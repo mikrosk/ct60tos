@@ -1,7 +1,7 @@
 ; Read on the CT60, the 68060 temperature on the TLV0831 DC from Texas I.
 ; 2,8 deg celcius / step 
 ;
-; Didier Mequignon 2001 December, e-mail: didier.mequignon@wanadoo.fr
+; Didier Mequignon 2001 December, e-mail: aniplay@wanadoo.fr
 ;
 ;  This library is free software; you can redistribute it and/or
 ;  modify it under the terms of the GNU Lesser General Public

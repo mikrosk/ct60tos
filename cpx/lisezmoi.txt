@@ -49,4 +49,4 @@ flush apräs la relocation, ce n'est pas compatible avec la SDRAM et
 le cache CPU en copyback.  
 
 Pour plus d'informations:
-didier.mequignon@wanadoo.fr
+aniplay@wanadoo.fr

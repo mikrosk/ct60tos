@@ -1,5 +1,5 @@
 /* Flashing hard CT60, JTAG part
-*  Didier Mequignon 2003 February, e-mail: didier.mequignon@wanadoo.fr
+*  Didier Mequignon 2003 February, e-mail: aniplay@wanadoo.fr
 *
 *  This program is free software; you can redistribute it and/or modify
 *  it under the terms of the GNU General Public License as published by

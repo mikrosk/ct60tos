@@ -1,5 +1,5 @@
 /* TOS 4.04 Vectors patch for the CT60 board
-*  Didier Mequignon 2002 December, e-mail: didier.mequignon@wanadoo.fr
+*  Didier Mequignon 2002 December, e-mail: aniplay@wanadoo.fr
 *
 *  This library is free software; you can redistribute it and/or
 *  modify it under the terms of the GNU Lesser General Public
@@ -24,7 +24,7 @@
 	.long	0x77E
 	.long	end1-begin1+0x80000000
 begin1:
-	jsr init_vectors
+	jsr	init_vectors
 	nop
 	nop
 	nop

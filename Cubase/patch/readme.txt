@@ -10,5 +10,5 @@ format error.
 This patch works only on an umpacked CAF_20x.PRG (1MB).
 
 For more informations:
-didier.mequignon@wanadoo.fr
+aniplay@wanadoo.fr
 

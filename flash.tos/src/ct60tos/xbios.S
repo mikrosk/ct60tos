@@ -1,5 +1,5 @@
 /* TOS 4.04 Xbios patch for the CT60 board
-*  Didier Mequignon 2002 December, e-mail: didier.mequignon@wanadoo.fr
+*  Didier Mequignon 2002 December, e-mail: aniplay@wanadoo.fr
 *
 *  This library is free software; you can redistribute it and/or
 *  modify it under the terms of the GNU Lesser General Public
@@ -27,3 +27,26 @@ begin1:
 	.short	0x21FC
 	.long	det_xbios
 end1:
+
+	.globl	new_statvec
+
+	.align	2
+	.long	0x26C4
+	.long	end2-begin2+0x80000000
+begin2:
+	jsr	new_statvec
+	nop
+	nop
+end2:
+
+	.globl	new_ikbdvect
+
+	.align	2
+	.long	0x340A
+	.long	end3-begin3+0x80000000
+begin3:
+	jsr	new_ikbdvect
+	nop
+end3:	
+
+

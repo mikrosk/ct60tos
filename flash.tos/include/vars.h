@@ -1,5 +1,5 @@
 /* TOS 4.04 Xbios vars for the CT60 board
-*  Didier Mequignon 2002 December, e-mail: didier.mequignon@wanadoo.fr
+*  Didier Mequignon 2002 December, e-mail: aniplay@wanadoo.fr
 *
 *  This library is free software; you can redistribute it and/or
 *  modify it under the terms of the GNU Lesser General Public
@@ -35,6 +35,9 @@
 #define ramtop     0x5A4
 #define ramvalid   0x5A8
 
+#define power_flag    -68
+#define flag_statvec  -64
+#define pbuf_statvec  -60
 #define count_io3_mfp -54
 #define start_hz_200  -52
 #define flag_cache    -48

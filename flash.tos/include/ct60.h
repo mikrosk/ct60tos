@@ -1,5 +1,5 @@
 /* TOS 4.04 Xbios for the CT60 board
-*  Didier Mequignon 2002 December, e-mail: didier.mequignon@wanadoo.fr
+*  Didier Mequignon 2002 December, e-mail: aniplay@wanadoo.fr
 *
 *  This library is free software; you can redistribute it and/or
 *  modify it under the terms of the GNU Lesser General Public
@@ -29,6 +29,7 @@
 #define CT60_BLITTER_SPEED 1
 #define CT60_CACHE_DELAY 2
 #define CT60_BOOT_ORDER 3
+#define CT60_CPU_FPU 4
 #define CT60_PARAM_OFFSET_TLV 10
 #define CT60_ABE_CODE 11
 #define CT60_SDR_CODE 12

@@ -47,4 +47,4 @@ Note about TSR programs that crash in the AUTO folder:
   copyback mode.
 
 For more information:
-didier.mequignon@wanadoo.fr
+aniplay@wanadoo.fr

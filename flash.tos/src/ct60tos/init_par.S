@@ -1,5 +1,5 @@
-/* TOS 4.04 Gemdos Pexec patch for the CT60 board
-*  Didier Mequignon 2003 March, e-mail: aniplay@wanadoo.fr
+/* TOS 4.04 Boot order patch for the CT60 board
+*  Didier Mequignon 2003 November, e-mail: aniplay@wanadoo.fr
 *
 *  This library is free software; you can redistribute it and/or
 *  modify it under the terms of the GNU Lesser General Public
@@ -17,32 +17,14 @@
 */
 
 	.text
-	
-	.globl	flush_cache_pexec
+
+	.globl	init_flash_parameters
 
 	.align	2
-	.long	0x1F164                /* Pexec */
+	.long	0xADA
 	.long	end1-begin1+0x80000000
 begin1:
-	jsr	flush_cache_pexec
+	jmp	init_flash_parameters
 end1:
 
-	.globl	det_gemdos
-
-	.align	2
-	.long	0x1DF62
-	.long	end2-begin2+0x80000000
-begin2:
-	.short	0x41F9
-	.long	det_gemdos
-end2:
-
-	.globl	det_vbl
-
-	.align	2
-	.long	0x214
-	.long	end3-begin3+0x80000000
-begin3:
-	move.l	#det_vbl,0x70.w
-end3:
 

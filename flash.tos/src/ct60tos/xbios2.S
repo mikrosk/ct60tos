@@ -3,8 +3,9 @@
 *    2,8 deg celcius / step 
 *  - Parameters in flash
 *  - Cache
+*  Eiffel keyboard XBIOS
 *
-*  Didier Mequignon 2001-2003, e-mail: didier.mequignon@wanadoo.fr
+*  Didier Mequignon 2001-2004, e-mail: aniplay@wanadoo.fr
 *
 *  This library is free software; you can redistribute it and/or
 *  modify it under the terms of the GNU Lesser General Public
@@ -22,10 +23,13 @@
 */
 
 	.globl det_xbios
+	.globl new_ikbdvect
+	.globl new_statvec
 
 #include "main.h"
 #include "ct60.h"
 #include "command.h"
+#include "vars.h"
 
 #define MES_TEMP_0 197
 #define MES_TEMP_25 208
@@ -34,10 +38,6 @@
 #define MES_TEMP_ERROR 255
 #define CT60_READ_ERROR -1
 
-#define phystop  0x42e
-#define _hz_200  0x4ba
-#define ramtop   0x5A4
-#define ramvalid 0x5A8
 #define _iera_mfp 0xfffffa07						// MFP registers
 #define _ipra_mfp 0xfffffa0b
 #define _isra_mfp 0xfffffa0f
@@ -518,4 +518,172 @@ fujitsu_mbm29f800ba:
 	.long FLASH_ADR+0xFF0F0000, FLASH_UNLOCK1+0xFF000000, FLASH_UNLOCK2+0xFF000000
 
 end_ct60_write_param:
+
+
+new_ikbdvect:                                                    // test Eiffel keys
+
+	move.b D0,D1
+	bclr #7,D1
+	cmp.b #0x45,D1                                      // PAGE UP
+	bne.s .test_page_down
+	btst #7,D0
+	bne.s .break_page_up
+	bset.b #0,0x1187                                    // SHIFT
+	move.b #0x48,D0                                     // ^
+	bra .test_shift
+.break_page_up:
+	bclr.b #0,0x1187                                    // SHIFT
+	move.b #0xC8,D0                                     // ^
+	bra .test_shift
+.test_page_down:
+	cmp.b #0x46,D1                                      // PAGE DOWN
+	bne.s .test_print_screen
+	btst #7,D0
+	bne.s .break_page_down
+	bset.b #0,0x1187                                    // SHIFT
+	move.b #0x50,D0                                     // v
+	bra .test_shift
+.break_page_down:
+	bclr.b #0,0x1187                                    // SHIFT
+	move.b #0xD0,D0                                     // v
+	bra .test_shift	
+.test_print_screen:
+	cmp.b #0x49,D1                                      // PRINT SCREEN
+	bne.s .test_end
+	btst #7,D0
+	bne.s .break_print_screen
+	bset.b #3,0x1187                                    // ALT
+	move.b #0x62,D0                                     // HELP
+	bra.s .test_shift
+.break_print_screen:
+	bclr.b #3,0x1187                                    // ALT
+	move.b #0xE2,D0                                     // HELP
+	bra.s .test_shift
+.test_end:
+	cmp.b #0x55,D1                                      // END
+	bne.s .test_power
+	btst #7,D0
+	bne.s .break_end
+	bset.b #0,0x1187                                    // SHIFT
+	move.b #0x47,D0                                     // CLR HOME
+	bra.s .test_shift
+.break_end:
+	bclr.b #0,0x1187                                    // SHIFT
+	move.b #0xC7,D0                                     // CLR HOME
+	bra.s .test_shift
+.test_power:
+	cmp.b #0x73,D1                                      // POWER
+	bne.s .test_shift
+	btst #7,D0
+	bne.s .test_shift
+	move.l A0,-(SP)
+	move.l phystop,A0
+	move.l #0xCAFEFADE,power_flag(A0)                   // tested inside evnt_multi AES
+	move.l (SP)+,A0
+.test_shift:
+	move.b 0x1187,D1                                    // Shift state
+	cmp.b #0x2A,D0
+	rts
+
+new_statvec:
+
+	move.l A0,-(SP)
+	lea det_statvec(PC),A0
+	move.l A0,0x1142
+	move.l #0xE02750,D0
+	move.l (SP)+,A0
+	rts
+
+	dc.l 0x58425241  /* XBRA */
+	dc.l 0x43543630  /* CT60 */
+	dc.l 0x00E02750  /* RTS */
+	
+det_statvec:
+
+	cmp.b #0x05,(A0)
+	bne .no_eiffel_key
+	movem.l D0/A0,-(SP)
+	cmp.b #0x32,6(A0)                                   // VOLUME UP
+	bne.s .not_volume_up
+	move.w #-1,-(SP)
+	clr.w -(SP)                  	             // LTATTEN
+	jsr 0xE0620C                                        // soundcmd
+	addq.l #4,SP
+	sub.w #0x10,D0
+	and.w #0xF0,D0
+	cmp.w #0xF0,D0
+	bne.s .not_lmax
+	moveq #0,D0
+.not_lmax:
+	move.w D0,-(SP)
+	clr.w -(SP)                  	             // LTATTEN
+	jsr 0xE0620C                                        // soundcmd
+	addq.l #4,SP
+	move.w #-1,-(SP)
+	move.w #1,-(SP)                  	             // RTATTEN
+	jsr 0xE0620C                                        // soundcmd
+	addq.l #4,SP
+	sub.w #0x10,D0
+	and.w #0xF0,D0
+	cmp.w #0xF0,D0
+	bne.s .not_rmax
+	moveq #0,D0
+.not_rmax:
+	move.w D0,-(SP)
+	move.w #1,-(SP)                  	             // RTATTEN
+	jsr 0xE0620C                                        // soundcmd
+	addq.l #4,SP
+	bra.s .not_volume_down
+.not_volume_up:
+	cmp.b #0x21,6(A0)                                   // VOLUME DOWN
+	bne.s .not_volume_down
+	move.w #-1,-(SP)
+	clr.w -(SP)                  	             // LTATTEN
+	jsr 0xE0620C                                        // soundcmd
+	addq.l #4,SP
+	add.w #0x10,D0
+	and.w #0xF0,D0
+	bne.s .not_lmin
+	move.w #0xF0,D0
+.not_lmin:
+	move.w D0,-(SP)
+	clr.w -(SP)                  	             // LTATTEN
+	jsr 0xE0620C                                        // soundcmd
+	addq.l #4,SP
+	move.w #-1,-(SP)
+	move.w #1,-(SP)                  	             // RTATTEN
+	jsr 0xE0620C                                        // soundcmd
+	addq.l #4,SP
+	add.w #0x10,D0
+	and.w #0xF0,D0
+	bne.s .not_rmin
+	move.w #0xF0,D0
+.not_rmin:
+	move.w D0,-(SP)
+	move.w #1,-(SP)                  	             // RTATTEN
+	jsr 0xE0620C                                        // soundcmd
+	addq.l #4,SP
+.not_volume_down:	
+	movem.l (SP)+,D0/A0
+	bra.s .not_read_memory
+.no_eiffel_key:
+	cmp.b #0x20,(A0)
+	bne.s .not_read_memory
+	movem.l A0-A2,-(SP)
+	move.l phystop,A2
+	cmp.l #0xCAFEFADE,flag_statvec(A2)
+	bne.s .not_read_memory
+	move.l pbuf_statvec(A2),A1
+	addq.l #1,A0
+	move.b (A0)+,(A1)+
+	move.b (A0)+,(A1)+
+	move.b (A0)+,(A1)+
+	move.b (A0)+,(A1)+
+	move.b (A0)+,(A1)+		
+	move.b (A0)+,(A1)+
+	move.l A1,pbuf_statvec(A2)
+	movem.l (SP)+,A0-A2
+.not_read_memory:	
+	rts
+	
 	

@@ -1,5 +1,5 @@
 ;  Flashing CT60
-;  Didier Mequignon 2003 July, e-mail: didier.mequignon@wanadoo.fr
+;  Didier Mequignon 2003 July, e-mail: aniplay@wanadoo.fr
 ;  Based on the flash tool Copyright (C) 2000 Xavier Joubert
 ;
 ;  This program is free software; you can redistribute it and/or modify

@@ -1,6 +1,6 @@
 /*  Configure the CT60-SDRAM and more
  * 
- * Didier Mequignon 2001-2003, e-mail: didier.mequignon@wanadoo.fr
+ * Didier Mequignon 2001-2004, e-mail: aniplay@wanadoo.fr
  *
  *  This library is free software; you can redistribute it and/or
  *  modify it under the terms of the GNU Lesser General Public
@@ -22,6 +22,7 @@
 	.globl init_sdram
 	.globl add_sdram
 	.globl boot_drive
+	.globl init_flash_parameters
 	.globl fix_bug_nvdi
 	.globl display_ram_test
 	.globl ct60_read_info_sdram
@@ -77,6 +78,7 @@ init_060:
 	move.w 0xFFFF8006,D0
 	move.w #7,0xFFFF8940	
 	movec.l PCR,D0
+	bclr #1,D0               // enable PFU
 	bset #0,D0               // superscalar
 	movec.l D0,PCR
 	moveq #0,D0
@@ -490,7 +492,12 @@ init_sdram:
 	bmi.s .test_ok           // error
 	btst #1,D0               // CAS latency = 2
 	bne.s .test_ok
-	lea message54(PC),A0
+	moveq #9,D0              // cycle time
+	bsr read_i2c_sdram
+	bmi .test_ok             // error
+	cmp.b #0x70,D0
+	bls.s .test_ok           // PC150
+	lea message54(PC),A0     // warning CAS latency
 	bsr display_string
  	bra.s .test_ok
  .error_test:
@@ -754,16 +761,30 @@ display_infos_sdram:
 	bsr hex_byte
 	moveq #0x20,D0
 	bsr display_char
+	lea list_manufacturers(PC),A0
+.manufacturer_loop1:
+		move.b (A0)+,D0
+		beq.s .manufacturer_not_found
+		cmp.b 64(A1),D0
+		bne.s .next_manufacturer
+		moveq #31,D1
+		bra.s .manufacturer_loop2
+.next_manufacturer:
+		tst.b (A0)+
+		bne.s .next_manufacturer
+	bra.s .manufacturer_loop1
+.manufacturer_not_found:
 	lea 65(A1),A0            // manufacturer
 	moveq #6,D1
-.manufacturer:
+.manufacturer_loop2:
 		move.b (A0)+,D0
+		beq.s .end_manufacturer
 		cmp.b #0x20,D0
 		bcs.s .end_manufacturer
 		cmp.b #0x7F,D0
 		bcc.s .end_manufacturer
 		bsr display_char
-	dbf D1,.manufacturer
+	dbf D1,.manufacturer_loop2
 .end_manufacturer:	
 	lea message58(PC),A0     // part number
 	bsr display_string
@@ -777,11 +798,16 @@ display_infos_sdram:
 	bsr display_string
 	moveq #0,D0
 	move.b 93(A1),D0         // week
-	clr.w -130(A6)
-	lea -132(A6),A0
+	move.b D0,D1
+	and.b 94(A1),D1
+	cmp.b #0xFF,D1
+	beq .no_date
+	cmp.b #0x52,94(A1)       // week 52
+	bls.s .date_jedec_format
+	lea -132(A6),A0          // IBM format
              moveq #2,D1
 	bsr conv_ascii_value_optimized
-	lea -132(A6),A0
+	lea -132(A6),A0          // date
 	bsr display_string_single
 	moveq #0x2F,D0
 	bsr display_char
@@ -796,6 +822,28 @@ display_infos_sdram:
 	bsr conv_ascii_value_optimized
 	lea -134(A6),A0	
 	bsr display_string_single
+	bra.s .no_date
+.date_jedec_format:
+	move.b 94(A1),D0         // week
+	bsr hex_byte
+	moveq #0x2F,D0
+	bsr display_char
+	cmp.b #0x90,93(A1)       // year
+	bcs.s .year_20xx
+	moveq #0x31,D0
+	bsr display_char
+	moveq #0x39,D0
+	bsr display_char         // 19xx
+	bra.s .year
+.year_20xx:
+	moveq #0x32,D0
+	bsr display_char
+	moveq #0x30,D0
+	bsr display_char         // 20xx	
+.year:		
+	move.b 93(A1),D0         // year	
+	bsr hex_byte
+.no_date:	
 //	lea -128(A6),A1
 //	moveq #7,D1
 //.loop_dump1:
@@ -861,6 +909,7 @@ error10:	.byte 13,10
 	.asciz "            SDRAM read failure at $"
 	.byte 13,10
 	.asciz "            SDRAM erreur v‚rification en $"
+name1:	.asciz "Eiffel"
 message0:	.ascii "            "
 	.byte 0x1B,0x62,0x32,0x41
 	.byte 0x1B,0x62,0x34,0x54
@@ -903,13 +952,13 @@ message15:	.byte 27
 	.ascii "."
 	.byte ((VERSION/16) & 0xF) + 0x30
 	.byte (VERSION & 0xF) + 0x30
-	.asciz "f "
+	.asciz " "
 message15b:	
-	.ascii "2003 November "
+	.ascii "2004 February "
 	.byte 27
 	.ascii "q"
 	.byte 13,10,0
-	.ascii "Novembre 2003 "
+	.ascii "F‚vrier 2004 "
 	.byte 27
 	.ascii "q"
 	.byte 13,10,0
@@ -1081,9 +1130,46 @@ message72:	.asciz " unbuffered"
 	.asciz " sans buffers" 
 message73:	.asciz " PC100"
 message74:	.asciz " PC133"
+message75:	.byte 13,10
+	.asciz "Keyboard OK  "
+	.byte 13,10 
+	.asciz "Clavier OK  " 
+message76:	.byte 13,10
+	.asciz "Keyboard failure"
+	.byte 13,10 
+	.asciz "Pas de r‚ponse du clavier" 
 
 boot_ide:	.byte 16,8,9,10,11,12,13,14,15,255
 boot_scsi:	.byte 8,9,10,11,12,13,14,15,16,255
+
+list_manufacturers:
+	.byte 0x1C
+	.asciz "MITSUBISHI"
+	.byte 0x25
+	.asciz "KINGMAX
+	.byte 0x2C
+	.asciz "MICRON"
+	.byte 0x4A
+	.asciz "COMPAQ"
+	.byte 0x54
+	.asciz "HP"
+	.byte 0x98
+	.asciz "KINGSTON"
+	.byte 0x9E
+	.asciz "CORSAIR"
+	.byte 0xA4
+	.asciz "IBM"
+	.byte 0xC1
+	.asciz "INFINEON"
+	.byte 0xCE
+	.asciz "SAMSUNG"
+	.byte 0xDA
+	.asciz "DANE-ELEC"
+	.byte 0xAD     // jedec source
+	.asciz "HYUNDAI" 
+	.byte 0xE0     // module source ?
+	.asciz "HYUNDAI"
+	.byte 0,0
 
 	.align 2
 
@@ -1193,6 +1279,20 @@ boot_drive:
 //.no_resvector:
 	movem.l (SP)+,D0-D2/A0-A2/A5
 	rts
+
+init_flash_parameters:
+
+	moveq #14,D7
+.loop_init_params:
+		move.l #-1,-(SP)
+		move.l D7,-(SP)
+		move.w #CT60_MODE_WRITE,-(SP)
+		move.w #rw_parameter,-(SP)
+		trap #14
+		lea 12(SP),SP
+		cmp.l #-1,D0
+             dblt D7,.loop_init_params
+	jmp 0xE0398C             // reset
 	
 fix_bug_nvdi:
 
@@ -1454,6 +1554,105 @@ add_sdram:
 	bsr display_string_single
 	lea message15b(PC),A0
 	bsr display_string
+	link A6,#-4
+	clr.w -(SP)              // stram
+	move.l #0x2000,-(SP)     // 8K
+	move.w #0x44,-(SP)       // Mxalloc
+	trap #1 
+	addq.w #8,SP
+	tst.l D0
+	ble .no_buffer
+	move.l D0,A5             // buffer
+	move.l phystop,A4        // use internal statvec
+	move.l A5,pbuf_statvec(A4)
+	move.l #0xCAFEFADE,flag_statvec(A4)
+	move.b #0x12,-4(A6)      // IKBD mouse off
+	move.b #0x21,-3(A6)      // IKBD read memory
+	move.b #0x8F,-2(A6)      // Eiffel 0x0FFF flash memory
+	move.b #0xFF,-1(A6)
+	pea.l -4(A6)
+	move.w #3,-(SP)
+	move.w #0x19,-(SP)       // Ikbdws
+	trap #14 
+	addq.w #8,SP
+	move.l _hz_200,D1
+.wait_answer:
+		move.l _hz_200,D0
+		sub.l D1,D0
+		cmp.l #20,D0          // time-out 100 mS
+		bge .keyboard_error
+	cmp.l pbuf_statvec(A4),A5
+	beq.s .wait_answer
+	lea message75(PC),A0     // keyboard OK
+	bsr display_string
+	move.l A5,pbuf_statvec(A4)
+	move.b #0x21,-4(A6)      // IKBD read memory
+	move.b #0x90,-3(A6)      // Eiffel 0x1000 flash memory
+	clr.b -2(A6)
+	tst.w (A5)
+	beq.s .eiffel_2nd_bank_ok
+	cmp.w #0x3FFF,(A5)
+	bne .end_test_keyboard
+	move.b #0x80,-3(A6)      // Eiffel 0x0000 flash memory
+.eiffel_2nd_bank_ok:
+	move.l A5,A3
+	move.w #(256/6),D7
+.loop_read_eiffel:
+		pea.l -4(A6)
+		move.w #2,-(SP)
+		move.w #0x19,-(SP)    // Ikbdws
+		trap #14 
+		addq.w #8,SP
+		move.l _hz_200,D1
+.wait_answer_keyb:
+			move.l _hz_200,D0
+			sub.l D1,D0
+			cmp.l #20,D0 // time-out 100 mS
+			bge .keyboard_error
+		cmp.l pbuf_statvec(A4),A3
+		beq.s .wait_answer_keyb
+		move.l pbuf_statvec(A4),A3
+		add.w #3,-3(A6)       // next word
+	dbf D7,.loop_read_eiffel
+	move.l A5,A0             // buffer
+	move.w #(256/2)-7,D1
+.loop_find_name:
+		move.l A0,A2
+		lea name1(PC),A1
+		moveq #5,D0
+.compare_name:
+			addq.l #1,A2
+			cmpm.b (A1)+,(A2)+
+		dbne D0,.compare_name
+		beq.s .eiffel_found			
+		addq.l #2,A0
+	dbf D1,.loop_find_name
+	bra.s .end_test_keyboard
+.eiffel_found:                        // display eiffel version
+		addq.l #1,A0
+		move.b (A0)+,D0
+		beq.s .end_test_keyboard
+		bsr display_char
+	bra.s .eiffel_found
+.keyboard_error:	
+	lea message76(PC),A0     // keyboard failure
+	bsr display_string
+.end_test_keyboard:
+	move.b #0x08,-4(A6)      // IKBD mouse on
+	pea.l -4(A6)
+	clr.w -(SP)
+	move.w #0x19,-(SP)       // Ikbdws
+	trap #14 
+	addq.w #8,SP
+	unlk A6
+	clr.l flag_statvec(A4)   //  not use internal statvec
+	move.l A5,D0
+	beq.s .no_buffer
+	move.l A0,-(SP)
+	move.w #0x49,-(SP)       // Mfree
+	trap #1 
+	addq.w #6,SP
+.no_buffer:
 	cmp.l #0x1357BD13,ramvalid
 	bne .not_sdram
 	move.l _sysbase,A0       // header ROM

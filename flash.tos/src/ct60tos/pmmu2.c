@@ -1,6 +1,6 @@
 /*  PMMU tree on the CT60.
  *
- *  Didier Mequignon 2002 December, e-mail: didier.mequignon@wanadoo.fr
+ *  Didier Mequignon 2002 December, e-mail: aniplay@wanadoo.fr
  *
  *  This library is free software; you can redistribute it and/or
  *  modify it under the terms of the GNU Lesser General Public

@@ -1,6 +1,6 @@
 /*  Debug the CT60
  * 
- * Didier Mequignon, January 2003, e-mail: didier.mequignon@wanadoo.fr
+ * Didier Mequignon, January 2003, e-mail: aniplay@wanadoo.fr
  *
  *  This library is free software; you can redistribute it and/or
  *  modify it under the terms of the GNU Lesser General Public

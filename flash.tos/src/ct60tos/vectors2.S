@@ -1,6 +1,6 @@
 /*  Init Vectors, ISP/FPSP patchs on the CT60 board
  * 
- * Didier Mequignon 2001-2002, e-mail: didier.mequignon@wanadoo.fr
+ * Didier Mequignon 2001-2004, e-mail: aniplay@wanadoo.fr
  *
  *  This library is free software; you can redistribute it and/or
  *  modify it under the terms of the GNU Lesser General Public
@@ -20,6 +20,8 @@
  
 	.globl init_vectors
 	.globl _init_emulation_vectors
+	
+#include "vars.h"
 	
 init_vectors:
 
@@ -42,6 +44,21 @@ _init_emulation_vectors:
 	movec.l PCR,D0
 	btst #16,D0
 	bne .no_fpu           // EC or LC
+	move.l cookie,D0
+	beq.s .fpu
+	move.l D0,A0
+.loop_cookie:
+		move.l (A0),D0
+		beq.s .fpu
+		cmp.l #0x5F465055,D0    // _FPU cookie
+		bne.s .next_cookie
+		tst.l 4(A0)
+		beq .no_fpu
+		bra.s .fpu
+.next_cookie:
+		addq.l #8,A0
+	bra.s .loop_cookie
+.fpu:
 	lea.l _top_fpsp+0x80(PC),A0
 	cmp.l 0xD8,A0
 	beq.s .ok2

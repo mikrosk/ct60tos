@@ -66,6 +66,7 @@ GENTOS_OBJS=	\
 		$(OBJDIR)/ct60tos/cache.o \
 		$(OBJDIR)/ct60tos/movep.o \
 		$(OBJDIR)/ct60tos/boot.o \
+		$(OBJDIR)/ct60tos/init_par.o \
 		$(OBJDIR)/ct60tos/blitter.o \
 		$(OBJDIR)/ct60tos/bios.o \
 		$(OBJDIR)/ct60tos/xbios.o \
@@ -88,6 +89,8 @@ GENTOS_OBJS=	\
 		$(OBJDIR)/ct60tos/xbios2.o \
 		\
 		$(OBJDIR)/ct60tos/gemdos2.o \
+		\
+		$(OBJDIR)/ct60tos/aes2.o \
 		\
 		$(OBJDIR)/ct60tos/vectors2.o \
 		\

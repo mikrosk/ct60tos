@@ -1,5 +1,5 @@
 /* TOS 4.04 AES SHBUF patch for the CT60 board
-*  Didier Mequignon 2003 March, e-mail: didier.mequignon@wanadoo.fr
+*  Didier Mequignon 2003-2004, e-mail: aniplay@wanadoo.fr
 *  from SHBUF.FIL / Martin Osieka
 *
 *  This library is free software; you can redistribute it and/or
@@ -333,3 +333,12 @@ end34:
 begin35:
 	jsr	fix_bug_nvdi
 end35:
+
+	.globl	det_evnt_multi
+
+	.align	2
+	.long	0x20122
+	.long	end36-begin36+0x80000000
+begin36:
+	jsr	det_evnt_multi
+end36:

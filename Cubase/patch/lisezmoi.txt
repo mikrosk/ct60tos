@@ -10,4 +10,4 @@ l'erreur de format.
 Ce patch fonctionne seulement avec un CAF_20x.PRG non compress‚ (1Mo).
 
 Pour plus d'informations:
-didier.mequignon@wanadoo.fr
+aniplay@wanadoo.fr

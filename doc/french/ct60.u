@@ -4,12 +4,12 @@
 !title   Documentation de la
 !programimage ..\img\ct60.img
 !program CT60
-!version Version 0.99f
+!version Version 1.00
 !date    (!today)
 !author  Didier MEQUIGNON
 !street  25, rue de l'Ascenseur
 !town    62510 ARQUES FRANCE
-!email   didier.mequignon@wanadoo.fr
+!email   aniplay@wanadoo.fr
 !use_auto_subtocs    [info,html,stg,tvh,win]
 !use_auto_subsubtocs [info,html,stg,tvh,win]
 !no_effects          [asc]
@@ -352,7 +352,10 @@ C'est un TOS 4.04 patch‚, dans l'ordre il contient :
 68060), la zone m‚moire de 0 … $7FFFFFFF en copyback except‚ pour la 
 zone de 0 … $FFFFFF en writethrough, et la zone de $80000000 … $FFFFFFFF 
 en cache inhib‚.
-!item L'installation des cookies '_CPU', '_FPU', 'CT60'.
+!item L'installation des cookies '_CPU', '_FPU', 'CT60', mais aussi '_FRQ' 
+(horloge interne) et 'FRE' (horloge externe) si le videl a besoin d'une 
+horloge externe 32 MHz pour les moniteurs RVB. Le cookie CT60 peut 
+retourner la fr‚quence de rotation d'un ventilateur via IO3 du MFP 
 !item Les patchs du cache, de la PMMU, des adresses en $00FFxxxx, le 
 remplacement des instructions movep.
 !item Le detournement des exceptions pour l'affichage en clair d'un 
@@ -377,6 +380,7 @@ et la SDRAM d‚clar‚e en copyback.
 ‚criture.
 !item La cr‚ation du buffer fastram et de son cookie '_FRB'.
 !item La cr‚ation du buffer fastram ‚tendu et de son cookie 'XFRB'.
+!item L'affichage complet des informations sur la barette SDRAM.
 !item Le patch pour l'ordre de boot des disques IDE et SCSI.
 !item Le patch de la fonction Pexec pour le copyback (cpush aprŠs la 
 relocation).
@@ -384,6 +388,14 @@ relocation).
 vrt_cpyfm pour fonctionner en SDRAM (un buffer interm‚diaire en STRAM est  
 utilis‚).
 !item Les patchs AES pour changer le buffer de Newdesk de 4 Ko … 32 Ko.
+!item Support des scan-codes de la carte Eiffel :
+!begin_itemize
+!item PAGE HAUT/BAS.
+!item FIN.
+!item IMPR ECRAN.
+!item POWER (jeu 2 seulement, Eiffel 1.0.5).
+!item VOLUME HAUT/BAS (jeu 2 seulement, Eiffel 1.0.5).
+!end_itemize
 !end_itemize 
 
 
@@ -641,16 +653,17 @@ double-cliquant sur ce seuil (offset TLV).
 
 !end_verbatim
 
-Sur cette page vous pouvez voir :
+Sur cette page vous pouvez :
                                        
 !begin_itemize
-!item La capacit‚ totale de la ST-Ram.
-!item La capacit‚ totale de la Fast-Ram.
-!item Le Nombre d'octets de la ST-Ram libres.
-!item Le Nombre d'octets de la Fast-Ram libres.
-!item Le Nombre de millions d'instructions par seconde effectu‚s par le 
-microprocesseur.
-!item Eventuellement la vitesse du ventilateur ou de la pompe (si 
+!item Voir la capacit‚ totale de la ST-Ram.
+!item Voir la capacit‚ totale de la Fast-Ram.
+!item Voir le Nombre d'octets de la ST-Ram libres.
+!item Voir le Nombre d'octets de la Fast-Ram libres.
+!item Voir le Nombre de millions d'instructions par seconde effectu‚s par 
+le microprocesseur.
+!item S‚lectionner avec/sans FPU.
+!item Eventuellement voir la vitesse du ventilateur ou de la pompe (si 
 watercooling) avec de la connectique 3 fils :
 !end_itemize
 !begin_verbatim
@@ -904,11 +917,11 @@ lancement d'un programme sous TOS via le menu Boot du CPX de
 configuration, mais cette m‚thode p‚nalise tous les programmes. 
 
 
-!subnode Programs compress‚s avec Ice
+!subnode Programmes compress‚s avec Ice
 
 Le TOS teste les programmes compress‚s avec Ice, il y a un patch 
 pour faire un flush des caches (dans la fonction Pexec). Sans ce patch, 
-les programs compress‚s avec Ice plantent avec le cache en copyback 
+les programmes compress‚s avec Ice plantent avec le cache en copyback 
 (SDRAM). Ce problŠme n'est pas corrig‚ sous MagiC ou MiNT.  
 
 
@@ -959,7 +972,7 @@ AUTO.
 !begin_table [|l|l|l|] !hline
 (!B)Logiciel(!b) !! (!B)ProblŠme(!b)  !! (!B)Solution(!b)
 !hline
-Port cartouche   !! Ne fonctionne pas !! Couper les caches.
+Port cartouche   !! Ne fonctionne pas !! Acheter un 68060 full.
 et 68060 EC      !!                   !!
 !hline
 HD Driver 8 et   !! Plante avec choix !! Mettre … jour ABE060 
@@ -967,14 +980,19 @@ disques SCSI ou  !! "SCSI Processeur  !! vers v5K ou plus.
 le lecteur de    !!  Device"          !!
 disquettes       !!                   !!
 !hline
+HD Driver 8 et   !! ProblŠmes quand   !! Mettre … jour HD Driver 
+le bug IO7 MFP 1 !! SDMA fonctionne   !! (8.13 ou plus).
+                 !! avec le D2D       !!
+!hline
 MagiC            !! Ne fonctionne pas !! Patcher MAGIC.RAM et utiliser
                  !!                   !! le nouveau MAGXBOOT.PRG.
                  !!                   !! Installer CT60XBIO.PRG et 
                  !!                   !! DSPXBIOS.PRG dans le dossier
-                 !!                   !! AUTO. 
+                 !!                   !! AUTO aprŠs MAGXBOOT.PRG. 
 !hline
-Cubase Audio     !! Ne fonctionne pas !! Patcher CAF_20x.PRG et utiliser 
-                 !!                   !! le nouveau CAF_060.PRG.
+Cubase Audio     !! Ne fonctionne pas !! Patcher CAF_20x.PRG d‚compact‚
+                 !!                   !! par NEW DEPACK et utiliser 
+                 !!                   !! le nouveau CAF_060.PRG cr‚‚.
                  !!                   !! Installer EXCEP060.PRG dans le 
                  !!                   !! dossier AUTO, et le MROS3_45 
                  !!                   !! patch‚. 
@@ -991,11 +1009,53 @@ Xcontrol         !! Plante            !! Utiliser la version patch‚e.
 !hline
 !end_table
 
+!begin_table [|l|l|l|] !hline
+(!B)Hard(!b) !! (!B)ProblŠme(!b) !! (!B)Solution(!b)
+!hline
+F030/DSP     !! Erreurs DSP      !! Ne pas utiliser l'hologe CT60 (fil trop
+             !!                  !! long) et placer un oscillateur de 50 MHz
+             !!                  !! sur le 32 MHz d'origine … cot‚ du DSP.
+!hline
+F030/SDMA    !! Erreurs DSP avec !! Contr“ler l'horloge SDMA.
+             !! les transferts   !!
+             !! DMA -> DSP ou    !!
+             !! clics pendant    !!
+             !! la lecture SDMA  !!
+!hline
+Blitter      !! Pixels           !! Essayer blitter lent dans CT60CONF.CPX.
+             !! mauvais          !! Baisser l'hologe F030 … 20/40 MHz ou
+             !!                  !! 16/32 MHz.
+             !!                  !! Utiliser NVDI.
+!hline
+68060        !! SystŠme bloqu‚   !! Installer un diviseur d'horloge :
+rev. 6       !! parfois quand le !!
+100MHz       !! SDMA fonctionne  !! 14,13,10:+5V, 7:GND  _______
+             !! et aussi perte   !! 5V                  | 74F74 |  
+             !! de synchro du    !! o o o o o o o_______|H     Q|_____ o   o
+             !! Videl.           !! CT60      100MHz  11|       |9   | 50MHz
+             !! Parfois le 68060 !! OSC                 |      _|    |  OSC
+             !! fonctionne …     !! o o o o o o o     __|D     Q|___ |_o   o
+             !! nouveau en       !! 1          GND   |12|_______|8 |  enlev‚
+             !! basculant sur    !! Mettre une petite|_____________|
+             !! l'horloge 32 MHz !! carte entre oscillateur et support
+             !! (sans reset !)   !!
+             !! Bug arbitration  !! (A 16/32 MHz le problŠme n'est pas corrig‚)
+             !! ???              !! ... ou contactez Rodolphe.
+!hline
+Ethernec     !! Lent et/ou       !! Installer les drivers CT60 (sans movep).
+             !! erreurs          !! Utiliser seulement … 16/32 MHz.
+!hline
+Eclipse      !! Ne fonctionne    !! Couper la piste entre les pins 20 et 22.
+             !! pas              !! Mettre … jour ABE060 vers v5I ou plus.
+             !!                  !! Essayer seulement … 16/32 MHz.
+!hline
+!end_table
+
 
 !node CT60 HARDWARE GUIDE (Anglais)
 
 (!B)
-Rev 5.0  October 2000 / June 2003
+Rev 5.2  October 2000 / February 2004
 (c) Rodolphe Czuba
 (!b)
 
@@ -1072,8 +1132,6 @@ ABE-60
 (!b)
 
 !begin_verbatim
-ULAR      $F8000000 UNlocked ARbiter
-
 FWEN      $F9000000 Flash Write ENable  (only from the 060/PPC)
 
 SLP       $FA000000 Sleep = Turn OFF the ATX power supply.
@@ -1163,16 +1221,6 @@ A16 = rfrt
 !subsubnode ABE60 REGISTERS DETAILS
 
 !begin_verbatim
-ULAR (UnLocked ARbiter)
- 060 is MASTER locked after RESET.
- F030 can't be Master locked but can obtain the bus. 
- Write at  $F8000000 : Unlock Arbiter
- Write at  $F8800000 : Lock   Arbiter
-
-NOTE : In a dual processor configuration (ie : a PPC on Slot), this 
-register can be used to lock the arbiter at any time to use the 060 or the 
-PPC alone.     
-
 FWEN (Flash Write ENable)
  Only for the PowerPC write accesses.
  Not needed for 030 and 060 write accesses. 
@@ -1240,7 +1288,7 @@ INTERRUPTS
 CLOCK
 (!u)
 !begin_verbatim
-CLK     CLocK (CT60 clock : 66MHz or more)
+CLK     CLocK (CT60 clock : 64MHz or more)
 !end_verbatim
 
 (!U)
@@ -1280,40 +1328,101 @@ GND  GND      GND  GND
 
 !subnode HARDWARE EMULATION
 
-The CT60 allows a Falcon hardware emulation.
+The CT60 allows a (!B) Falcon hardware emulation. (!b)
 
-This is a time window from the start of the 060 access to the Falcon 
-addresses ($00xxxxxx and $FFxxxxxx) up to the 8 th cycle of the CLK (bus 
-and 060 clock).
-
-When the 060 inserts its addresses and TS, a counter into ABE start if the 
-address is somewhere in the Falcon address space.
-Until the counter reaches the end of the 8 th cycle, a card on the 060 
-slot bus of the CT60 can answer to terminate the access (with TA/ or TEA/ 
-or both TA/ & TEA/ for a RETRY).
-
-The time limit for the answer is the 7 th cycle because it is what is 
-needed for a SDRAM reading by a BURST of 4-1-1-1 cycles.
-This SDRAM could replace a part of the ST-RAM at the same addresses...
-
-For registers accesses, 2 or 3 cycles are needed...
-So, it's easy to implement a new chip replacing the old one of the Falcon 
-motherboard and this at the same addresses!
+With this Hardware Emulation Window, it is easy to implement a new chip 
+replacing the old one of the Falcon motherboard and this at the same 
+address(es) !
 
 (!U)
-Examples:
+Examples :
 (!u)
-!begin_verbatim
-SUPER-VIDEL chip in a FPGA with DDR memory.
-ACIA for new PS/2 ports with a CPLD/FPGA.
-ACIA MIDI with a CPLD/FPGA.
-DSP56301 replacing 56001 at same addresses !
-FPGA emulating serial & parallel port of the Falcon (Zilog 85C30 and Yamaha).
-New SDMA for Audio.
-!end_verbatim
+!begin_itemize
+!item SUPER-VIDEL chip in a FPGA with DDR memory.
+!item SDRAM replacement of a part of the ST-RAM at the same addresses.
+!item ACIA for new PS/2 ports with a CPLD/FPGA.
+!item ACIA MIDI with a CPLD/FPGA.
+!item DSP56301 replacing 56001 at same addresses !
+!item FPGA emulating serial & parallel port of the Falcon (Zilog 85C30 and Yamaha).
+!item New SDMA for Audio.
+!end_itemize
 
-At the begining of the 8 th cycle the Falcon access continue and cannot be 
-stoped.
+There is a time window from the start of the 060 access to the Falcon 
+addresses ($00xxxxxx and $FFxxxxxx) up to the start (rising edge) of the 
+7th cycle of the CLK (bus and 060 clock).
+
+When the 060 inserts the addresses and TS to validate, a counter into ABE 
+start if the address is somewhere in the Falcon address space.
+Until the counter reaches the end of the 6th cycle, a card on the 060 
+slot bus of the CT60 can answer to terminate the access instead of a chip 
+of the Falcon mb (with TA/ or TEA/ or both TA/ & TEA/ for a RETRY).
+This termination of the access terminates the counter and invalidates the 
+Falcon acccess that was started.
+
+At the begining of the 7th cycle the Falcon READ access continues and 
+cannot be stopped. ABE drives data on the CT60 bus.
+
+The time limit for the termination signal sampling is the end of the 6th 
+cycle.
+
+(!U)
+If you want to use SDRAM on a daughter card :
+(!u)
+
+For 66 MHz SDRAM BURST READ you need 5-1-1-1 cycles.
+The TA arrives the 5th cycle (first data) up to 8th (fourth data). This 
+TA arrives before the end of the 6th cycle and the F030 access start is 
+cancelled.
+
+For 66 MHz SDRM BURST WRITE you need 3-1-1-1 cyles.
+The TA arrives the 3rd cycle (first data) up to 6th (fourth data). This 
+TA arrives before the end of the 6th cycle and the F030 access start is 
+cancelled.
+
+(!U)
+For registers accesses on a daughter card, you need 2 or 3 cycles.
+(!u)
+
+If you want to write both to F030 mb AND your daughter card (an adress 
+that is present on the two boards), don't send TA from the daughter card 
+and the TA from mb will terminate the write access for you.
+
+(!U) By example, (!u) this technic allows to write all VIDEL and SUPER VIDEL 
+registers in the same time. The emulation is total! The only thing is to do 
+is to implement a bit in the daughter board to (!B) switch ON/OFF the 
+emulation. (!b)
+
+(!B)
+If the switch is ON :
+(!b)
+!begin_itemize
+!item the daugther card address registers are at the same addresses than the 
+F030 mb and :
+!item the TA must not be sent when writting these registers that are common to 
+F030 and the daughter card.
+!item the TA must be sent before the 7th cycle when reading from register that 
+is a common to F030 & daughter card.
+!end_itemize
+
+(!B)
+If the switch is OFF :
+(!b)
+!begin_itemize
+!item the daughter card address registers must be present at some specific 
+addresses (not the same than the F030) and the TA is sent as usual by the 
+daughter card for all read & write accesses.
+!end_itemize
+
+(!U)
+Example with $FFFF820E :
+(!u)
+
+Switch is ON -> Write at $FFFF820E write to daughter card and F030 mb and 
+this access is terminated by the TA from Falcon mb (ABE). The card don't 
+send TA.
+
+Switch is OFF -> Write at $FFFF820E write only to Falcon mb. You need to 
+write to a 'new' address on the card to access the same register.
 
 
 !subnode THERMAL SENSOR
@@ -1324,14 +1433,16 @@ has a 780 ohms value at 25øC and increases/decreases by steps of 2.8 ohms
 per øC unit. By example, a 060 core at 80øC gives a resistance of 934 ohms 
 between the two THERMx pins.
 
+(!B)
 Equations :  R60 = 780 + 2.8 x (TEMP  25) or TEMP = (R60 - 710) / 2.8
+(!b)
 
 The CT60 uses a small slow Analog/Digital converter (TI TLV0831) to obtain 
 a 8-Bit value of the voltage between the THERMs pins.  
 
-The equation is : U60 = (3.34 x R60) / (1000 + R60) where R60 is the value 
-of the core sensor resistor; 3.34 is the power supply and 1000 is the 
-value of the resistor connected between the 3.34V and the positive 
+(!B) The equation is : U60 = (3.34 x R60) / (1000 + R60) (!b) where R60 is 
+the value of the core sensor resistor; 3.34 is the power supply and 1000 
+is the value of the resistor connected between the 3.34V and the positive 
 THERM0/IN+ line.
 
 (!U)
@@ -1350,7 +1461,9 @@ the two pins of the AD converter, the digital result is 0. With 1.794 to
 1.800 V, the result is 255. The value increases/decreases by steps of 
 0.007 V.
 
+(!B)
 The equation is :  Data = INT [U60/0.007]. 
+(!b)
 
 !begin_verbatim
 At   0øC : Vin+ = 1.387 V  Data = 197  R60=710 
@@ -1645,7 +1758,7 @@ LONG WRITE at $F0C00000   WRITE 1 to SDA
 !subnode DIMM SDRAM for CT60
 
 The CT60 supports the modern PC100/133 standard SDRAM DIMMs, and the 
-obsolet or uneeded are not accepted.
+obsolet/uneeded are not accepted.
 
 GOOD SDRAM DIMMs for CT60
 
@@ -1693,51 +1806,48 @@ not PC).
 REMARK :
 (!b)
 
-Don't confuse SDRAM banks (2 or 4) with DIMM banks (1= Single Size or 
+Don't confuse SDRAM banks (2 or 4) with physical banks (1= Single Size or 
 2 = Double Size) !
 
 (!B)
-CONCLUSION : 
+PERFORMANCES : 
 (!b)
 
-In general, PC shops furnish only Unbuffured 64-bits models, what you 
-need.
- 
-But the obsolet models may be in some old stocks !
+The better system performances is obtained with 16 KB page length DIMMs.
 
 
 !subnode 060 BURST with SDRAM
 
 The CT60 bus clock = the 060 clock (060 in 'Full Bus mode').
 
-The 060 uses LINE BURST to & from the system memory. SDRAM is well adapted 
-for a such processor !
+The 060 uses (!B) LINE BURST (!b) to & from the system memory. SDRAM is 
+well adapted for a such processor !
 
-A BURST LINE is a length of 4 LONG-WORDs (16 Bytes) that are transferred 
-with only : 
+A BURST LINE is a length of (!B) 4 LONG-WORDs (16 Bytes) (!b) that are 
+transferred with only : 
 
 (!B) PAGE HIT (!b) (access to a logical SDRAM page already open) :
 
 !begin_itemize
-!item 2,1,1,1 = 5 cycles for Burst Writes. Rate is 16Bytes/6cycles = 213 
-MBytes/s (Each access in the same page). 
-!item 4,1,1,1 = 7 cycles for Burst Reads. Rate is 16Bytes/8cycles  = 152 
-MBytes/s (Each access in the same page).
+!item 3,1,1,1 = 6 cycles for Burst Writes. Rate is 16 Bytes / 6 cycles = 
+178 MBytes/s (Each access in the same page). 
+!item 5,1,1,1 = 8 cycles for Burst Reads. Rate is 16 Bytes / 8 cycles  = 
+132 MBytes/s (Each access in the same page).
 !end_itemize
 
 (!B) PAGE MISS (!b) (access to a new logical SDRAM page (must be 
 precharged and open) : 
 
 !begin_itemize
-!item 7,1,1,1 = 10 cycles for Burst Writes. Rate is 16Bytes/10cycles = 107 
-MBytes/s (Each access in a new page).
-!item 9,1,1,1 = 12 cycles for Burst Reads. Rate is 16Bytes/12cycles  = 89 
-MBytes/s (Each access in a new page).
+!item 7,1,1,1 = 10 cycles for Burst Writes. Rate is 16 Bytes / 10 cycles = 
+107 MBytes/s (Each access in a new page).
+!item 9,1,1,1 = 12 cycles for Burst Reads. Rate is 16 Bytes / 12 cycles  = 
+89 MBytes/s (Each access in a new page).
 !end_itemize
 
 The CT60 uses the 060 at the top of the possible performances with the 
-mighty COPYBACK mode ! Instead of the WRITETROUGH mode like other TOS 
-machines !
+mighty (!B) COPYBACK (!b) mode ! Instead of the WRITETROUGH mode like 
+other TOS machines !
 
 (!B)
 Copyback mode is active for all SDRAM memory area.
@@ -1745,8 +1855,8 @@ Copyback mode is active for all SDRAM memory area.
 
 Copyback mode allows the 060 to write into the cache without writting into 
 the SDRAM, what is so more performant ! The cache lines are pushed into 
-SDRAM only when needed (060 needs place by example). With two 8Kbytes 
-caches, it gives to coders the possibility to do some incredibly speed 
+SDRAM only when needed (060 needs place by example). With (!B) two 8Kbytes 
+caches, (!b) it gives to coders the possibility to do some incredibly speed 
 routs residing at 100% into the caches !
 
 The 060 uses BURST transfers with SDRAM in 99% of the cases. Here are the 
@@ -1790,10 +1900,7 @@ Accesses that are not allocate in the data cache on a write miss :
 
 Cache Line pushes for lines containing a single dirty Long-word.
 
-Only with at least 2 processors (ie : 060 + PPC) that share common memory pages :
-!begin_itemize
-!item Write to WRITETHROUGH pages.
-!end_itemize
+Write to WRITETHROUGH pages (ST-RAM !).
 
 (!B)
 Remark :
@@ -1802,15 +1909,17 @@ Remark :
 For those of you who are a bit familiar with 64-bit processors like PPC, 
 don't forget that the syntax for data size is not the same : 
 
+(!B)
 With 32-Bit processors :
-
+(!b)
 !begin_itemize
 !item A WORD designates a 16-Bit entity.
 !item LONG-WORD designates a 32-Bit entity.
 !end_itemize
 
+(!B)
 With 64-Bit processors : 
-
+(!b)
 !begin_itemize
 !item A HALF-WORD designates a 16-Bit entity.
 !item A WORD designates a 32-Bit entity.
@@ -1852,21 +1961,23 @@ HBL    !! 2     !! Low    !! Auto     !! F030 VIDEL HSync !! 0,1,0 !!    v
 INT1   !! 1     !! High   !! Software !! F030 Bus Slot    !! 0,0,1 !! Lowest
 !hline
 !end_table
- 
-INT1 & INT3 are High active !
+
+(!B) 
+INT1 & INT3 are NO MORE SUPPORTED with CT60 !
+(!b)
 
 INT6 is also named MFPINT on atari documents because it is daisy chained 
 with the MFP. 
 
 To allow the PPC to read the level of the falcon re-routed interrupts, the 
-CT60 furnishes a register called IVR (Interrupt Vector Register). The IVR 
-column gives you the binary values encoded by the SDR60 chip...
+CT60 furnishes a register called (B!) IVR (Interrupt Vector Register). (!b)
+The IVR column gives you the binary values encoded by the SDR60 chip...
 
 Note that the INT6, MFPINT and DSPREQ Interrupts are chained on the level 
 6 line... (its a stock Falcon feature !). 
 
 It is planned that the PPC board will contain a mechanism register to 
-generate a 68K like INT ACK cycle and  receive the software Vector from 
+generate a '68K like' INT ACK cycle and receive the software Vector from 
 the Falcon data bus. On CT60, the IVR contains only the level of the 
 pending INT...
 
@@ -1991,8 +2102,8 @@ This interrupt is compatible with the PowerPC INT...
  22 ts                             94 d11                           
  23 bg0                            95 d10                           
  24 tt1                            96 d9                            
- 25 exp/                           97 d8                            
- 26 TEST ABE                       98 d7
+ 25 exp/  - TEST ABE               97 d8                            
+ 26 exp2/ - TEST ABE               98 d7
  27 tm2                            99 GND                           
  28 as                             100 d6                            
  29 GND                            101 d5                            
@@ -2141,7 +2252,9 @@ CTRL-SHIFL:    Boot sans arbre PMMU comme un 68060 EC si appuy‚ avant le
                logo Atari.
 SHIFTL-SHIFTR: Boot sans SDRAM si appuy‚ avant le logo Atari.
 SHIFTL:        Affiche les informations sur le module SDRAM.
-CTRL-ALT-UNDO: Init NVM si appuy‚ avant l'init SDRAM et jusqu'au Reset.
+CTRL-ALT-UNDO: Init NVM et ParamŠtres en Flash si appuy‚ pendant le test 
+               m‚moire jusqu'au reset. Vous avez besoin de r‚gler le 
+               d‚lais au boot … 60 secondes avec le CPX de configuration.
 !end_verbatim
 
 
@@ -2159,7 +2272,7 @@ xavier.joubert@free.fr
 
 Flash Tool, Configuration, et systŠme :
 Didier MEQUIGNON
-didier.mequignon@wanadoo.fr
+aniplay@wanadoo.fr
 !end_verbatim
  
 !end_document

@@ -1,5 +1,5 @@
 /* Flashing hard CT60, JEDEC part
-*  Didier Mequignon 2003 February, e-mail: didier.mequignon@wanadoo.fr
+*  Didier Mequignon 2003 February, e-mail: aniplay@wanadoo.fr
 *  Based on sources Copyright (c) 2000 Stephen Williams (steve@icarus.com)
 *
 *  This program is free software; you can redistribute it and/or modify

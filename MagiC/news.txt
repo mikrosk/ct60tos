@@ -6,4 +6,4 @@ clock used at 32 MHz) and a new FPU patch (FPU context bug with the
 5.13 but this version is not tested. 
 
 For more information:
-didier.mequignon@wanadoo.fr
+aniplay@wanadoo.fr

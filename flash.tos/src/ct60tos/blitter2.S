@@ -1,5 +1,5 @@
 /* TOS 4.04 Blitter patch for the CT60 board
-*  Didier Mequignon 2002 December, e-mail: didier.mequignon@wanadoo.fr
+*  Didier Mequignon 2002 December, e-mail: aniplay@wanadoo.fr
 *
 *  This library is free software; you can redistribute it and/or
 *  modify it under the terms of the GNU Lesser General Public
@@ -125,6 +125,8 @@ cf3:
 	move.l phystop,A2
 	clr.l flag_cache(A2)
 	clr.l save_hz_200(A2)
+	clr.l flag_statvec(A2)
+	clr.l power_flag(A2)
 	lea adr_fonts(A2),A2
 	lea 0xE4AFEC,A0
 	move.l D1,A1

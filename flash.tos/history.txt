@@ -101,3 +101,17 @@ test of the SDRAM 72 bits.
 2003-11-08 0.99f
 ----------------
 - More infos displaed about the SDRAM module.
+
+2003-11-23 0.99g
+----------------
+- Flash parameters init added to the NVRAM init with the CTRL-ALT-UNDO 
+keys during the memory test.
+
+2004-02-29 1.00
+---------------
+- Add CT60_CPU_FPU parameter in flash, if the the bit 0 is to 0, the 
+FPU is disabled (files cookies.S and vector2.S).
+- Add keyboard test, if an Eiffel card is found (version >= 1.0.4), 
+you can see the version (files xbios.S, xbios2.S and sdram.S).
+- PAGE UP/DOWN, END, PRINT SCREEN, POWER, and VOLUME UP/DOWN keys
+tested for Eiffel card (files xbios.S, xbios2.S, aes.S and aes2.S). 
