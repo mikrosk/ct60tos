@@ -2,7 +2,7 @@
 ;CT60 XBIOS
 
 	.import ct60_read_temp,ct60_stop,ct60_rw_param
-	.export det_xbios,det_xbios_030
+	.export det_xbios,det_xbios_030,inter_io3_mfp
 
 TEST equ 0
 
@@ -19,6 +19,9 @@ ct60_read_core_temperature_bis equ $c6a
 ct60_rw_parameter_bis equ $c6b
 ct60_cache_bis equ $c6c
 ct60_flush_cache_bis equ $c6d
+
+_hz_200 equ $4BA
+cookie equ 0x5A0
 
 	dc.l "XBRA"
 	dc.l "CT60"
@@ -213,6 +216,46 @@ det_xbios_030:
 	rte
 .1:	move.l det_xbios_030-4,-(SP)
 	rts	
+
+	dc.l "XBRA"
+	dc.l "CT60"
+	dc.l 0
+	
+inter_io3_mfp:
+
+	movem.l D0/A0,-(SP)
+	addq.w #1,count_io3_mfp
+	move.l _hz_200,D0
+	sub.l start_hz_200,D0
+	cmp.l #1000,D0              ; 5 S
+	bcs.s .end_inter
+	move.l _hz_200,start_hz_200
+	move.l cookie,D0
+	beq.s .end_inter
+	move.l D0,A0
+.loop_cookie:
+		tst.l (A0)
+		beq.s .end_inter
+		cmp.l #'CT60',(A0)
+		bne.s .next_cookie
+		move.l 4(A0),D0
+		beq.s .end_inter
+		move.l D0,A0
+		move.w count_io3_mfp,D0
+		mulu #6,D0                  ; tr/mn
+		move D0,6(A0)               ; speed_fan
+		clr.w count_io3_mfp
+		bra.s .end_inter
+.next_cookie:
+		addq.l #8,A0
+	bra.s .loop_cookie
+.end_inter:
+	movem.l (SP)+,D0/A0
+	bclr #3,$FFFFFA11           ; ISRB
+	rte
+	
+start_hz_200:	dc.l 0
+count_io3_mfp:	dc.w 0
 
 	if TEST	
 temp:	dc.l 25

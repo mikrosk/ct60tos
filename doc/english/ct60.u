@@ -4,7 +4,7 @@
 !title   Documentation of the
 !programimage ..\img\ct60.img
 !program CT60
-!version Version 0.99c
+!version Version 0.99d
 !date    (!today)
 !author  Didier MEQUIGNON
 !street  25, rue de l'Ascenseur
@@ -634,7 +634,15 @@ At this page you can see :
 !item The number of free bytes for the Fast-Ram.
 !item The number of millions instructions by second worked out by the 
 microprocessor (BogoMips).
+!item If necessary the speed of the fan or the pump (if watercooling) with 
+a 3 wires connector :
 !end_itemize
+!begin_verbatim
+                            1N4148
+     * Yellow ---<47 ohms>---|<|---> IO3 MFP pin 28
+     * Red    ---------------------> +12V CT60 FAN connector
+     * Black  --------------------->  GND CT60 FAN connector    
+!end_verbatim
 
 
 !subnode Boot
@@ -655,7 +663,8 @@ At this page you can :
 STRAM and the SDRAM).
 !item Change the speed of the blitter.
 !item Set the transfer of TOS 4.0x in RAM with using of the PMMU.
-!item Remove the caches during 5 seconds when a program is started under TOS.
+!item Under TOS, remove the caches during 5 seconds when a program is 
+started or remove the copyback alert box. 
 !end_itemize
 
 

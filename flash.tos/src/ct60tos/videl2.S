@@ -333,7 +333,7 @@ irq_vbl_measure:
 	btst #2,D2              // /2
 	bne.s .div_2_clock
 	btst #3,D2
-	bne.s .high_hht         // /1
+	bne.s .div_2_clock      // /1
 	add.w D1,D1             // /4
 .div_2_clock:
 	add.w D1,D1

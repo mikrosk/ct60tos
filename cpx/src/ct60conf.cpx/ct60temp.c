@@ -1,6 +1,6 @@
 	
 /* CT60 TEMPerature - Pure C */
-/* Didier MEQUIGNON - v0.99c - August 2003 */
+/* Didier MEQUIGNON - v0.99d - August 2003 */
 
 #include <portab.h>
 #include <tos.h>
@@ -187,7 +187,7 @@ int main(int argc,const char *argv[])
 	unsigned long daytime;
 	unsigned int time,trigger_temp,daystop,timestop;
 	int temp_id,app_id=-1,app_sid,app_stype,flag_cpuload,event,ret,end=0,count=0,count_mn=0,loops=1,stop,cpu_060,flag_msg=0;
-	unsigned long ticks,start_ticks,new_ticks,sum_ticks=0;
+	unsigned long ticks,run_ticks,start_ticks,new_ticks,sum_ticks=0;
 	long uptime,load,old_load=0,load_avg=0,load_avg_mn=0,delay=ITIME,avenrun[3]={0,0,0};
 	char *eiffel_temp;
 	char buffer[2];
@@ -328,7 +328,7 @@ int main(int argc,const char *argv[])
 	}
 	for(i=0;i<61;i++)
 		tab_temp[i]=tab_temp[i+61]=tab_cpuload[i]=0;
-	start_ticks=clock();
+	ticks=start_ticks=run_ticks=clock();
 	while(!end)
 	{
 		avenrun[0]=-1L;
@@ -374,7 +374,7 @@ int main(int argc,const char *argv[])
 				error_flag=1;
 			}
 		}
-		if(temp > MAX_TEMP-5)
+		if(temp>(MAX_TEMP-5) && ticks-run_ticks>=(5000UL/CLOCKS_PER_SEC))
 		{
 			bip();
 			if(!start_lang)
@@ -444,7 +444,7 @@ int main(int argc,const char *argv[])
 				 | (((unsigned short)(eiffel_temp[2]&1))<<15);
 			}
 			old_time=time;
-			if(temp > trigger_temp && temp <= MAX_TEMP)
+			if(temp > trigger_temp && temp <= MAX_TEMP  && ticks-run_ticks>=(5000UL/CLOCKS_PER_SEC))
 			{
 				bip();
 			 	if(!start_lang)
@@ -502,11 +502,11 @@ int main(int argc,const char *argv[])
 					}
 				 	if(!start_lang)
 						sprintf(mess_alert,
-						"[0][      CT60 TEMPERATURE       |V0.99c MEQUIGNON Didier 08/2003| |Temp.: %d øC     Seuil: %d øC |Lien avec processus %d %s][OK]",
+						"[0][      CT60 TEMPERATURE       |V0.99d MEQUIGNON Didier 08/2003| |Temp.: %d øC     Seuil: %d øC |Lien avec processus %d %s][OK]",
 						temp,trigger_temp,app_id,app_name);
 					else
 						sprintf(mess_alert,
-						"[0][      CT60 TEMPERATURE       |V0.99c MEQUIGNON Didier 08/2003| |Temp.: %d øC Threshold: %d øC |Link with process %d %s][OK]",
+						"[0][      CT60 TEMPERATURE       |V0.99d MEQUIGNON Didier 08/2003| |Temp.: %d øC Threshold: %d øC |Link with process %d %s][OK]",
 						temp,trigger_temp,app_id,app_name);
 					MT_form_xalert(1,mess_alert,ITIME*10L,0L,myglobal);
 					break;

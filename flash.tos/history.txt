@@ -76,3 +76,24 @@ VBL (files gemdos2.S and vectors2.S).
 screen of NVDI in 2 colors. work_out[4] (number of planes) from 
 vq_extnd() was to 0. Caches are removed during v_opnwk() (files 
 sdram.S and aes.S). Strange NVDI bug...
+
+2003-08-31 0.99d
+----------------
+- Add a warning about the SDRAM CAS Latency unsupported (file 
+sdram.S).
+- Add bit 1 inside the CT60_CACHE_DELAY parameter in flash for 
+remove the copyback alert (Fread test), if this bit is to 0 (file 
+gemdos2.S). 
+- Add fan speed measure with IO3 MFP interrupt (file sdram.S), 
+returned with the CT60 cookie. You need a 3 wires FAN (or pump if 
+watercooling) : 
+                       1N4148
+ * Yellow ---<47 ohms>---|<|---> IO3 MFP pin 28
+ * Red    ---------------------> +12V CT60 FAN connector
+ * Black  --------------------->  GND CT60 FAN connector    
+ 
+2003-10-22 0.99e
+----------------
+- SDRAM module data width 64 & 72 bits supported but there a message
+about data width error if there are a failure during the short memory 
+test of the SDRAM 72 bits (file sdram.S).

@@ -29,6 +29,7 @@
 
 #include "main.h"
 #include "ct60.h"
+#include "vars.h"
 
 // #define RESET // removed because not works with some motherboards/SDR60 versions
 #define XFRB_SIZE 0x10000
@@ -36,20 +37,6 @@
 
 #define rw_parameter 0xc60b
 	
-#define memctrl   0x424
-#define resvalid  0x426
-#define resvector 0x42A
-#define phystop   0x42E
-#define _memtop   0x436
-#define hdv_rw    0x476
-#define hdv_boot  0x47A
-#define _hz_200   0x4BA
-#define _dskbufp  0x4C6
-#define _sysbase  0x4F2
-#define cookie    0x5A0
-#define ramtop    0x5A4
-#define ramvalid  0x5A8
-
 #define SLAVE_ADRESS            0xA0 // 7 bits 1010xxx + r/w
 
 #define CT60_READ_ERROR         -1
@@ -265,6 +252,13 @@ init_sdram:
 	swap D0
 	link A6,#-6
 	clr.w -2(A6)
+             cmp.w #1000,D0
+             bcs.s .low_100
+             move.l D0,-(SP)
+             moveq #0x20,D0
+             bsr display_char
+             move.l (SP)+,D0
+.low_100:     
 	lea -6(A6),A0
 	moveq #4,D1
 	bsr conv_ascii_value
@@ -491,6 +485,13 @@ init_sdram:
 		add.l #0x2000,A0         // 8K step
 	cmp.l A1,A0
 	bcs.s .loop_sdram_test
+	moveq #18,D0             // CAS laytency
+	bsr read_i2c_sdram
+	bmi.s .test_ok           // error
+	btst #1,D0               // CAS latency = 2
+	bne.s .test_ok
+	lea message54(PC),A0
+	bsr display_string
  	bra.s .test_ok
  .error_test:
 	move.l A0,-(SP)
@@ -498,6 +499,22 @@ init_sdram:
 	bsr display_string
 	move.l (SP)+,D0
 	bsr hex_long
+	moveq #6,D0              // module data width
+	bsr read_i2c_sdram
+	bmi .error_sdram2        // error
+	cmp.w #0x40,D0           // 64
+	beq.s .data_width_ok
+	lea message55(PC),A0
+	bsr display_string
+	bra .error_sdram2
+.data_width_ok:
+	moveq #18,D0             // CAS laytency
+	bsr read_i2c_sdram
+	bmi .error_sdram2        // error
+	btst #1,D0               // CAS latency = 2
+	bne .error_sdram2
+	lea message54(PC),A0
+	bsr display_string
 	bra .error_sdram2
 .test_ok:
 	add.l #0x01000000,D5
@@ -529,7 +546,7 @@ init_sdram:
 
 display_infos_sdram:
 
-	movem.l D0/A0/A1,-(SP)
+	movem.l D0-D2/A0-A1,-(SP)
 	link A6,#-128
 	lea -128(A6),A0
 	bsr ct60_read_info_sdram
@@ -579,6 +596,10 @@ display_infos_sdram:
 	bsr display_string
 	move.b 17(A1),D0
 	bsr hex_byte
+	lea message53(PC),A0
+	bsr display_string
+	move.b 18(A1),D0
+	bsr hex_byte
 	lea message31(PC),A0
 	bsr display_string
 	move.b 27(A1),D0
@@ -609,9 +630,22 @@ display_infos_sdram:
 	bsr display_string
 	move.l 95(A1),D0
 	bsr hex_long
+//	lea -128(A6),A1
+//	moveq #7,D1
+//.loop_dump1:
+//		lea crlf(PC),A0
+//		bsr display_string_single		
+//		moveq #15,D2
+//.loop_dump2:
+//			move.b (A1)+,D0
+//			bsr hex_byte
+//			moveq #0x20,D0
+//			bsr display_char
+//		dbf D2,.loop_dump2
+//	dbf D1,.loop_dump1
 .error_eeprom_sdram:
 	unlk A6
-	movem.l (SP)+,D0/A0/A1
+	movem.l (SP)+,D0-D2/A0-A1
 	rts
 
 get_cookie:
@@ -703,13 +737,13 @@ message15:	.byte 27
 	.ascii "."
 	.byte ((VERSION/16) & 0xF) + 0x30
 	.byte (VERSION & 0xF) + 0x30
-	.asciz "c "
+	.asciz "e "
 message15b:	
-	.ascii "2003 August "
+	.ascii "2003 October "
 	.byte 27
 	.ascii "q"
 	.byte 13,10,0
-	.ascii "Aout 2003 "
+	.ascii "Octobre 2003 "
 	.byte 27
 	.ascii "q"
 	.byte 13,10,0
@@ -834,6 +868,14 @@ message51:	.byte 13,10
 	.asciz "            TOS copi‚ en SDRAM"
 message52:	.byte 13,10
 	.asciz "Reset"
+message53:	.byte 13,10
+	.asciz "Octet 18, CAS Latency : $" 
+	.byte 13,10
+	.asciz "Octet 18, CAS Latence : $"
+message54:	.asciz ", CAS Latency unsupported"
+	.asciz ", CAS Latence non support‚e"
+message55:	.asciz ", Data Width unsupported"
+	.asciz ", Largeur donn‚es non support‚e"
 
 boot_ide:	.byte 16,8,9,10,11,12,13,14,15,255
 boot_scsi:	.byte 8,9,10,11,12,13,14,15,16,255
@@ -933,17 +975,17 @@ boot_drive:
 	tst.b (A5,D4)
 	bpl .loop_drive
 .end_boot_drive:
-	cmp.l #0x31415926,resvalid
-	bne.s .no_resvector
-	tst.l resvector
-	beq.s .no_resvector
-	lea message52(PC),A0
-	bsr display_string_single
-	move.l resvector,A0
-	bsr display_xbra
-	lea crlf(PC),A0
-	bsr display_string_single
-.no_resvector:
+//	cmp.l #0x31415926,resvalid
+//	bne.s .no_resvector
+//	tst.l resvector
+//	beq.s .no_resvector
+//	lea message52(PC),A0
+//	bsr display_string_single
+//	move.l resvector,A0
+//	bsr display_xbra
+//	lea crlf(PC),A0
+//	bsr display_string_single
+//.no_resvector:
 	movem.l (SP)+,D0-D2/A0-A2/A5
 	rts
 	
@@ -1279,6 +1321,31 @@ add_sdram:
 .clear_data_ct60_cookie:
 		clr.l (A1)+
 	dbf D0,.clear_data_ct60_cookie
+	move.l phystop,A0
+	clr.w count_io3_mfp(A0)
+	move.l _hz_200,start_hz_200(A0)
+	pea.l inter_io3_mfp(PC)
+	move.w #67,-(SP)         // IO3 MFP
+	move.w #5,-(SP)          // Setexec
+	trap #13
+	addq.w #8,SP
+	move.w #3,-(SP)          // IO3 MFP
+	move.w #27,-(SP)         // Jenabint
+	trap #14
+	addq.w #4,SP
+	move.l _hz_200,D0
+	add.l #100,D0            // tempo 0.5 S
+.tempo_test_fan:
+		move.l _hz_200,D1
+		cmp.l D0,D1
+	blt.s .tempo_test_fan
+	move.l phystop,A0
+	cmp.w #5,count_io3_mfp(A0)
+	bcc.s .error_cookie_ct60
+	move.w #3,-(SP)          // IO3 MFP
+	move.w #26,-(SP)         // Jdisint
+	trap #14
+	addq.w #4,SP
 .error_cookie_ct60:	
 	moveq #3,D0
 	jsr 0x00E00BD2
@@ -1446,7 +1513,10 @@ ct60_configure_sdram:
 	bsr read_i2c_sdram
 	bmi .c1                  // error
 	cmp.w #0x40,D0
+	beq.s .c18               // 64
+	cmp.w #0x48,D0           // 72
 	bne.s .c11               // data width error
+.c18:
 	moveq #7,D0              // module data width
 	bsr read_i2c_sdram
 	bmi .c1                  // error
@@ -1724,7 +1794,7 @@ wait_26us:                            // 26uS (timer C) or 6,5uS (timer B)
 	cmp.b (A0),D0       
 	beq.s .wu1
 	rts
-	
+
 chip_density:                         // A23-A22 cdy2-1
 
 	dc.w 0xC,0x9,0x00,0      // 8Mx8b / 8Mx16b
@@ -1732,3 +1802,44 @@ chip_density:                         // A23-A22 cdy2-1
 	dc.w 0xD,0x9,0x80,0      // 16Mx16b
 	dc.w 0xD,0xA,0xC0,0      // 32Mx8b / 32Mx16b
 	dc.w 0,0,0,0             // end
+	
+	dc.l 0x58425241          // XBRA
+	dc.l 0x43543630          // CT60
+	dc.l 0
+	
+inter_io3_mfp:
+
+	movem.l D0/A0,-(SP)
+	move.l phystop,A0
+	addq.w #1,count_io3_mfp(A0)
+	move.l _hz_200,D0
+	sub.l start_hz_200(A0),D0
+	cmp.l #1000,D0           // 5 S
+	bcs.s .end_inter
+	move.l _hz_200,start_hz_200(A0)
+	move.l cookie,D0
+	beq.s .end_inter
+	move.l D0,A0
+.loop_cookie_inter:
+		tst.l (A0)
+		beq.s .end_inter
+		cmp.l #0x43543630,(A0)
+		bne.s .next_cookie_inter
+		move.l 4(A0),D0
+		beq.s .end_inter
+		move.l phystop,A0
+		move.w count_io3_mfp(A0),-(SP)
+		clr.w count_io3_mfp(A0)
+		move.l D0,A0
+		move.w (SP)+,D0
+		mulu #6,D0                  // tr/mn
+		move D0,6(A0)               // speed_fan
+		bra.s .end_inter
+.next_cookie_inter:
+		addq.l #8,A0
+	bra.s .loop_cookie_inter
+.end_inter:
+	movem.l (SP)+,D0/A0
+	bclr #3,0xFFFFFA11       // ISRB
+	rte
+	

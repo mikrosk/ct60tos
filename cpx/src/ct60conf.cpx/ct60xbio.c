@@ -38,6 +38,7 @@ int add_cookie(COOKIE *cook);
 extern void det_xbios(void);
 extern void det_xbios_030(void);
 extern void det_vdi(void);
+extern void inter_io3_mfp(void);
 
 int main(void)
 
@@ -53,7 +54,7 @@ int main(void)
 	}
 	Cconws("\r\n\n");
 	Cconout(27);
-	Cconws("p XBIOS CT60 v0.99b ");
+	Cconws("p XBIOS CT60 v0.99d ");
 	Cconout(27);
 	Cconws("q August 2003\r\n");
 #ifdef TEST_MAGICMAC
@@ -85,7 +86,7 @@ int main(void)
 	{
 		p=&cookie_ct60;
 		p->ident=ID_CT60;
-		p->v.l=(long)Mxalloc(sizeof(CT60_COOKIE),3);
+		p->v.l=(long)Mxalloc(sizeof(CT60_COOKIE),0x23);
 		ptr=(char *)p->v.l;
 		add_cookie(p);
 		if(ptr!=NULL)
@@ -93,6 +94,8 @@ int main(void)
 		if(get_cookie('MagX')==0)
 			*(((long *)(&det_vdi))-1L)=(long)Setexc(34,(void(*)())det_vdi);	/* TRAP #2 */
 		*(((long *)(&det_xbios))-1L)=(long)Setexc(46,(void(*)())det_xbios);	/* TRAP #14 */
+		*(((long *)(&inter_io3_mfp))-1L)=(long)Setexc(67,(void(*)())inter_io3_mfp);	/* IO3 MFP */
+		Jenabint(3);
 		Ptermres(32000,0);
 	}
 	return(0);

@@ -29,20 +29,7 @@
 	.globl	det_vdi
 	
 #include "main.h"
-
-#define phystop  0x42E
-#define _memtop  0x436
-#define _sysbase 0x4F2
-#define _cookie  0x5A0
-
-#define flag_cache  -48
-#define save_hz_200 -44
-#define save_source -40
-#define save_target -36
-#define save_contrl -32
-#define adr_source  -28
-#define adr_target  -24
-#define adr_fonts   -20
+#include "vars.h"
 
 get_font_6x6_a0:
 

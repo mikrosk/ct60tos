@@ -21,18 +21,11 @@
 	.globl det_vbl
 	
 #include "ct60.h"	
+#include "vars.h"
 
 #define DELAY_CACHE 1000   /* 5 Sec */
 
 #define rw_parameter 0xc60b
-
-#define flag_cache  -48
-#define save_hz_200 -44
-
-#define etv_critic 0x404
-#define phystop    0x42E
-#define _frclock   0x466	
-#define _hz_200    0x4BA
 	
 flush_cache_pexec:
 
@@ -204,19 +197,21 @@ end_fread:
 	addq.l #8,SP
 	cmp.l 28(SP),D0                                     // offset = size ?
 	bne .ef2
+	clr.l -(SP)
+	move.l #CT60_CACHE_DELAY,-(SP)
+	move.w #CT60_MODE_READ,-(SP)
+	move.w #rw_parameter,-(SP)
+	trap #14
+	lea 12(SP),SP
+	btst #1,D0
+	beq .ef2                                            // no Fread test
  	move.l etv_critic,A0                                // AES valid ?
  	cmp.l #0xE00000,A0
  	bcs.s .ef3
  	cmp.l #0xEFFFFF,A0
  	bhi.s .ef3
  	cmp.l #0xE3449C,A0
- 	beq.s .ef3
-//	move #7,-(SP)                                       // bell
-//	move #2,-(SP)
-//	move #3,-(SP)
-//	trap #13                                            // Bconout
-//	addq.w #6,SP
-	bra .ef2
+ 	bne .ef2
 .ef3:
 	move.l phystop,A0
 	cmp.l #0xCAFEFADE,flag_cache(A0)

@@ -1,5 +1,5 @@
 /* CT60 CONFiguration - Pure C */
-/* Didier MEQUIGNON - v0.99c - August 2003 */
+/* Didier MEQUIGNON - v0.99d - August 2003 */
 
 #include <portab.h>
 #include <tos.h>
@@ -340,7 +340,7 @@ char *rs_strings[] = {
 	"yyyyyyyyy octets","","",
 	"Fast-Ram libre:",
 	"zzzzzzzzz octets","","",
-	"ÊP:   0.00 Mips","","",
+	"ÊP:   0.00 Mips     0000 tr/mn","","",
 	" Langage ","","",
 	"Langage:",
 	"Franáais","","",
@@ -387,7 +387,7 @@ char *rs_strings[] = {
 	"OK",
 	"Annule",
 	
-	"CT60 Configuration V0.99c Aout 2003","","",
+	"CT60 Configuration V0.99d Aout 2003","","",
 	"Ce CPX et systäme:","","",
 	"Didier MEQUIGNON","","",
 	"didier-mequignon@wanadoo.fr","","",
@@ -436,7 +436,7 @@ char *rs_strings_en[] = {
 	"yyyyyyyyy bytes","","",
 	"Fast RAM free:",
 	"zzzzzzzzz bytes","","",
-	"ÊP:   0.00 Mips","","",
+	"ÊP:   0.00 Mips     0000 tr/mn","","",
 	" Language ","","",
 	"Language:",
 	"English","","",
@@ -483,7 +483,7 @@ char *rs_strings_en[] = {
 	"OK",
 	"Cancel",
 
-	"CT60 Configuration V0.99c August 2003","","",
+	"CT60 Configuration V0.99d August 2003","","",
 	"This CPX and system:","","",
 	"Didier MEQUIGNON","","",
 	"didier-mequignon@wanadoo.fr","","",
@@ -605,7 +605,7 @@ OBJECT rs_object[] = {
 	26,-1,-1,G_TEXT,FL3DBAK,NORMAL,10L,16,3,16,1,									/* free ST-Ram */
 	27,-1,-1,G_STRING,NONE,NORMAL,40L,1,4,15,1,
 	28,-1,-1,G_TEXT,FL3DBAK,NORMAL,11L,16,4,16,1,									/* free Fast-Ram */
-	19,-1,-1,G_TEXT,/* TOUCHEXIT| */ FL3DBAK,NORMAL,12L,1,5,15,1,					/* Mips */
+	19,-1,-1,G_TEXT,/* TOUCHEXIT| */ FL3DBAK,NORMAL,12L,1,5,30,1,					/* Mips & tr/mn */
 	30,-1,-1,G_TEXT,FL3DBAK,NORMAL,9L,1,2,14,1,
 	40,31,39,G_BOX,FL3DIND,NORMAL,0xff1100L,0,2,32,6,								/* language box */
 	32,-1,-1,G_STRING,NONE,NORMAL,50L,1,1,15,1,
@@ -899,8 +899,15 @@ char *spec_blitter_speed[2][2]={"Lent","Rapide","Slow","Fast"};
 char *blitter_speed[2][2]={"  Lent   ","  Rapide ","  Slow ","  Fast "};
 char *spec_tos_ram[2][2]={"Non","Oui","No","Yes"};
 char *tos_ram[2][2]={"  Non ","  Oui ","  No  ","  Yes "};
-char *spec_cache_delay[2][2]={"Normal","Cache 5","Normal","Cache 5"};
-char *cache_delay[2][2]={"  Cache normal       ","  Cache delais 5 sec ","  Normal cache      ","  Delay cache 5 sec "};
+char *spec_cache_delay[2][4]={"Normal","Cache 5","Alerte","Cache 5","Normal","Cache 5","Alert","Cache 5"};
+char *cache_delay[2][4]={"  Cache normal / Pas d'alerte copyback     ",
+                         "  Cache delais 5 S / Pas d'alerte copyback ",
+                         "  Cache normal / Alerte copyback           ",
+                         "  Cache delais 5 S / Alerte copyback       ",
+                         "  Normal cache / No copyback alert    ",
+                         "  Delay cache 5 S / No copyback alert ",
+                         "  Normal cache / Copyback alert       ",
+                         "  Delay cache 5 S / Copyback alert    "};
 char *spec_boot_order[2][2]={"SCSI->IDE","IDE->SCSI","SCSI->IDE","IDE->SCSI"};
 char *boot_order[2][2]={"  SCSI->IDE ","  IDE->SCSI ","  SCSI->IDE ","  IDE->SCSI "};
 char *spec_day_stop[2][11]={"Sans","Lundi","Mardi","Mercredi","Jeudi","Vendredi","Samedi","Dimanche","Jours ouvrÇs","Fin de semaine","Chaque jour",
@@ -1175,6 +1182,7 @@ int CDECL cpx_call(GRECT *work)
 	TEDINFO *t_edinfo;
 	long value,stack;
 	HEAD *header;
+	CT60_COOKIE *ct60_arg=NULL;
 	int ret;
 	register int i;
 #ifdef DEBUG
@@ -1266,7 +1274,11 @@ int CDECL cpx_call(GRECT *work)
 	sprintf(rs_object[MENUFASTRAMTOT].ob_spec.free_string,"%9ld",fast_ram);
 	rs_object[MENUFASTRAMTOT].ob_spec.free_string[9]=' ';
 	t_edinfo=rs_object[MENUMIPS].ob_spec.tedinfo;
-	sprintf(t_edinfo->te_ptext,"ÊP: %3lu.%02lu Mips",loops_per_sec/500000,(loops_per_sec/5000) % 100 );
+	if((*Xcpb->get_cookie)(ID_CT60,&(long)ct60_arg) && (ct60_arg!=NULL) && ct60_arg->speed_fan)
+		sprintf(t_edinfo->te_ptext,"ÊP: %3lu.%02lu Mips     %04u tr/mn",
+		loops_per_sec/500000,(loops_per_sec/5000) % 100,ct60_arg->speed_fan);
+	else
+		sprintf(t_edinfo->te_ptext,"ÊP: %3lu.%02lu Mips",loops_per_sec/500000,(loops_per_sec/5000) % 100);
 	language=0;
 	if(nvram.language<9)
 	{
@@ -1344,7 +1356,7 @@ int CDECL cpx_call(GRECT *work)
 	{
 		tosram=(int)ct60_rw_parameter(CT60_MODE_READ,CT60_PARAM_TOSRAM,0L)&1;
 		blitterspeed=(int)ct60_rw_parameter(CT60_MODE_READ,CT60_BLITTER_SPEED,0L)&1;
-		cachedelay=(int)ct60_rw_parameter(CT60_MODE_READ,CT60_CACHE_DELAY,0L)&1;
+		cachedelay=(int)ct60_rw_parameter(CT60_MODE_READ,CT60_CACHE_DELAY,0L)&3;
 		bootorder=(int)ct60_rw_parameter(CT60_MODE_READ,CT60_BOOT_ORDER,0L)&1;
 	}
 	else
@@ -1352,7 +1364,7 @@ int CDECL cpx_call(GRECT *work)
 		stack=Super(0L);
 		tosram=(int)ct60_rw_param(CT60_MODE_READ,CT60_PARAM_TOSRAM,0L)&1;
 		blitterspeed=(int)ct60_rw_param(CT60_MODE_READ,CT60_BLITTER_SPEED,0L)&1;
-		cachedelay=(int)ct60_rw_param(CT60_MODE_READ,CT60_CACHE_DELAY,0L)&1;
+		cachedelay=(int)ct60_rw_param(CT60_MODE_READ,CT60_CACHE_DELAY,0L)&3;
 		bootorder=(int)ct60_rw_param(CT60_MODE_READ,CT60_BOOT_ORDER,0L)&1;
 		Super((void *)stack);
 	}
@@ -1485,6 +1497,7 @@ void CDECL cpx_timer(int *event)
 {
 	register int i,j,ret,mn;
 	long value;
+	CT60_COOKIE *ct60_arg=NULL;
 	unsigned int time,new_trigger,new_timestop;
 	static unsigned int old_daystop=0;
 	register TEDINFO *t_edinfo;
@@ -1498,6 +1511,15 @@ void CDECL cpx_timer(int *event)
 		case PAGE_CPULOAD:
 			if(temp_id>=0)											/* average load */
 				send_ask_temp();		
+			break;
+		case PAGE_MEMORY:
+			if((*Xcpb->get_cookie)(ID_CT60,&(long)ct60_arg) && (ct60_arg!=NULL) && ct60_arg->speed_fan)
+			{
+				t_edinfo=rs_object[MENUMIPS].ob_spec.tedinfo;	
+				sprintf(t_edinfo->te_ptext,"ÊP: %3lu.%02lu Mips     %04u tr/mn",
+				loops_per_sec/500000,(loops_per_sec/5000) % 100,ct60_arg->speed_fan);
+				display_objc(MENUMIPS,Work);
+			}
 			break;
 		case PAGE_TEMP:
 		case -1:
@@ -1682,6 +1704,7 @@ void CDECL cpx_button(MRETS *mrets,int nclicks,int *event)
 	long value,stack,offset;
 	GRECT menu;
 	HEAD *header;
+	CT60_COOKIE *ct60_arg=NULL;
 	OBJECT *info_tree, *offset_tree;
 	header=(HEAD *)head->cpxhead.buffer;
 	if((objc_clic=objc_find(rs_object,0,MAX_DEPTH,mrets->x,mrets->y))>=0)
@@ -1808,7 +1831,11 @@ void CDECL cpx_button(MRETS *mrets,int nclicks,int *event)
 			case MENUMIPS:
 				loops_per_sec=bogomips();
 				t_edinfo=rs_object[MENUMIPS].ob_spec.tedinfo;
-				sprintf(t_edinfo->te_ptext,"ÊP: %3lu.%02lu Mips",loops_per_sec/500000,(loops_per_sec/5000) % 100 );
+				if((*Xcpb->get_cookie)(ID_CT60,&(long)ct60_arg) && (ct60_arg!=NULL) && ct60_arg->speed_fan)
+					sprintf(t_edinfo->te_ptext,"ÊP: %3lu.%02lu Mips     %04u tr/mn",
+					loops_per_sec/500000,(loops_per_sec/5000) % 100,ct60_arg->speed_fan);
+				else
+					sprintf(t_edinfo->te_ptext,"ÊP: %3lu.%02lu Mips",loops_per_sec/500000,(loops_per_sec/5000) % 100);
 				display_objc(MENUMIPS,Work);	
 				break;
 #ifndef LIGHT
@@ -2091,7 +2118,7 @@ void CDECL cpx_button(MRETS *mrets,int nclicks,int *event)
 				objc_offset(rs_object,MENUBCACHE,&menu.g_x,&menu.g_y);
 				menu.g_w=rs_object[MENUBCACHE].ob_width;
 				menu.g_h=rs_object[MENUBCACHE].ob_height;
-				ret=(*Xcpb->Popup)(cache_delay[start_lang],2,cachedelay,IBM,&menu,Work);
+				ret=(*Xcpb->Popup)(cache_delay[start_lang],4,cachedelay,IBM,&menu,Work);
 				if(ret>=0 && ret!=cachedelay)
 				{
 					t_edinfo=rs_object[MENUBCACHE].ob_spec.tedinfo;
