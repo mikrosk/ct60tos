@@ -1,7 +1,10 @@
-/* Read on the CT60, the 68060 temperature on the TLV0831 DC from Texas I.
-*  2,8 deg celcius / step 
+/* XBIOS CT60 functions
+*  - Read on the CT60, the 68060 temperature on the TLV0831 DC from Texas I.
+*    2,8 deg celcius / step 
+*  - Parameters in flash
+*  - Cache
 *
-*  Didier Mequignon 2001 December, e-mail: didier-mequignon@wanadoo.fr
+*  Didier Mequignon 2001-2003, e-mail: didier-mequignon@wanadoo.fr
 *
 *  This library is free software; you can redistribute it and/or
 *  modify it under the terms of the GNU Lesser General Public
@@ -82,9 +85,58 @@ xb2:
 	and.l #0xFFF00000,D0
 	cmp.l #0x00E00000,D0                                // TOS
 	beq xb1
-	moveq #0,D0
+	moveq #0,D0                                         // no blitter
 	rte
 xb10:
+	cmp.w #160,D0                                       // CacheCtrl MilanTOS
+	bne.s xb15
+	move.w 2(A0),D0                                     // OpCode
+	bne.s xb16
+	moveq #0,D0                                         // function is implemented
+	rte
+xb16:
+	cmp.w #1,D0                                         // flush data cache
+	bne.s xb17
+	cpusha DC
+	moveq #0,D0
+	rte	
+xb17:
+	cmp.w #2,D0                                         // flush instruction cache
+	bne.s xb18
+	cpusha IC
+	moveq #0,D0
+	rte
+xb18:
+	cmp.w #3,D0                                         // flush data and instruction caches
+	beq xb14
+	cmp.w #4,D0                                         // inquire data cache mode
+	bne.s xb19
+	movec.l CACR,D0
+	btst #31,D0
+	bra.s xb20
+xb19:
+	cmp.w #6,D0                                         // inquire instruction cache mode
+	bne.s xb21
+	movec.l CACR,D0
+	btst #15,D0
+xb20:
+	sne.b D0
+	and.w #1,D0
+	ext.l D0
+	rte
+xb21:
+	cmp.w #5,D0                                         // set data cache mode
+	beq.s xb22
+	cmp.w #7,D0                                         // set instruction cache mode
+	bne.s xb23
+xb22:	
+	tst.w 4(A0)                                         // mode
+	beq xb24                                            // disable
+	bra xb8                                             // enable
+xb23:
+	moveq #-5,D0                                        // error
+	rts
+xb15:	
 	cmp.w #read_core_temperature,D0
 	beq.s xb11
 	cmp.w #read_core_temperature_bis,D0
@@ -125,6 +177,7 @@ xb13:
 	move.w 2(A0),D0
 	bmi.s xb7
 	bne.s xb8
+xb24:
 	jsr 0xE0085A                                        // caches off
 	rte
 xb8:
@@ -140,6 +193,7 @@ xb9:
 	bne.s xb1
 xb14:
 	cpusha BC
+	moveq #0,D0
 	rte
 xb1:
 	move.l det_xbios-4,-(SP)

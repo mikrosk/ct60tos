@@ -557,7 +557,7 @@ message15:	.byte 27
 	.ascii "."
 	.byte ((VERSION/16) & 0xF) + 0x30
 	.byte (VERSION & 0xF) + 0x30
-	.ascii " 2003 May "
+	.ascii "b 2003 June "
 	.byte 27
 	.ascii "q"
 	.byte 13,10,10

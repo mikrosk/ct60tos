@@ -1,0 +1,77 @@
+Patchs file list
+================
+
+sdram.S
+-------
+The validation of the superscalar dispatcher on the 68060 (PCR).
+The initialization of the translation registers (on all 68060's 
+types), the first zone mapped to 0 at $7FFFFFFF in copyback excepted for 
+the zone mapped to 0 … $FFFFFF in writethrough, and the second zone mapped 
+to $80000000 at $FFFFFFFF in cache inhibed.
+The display of the 68060's type (revision, mask and frequency).
+The modification of PCR for the bugged types revision 1.
+The reading and the display of the SDRAM's type from his EEPROM. 
+The declaration of the SDRAM to the TOS.
+The initialization of the SDRAM, and the MB/s during writing 
+displayed.
+The fastram buffer created and this cookie '_FRB'.
+
+pmmu2.c
+-------
+The initialization of the PMMU tree (excepted for 68060 EC or LC), 
+and the possible creation of the 'PMMU' cookie. All the STRAM is in 
+writethrough and the SDRAM declaration in copyback.
+The possible copy of the TOS in SDRAM (excepted for 68060 EC or LC). 
+
+cookie.S
+--------                w
+The installation of the cookies '_CPU', '_FPU', 'CT60'.
+
+cache.S, pmmu.S, periph.S, movep.S, and movep2.S
+------------------------------------------------
+The patchs for cache, PMMU, adress in $00FFxxxx, and the 
+instructions movep replaced.
+
+debug.S, debug2.S
+-----------------
+The bombs inside exceptions displayed with texts in clear of a crash.
+
+vector.S, vectors2.S (fpsp.S, isp.S)
+------------------------------------
+The emulation of unimplemented instructions (integers and FPU).
+
+xbios.S, xbios2.S
+-----------------
+The XBIOS CT60 function $C60A to $C60D (temperature, parameters in 
+flash, cache...), and the DSP (functions with handshake). 
+
+blitter.S, blitter2.S
+---------------------
+The needful patchs for the blitter, the system fonts and the Atari 
+logo copied at the top of the STRAM (needed if the TOS in ROM is a 4.02).
+The blitter patchs of the VDI functions, vro_cpyfm, vr_trnfm, and
+vrt_cpyfm for work in SDRAM (an intermediate buffer inside STRAM is used).
+
+bios.S, bios2.S (conout.S)
+--------------------------
+The replacement of the XBIOS Bconout routine.
+
+videl.S, videl2.S (pic_boot.S)
+-------------------------------
+The picture in 65K colors displayed during 2 seconds.
+
+gemdos.S, gemdos2.S
+-------------------
+The patch for the Pexec function for the copyback (cpush after the 
+relocation).
+
+aes.S
+-----
+The AES patchs for change the Newdesk buffer of 4 KB to 32 KB.
+
+
+Note:
+=====
+xxxx2.S/c files are in the 2nd half of the flash $E8FFFF-$EFFFFF.
+
+ 

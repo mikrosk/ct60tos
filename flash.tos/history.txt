@@ -1,0 +1,16 @@
+2003-06-15 0.98 (no history and no version before)
+---------------
+- Boot version inside the TOS (file sdram.S).
+- CPU frequency displayed during boot (file sdram.S).
+- Bug fixed inside the blitter patch (file blitter2.S).
+- Add BUFSH patch (32KB max for newdesk.inf), thanks to Florent Lafabrie (file aes.S).
+
+2003-06-22 0.98a
+----------------
+- Add XBIOS(160) CacheCtrl MilanTOS (file xbios2.S).
+
+2003-06-27 0.98b
+----------------
+- Add test inside Pexec for start programs packed by Ice without 
+crashes (file gemdos2.S).
+

@@ -4,7 +4,7 @@
 !title   Documentation of the
 !programimage ..\img\ct60.img
 !program CT60
-!version Version 0.98
+!version Version 0.98b
 !date    (!today)
 !author  Didier MEQUIGNON
 !street  25, rue de l'Ascenseur
@@ -119,7 +119,7 @@ performances are clear :
 !begin_table [|l|l|l|l|l|l|] !hline
 PRODUCT        !! BUS      !! RAM   !! READ      !! WRITE     !! FACTOR
 !hline
-CT60           !! 66 MHz   !! SDRAM !! 74 MB/s   !! 69 MB/s   !! 16.2 - 12.5
+CT60           !! 66 MHz   !! SDRAM !! 73.8 MB/s !! 72.6 MB/s !! 16.2 - 13.2
 HADES60 FPM    !! 29,5 MHz !! FPM   !! 43.0 MB/s !! 33.5 MB/s !! 9.5 - 6.1
 HADES40 FPM    !! 32 MHz   !! FPM   !! 46.5 MB/s !! 36.2 MB/s !! 10.2 - 6.6
 MILAN40        !! 25 MHz   !! EDO   !! 35.7 MB/s !! 21.5 MB/s !! 7.8 - 3.9
@@ -329,103 +329,9 @@ not consumer PC).
  
 !node Fitting
 
-!subnode PLUG'N PLAY !
+The CT60 is PLUG'N PLAY !
 
-
-!subnode SDMA clock modification
-
-!image ..\img\buffer.img
-
-
-!subnode Boost F030
-
-(!B)
-By Rodolphe Czuba
-(!b)
-
-!subsubnode Pr‚paration de la carte mŠre (in french)
-
-Avec une pince coupante … bec trŠs fin ou une lame de cutter, coupez 
-et relevez l‚gŠrement les broches 3 et 4 de l'ACIA 68B50 U24 (… c“t‚ des 
-prises MIDI) et de l'ACIA clavier U52 (… gauche du connecteur clavier). 
-
-!image ..\img\acia.img
-!begin_verbatim
-
-!end_verbatim
-
-Localisez le DSP (U38) sous l'emplacement du lecteur de disquettes. Coupez 
-la piste allant du (gros) trou avant droit de l'emplacement U37 de 
-l'oscillateur 32 MHz au DSP (voir figure ci-dessous).
-
-!image ..\img\dsp.img
-!begin_verbatim
-
-!end_verbatim
-
-La coupure doit se faire le plus prŠs possible du trou et sur une longueur 
-d'au moins 1 mm. Puis grattez le vernis de la piste … droite de la coupure 
-sur 2 mm et ‚tamez.  
-
-Coupez, au ras de la carte mŠre, la broche gauche de L102 situ‚e … c“t‚ de la NVRAM. Tournez 
-la vers l'arriŠre (voir figure ci-dessous) et ‚tamez sa broche coup‚e. 
-
-!image ..\img\clock.img
-!begin_verbatim
-
-!end_verbatim
-
-
-!subsubnode Cƒble NAPPE (in french)
-
-Posez la nappe sur un morceau de carton dur (par exemple), et grƒce au 
-cutter, s‚parez les fils jusqu'au connecteur. Coupez ensuite les fils … la 
-longueur indiqu‚e. D‚nudez sur 2 mm sauf les fils ACIA sur 4 mm. Torsadez 
-et ‚tamez. 
-
-!image ..\img\x9.img
-!begin_verbatim
-
-!end_verbatim
-
-Il reste … souder les 6 fils de cette nappe en commen‡ant par le nø2 qui 
-est vers vous. Certains fils devront ˆtre fix‚s sur la carte mŠre avec des 
-morceaux d'adh‚sif. Prenez un soin particulier … avoir le moins de fils 
-qui se croisent au niveau  du connecteur, l'id‚al ‚tant que tous les fils 
-soient parallŠles entre eux.
-
-(!B)
-RESPECTEZ CES REGLES :
-(!b)
-
-!begin_itemize
-!item Ne faites jamais de boucle avec un fil en le passant par exemple 
-autour d'une patte d'un composant.
-!item Ne croisez pas les fils de la nappe … quelqu' endroit que ce soit.
-!item Disposez les fils le plus droit possible et maintenez la plus grande 
-distance possible entre chacun d'eux : chaque fil perturbe ses voisins et 
-subit ses voisins ! 
-!item Ne faites pas passer un fil sur un circuit int‚gr‚ : l'activit‚ 
-‚lectronique de ce dernier pertubera le signal du fil !
-!end_itemize
-
-Soudez : 
-!begin_itemize
-!item Le fil 2 (MCLK) sur la carte mŠre/broche gauche de l'ancien 
-emplacement de L102 (maintenant relev‚) et non pas sur la broche gauche de 
-L102 relev‚e ! Laisser le fil 1 (GND1) coll‚ … lui jusqu'… 1 cm de la fin.
-!item Le fil 4 (CLK32) sur la broche gauche relev‚e de L102. Laisser le 
-fil 3 (GND2) coll‚ … lui jusqu'… 1 cm de la fin. 
-!item Le fil 5 (AC_M) sur les broches 3 et 4 de l'ACIA MIDI (et non pas 
-sur la carte mŠre !). 
-!item Le fil 6 (AC_K) sur les broches 3 et 4 de l'ACIA CLAVIER (et non pas 
-sur la carte mŠre !). 
-!item Le fil 7 (DSP) sur la piste coup‚e menant au DSP. Laisser le fil 8 
-(GND3) coll‚ … lui jusqu'… 1 cm de la fin. 
-!item le fil 9 (SDMA) sur la connexion de la r‚sistance avec la piste 
-coup‚e allant au SDMA (figure). Laisser le fil 10 (GND4) coll‚ … lui 
-jusqu'… 1 cm de la fin. 
-!end_itemize
+Look at http://www.czuba-tech.com for informations.
 
 
 !node TOS in Flash
@@ -435,7 +341,7 @@ jusqu'… 1 cm de la fin.
 This is a TOS 4.04 patched, in this order there are :
 
 !begin_itemize
-!iten The validation of the superscalar dispatcher on the 68060 (PCR).
+!item The validation of the superscalar dispatcher on the 68060 (PCR).
 !item The initialization of the translation registers (on all 68060's 
 types), the first zone mapped to 0 at $7FFFFFFF in copyback excepted for 
 the zone mapped to 0 … $FFFFFF in writethrough, and the second zone mapped 
@@ -494,6 +400,14 @@ It's impossible to found difference between a 68060 LC and a 68060 EC,
 so for the moment a 68060 LC is used like an EC.
 
 
+!subnode SDRAM identification
+
+The TOS found the informations inside the EEPROM of the SDRAM for 
+configure the SDRAM controler (SDR60). If an error arrive (see the SDRAM 
+part for see the types who works) you need to press a key for see this 
+informations about the SDRAM.
+
+
 !subnode SDRAM test
 
 If the reading and the display of the SDRAM's type from his EEPROM is good
@@ -515,6 +429,10 @@ PMMU tree in SDRAM (like a 68060 EC).
 after the TT-RAM test (the SDRAM here), if the 'X' characters replaces 
 the '-' characters, the SDRAM is defective.  
 !end_itemize
+
+For see informations about the SDRAM :
+
+During boot the Atari logo is displayed, press the right SHIFT key. 
 
 
 !node Flash Tool
@@ -800,7 +718,7 @@ At this page you can :
 
 !begin_itemize
 !item Select at boot the monitor type.
-!item Select at boot the display's mode : NTSC = 50 Hz, PAL = 60 Hz. 
+!item Select at boot the display's mode : NTSC = 60 Hz, PAL = 50 Hz. 
 !item Select at boot the numbers of colors.
 !item Select at boot the screen resolution.
 !item Select at boot the ST compatibility mode.
@@ -911,6 +829,14 @@ For example you must remove TT-ram flags of METAXBS.PRG (Metados)
 because when the OVL modules are loaded there are no flush after 
 relocation, it's not compatible with the SDRAM and the CPU cache in 
 copyback. 
+
+
+!subnode Programs packed by Ice.
+
+The TOS test the programs packed by Ice, there are a patch for flush 
+caches (inside the Pexec function). Without this patch, programs packed by 
+Ice crashes with the copyback cache (SDRAM). This problem is not solved 
+under MagiC or MiNT.
 
 
 !node Compatibility
@@ -2170,20 +2096,20 @@ Connector F030 BOOST X9
 !begin_table [|c|l|l|] !hline
 Pin Card !! Signal !! Comment
 !hline
-   1     !! MCLK   !! Master Clock (output) 
-   2     !! GND1   !! Ground (0V)
-   3     !! CLK32  !! Clock 32MHz (input)
-   4     !! GND2   !! Ground (0V)
-   5     !! AC_K   !! Clock 500Khz Keyboard (output)
-   6     !! AC_M   !! Clock 500Khz Midi (output)
-   7     !! GND3   !! Ground (0V)
-   8     !! DCLK   !! DSP Clock (output)
-   9     !! GND4   !! Ground (0V)
-   10    !! DTKCMB !! Dtack Combel (input)
+   1     !! GND1   !! Ground (0V)
+   2     !! MCLK   !! Master Clock CT60 (output) to L102 motherboard
+   3     !! GND2   !! Ground (0V)
+   4     !! CLK32  !! Clock 32MHz (input) to L102 pin removed
+   5     !! AC_K   !! Clock 500Khz Keyboard (output) to ACIA U52 pins 3/4
+   6     !! AC_M   !! Clock 500Khz Midi (output) to ACIA U24 pins 3/4
+   7     !! DCLK   !! DSP Clock (output) to DSP U38 pin 74
+   8     !! GND3   !! Ground (0V)
+   9     !! DTKCMB !! Dtack Combel (input) to GAL U63 pin 8
+   10    !! GND4   !! Ground (0V) not used
 !hline
 !end_table
-
-The even pins and the odd pins are inverted on the flat cable !
+!image ..\img\dsp.img
+!image ..\img\clock.img
 
 
 !node Contacts

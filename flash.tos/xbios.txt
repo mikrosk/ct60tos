@@ -1,0 +1,177 @@
+*************************************************************************
+ CT60 XBIOS functions v0.98a
+*************************************************************************
+XBIOS Functions list:
+
+ct60_read_core_temperature() XBIOS function 0xc60a.
+ct60_rw_parameter()          XBIOS Function 0xc60b.
+ct60_cache()                 XBIOS Function 0xc60c.
+ct60_flush_cache()           XBIOS Function 0xc60d.
+CacheCtrl()                  XBIOS Function 160.
+
+*************************************************************************
+				ct60_read_core_temperature    
+*************************************************************************
+
+  Opcode:
+       XBIOS 0xc60a
+
+  Syntax:
+       long ct60_read_core_temperature(short type_deg);
+
+  Description:
+          Read the 68060 temperature.
+
+  type_deg:
+          CT60_CELCIUS 0
+          CT60_FARENHEIT 1  
+  
+  Binding:
+          move.w  type_deg,-(sp)
+          move.w  #$c60a,-(sp)
+          trap    #14
+          addq.l  #4,sp
+          
+  Return: The value or ERROR (-1) if there are a read error.
+
+*************************************************************************
+				ct60_rw_parameter
+*************************************************************************
+
+  Opcode:
+       XBIOS 0xc60b
+
+  Syntax:
+       long ct60_rw_parameter(short mode,long type_param,long value);
+
+  Description:
+          Read or change a parameter inside the flash eprom.
+          The fonction returns the value.
+          
+  mode:
+          CT60_MODE_READ 0
+          The value is read.
+          
+          CT60_MODE_WRITE 1
+          The value is write.
+
+  type_param:
+          CT60_PARAM_TOSRAM 0
+          If the value is set to 1, the TOS is copied inside the 
+          SDRAM during boot (PMMU used and cookie PMMU created).
+          If the value is set to 0, the TOS in flash eprom is used. 
+          
+          CT60_BLITTER_SPEED 1
+          If the value is set to 0, the blitter runs a 8/10 MHz.
+          If the value is set to 1, the blitter runs a 16/20 MHz.          
+
+          CT60_PARAM_OFFSET_TLV 10
+          Value contains a signed offset in points. A point is equal 
+          to 2.8 øC. 
+
+  Binding:
+          move.l  value,-(sp)
+          move.l  type_param,-(sp)
+          move.w  mode,-(sp)
+          move.w  #$c60b,-(sp)
+          trap    #14
+          lea     12(sp),sp
+
+  Return: The value or return :
+          EBADRQ (-5) if the parameter is >=15. 
+          EWRITF (-10) for a write fault.
+          EUNDEV (-15) if the flash device is not found.
+
+*************************************************************************
+				ct60_cache
+*************************************************************************
+
+  Opcode:   
+       XBIOS 0xc60c
+
+ Syntax:
+       long ct60_cache(short cache_mode);
+
+  Description:
+          This function is used to set or remove the 68060 caches 
+          inside the patched version of General.cpx.
+          
+  cache_mode:
+          1 set the caches to on.
+          0 remove the caches.
+          -1 without change.
+
+  Binding:
+          move.w  cache_mode,-(sp)
+          move.w  #$c60c,-(sp)
+          trap    #14
+          addq.l  #4,sp
+
+  Return: Returns CACR.
+  
+  Note: Please use the CacheCtrl() function.
+
+*************************************************************************
+				ct60_flush_cache
+*************************************************************************
+
+  Opcode:
+       XBIOS 0xc60d
+
+  Syntax:
+       long ct60_flush_cache(void);
+
+  Description:
+          This function is used to flush the instruction and data 
+          caches inside the patched version of Xcontrol.
+
+  Binding:
+          move.w  #$c60d,-(sp)
+          trap    #14
+          addq.l  #2,sp
+
+  Return: ct60_flush_cache return E_OK (0).
+
+  Note: Please use the CacheCtrl() function.
+
+*************************************************************************
+				CacheCtrl
+*************************************************************************
+
+  Opcode:
+       XBIOS 160
+
+  Syntax:
+       long CacheCtrl(short OpCode,short Param);
+
+  Description:
+          This function is compatible with the MilanTOS.
+
+  OpCode:
+          OpCode  Param 
+            0      -    return 0 to check that function is implemented.
+            1      -    Flush Data Cache.
+            2      -    Flush Instruction Cache.
+            3      -    Flush Data and Instruction Cache.
+            4      -    Inquire data cache mode.
+            5     mode  Set data cache mode, invalidate/flush caches. 
+            6      -    Inquire instruction cache mode.
+            7     mode  Set instruction cache mode, invalidate/flush caches.
+          with mode : 0 = disable / 1 = enable.
+
+  Binding:
+          move.w  Param,-(sp)
+          move.w  OpCode,-(sp)
+          move.w  #160,-(sp)
+          trap    #14
+          addq.l  #6,sp
+
+  Return: Inquire value, E_OK (0) or BADRQ (-5) if the OpCode is > 7.
+
+  Note: Under the CT60 XBIOS, OpCode 5/7 has the same effect :
+        mode : 0 = disable all caches.
+               1 = enable all caches.
+        All caches ares : Data Cache, Store Buffer, Branch Cache, 
+        Instruction Cache.
+
+*************************************************************************
