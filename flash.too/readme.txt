@@ -9,7 +9,10 @@ port, look inside CT60.HYP for the schema.
 proper verification. Only SDR60 can be programmed (or verified) when 
 the CT60 is connected to the mother board in normal 030 mode (if you 
 use the same machine CT60/F030 ;-) ). If you update the ABE60 chip you 
-need to remove the CT60 from the bus. 
+need to remove the CT60 from the bus excepted if there are a 1Kohms 
+resistor between GND (Ground) and the pin #1 of one of the three 
+74LVC245 chips. In this case the blitter must not be used (NVDI 
+installed). 
 - If you load the good jedec files, another button appears 'verify'. 
 You can use this button for compare the jedec file with the chip. The 
 'program' button erase, program, and verify his flash. 

@@ -4,7 +4,7 @@
 !title   Documentation of the
 !programimage ..\img\ct60.img
 !program CT60
-!version Version 0.98d
+!version Version 0.98e
 !date    (!today)
 !author  Didier MEQUIGNON
 !street  25, rue de l'Ascenseur
@@ -245,7 +245,7 @@ machine is OFF but stills connected to AC power.
 The 030 allows you to launch the old software that cannot run on the 060 
 and to copy/patch the TOS in the CT60 Flash. 
 
-The PMMU and DSP routs patchs are necessary, by exemple.
+The PMMU and DSP routs patchs are necessary, by example.
 
 The Flash can be accessed by the 030 and by the 060 and will allow all 
 developers to modify and personalize their machine as they want. 
@@ -466,7 +466,9 @@ port, look at 'JTAG/parallel download cable'.
 proper verification. Only SDR60 can be programmed (or verified) when 
 the CT60 is connected to the mother board in normal 030 mode (if you 
 use the same machine CT60/F030 ;-) ). If you update the ABE60 chip you 
-need to remove the CT60 from the bus. 
+need to remove the CT60 from the bus excepted if there are a 1Kohms 
+resistor between GND (Ground) and the pin #1 of one of the three 74LVC245 
+chips. In this case the blitter must not be used (NVDI installed). 
 
 !item If you load the good jedec files, another button appears 'verify'. 
 You can use this button for compare the jedec file with the chip. The 

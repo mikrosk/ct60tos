@@ -143,7 +143,7 @@ long size_tos=0;
 int jedec_only=0;
 int soft_hard=SOFT;
 int device=NO_DEVICE;
-unsigned long usercode_jed=0;
+unsigned long usercode_jed=0,flash_device=0;
 OBJECT *Resource;
 OBJECT *Icone;
 GRECT shrink;
@@ -291,9 +291,35 @@ void main(int argc, char **argv)
 
 int Alert(int name)
 {	
-	char *addr;
+	char *addr,*p;
+	int i;
+	char c;
 	if(rsrc_gaddr(R_STRING,name,&addr))
-		return form_alert(1,addr);
+	{
+		if(name==ALERT_DEVICE)
+		{
+			p=addr;
+			while(*p)
+			{
+				if(p[0]=='(' && p[1]=='$')
+				{
+					p+=2;
+					for(i=7;i>=0;i--,p++)
+					{
+						c=(char)((flash_device>>(i<<2))&0xF);
+						if(c<10)
+							c+='0';
+						else
+							c+=('A'-10);
+						*p = c;
+					}
+					break;
+				}
+				p++;
+			}
+		}
+		return(form_alert(1,addr));
+	}
 	return NOALERT;
 }
 
@@ -541,7 +567,7 @@ int Button(int code)
 								default: i=-1; break;
 							}
 							if(i>=0)
-								Alert(i);
+								Alert(i);	
 							break;
 						}
 						aff_leds((int)((offset*16L)/(long)(FLASH_SIZE-PARAM_SIZE)));
@@ -1225,7 +1251,7 @@ void load_file(char *path_argv)
 					{
 						for(i=7;i>=0;i--)
 						{
-							c=(char)(usercode_jed>>(i<<2));
+							c=(char)((usercode_jed>>(i<<2))&0xF);
 							if(c<10)
 								c+='0';
 							else

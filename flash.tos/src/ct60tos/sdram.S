@@ -663,7 +663,7 @@ message15:	.byte 27
 	.ascii "."
 	.byte ((VERSION/16) & 0xF) + 0x30
 	.byte (VERSION & 0xF) + 0x30
-	.ascii "d 2003 July "
+	.ascii "e 2003 July "
 	.byte 27
 	.ascii "q"
 	.byte 13,10,10

@@ -41,6 +41,7 @@ CMD_READ equ $F0
 	.export get_date_flash
 	.export get_version_flash
 	.export program_flash
+	.import flash_device
 
 get_date_flash:
 
@@ -150,6 +151,7 @@ program_flash: ; D0.L: offset, D1.L: total size, A0: source, D2: lock_interrupts
 	move.l A5,8
 	move.l A6,SP
 	move.w (SP)+,SR
+	move.l D0,flash_device
 	lea.l devices(PC),A3
 .loop_dev:
 		tst.l (A3)

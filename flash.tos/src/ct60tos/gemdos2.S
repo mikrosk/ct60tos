@@ -81,12 +81,12 @@ det_gemdos:
 .gd2:
 	cmp.w #0x3F,(A0)                                    // Fread function
 	bne.s .gd1
-             move.l 8(A0),-(SP)                                  // buffer
-             move.l 4(A0),-(SP)                                  // size
-             move.l (A0),-(SP)                                   // function, handle
-             clr.w -(SP)                                         // format
-             pea.l end_fread(PC)                                 // return
-             move.w SR,-(SP)
+	move.l 8(A0),-(SP)                                  // buffer
+	move.l 4(A0),-(SP)                                  // size
+	move.l (A0),-(SP)                                   // function, handle
+	clr.w -(SP)                                         // format
+	pea.l end_fread(PC)                                 // return
+	move.w SR,-(SP)
 .gd1:
 	move.l det_gemdos-4,-(SP)
 	rts
@@ -106,29 +106,36 @@ det_vbl:
  	cmp.l #0xE3449C,A0
  	beq.s .vb2
 	move.l phystop,A0
-             clr.l save_hz_200(A0)
-             bra.s .vb1
+	cmp.l #-1,save_hz_200(A0)
+	beq.s .vb1
+	clr.l save_hz_200(A0)
+	bra.s .vb1
 .vb2:	
 	move.l phystop,A0
-             tst.l save_hz_200(A0)
-             bne.s .vb1
-             move.l _hz_200,save_hz_200(A0)    
+	tst.l save_hz_200(A0)
+	bne.s .vb1
+	move.l _hz_200,save_hz_200(A0)    
 .vb1:
 	move.l (SP)+,A0
 	move.l det_vbl-4,-(SP)
 	rts
 
 alert_copyback_en:
-	.asciz "[1][WARNING !|This program seems|not like copyback cache| |Try without cache ?][Yes|No]" 
+	.asciz "[1][WARNING !|This program seems|not like copyback cache| |Try without cache ?][Yes|No|Ignore]" 
 
 alert_copyback_fr:
-	.asciz "[1][ATTENTION !|Ce programme semble ne pas|aimer le cache en copyback| |Essayer sans le cache ?][Oui|Non]" 
+	.asciz "[1][ATTENTION !|Ce programme semble ne pas|aimer le cache en copyback| |Essayer sans le cache ?][Oui|Non|Ignore]" 
 	
 	.align 2	
 
 end_fread:
 	tst.l D0
 	bmi .ef1                                            // error
+ 	cmp.l #0xE00000,14(SP)                              // return = TOS call
+ 	bcs .ef7
+ 	cmp.l #0xEFFFFF,14(SP)
+ 	bls .ef1
+.ef7:
 	movem.l D0-D2/A0-A2,-(SP)
 	movec.l CACR,D0
 	cmp.l #0xA0808000,D0
@@ -158,16 +165,16 @@ end_fread:
  	bhi.s .ef3
  	cmp.l #0xE3449C,A0
  	beq.s .ef3
-	move.l phystop,A0
-             clr.l save_hz_200(A0)
 //	move #7,-(SP)                                       // bell
 //	move #2,-(SP)
 //	move #3,-(SP)
 //	trap #13                                            // Bconout
 //	addq.w #6,SP
-	bra.s .ef2
+	bra .ef2
 .ef3:
 	move.l phystop,A0
+	cmp.l #-1,save_hz_200(A0)
+	beq.s .ef2
 	move.l _hz_200,D0
 	sub.l save_hz_200(A0),D0
 	cmp.l #2000,D0                                      // 10 S for load CPX
@@ -197,13 +204,18 @@ end_fread:
 	jsr 0xE0085A                                        // caches off
 	bra.s .ef2
 .ef5:
-	cmp.w #2,D0                                         // no
-	bne.s .ef2
 	move.l phystop,A0
-             clr.l save_hz_200(A0)
+	cmp.w #2,D0                                         // no
+	bne.s .ef6
+	clr.l save_hz_200(A0)
+	bra.s .ef2
+.ef6:
+	cmp.w #3,D0
+	bne.s .ef2
+	move.l #-1,save_hz_200(A0)
 .ef2:
 	movem.l (SP)+,D0-D2/A0-A2
 .ef1:
-             lea.l 12(SP),SP
-             rte
-             
+	lea.l 12(SP),SP
+	rte
+ 

@@ -21,7 +21,7 @@
 #include "main.h"
 #include "ct60.h"
 
-//#define FIRST_PAGE_SDRAM
+// #define FIRST_PAGE_SDRAM
 
 #define phystop 0x42E
 #define cookie  0x5A0

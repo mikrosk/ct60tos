@@ -30,3 +30,8 @@ RAM size (128, 256 and 512 broken before, files pmmu.S & sdram.S).
 - Add a patch for a copyback alert inside Fread if the data start by 
 0x601A (files gemdos.S & gemdos2.S). 
 
+2003-07-14 0.98e
+----------------
+- Add a TOS call test for the copyback alert and a 3rd button 
+'ignore' (file gemdos2.S). 
+

@@ -11,7 +11,9 @@ CT60) pour une propre verification. Seulement le composant SDR60 peut
 ˆtre programm‚ (ou verifi‚) quand la CT60 est connect‚e … la carte 
 mŠre en mode normal 030 (si vous utilisez la mˆme machine CT60/F030 
 ;-) ). Si vous mettez … jour le composant ABE60, vous devez enlever la 
-CT60 du bus. 
+CT60 du bus except‚ s'il y a une r‚sistance de 1Kohms entre le GND et 
+l'une des 3 pins #1 des 74LVC245. Dans ce cas il faut que le blitter 
+ne soit pas utilis‚ (NVDI install‚). 
 - Si vous chargez les bons fichiers jedec, un autre bouton apparait 
 'verify'. Vous pouvez utiliser ce bouton pour comparer le fichier 
 jedec avec le composant. Le bouton 'program' efface, programme, et 
