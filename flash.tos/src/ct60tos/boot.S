@@ -1,5 +1,5 @@
 /* TOS 4.04 Boot order patch for the CT60 board
-*  Didier Mequignon 2003 July, e-mail: aniplay@wanadoo.fr
+*  Didier Mequignon 2003-2004, e-mail: aniplay@wanadoo.fr
 *
 *  This library is free software; you can redistribute it and/or
 *  modify it under the terms of the GNU Lesser General Public
@@ -35,5 +35,12 @@ end1:
 begin2:
 	jmp	boot_drive
 end2:
+
+	.align	2
+	.long	0x17EA
+	.long	end3-begin3
+begin3:
+	.short	0x11
+end3:
 
 

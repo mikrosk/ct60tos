@@ -154,3 +154,19 @@ sdram.S).
 - Add flash AMD AM29F800BB support for new CT60 (file xbios2.S).
 - Malloc in STRAM for ataboot (file ataboot.S), kernel 2.2.25 works 
 now without -s option (2.4.25 need -s).
+
+2001-09-21 1.02
+---------------
+- New boot features (files sdram.S and boot.S):
+ * Add identify device procedure for SCSI and IDE drives, the boot wait 
+   if a removable drive is not ready.
+ * Add IDE slave support (device 17).
+ * Add CompactFlash support.
+ * Add combined MSDOS/TOS root and partition support, this feature 
+   support byte swapping needed by MSDOS format and search a *.SYS for 
+   load the disk driver.
+ * Add speed test for bootables devices.   
+- Check and fix modecode get from NVM (file videl2.S).
+- Removed Eiffel END key because it's already used by F12 (SHIFT-F2),
+and add status Eiffel POWER key 0xF6 0x05 0x00 0x00 0x00 0x73 because 
+it's already used by the TOS (CTRL <-) (files xbios2.S).

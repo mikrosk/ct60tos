@@ -1,5 +1,5 @@
 /* CT60 CONFiguration - Pure C */
-/* Didier MEQUIGNON - v1.00 - February 2004 */
+/* Didier MEQUIGNON - v1.02 - August 2004 */
 
 #include <portab.h>
 #include <tos.h>
@@ -351,8 +351,8 @@ char *rs_strings[] = {
 	" TempÇrature ","","",
 	"T¯ 60:",
 	"xxx ¯C","","",
-	"12","Seuil: __","99",
-	"00:00 00:10 00:20 00:30 00:40 00:50 01:00","","",
+	"yy","Seuil: __","99",
+	"00:00 00:10 00:20 00:30 00:40 00:50 01:xx","","",
 	"80","","",
 	"40","","",
 	"0¯","","",
@@ -384,7 +384,7 @@ char *rs_strings[] = {
 	"Mode:",
 	"PAL","","",
 	"Couleurs:",
-	"65536","","",
+	"xxxxx","","",
 	"RÇsolution:",
 	"320x200","","",
 	"Mode ST",
@@ -396,8 +396,8 @@ char *rs_strings[] = {
 	"SCSI arbitration:",
 	"Oui","","",
 	"ID:",
-	"7","","",
-	"10","DÇlais: __ S","99",
+	"x","","",
+	"zz","DÇlais: __ S","99",
 	"Blitter:",
 	"Lent","","",
 	"TOS en RAM:",
@@ -407,14 +407,14 @@ char *rs_strings[] = {
 	" Arràt ","","",
 	"Arràt programmÇ:",
 	"Sans","","",
-	"2359","Ö: __:__","9999",
+	"xxxx","Ö: __:__","9999",
 	
 	"Sauve",
 	"Charge",
 	"OK",
 	"Annule",
 	
-	"CT60 Configuration V1.00 FÇvrier 2004","","",
+	"CT60 Configuration V1.02 Aout 2004","","",
 	"Ce CPX et systäme:","","",
 	"Didier MEQUIGNON","","",
 	"aniplay@wanadoo.fr","","",
@@ -430,34 +430,34 @@ char *rs_strings[] = {
 	"Aide",
 	
 	"CT60 TempÇrature","","",
-	"line1",
-	"line2",
-	"line3",
-	"line4",
-	"line5",
-	"line6",
-	"line7",
-	"line8",
-	"line9",	
-	"line10",
-	"line11",
-	"line12",
-	"line13",
-	"line14",
-	"line15",
-	"line16",
-	"line17",
-	"line18",
-	"line19",
-	"line20",
-	"line21",
-	"line22",
-	"line23",
-	"line24",
-	"line25",
-	"button1",
-	"button2",
-	"button3",
+	"line1x",
+	"line2x",
+	"line3x",
+	"line4x",
+	"line5x",
+	"line6x",
+	"line7x",
+	"line8x",
+	"line9x",	
+	"line10x",
+	"line11x",
+	"line12x",
+	"line13x",
+	"line14x",
+	"line15x",
+	"line16x",
+	"line17x",
+	"line18x",
+	"line19x",
+	"line20x",
+	"line21x",
+	"line22x",
+	"line23x",
+	"line24x",
+	"line25x",
+	"button1x",
+	"button2x",
+	"button3x",
 	
 	"-00","Offset TLV 2.8¯C/unit: ___ unit","X99",
 	"OK",
@@ -470,8 +470,8 @@ char *rs_strings_en[] = {
 	" Temperature ","","",
 	"T¯ 60:",
 	"xxx ¯C","","",
-	"34","Thres: __","99",
-	"00:00 00:10 00:20 00:30 00:40 00:50 01:00","","",
+	"yy","Thres: __","99",
+	"00:00 00:10 00:20 00:30 00:40 00:50 01:xx","","",
 	"80","","",
 	"40","","",
 	"0¯","","",
@@ -503,7 +503,7 @@ char *rs_strings_en[] = {
 	"Mode:",
 	"PAL","","",
 	"Colors:",
-	"65536","","",
+	"xxxxx","","",
 	"Resolution:",
 	"320x200","","",
 	"Mode ST",
@@ -515,8 +515,8 @@ char *rs_strings_en[] = {
 	"SCSI arbitration:",
 	"Yes","","",
 	"ID:",
-	"7","","",
-	"10","Delay: __ S","99",
+	"x","","",
+	"zz","Delay: __ S","99",
 	"Blitter:",
 	"Slow","","",
 	"TOS in RAM:",
@@ -526,14 +526,14 @@ char *rs_strings_en[] = {
 	" Stop ","","",
 	"Stop programmed:",
 	"Without","","",
-	"2359","at: __:__","9999",
+	"xxxx","at: __:__","9999",
 	
 	"Save",
 	"Load",
 	"OK",
 	"Cancel",
 
-	"CT60 Configuration V1.00 February 2004","","",
+	"CT60 Configuration V1.02 August 2004","","",
 	"This CPX and system:","","",
 	"Didier MEQUIGNON","","",
 	"aniplay@wanadoo.fr","","",
@@ -549,34 +549,34 @@ char *rs_strings_en[] = {
 	"Help",
 	
 	"CT60 Temperature","","",
-	"line1",
-	"line2",
-	"line3",
-	"line4",
-	"line5",
-	"line6",
-	"line7",
-	"line8",
-	"line9",	
-	"line10",
-	"line11",
-	"line12",
-	"line13",
-	"line14",
-	"line15",
-	"line16",
-	"line17",
-	"line18",
-	"line19",
-	"line20",
-	"line21",
-	"line22",
-	"line23",
-	"line24",
-	"line25",
-	"button1",
-	"button2",
-	"button3",
+	"line1x",
+	"line2x",
+	"line3x",
+	"line4x",
+	"line5x",
+	"line6x",
+	"line7x",
+	"line8x",
+	"line9x",	
+	"line10x",
+	"line11x",
+	"line12x",
+	"line13x",
+	"line14x",
+	"line15x",
+	"line16x",
+	"line17x",
+	"line18x",
+	"line19x",
+	"line20x",
+	"line21x",
+	"line22x",
+	"line23x",
+	"line24x",
+	"line25x",
+	"button1x",
+	"button2x",
+	"button3x",
 	
 	"-00","Offset TLV 2.8¯C/unit: ___ unit","X99",
 	"OK",
@@ -705,9 +705,9 @@ OBJECT rs_object[] = {
 	43,-1,-1,G_BUTTON,SELECTABLE|TOUCHEXIT|FL3DIND,NORMAL,93L,16,5,15,1,
 	55,-1,-1,G_TEXT,FL3DBAK,NORMAL,20L,1,2,14,1,
 	70,56,69,G_BOX,FL3DIND,NORMAL,0xff1100L,0,2,32,6,								/* boot box */
-	57,-1,-1,G_BOXTEXT,TOUCHEXIT,SHADOWED,26L,1,1,9,1,								/* popup boot order */
-	58,-1,-1,G_STRING,NONE,NORMAL,100L,12,1,3,1,
-	59,-1,-1,G_BOXTEXT,TOUCHEXIT,SHADOWED,27L,16,1,15,1,							/* popup favourite OS */
+	57,-1,-1,G_BOXTEXT,TOUCHEXIT,SHADOWED,26L,1,1,17,1,								/* popup boot order */
+	58,-1,-1,G_STRING,NONE,NORMAL,100L,20,1,3,1,
+	59,-1,-1,G_BOXTEXT,TOUCHEXIT,SHADOWED,27L,24,1,7,1,								/* popup favourite OS */
 	60,-1,-1,G_STRING,NONE,NORMAL,104L,1,2,17,1,
 	61,-1,-1,G_BOXTEXT,TOUCHEXIT,SHADOWED,28L,18,2,4,1,								/* popup arbitration */
 	62,-1,-1,G_STRING,NONE,NORMAL,108L,24,2,3,1,
@@ -960,7 +960,7 @@ char *lang[]={ "  English     ",
                "  Italiano    ",
                "  Suisse      ",
                "  Schweiz     " };
-char *spec_key[]={"USA","Deutsch","France","England","Espa•a","Italia","Sweden","Suisse","Schweiû"};
+char *spec_key[]={"USA","Deutsch","France","England","Espa•a","Italia","Sweden","Suisse","Schweiz"};
 char *key[]={ "  USA            ",
               "  Deutschland    ",
               "  France         ",
@@ -969,7 +969,7 @@ char *key[]={ "  USA            ",
               "  Italia         ",
               "  Sweden         ",
               "  Suisse         ",
-              "  Schweiû        " };
+              "  Schweiz        " };
 char *spec_date[]={"MM/DD/YY","DD/MM/YY","YY/MM/DD","YY/DD/MM"};
 char *date[]={"  MM/DD/YY ","  DD/MM/YY ","  YY/MM/DD ","  YY/DD/MM "};
 char *spec_time[]={"12","24"};
@@ -980,8 +980,9 @@ char *spec_mode[]={"NTSC","PAL"};
 char *mode[]={"  NTSC ","  PAL  "};
 char *spec_coul[]={" 2 "," 4 ","16","256","65536"};
 char *coul[]={"  2     ","  4     ","  16    ","  256   ","  65536 "};
-char *spec_res[]={"320x200","320x400","640x200","640x400"};
-char *res[]={"  320 x 200 ","  320 x 400 ","  640 x 200 ","  640 x 400 "};
+char *spec_res[2][4]={"320x200","320x400","640x200","640x400","320x240","320x480","640x240","640x480"};
+char *res[2][4]={"  320 x 200 ","  320 x 400 ","  640 x 200 ","  640 x 400 ",
+                 "  320 x 240 ","  320 x 480 ","  640 x 240 ","  640 x 480 "};
 #endif
 unsigned char code_lang[]= { USA, FRG, FRA, SPA, ITA, SWF, SWG };
 unsigned char code_key[]=  { USA, FRG, FRA, UK, SPA, ITA, SWE, SWF, SWG };
@@ -1005,8 +1006,10 @@ char *cache_delay[2][4]={"  Cache normal / Pas d'alerte copyback     ",
                          "  Delay cache 5 S / No copyback alert ",
                          "  Normal cache / Copyback alert       ",
                          "  Delay cache 5 S / Copyback alert    "};
-char *spec_boot_order[2][2]={"SCSI->IDE","IDE->SCSI","SCSI->IDE","IDE->SCSI"};
-char *boot_order[2][2]={"  SCSI->IDE ","  IDE->SCSI ","  SCSI->IDE ","  IDE->SCSI "};
+char *spec_boot_order[2][4]={"SCSI0-7 -> IDE0-1","IDE0-1 -> SCSI0-7","SCSI7-0 -> IDE1-0","IDE1-0 -> SCSI7-0",
+                             "SCSI0-7 -> IDE0-1","IDE0-1 -> SCSI0-7","SCSI7-0 -> IDE1-0","IDE1-0 -> SCSI7-0"};
+char *boot_order[2][4]={"  SCSI0-7 -> IDE0-1 ","  IDE0-1 -> SCSI0-7 ","  SCSI7-0 -> IDE1-0 ","  IDE1-0 -> SCSI7-0 ",
+                        "  SCSI0-7 -> IDE0-1 ","  IDE0-1 -> SCSI0-7 ","  SCSI7-0 -> IDE1-0 ","  IDE1-0 -> SCSI7-0 "};
 char *spec_day_stop[2][11]={"Sans","Lundi","Mardi","Mercredi","Jeudi","Vendredi","Samedi","Dimanche","Jours ouvrÇs","Fin de semaine","Chaque jour",
                             "Without","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday","Mon-Fri","Weekend","Every day"};
 char *day_stop[2][11]={"  Sans           ","  Lundi          ","  Mardi          ","  Mercredi       ","  Jeudi          ","  Vendredi       ",
@@ -1380,21 +1383,15 @@ int CDECL cpx_call(GRECT *work)
 	else
 		sprintf(t_edinfo->te_ptext,"ÊP: %3lu.%02lu Mips",loops_per_sec/500000,(loops_per_sec/5000) % 100);
 	language=0;
-	if(nvram.language<9)
-	{
-		while(language<7 && nvram.language!=code_lang[language])
-			language++;
-		if(language>=7)
-			language=0;	
-	}
+	while(language<7 && nvram.language!=code_lang[language])
+		language++;
+	if(language>=7)
+		language=0;	
 	keyboard=0;
-	if(nvram.keyboard<9)
-	{
-		while(keyboard<8 && nvram.keyboard!=code_key[keyboard])
-			keyboard++;
-		if(keyboard>=8)
-			keyboard=0;
-	}
+	while(keyboard<9 && nvram.keyboard!=code_key[keyboard])
+		keyboard++;
+	if(keyboard>=9)
+		keyboard=0;
 	datetime=(int)nvram.datetime & 0x13;
 	vmode=(int)nvram.vmode & 0x1ff;
 #ifndef LIGHT
@@ -1421,16 +1418,49 @@ int CDECL cpx_call(GRECT *work)
 		i++;
 	if((vmode & VERTFLAG) && !(vmode & VGA_FALCON))
 		i++;
-	t_edinfo=rs_object[MENUBRES].ob_spec.tedinfo;
-	t_edinfo->te_ptext=spec_res[i];
 	if((vmode & OVERSCAN) && !(vmode & VGA_FALCON))
 		rs_object[MENUOVERSCAN].ob_state |= SELECTED;
 	else
 		rs_object[MENUOVERSCAN].ob_state &= ~SELECTED;		
-	if(vmode & STMODES)
+	if((vmode & STMODES) && (vmode & 7)<3)
+	{
 		rs_object[MENUSTMODES].ob_state |= SELECTED;
+		switch(vmode & 7)
+		{
+		case 0:				/* 640 x 400 */	
+			i=3;
+			vmode |= COL80;
+			if(vmode & VGA_FALCON)
+				vmode &= ~VERTFLAG;
+			else
+				vmode |= VERTFLAG;
+			break;
+		case 1:				/* 640 x 200 */
+			i=2;
+			vmode |= COL80;
+			if(vmode & VGA_FALCON)
+				vmode |= VERTFLAG;
+			else
+				vmode &= ~VERTFLAG;
+			break;
+		case 2:				/* 320 x 200 */
+			i=0;
+			vmode &= ~COL80;
+			if(vmode & VGA_FALCON)
+				vmode |= VERTFLAG;
+			else
+				vmode &= ~VERTFLAG;
+			break;
+		}
+	}
 	else
-		rs_object[MENUSTMODES].ob_state &= ~SELECTED;		
+	{
+		rs_object[MENUSTMODES].ob_state &= ~SELECTED;
+		if((vmode & 7)>=3)
+			vmode &= ~STMODES;	
+	}
+	t_edinfo=rs_object[MENUBRES].ob_spec.tedinfo;
+	t_edinfo->te_ptext=spec_res[(vmode & VGA_FALCON) ? 1 : 0][i];
 #endif
 	bootpref=0;
 	while(bootpref<6 && nvram.bootpref!=(int)code_os[bootpref])
@@ -1457,7 +1487,7 @@ int CDECL cpx_call(GRECT *work)
 		tosram=(int)ct60_rw_parameter(CT60_MODE_READ,CT60_PARAM_TOSRAM,0L)&1;
 		blitterspeed=(int)ct60_rw_parameter(CT60_MODE_READ,CT60_BLITTER_SPEED,0L)&1;
 		cachedelay=(int)ct60_rw_parameter(CT60_MODE_READ,CT60_CACHE_DELAY,0L)&3;
-		bootorder=(int)ct60_rw_parameter(CT60_MODE_READ,CT60_BOOT_ORDER,0L)&1;
+		bootorder=(int)ct60_rw_parameter(CT60_MODE_READ,CT60_BOOT_ORDER,0L)&3;
 		cpufpu=(int)ct60_rw_parameter(CT60_MODE_READ,CT60_CPU_FPU,0L)&1;
 	}
 	else
@@ -1466,7 +1496,7 @@ int CDECL cpx_call(GRECT *work)
 		tosram=(int)ct60_rw_param(CT60_MODE_READ,CT60_PARAM_TOSRAM,0L)&1;
 		blitterspeed=(int)ct60_rw_param(CT60_MODE_READ,CT60_BLITTER_SPEED,0L)&1;
 		cachedelay=(int)ct60_rw_param(CT60_MODE_READ,CT60_CACHE_DELAY,0L)&3;
-		bootorder=(int)ct60_rw_param(CT60_MODE_READ,CT60_BOOT_ORDER,0L)&1;
+		bootorder=(int)ct60_rw_param(CT60_MODE_READ,CT60_BOOT_ORDER,0L)&3;
 		cpufpu=(int)ct60_rw_param(CT60_MODE_READ,CT60_CPU_FPU,0L)&1;
 		Super((void *)stack);
 	}
@@ -2042,6 +2072,20 @@ void CDECL cpx_button(MRETS *mrets,int nclicks,int *event)
 					}
 					else
 						vmode &= ~VGA_FALCON;
+					if(vmode & VERTFLAG)
+						vmode &= ~VERTFLAG;
+					else
+						vmode |= VERTFLAG;
+					i=0;
+					if(vmode & COL80)
+						i+=2;
+					if(!(vmode & VERTFLAG) && (vmode & VGA_FALCON))
+						i++;
+					if((vmode & VERTFLAG) && !(vmode & VGA_FALCON))
+						i++;
+					t_edinfo=rs_object[MENUBRES].ob_spec.tedinfo;
+					t_edinfo->te_ptext=spec_res[(vmode & VGA_FALCON) ? 1 : 0][i];
+					display_objc(MENUBRES,Work);
 				}		
 				break;
 			case MENUBMODE:
@@ -2070,6 +2114,46 @@ void CDECL cpx_button(MRETS *mrets,int nclicks,int *event)
 				ret=(*Xcpb->Popup)(coul,5,vmode & 7,IBM,&menu,Work);
 				if(ret>=0 && ret!=(vmode & 7))
 				{
+					if(vmode & STMODES)
+					{
+						switch(ret)
+						{
+						case 0:				/* 640 x 400 */	
+							vmode |= COL80;
+							if(vmode & VGA_FALCON)
+								vmode &= ~VERTFLAG;
+							else
+								vmode |= VERTFLAG;
+							t_edinfo=rs_object[MENUBRES].ob_spec.tedinfo;
+							t_edinfo->te_ptext=spec_res[(vmode & VGA_FALCON) ? 1 : 0][3];
+							display_objc(MENUBRES,Work);
+							break;
+						case 1:				/* 640 x 200 */
+							vmode |= COL80;
+							if(vmode & VGA_FALCON)
+								vmode |= VERTFLAG;
+							else
+								vmode &= ~VERTFLAG;
+							t_edinfo=rs_object[MENUBRES].ob_spec.tedinfo;
+							t_edinfo->te_ptext=spec_res[(vmode & VGA_FALCON) ? 1 : 0][2];
+							display_objc(MENUBRES,Work);
+							break;
+						case 2:				/* 320 x 200 */
+							vmode &= ~COL80;
+							if(vmode & VGA_FALCON)
+								vmode |= VERTFLAG;
+							else
+								vmode &= ~VERTFLAG;
+							t_edinfo=rs_object[MENUBRES].ob_spec.tedinfo;
+							t_edinfo->te_ptext=spec_res[(vmode & VGA_FALCON) ? 1 : 0][0];
+							display_objc(MENUBRES,Work);
+							break;
+						default:
+							vmode &= ~STMODES;
+							change_objc(MENUSTMODES,NORMAL,Work);
+							break;
+						}
+					}
 					if(!(vmode & COL80) && ret==0)
 						ret++;
 					if((vmode & COL80) && (vmode & VGA_FALCON) && ret==4)
@@ -2092,7 +2176,7 @@ void CDECL cpx_button(MRETS *mrets,int nclicks,int *event)
 					i++;
 				if((vmode & VERTFLAG) && !(vmode & VGA_FALCON))
 					i++;
-				ret=(*Xcpb->Popup)(res,4,i,IBM,&menu,Work);					
+				ret=(*Xcpb->Popup)(res[(vmode & VGA_FALCON) ? 1 : 0],4,i,IBM,&menu,Work);					
 				if(ret>=0 && ret!=i)
 				{
 					if(ret<2)
@@ -2105,8 +2189,17 @@ void CDECL cpx_button(MRETS *mrets,int nclicks,int *event)
 						if((vmode & VGA_FALCON) && (vmode & 7)==4)
 							ret-=2;
 					}
+					if(vmode & STMODES)
+					{
+						switch(vmode & 7)
+						{
+						case 0: ret=3; break;		/* 640 x 400 */
+						case 1: ret=2; break;		/* 640 x 200 */
+						default: ret=0; break;		/* 320 x 200 */
+						}
+					}
 					t_edinfo=rs_object[MENUBRES].ob_spec.tedinfo;
-					t_edinfo->te_ptext=spec_res[ret];
+					t_edinfo->te_ptext=spec_res[(vmode & VGA_FALCON) ? 1 : 0][ret];
 					display_objc(MENUBRES,Work);
 					switch(ret)
 					{
@@ -2142,10 +2235,46 @@ void CDECL cpx_button(MRETS *mrets,int nclicks,int *event)
 				}		
 				break;		
 			case MENUSTMODES:
-				if(rs_object[MENUSTMODES].ob_state & SELECTED)		
+				if((rs_object[MENUSTMODES].ob_state & SELECTED) && (vmode & 7)<3)
+				{
 					vmode |= STMODES;
+					switch(vmode & 7)
+					{
+					case 0:				/* 640 x 400 */	
+						i=3;
+						vmode |= COL80;
+						if(vmode & VGA_FALCON)
+							vmode &= ~VERTFLAG;
+						else
+							vmode |= VERTFLAG;
+						break;
+					case 1:				/* 640 x 200 */
+						i=2;
+						vmode |= COL80;
+						if(vmode & VGA_FALCON)
+							vmode |= VERTFLAG;
+						else
+							vmode &= ~VERTFLAG;
+						break;
+					case 2:				/* 320 x 200 */
+						i=0;
+						vmode &= ~COL80;
+						if(vmode & VGA_FALCON)
+							vmode |= VERTFLAG;
+						else
+							vmode &= ~VERTFLAG;
+						break;
+					}
+					t_edinfo=rs_object[MENUBRES].ob_spec.tedinfo;
+					t_edinfo->te_ptext=spec_res[(vmode & VGA_FALCON) ? 1 : 0][i];
+					display_objc(MENUBRES,Work);
+				}
 				else
+				{
 					vmode &= ~STMODES;
+					if((vmode & 7)>=3)
+						change_objc(MENUSTMODES,NORMAL,Work);
+				}
 				break;
 			case MENUOVERSCAN:
 				if(rs_object[MENUOVERSCAN].ob_state & SELECTED)		
@@ -2163,7 +2292,7 @@ void CDECL cpx_button(MRETS *mrets,int nclicks,int *event)
 				objc_offset(rs_object,MENUBBOOTORDER,&menu.g_x,&menu.g_y);
 				menu.g_w=rs_object[MENUBBOOTORDER].ob_width;
 				menu.g_h=rs_object[MENUBBOOTORDER].ob_height;
-				ret=(*Xcpb->Popup)(boot_order[start_lang],2,bootorder,IBM,&menu,Work);
+				ret=(*Xcpb->Popup)(boot_order[start_lang],4,bootorder,IBM,&menu,Work);
 				if(ret>=0 && ret!=bootorder)
 				{
 					t_edinfo=rs_object[MENUBBOOTORDER].ob_spec.tedinfo;
@@ -2306,21 +2435,15 @@ void CDECL cpx_button(MRETS *mrets,int nclicks,int *event)
 					t_edinfo=rs_object[MENUBSELECT].ob_spec.tedinfo;
 					t_edinfo->te_ptext=spec_select[start_lang][selection];
 					language=0;
-					if(header->language<9)
-					{
-						while(language<7 && header->language!=code_lang[language])
-						language++;
-						if(language>=7)
-							language=0;	
-					}
+					while(language<7 && header->language!=code_lang[language])
+					language++;
+					if(language>=7)
+						language=0;	
 					keyboard=0;
-					if(header->keyboard<9)
-					{
-						while(keyboard<8 && header->keyboard!=code_key[keyboard])
-							keyboard++;
-						if(keyboard>=8)
-							keyboard=0;
-					}
+					while(keyboard<9 && header->keyboard!=code_key[keyboard])
+						keyboard++;
+					if(keyboard>=9)
+						keyboard=0;
 					datetime=(int)header->datetime;
 					vmode=(int)header->vmode;
 #ifndef LIGHT
@@ -2347,16 +2470,49 @@ void CDECL cpx_button(MRETS *mrets,int nclicks,int *event)
 						i++;
 					if((vmode & VERTFLAG) && !(vmode & VGA_FALCON))
 						i++;
-					t_edinfo=rs_object[MENUBRES].ob_spec.tedinfo;
-					t_edinfo->te_ptext=spec_res[i];
 					if((vmode & OVERSCAN) && !(vmode & VGA_FALCON))
 						rs_object[MENUOVERSCAN].ob_state |= SELECTED;
 					else
 						rs_object[MENUOVERSCAN].ob_state &= ~SELECTED;		
-					if(vmode & STMODES)
+					if((vmode & STMODES) && (vmode & 7)<3)
+					{
 						rs_object[MENUSTMODES].ob_state |= SELECTED;
+						switch(vmode & 7)
+						{
+						case 0:				/* 640 x 400 */	
+							i=3;
+							vmode |= COL80;
+							if(vmode & VGA_FALCON)
+								vmode &= ~VERTFLAG;
+							else
+								vmode |= VERTFLAG;
+							break;
+						case 1:				/* 640 x 200 */
+							i=2;
+							vmode |= COL80;
+							if(vmode & VGA_FALCON)
+								vmode |= VERTFLAG;
+							else
+								vmode &= ~VERTFLAG;
+							break;
+						case 2:				/* 320 x 200 */
+							i=0;
+							vmode &= ~COL80;
+							if(vmode & VGA_FALCON)
+								vmode |= VERTFLAG;
+							else
+								vmode &= ~VERTFLAG;
+							break;
+						}
+					}
 					else
+					{
 						rs_object[MENUSTMODES].ob_state &= ~SELECTED;		
+						if((vmode & 7)>=3)
+							vmode &= ~STMODES;	
+					}
+					t_edinfo=rs_object[MENUBRES].ob_spec.tedinfo;
+					t_edinfo->te_ptext=spec_res[(vmode & VGA_FALCON) ? 1 : 0][i];
 #endif
 					bootpref=0;
 					while(bootpref<6 && header->bootpref!=(int)code_os[bootpref])

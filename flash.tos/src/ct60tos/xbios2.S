@@ -562,17 +562,17 @@ new_ikbdvect:                                                    // test Eiffel 
 	move.b #0xE2,D0                                     // HELP
 	bra.s .test_shift
 .test_end:
-	cmp.b #0x55,D1                                      // END
-	bne.s .test_power
-	btst #7,D0
-	bne.s .break_end
-	bset.b #0,0x1187                                    // SHIFT
-	move.b #0x47,D0                                     // CLR HOME
-	bra.s .test_shift
-.break_end:
-	bclr.b #0,0x1187                                    // SHIFT
-	move.b #0xC7,D0                                     // CLR HOME
-	bra.s .test_shift
+//	cmp.b #0x55,D1                                      // END  / F12 Atari
+//	bne.s .test_power
+//	btst #7,D0
+//	bne.s .break_end
+//	bset.b #0,0x1187                                    // SHIFT
+//	move.b #0x47,D0                                     // CLR HOME
+//	bra.s .test_shift
+//.break_end:
+//	bclr.b #0,0x1187                                    // SHIFT
+//	move.b #0xC7,D0                                     // CLR HOME
+//	bra.s .test_shift
 .test_power:
 	cmp.b #0x73,D1                                      // POWER
 	bne.s .test_shift
@@ -605,6 +605,12 @@ det_statvec:
 	cmp.b #0x05,(A0)
 	bne .no_eiffel_key
 	movem.l D0/A0,-(SP)
+	cmp.b #0x73,6(A0)                                   // POWER
+	bne.s .not_power
+	move.l phystop,A0
+	move.l #0xCAFEFADE,power_flag(A0)                   // tested inside evnt_multi AES
+             bra .not_volume_down
+.not_power:
 	cmp.b #0x32,6(A0)                                   // VOLUME UP
 	bne.s .not_volume_up
 	move.w #-1,-(SP)

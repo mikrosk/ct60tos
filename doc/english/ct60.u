@@ -4,7 +4,7 @@
 !title   Documentation of the
 !programimage ..\img\ct60.img
 !program CT60
-!version Version 1.01
+!version Version 1.02
 !date    (!today)
 !author  Didier MEQUIGNON
 !street  25, rue de l'Ascenseur
@@ -359,6 +359,7 @@ flash, cache...), and the DSP (functions with handshake).
 logo copied at the top of the ST-RAM (needed if the TOS in ROM is a 4.02).
 !item The replacement of the XBIOS Bconout routine (display texts).
 !item The picture in 65K colors displayed during 2 seconds.
+!item Check and fix the modecode get from NVM.
 !item The display of the 68060's type (revision, mask and frequency).
 !item The modification of PCR for the bugged types revision 1.
 !item The reading and the display of the SDRAM's type from his EEPROM. 
@@ -372,7 +373,18 @@ displayed.
 !item The fastram buffer created and his cookie '_FRB'.
 !item The extended fastram buffer created and his cookie 'XFRB'.
 !item Lot of infos displayed about the SDRAM module.
-!item The patch for the boot order of the drives IDE and SCSI.
+!item The patch for the boot order of the drives IDE and SCSI (4 choices).
+!item Extra boot features:
+!begin_itemize
+!item Add identify device procedure for SCSI and IDE drives, the boot wait
+ if a removable drive is not ready.
+!item Add IDE slave support.
+!item Add CompactFlash support.
+!item Add combined MSDOS/TOS root and partition support, this feature 
+ support byte swapping needed by MSDOS format and search a *.SYS for 
+ load the disk driver.
+!item Add speed test for bootables devices.
+!end_itemize
 !item The patch for the boot menu.
 !item The patch for the Pexec function for the copyback (cpush after the 
 relocation).
@@ -382,7 +394,6 @@ vrt_cpyfm for work in SDRAM (an intermediate buffer inside ST-RAM is used).
 !item Scan-codes used with the Eiffel card :
 !begin_itemize
 !item PAGE UP/DOWN.
-!item END.
 !item PRINT SCREEN.
 !item POWER (set 2 only, Eiffel 1.0.5).
 !item VOLUME UP/DOWN (set 2 only, Eiffel 1.0.5).
@@ -813,7 +824,7 @@ with a 3 wires connector :
 At this page you can :
 
 !begin_itemize
-!item Select the boot order on the IDE and SCSI drives.
+!item Select the boot order on the IDE and SCSI drives (4 choices).
 !item Select at boot the operating system by default.
 !item Select at boot the SCSI arbitration.
 !item Select at boot the SCSI identificator (0 to 7).

@@ -4,7 +4,7 @@
 !title   Documentation de la
 !programimage ..\img\ct60.img
 !program CT60
-!version Version 1.01
+!version Version 1.02
 !date    (!today)
 !author  Didier MEQUIGNON
 !street  25, rue de l'Ascenseur
@@ -368,6 +368,7 @@ logo du boot sont copi‚s au sommet de la ST-RAM (indispensable si le TOS
 en ROM est un 4.02).
 !item Le remplacement de la routine d'affichage de texte du BIOS.
 !item Une image en 65K couleurs affich‚e pendant 2 secondes.
+!item Contr“le et correction du modecode obtenu de la NVM.
 !item L'affichage du type de 68060 (r‚vision, masque et fr‚quence).
 !item La modification du PCR pour les modŠles bugg‚s r‚vision 1.
 !item La lecture et l'affichage du type de SDRAM via sa EEPROM. 
@@ -381,7 +382,18 @@ et la SDRAM d‚clar‚e en copyback.
 !item La cr‚ation du buffer fastram et de son cookie '_FRB'.
 !item La cr‚ation du buffer fastram ‚tendu et de son cookie 'XFRB'.
 !item L'affichage complet des informations sur la barette SDRAM.
-!item Le patch pour l'ordre de boot des disques IDE et SCSI.
+!item Le patch pour l'ordre de boot des disques IDE et SCSI (4 choix).
+!item Possibilit‚s supp‚mentaires du boot :
+!begin_itemize
+!item Proc‚dure d'identification du p‚riph‚rique pour les lecteurs SCSI 
+et IDE, le boot attend si un disque amovible n'est pas prˆt.
+!item Ajout gestion IDE esclave.
+!item Ajout gestion CompactFlash.
+!item Gestion du format combin‚ MSDOS/TOS (root et partition), cette 
+possibilit‚ supporte la permuttation des octets exig‚e pour le format 
+MSDOS et recherche un *.SYS pour charger le driver de disques. 
+!item Test de vitesse pour les disques bootables.
+!end_itemize
 !item Le patch pour le menu de boot.
 !item Le patch de la fonction Pexec pour le copyback (cpush aprŠs la 
 relocation).
@@ -392,7 +404,6 @@ utilis‚).
 !item Support des scan-codes de la carte Eiffel :
 !begin_itemize
 !item PAGE HAUT/BAS.
-!item FIN.
 !item IMPR ECRAN.
 !item POWER (jeu 2 seulement, Eiffel 1.0.5).
 !item VOLUME HAUT/BAS (jeu 2 seulement, Eiffel 1.0.5).
@@ -832,7 +843,7 @@ watercooling) avec de la connectique 3 fils :
 Sur cette page vour pouvez :
 
 !begin_itemize
-!item S‚lectionner l'ordre de boot sur les disques IDE et SCSI.
+!item S‚lectionner l'ordre de boot sur les disques IDE et SCSI (4 choix).
 !item S‚lectionner au d‚marrage le systŠme d'exploitation par d‚faut.
 !item S‚lectionner au d‚marrage l'arbitration SCSI.
 !item S‚lectionne au d‚marrage l'identificateur SCSI (0 to 7).

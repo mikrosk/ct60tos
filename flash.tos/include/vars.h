@@ -25,6 +25,8 @@
 #define resvector  0x42A
 #define phystop    0x42E
 #define _memtop    0x436
+#define flock      0x43E
+#define _bootdev   0x446
 #define sshiftmd   0x44C
 #define _v_bas_ad  0x44E
 #define _frclock   0x466	

@@ -38,8 +38,53 @@
 picture_boot:
 
 	move.w #0x2300,SR
+	bsr fix_modecode
 	bsr screen_ntc_boot
 	moveq #0,D0
+	rts
+	
+fix_modecode:
+
+	move.l D1,-(SP)
+	moveq #7,D1
+	move.w modecode,D0
+	and.w #0x1FF,D0                           // valid bits
+	and.w D0,D1                               // bits/pixel code
+	btst #7,D0                                // STMODES
+	beq.s normal_mode
+	bclr #6,D0                                // no OVERSCAN with STMODES
+	cmp.w #3,D1
+	bcs.s st_modes
+	bclr #7,D0                                // remove STMODES in 256 or 65K colors
+	bra.s normal_mode
+st_modes:
+	tst.w D1
+	bne.s not_640x400
+	bset #3,D0                                // COL80
+	bclr #8,D0                                // VERTFLAG
+	btst #4,D0                                // VGA
+	bne.s normal_mode
+	bset #8,D0                                // VERTFLAG interlaced
+	bra.s normal_mode
+not_640x400:
+	cmp.w #1,D1
+	bne.s not_640x200
+	bset #3,D0                                // COL80
+	bra.s x200
+not_640x200:
+	bclr #3,D0                                // no COL80 
+x200:
+	bset #8,D0                                // VERTFLAG double line
+	btst #4,D0                                // VGA
+	bne.s normal_mode
+	bclr #8,D0                                // VERTFLAG
+normal_mode:
+	btst #4,D0                                // VGA
+	beq.s no_vga
+	bclr #6,D0                                // no OVERSCAN in VGA
+no_vga:
+	move.w D0,modecode
+	move.l (SP)+,D1
 	rts
 	
 picture_build:                                         // target A0
