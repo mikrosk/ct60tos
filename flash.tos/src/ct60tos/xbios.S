@@ -1,5 +1,5 @@
 /* TOS 4.04 Xbios patch for the CT60 board
-*  Didier Mequignon 2002 December, e-mail: aniplay@wanadoo.fr
+*  Didier Mequignon 2002-2004, e-mail: aniplay@wanadoo.fr
 *
 *  This library is free software; you can redistribute it and/or
 *  modify it under the terms of the GNU Lesser General Public
@@ -49,4 +49,46 @@ begin3:
 	nop
 end3:	
 
+	.globl	nvm_access
+	
+	.align	2
+	.long	0x216C
+	.long	end4-begin4+0x80000000
+begin4:
+	jmp	nvm_access
+end4:	
 
+	.globl	test_rtc
+	
+	.align	2
+	.long	0x212E
+	.long	end5-begin5+0x80000000
+begin5:
+	jmp	test_rtc
+end5:	
+
+	.globl	fix_settime
+	
+	.align	2
+	.long	0x230E
+	.long	end6-begin6+0x80000000
+begin6:
+	jsr	fix_settime
+end6:	
+
+	.align	2
+	.long	0x2316
+	.long	end7-begin7
+begin7:
+	nop
+	nop
+end7:	
+	
+	.globl	fix_gettime
+	
+	.align	2
+	.long	0x2264
+	.long	end8-begin8+0x80000000
+begin8:
+	jsr	fix_gettime
+end8:	

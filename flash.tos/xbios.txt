@@ -78,6 +78,8 @@ CacheCtrl()                  XBIOS Function 160.
           alert.
 
           CT60_BOOT_ORDER 3
+          New boot
+          ========
           If the value is set to 0, TOS boots from SCSI drives (0-7) 
           before IDE drives (0-1).
           If the value is set to 1, TOS boots from IDE drives (0-1) 
@@ -85,6 +87,16 @@ CacheCtrl()                  XBIOS Function 160.
           If the value is set to 2, TOS boots from SCSI drives (7-0) 
           before IDE drives (1-0).
           If the value is set to 3, TOS boots from IDE drives (1-0) 
+          before SCSI drives (7-0).
+          Old boot
+          ========
+          If the value is set to 4, TOS boots from SCSI drives (0-7) 
+          before IDE drives (0-1).
+          If the value is set to 5, TOS boots from IDE drives (0-1) 
+          before SCSI drives (0-7).
+          If the value is set to 6, TOS boots from SCSI drives (7-0) 
+          before IDE drives (1-0).
+          If the value is set to 7, TOS boots from IDE drives (1-0) 
           before SCSI drives (7-0).
           
           CT60_CPU_FPU 4

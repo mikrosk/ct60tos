@@ -23,6 +23,10 @@
 */
 
 	.globl det_xbios
+	.globl nvm_access
+	.globl test_rtc
+	.globl fix_settime
+	.globl fix_gettime
 	.globl new_ikbdvect
 	.globl new_statvec
 
@@ -150,7 +154,7 @@ xb22:
 	bra xb8                                             // enable
 xb23:
 	moveq #-5,D0                                        // error
-	rts
+	rte
 xb15:	
 	cmp.w #read_core_temperature,D0
 	beq.s xb11
@@ -166,6 +170,7 @@ xb11:
 	mulu #9,D0
 	divu #5,D0
 	add.w #32,D0
+	ext.l D0
 	bra.s xb3
 xb4:
 	moveq #CT60_READ_ERROR,D0                           // error
@@ -339,6 +344,140 @@ display_char:
 	movem.l (SP)+,D0-D2/A0-A2
 	rts
 #endif
+
+nvm_access:
+
+	moveq #-5,D0             // error
+	cmp.w #48,6(SP)          // start
+	bcc .nvram_access 
+	move.w 4(SP),D1
+	bne .nvram_access        // <> read
+	move.w 6(SP),D0          // start
+	move.w 8(SP),D1          // size
+	move.l 10(SP),A0         // buffer
+	movem.l D1-D4/A0-A3,-(SP)
+	link A6,#-56
+	move.l A0,-56(A6)        // buffer
+	move.w D1,-52(A6)        // size
+	move.w D0,-50(A6)        // start
+	lea -48(A6),A3
+	moveq #CT60_MODE_READ,D0 // mode
+	moveq #CT60_SAVE_NVRAM_1,D1 // type_param
+	moveq #0,D2              // value
+	bsr ct60_rw_param 
+	move.w D0,(A3)           // bootpref
+	swap D0
+	cmp.w #0x4E56,D0         // NV magic code
+	bne .nvm_read
+	                         // NVM values are stored in Flash
+	pea (A3)                 // buffer: bootpref
+	move.w #2,-(SP)          // size
+	clr.w -(SP)              // start
+	moveq #-5,D0
+	moveq #1,D1
+	move.w D1,-(SP)          // write
+	jsr 0xE02172             // NVMaccess
+	lea 10(SP),SP
+	clr.l 2(A3) 
+	moveq #CT60_MODE_READ,D0 // mode
+	moveq #CT60_SAVE_NVRAM_2,D1 // type_param
+	moveq #0,D2              // value
+	bsr ct60_rw_param 
+	move.l D0,6(A3)          // language, keyboard, datetime, separator
+	moveq #CT60_MODE_READ,D0 // mode
+	moveq #CT60_SAVE_NVRAM_3,D1 // type_param
+	moveq #0,D2              // value
+	bsr ct60_rw_param 
+	rol.l #8,D0
+	move.b D0,10(A3)         // bootdelay
+	move.l D0,14(A3)         // vmode, scsi, bootdelay
+	pea 6(A3)                // buffer: language, keyboard, datetime, separator, bootdelay
+	move.w #5,-(SP)          // size
+	move.w #6,-(SP)          // start
+	moveq #-5,D0
+	moveq #1,D1
+	move.w D1,-(SP)          // write
+	jsr 0xE02172             // NVMaccess
+	lea 10(SP),SP
+	clr.b 11(A3)
+	clr.w 12(A3)
+	pea 14(A3)               // buffer: vmode, scsi
+	move.w #3,-(SP)          // size
+	move.w #14,-(SP)         // start
+	moveq #-5,D0
+	moveq #1,D1
+	move.w D1,-(SP)          // write
+	jsr 0xE02172             // NVMaccess
+	lea 10(SP),SP
+	clr.b 17(A3)
+	clr.l 18(A3)
+	clr.l 24(A3)
+	clr.l 28(A3)
+	clr.l 32(A3)
+	clr.l 36(A3)
+	clr.l 40(A3)
+	clr.l 44(A3)
+	move.l -56(A6),A0        // target buffer
+	move.w -52(A6),D1        // size
+	move.w -50(A6),D0        // start
+	add.w D0,A3
+	bra.s .nvm_copy_buf
+.loop_nvm_copy_buf:
+		cmp.w #48,D0
+		bcc.s .end_nvm_copy_buf 
+		move.b (A3)+,(A0)+
+		addq.w #1,D0	
+.nvm_copy_buf:
+	dbf D1,.loop_nvm_copy_buf
+.end_nvm_copy_buf:
+	unlk A6
+	movem.l (SP)+,D1-D4/A0-A3
+	moveq #0,D0
+	rts
+.nvm_read:
+	unlk A6
+	movem.l (SP)+,D1-D4/A0-A3
+	moveq #-5,D0             // error
+	move.w 4(SP),D1
+.nvram_access:
+	jmp 0xE02172             // NVMaccess
+	
+test_rtc:
+
+	movem.l D0-D2,-(SP)
+	moveq #CT60_MODE_READ,D0 // mode
+	moveq #CT60_SAVE_NVRAM_1,D1 // type_param
+	moveq #0,D2              // value
+	bsr ct60_rw_param 
+	swap D0
+	cmp.w #0x4E56,D0         // NV magic code
+	movem.l (SP)+,D0-D2
+	bne .use_rtc
+	or.b #1,CCR              // use IKBD clock
+	rts
+.use_rtc:
+	and.b #0xFE,CCR          // use RTC clock
+	rts
+	
+fix_settime:
+
+	move.b D2,D0
+	and.w #0x7F,D0           // 1980
+	add.w #80,D0
+	cmp.w #100,D0
+	bcs.s .year_before_2000_settime
+	sub.w #100,D0
+.year_before_2000_settime:
+	rts
+	
+fix_gettime:
+
+	sub.b #80,D0             // 1980
+	bpl.s .year_before_2000_gettime
+	add.b #100,D0
+.year_before_2000_gettime:
+	moveb D0,D2
+	rts
 
 ct60_read_temp:
 

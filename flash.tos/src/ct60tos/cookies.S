@@ -36,7 +36,7 @@ begin1:
 	move.w	d0,0x59E
              move.l	#0x43543630,(a0)+  // CT60 
              clr.l	(a0)+
-	bra.s	begin1-0x3C4+0x400
+	bra.s	begin1-0x3C4+0x402
 end1:
 
 	.align	2

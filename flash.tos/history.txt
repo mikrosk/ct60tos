@@ -183,4 +183,20 @@ CTRL-ALT-SHIFT-SHIFT during the boot picture (file videl2.S).
 - Moved the format boot picture to XIMG TC16 for get free place for 
 the Atari Diagnostics.
 - Add a picture/demo code 'XIMG' at 0x00ED0000 for call a picture/demo 
-at 0x00ED0004 for replace the boot picture (file videl2.S). 
+at 0x00ED0004 for replace the boot picture (file videl2.S).
+
+2001-10-26 1.02b
+----------------
+- Add NVRAM TOS parameters inside the Flash who can replace the XBIOS 
+NVMAccess() read call, and the Gettime()/Settime from the IKBD (files 
+sdram.S, xbios.S, xbios2.S). This feature is for fix NVM problems 
+caused by a battery failure. 
+- Add 4 normal choices with the CT60_BOOT_ORDER parameter in flash for boot
+on SCSI drives and IDE drives who not support new I/O functions (file 
+sdram.S). The old boot also bypass the keyboard test.
+- Fix short Farenheit temperature value returned by the XBIOS to long 
+value (file xbios2.S).
+- Add display CPU frequency during boot on the Eiffel LCD (need 
+v1.0.9).
+
+ 

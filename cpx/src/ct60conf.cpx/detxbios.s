@@ -97,7 +97,7 @@ det_xbios:
 	bra .11                     ; enable
 .25:
 	moveq #-5,D0                ; error
-	rts
+	rte
 .6:	cmp.w #ct60_read_core_temperature,D0
 	beq.s .13
 	cmp.w #ct60_read_core_temperature_bis,D0
@@ -128,6 +128,7 @@ det_xbios:
 	mulu #9,D0
 	divu #5,D0
 	add.w #32,D0
+	ext.l D0
 	bra.s .3
 .4:	moveq #CT60_READ_ERROR,D0	; error
 .3:	addq #2,SP

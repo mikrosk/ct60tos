@@ -181,11 +181,15 @@ init_sdram:
 	beq.s .blitter_slow
 	bset #2,0xFFFF8007       // blitter 16 MHz
 .blitter_slow:
+	lea spaces(PC),A0
+	bsr display_string_single
 	lea message0(PC),A0
 	cmp.w #2,0x3E86          // number of planes
 	bhi.s .title_colors
 	lea message0b(PC),A0
 .title_colors:
+	bsr display_string_single
+	lea spaces(PC),A0
 	bsr display_string_single
 	movec.l PCR,D0
 	swap D0
@@ -261,6 +265,14 @@ init_sdram:
 	clr.w D0
 	swap D0
 	link A6,#-6
+	move.l D0,-4(A6)
+	move.l #0x43543630,D0    // CT60
+	bsr get_cookie
+	move.l A0,D0
+	beq.s .no_cookie_ct60
+	move.l -4(A6),4(A0)      // value
+.no_cookie_ct60:
+	move.l -4(A6),D0
 	clr.w -2(A6)
              cmp.w #1000,D0
              bcs.s .low_100
@@ -419,10 +431,10 @@ init_sdram:
 	beq.s .error_sdram
 	lea error1(PC),A0	
 .error_sdram:
-	moveq #13,D0
-	bsr display_char
-	moveq #10,D0
-	bsr display_char
+	move.l A0,-(SP)
+	lea crlf_spaces(PC),A0
+	bsr display_string_single
+	move.l (SP)+,A0
 	bsr display_string
 .error_sdram2:
 	move.w #7,-(SP)          // Crawcin
@@ -441,7 +453,7 @@ init_sdram:
 	add.w #26,D0             // size 0-3 for 64MB-512MB
 	moveq #0,D5
 	bset D0,D5
-	lea crlf(PC),A0
+	lea crlf_spaces(PC),A0
 	bsr display_string_single
 	lea message1(PC),A0
 	bsr display_string_single
@@ -536,6 +548,7 @@ init_sdram:
 	move.l D5,ramtop
 	move.l #0x1357BD13,ramvalid
 .init_mmu:
+	moveq #0,D7
 	movec.l PCR,D0
 	btst #16,D0
 	bne.s .end_sdram         // EC or LC
@@ -552,8 +565,27 @@ init_sdram:
 	tst.l D0
 	beq.s .end_sdram
 	lea message51(PC),A0     // TOS in RAM
-	bsr display_string	
+	bsr display_string
+	moveq #-1,D7
 .end_sdram:
+	clr.l -(SP)
+	move.l #CT60_SAVE_NVRAM_1,-(SP)
+	move.w #CT60_MODE_READ,-(SP)
+	move.w #rw_parameter,-(SP)
+	trap #14
+	lea 12(SP),SP
+	swap D0
+	cmp.w #0x4E56,D0         // NV magic code
+	bne .no_nvm_read_saved
+	lea crlf_spaces(PC),A0
+             tst.w d7
+             beq .no_tos_in_ram
+	lea separator(PC),A0
+.no_tos_in_ram:
+	bsr display_string_single
+	lea message51b(PC),A0    // NVRAM restored
+	bsr display_string
+.no_nvm_read_saved:
 	lea crlf(PC),A0
 	bsr display_string_single
 	movem.l (SP)+,D1-A6
@@ -939,8 +971,7 @@ error10:	.byte 13,10
 	.byte 13,10
 	.asciz "            SDRAM erreur v‚rification en $"
 name1:	.asciz "Eiffel"
-message0:	.ascii "            "
-	.byte 0x1B,0x62,0x34,0x41
+message0:	.byte 0x1B,0x62,0x34,0x41
 	.byte 0x1B,0x62,0x32,0x54
 	.byte 0x1B,0x62,0x33,0x41
 	.byte 0x1B,0x62,0x31,0x52
@@ -952,21 +983,24 @@ message0:	.ascii "            "
 	.byte 0x1B,0x62,0x3F
 	.ascii " TOS4.04"
 	.byte 13,10,0
-message0b:	.ascii "            ATARI FALCON/CT60 TOS4.04"
+message0b:	.ascii "ATARI FALCON/CT60 TOS4.04"
 crlf:	.byte 13,10,0
-message1:	.asciz "            SDRAM "
+separator:	.asciz ", "
+crlf_spaces:	.byte 13,10
+spaces:	.asciz "            "
+message1:	.asciz "SDRAM "
 message2:	.asciz "64"
 message3:	.asciz "128"
 message4:	.asciz "256"
 message5:	.asciz "512"
 message6:	.asciz "MB detected"
 	.asciz "Mo d‚tect‚e" 
-message8:	.asciz "            68060 Rev."
-	.asciz "            68060 R‚v."
-message9:	.asciz "            68EC060 / 68LC060 Rev."
-	.asciz "            68EC060 / 68LC060 R‚v."
-message10:	.asciz "            unknown CPU "
-	.asciz "            CPU inconnu"
+message8:	.asciz "68060 Rev."
+	.asciz "68060 R‚v."
+message9:	.asciz "68EC060 / 68LC060 Rev."
+	.asciz "68EC060 / 68LC060 R‚v."
+message10:	.asciz "unknown CPU "
+	.asciz "CPU inconnu"
 message11:	.asciz " Mask D00W/D11W" // revision 0
 	.asciz " Masque D00W/D11W"
 message12:	.asciz " Mask F43G/G65V" // revision 1
@@ -981,7 +1015,7 @@ message15:	.byte 27
 	.ascii "."
 	.byte ((VERSION/16) & 0xF) + 0x30
 	.byte (VERSION & 0xF) + 0x30
-	.asciz "a "
+	.asciz "b "
 message15b:	
 	.ascii "2004 October "
 	.byte 27
@@ -1113,6 +1147,8 @@ message51:	.byte 13,10
 	.byte 13,10
 //	.asciz "            TOS copi‚ en SDRAM (0-1FFF E00000-EEFFFF)"
 	.asciz "            TOS copi‚ en SDRAM"
+message51b:	.asciz "NVRAM unused"
+	.asciz "NVRAM non utilis‚e"
 message52:	.byte 13,10
 	.asciz "Reset"
 message53:	.byte 13,10
@@ -1275,6 +1311,8 @@ debug14:	.byte 13,10
 	.asciz "Read directory: "
 debug15:	.byte 13,10
 	.asciz "MSDOS partition found: "
+debug16:	.byte 13,10
+	.asciz "Error code: "
 #endif
 
 boot_scsi:	.byte 8,9,10,11,12,13,14,15,16,17,255
@@ -1344,13 +1382,14 @@ list_device_type:
 boot_drive:
 
 	movem.l D0-A5,-(SP)
-	link A6,#-16
+	link A6,#-18
 	clr.l -(SP)
 	move.l #CT60_BOOT_ORDER,-(SP)
 	move.w #CT60_MODE_READ,-(SP)
 	move.w #rw_parameter,-(SP)
 	trap #14
 	lea 12(SP),SP
+	move.b D0,-18(A6)
 	lea boot_scsi(PC),A5
 	and.w #3,D0
 	beq.s .loop_drive
@@ -1407,6 +1446,12 @@ boot_drive:
 			bsr display_string_single
 .black_and_white_2:
 			moveq #0,D7          // flags
+			btst #2,-18(A6)      // old boot
+			beq.s .new_boot
+			lea message43(PC),A0 // ...
+			bsr display_string_single
+			bra .default_tos_routine
+.new_boot:
 			btst #4,D4
 			bne .ide_drive
 #ifdef DEBUG
@@ -1420,12 +1465,24 @@ boot_drive:
 			asl.w #5,D1
 			move.b D1,1(A1)      // logical unit
 			clr.w 2(A1)
-			moveq #32,D1         // DMA bytes length
+			moveq #96,D1         // DMA bytes length
 			move.b D1,4(A1)      // length
 			clr.b 5(A1)
 			moveq #6,D2          // cmd bytes length
 			bsr scsi_read
 			bmi .no_answer       // time-out
+#ifdef DEBUG
+			move.l _dskbufp,A1
+			moveq #5,D1
+			bsr dump
+			move.w #7,-(SP)      // Crawcin
+			trap #1
+			addq.w #2,SP
+			moveq #13,D0
+			bsr display_char
+			moveq #10,D0
+			bsr display_char			
+#endif			
 			move.l _dskbufp,A0
 			cmp.b #0x7F,(A0)     // qualifier = 3 & no device type
 			beq .no_logical_unit
@@ -1529,9 +1586,19 @@ boot_drive:
 			bra .no_read_error
 .found_ide_drive:	
 #ifdef DEBUG
-			move.l _dskbufp,A0   // IDE buffer
-			move.w (A0),D0
-			bsr hex_word	
+			move.l _dskbufp,A1
+			moveq #15,D1
+			bsr dump
+			move.w #7,-(SP)      // Crawcin
+			trap #1
+			addq.w #2,SP
+			moveq #13,D0
+			bsr display_char
+			moveq #10,D0
+			bsr display_char			
+//			move.l _dskbufp,A0   // IDE buffer
+//			move.w (A0),D0
+//			bsr hex_word	
 #endif
 			move.l _dskbufp,A0
 			add.w #54,A0
@@ -1843,10 +1910,15 @@ boot_drive:
 			bra .no_read_error
 .scsi_drive_2:
 			tst.l -12(A6)        // SCSI buffer
-			beq.s .default_tos_routine 
+			beq .default_tos_routine 
 #ifdef DEBUG
 			lea debug11(PC),A0
 			bsr display_string_single
+			move.l -12(A6),A0
+			moveq #127,D0
+.loop_raz_buffer:
+				clr.l (A0)+
+			dbf D0,.loop_raz_buffer			
 #endif
 			moveq #1,D3
 .loop_speed_scsi:
@@ -1875,6 +1947,24 @@ boot_drive:
 				move.l (A0)+,(A1)+
 			dbf D1,.copy_buffer_scsi
 .drive_not_ok:
+#ifdef DEBUG
+			move.l D0,-(SP)
+			move.l -12(A6),A1
+			moveq #15,D1
+			bsr dump
+			move.w #7,-(SP)      // Crawcin
+			trap #1
+			addq.w #2,SP
+			lea debug16(PC),A0
+			bsr display_string_single
+			move.l (SP),D0
+			bsr hex_long	
+			moveq #13,D0
+			bsr display_char
+			moveq #10,D0
+			bsr display_char
+			move.l (SP)+,D0
+#endif
 			move.w (SP)+,D1
 			tst.l D0
 			beq .drive_ok
@@ -2166,6 +2256,8 @@ boot_drive:
 		move.l _dskbufp,A0
 		bsr check_boot
 		beq.s .root_ok
+		btst #2,-18(A6)          // old boot
+		bne .no_boot_found
 		move.l _dskbufp,A0
 		cmp.w #0xAA55,510(A0)
 		beq .root_msdos_combined
@@ -2552,7 +2644,7 @@ scsi_read:	// D0: drive, D1.L: DMA bytes, D2: bytes cmd, A0: DMA buffer, A1: buf
 	bsr get_timer_c
 	sub.l D3,D0
 	move.l D0,D3	           // time speed test
-//	cpusha DC
+	cpusha DC
 	bsr get_status_scsi
 	and.l #0xFF,D0          // error code
 .sr4:
@@ -3623,69 +3715,90 @@ display_char:
 	movem.l (SP)+,D0-D2/A0-A2
 	rts
 	
-conv_bcd:
+//conv_bcd:
 
-	and.l #0xFFFF,D0
-	divu #10,D0
-	move.w D0,D1
-	swap D0
-	asl.w #4,D1
-	or.w D1,D0
-	move.b D0,(A0)
-	rts
+//	and.l #0xFFFF,D0
+//	divu #10,D0
+//	move.w D0,D1
+//	swap D0
+//	asl.w #4,D1
+//	or.w D1,D0
+//	move.b D0,(A0)
+//	rts
+	
+//settime_ikbd:
+
+//	movem.l D0-A2,-(SP)
+//	link A6,#-8
+//	move.l D0,D5
+//	move.b #0x1B,-8(A6)      // Settime IKBD
+//	move.w D5,D0
+//	and.w #0x1F,D0
+//	add.w D0,D0
+//	lea -2(A6),A0
+//	bsr conv_bcd             // seconds
+//	lsr.l #5,D5
+//	move.w D5,D0
+//	and.w #0x3F,D0
+//	lea -3(A6),A0
+//	bsr conv_bcd             // mn
+//	lsr.l #6,D5
+//	move.w D5,D0
+//	and.w #0x1F,D0
+//	lea -4(A6),A0
+//	bsr conv_bcd             // hours
+//	lsr.l #5,D5
+//	move.w D5,D0
+//	and.w #0x1F,D0
+//	lea -5(A6),A0
+//	bsr conv_bcd             // day
+//	lsr.l #5,D5
+//	move.w D5,D0
+//	and.w #0xF,D0
+//	lea -6(A6),A0
+//	bsr conv_bcd             // month
+//	lsr.l #4,D5
+//	move.w D5,D0
+//	and.w #0x7F,D0
+//	add.w #80,D0
+//	cmp.w #100,D0
+//	bcs.s .year_ikbd
+//	sub.w #100,D0
+//.year_ikbd:
+//	lea -7(A6),A0
+//	bsr conv_bcd             // year
+//	pea -8(A6)	
+//	move.w #6,-(SP)
+//	move.w #0x19,-(SP)       // Ikbdws
+//	trap #14 
+//	addq.w #8,SP
+//	unlk A6
+//	movem.l (SP)+,D0-A2
+//	rts
 	
 test_keyboard:
 	
 	movem.l D0-A5,-(SP)
 	link A6,#-8
+	clr.l -(SP)
+	move.l #CT60_SAVE_NVRAM_1,-(SP)
+	move.w #CT60_MODE_READ,-(SP)
+	move.w #rw_parameter,-(SP)
+	trap #14
+	lea 12(SP),SP
+	swap D0
+	cmp.w #0x4E56,D0         // NV magic code
+	beq .rtc_bypass
 	move.w #0x17,-(SP)       // Gettime
 	trap #14
 	addq.w #2,SP
 	move.l D0,D7
-	move.l D7,D5
-	move.b #0x1B,-8(A6)      // Settime IKBD
-	move.w D5,D0
-	and.w #0x1F,D0
-	add.w D0,D0
-	lea -2(A6),A0
-	bsr conv_bcd             // seconds
-	lsr.l #5,D5
-	move.w D5,D0
-	and.w #0x3F,D0
-	lea -3(A6),A0
-	bsr conv_bcd             // mn
-	lsr.l #6,D5
-	move.w D5,D0
-	and.w #0x1F,D0
-	lea -4(A6),A0
-	bsr conv_bcd             // hours
-	lsr.l #5,D5
-	move.w D5,D0
-	and.w #0x1F,D0
-	lea -5(A6),A0
-	bsr conv_bcd             // day
-	lsr.l #5,D5
-	move.w D5,D0
-	and.w #0xF,D0
-	lea -6(A6),A0
-	bsr conv_bcd             // month
-	lsr.l #4,D5
-	move.w D5,D0
-	and.w #0x3F,D0
-	add.w #80,D0
-	cmp.w #100,D0
-	bcs.s .year_ikbd
-	sub.w #100,D0
-.year_ikbd:
-	lea -7(A6),A0
-	bsr conv_bcd             // year
-	pea -8(A6)	
-	move.w #6,-(SP)
-	move.w #0x19,-(SP)       // Ikbdws
-	trap #14 
-	addq.w #8,SP
+	move.l D0,-(SP)
+	jsr 0xE022CA             // Settime IKBD
+	addq.w #4,SP
+//	bsr settime_ikbd
 	jsr 0xE022A0             // Gettime IKBD
-	and.l #0x01FFFFFF,D0     // remove year because this call has a year 2000 bug 
+//	and.l #0x01FFFFFF,D0     // remove year because this call has a year 2000 bug 
 	tst.b 0x11C4
 	bpl.s .keyboard_answer
 .keyboard_error_2:
@@ -3693,11 +3806,12 @@ test_keyboard:
 	bsr display_string
 	bra .no_buffer
 .keyboard_answer:
-	and.l #0x01FFFFFF,D7
+//	and.l #0x01FFFFFF,D7
 	sub.l D7,D0
 	bmi.s .keyboard_error_2
 	cmp.l #1,D0
 	bhi.s .keyboard_error_2
+.rtc_bypass:	
 	clr.w -(SP)              // stram
 	move.l #0x2000,-(SP)     // 8K
 	move.w #0x44,-(SP)       // Mxalloc
@@ -3770,13 +3884,39 @@ test_keyboard:
 		beq.s .eiffel_found			
 		addq.l #2,A0
 	dbf D1,.loop_find_name
-	bra.s .end_test_keyboard
+	bra .end_test_keyboard
 .eiffel_found:                        // display eiffel version
 		addq.l #1,A0
 		move.b (A0)+,D0
-		beq.s .end_test_keyboard
+		beq.s .end_eiffel_found
 		bsr display_char
 	bra.s .eiffel_found
+.end_eiffel_found:
+	move.b #0x20,-4(A6)      // IKBD load memory
+	move.b #0x01,-3(A6)      // Eiffel 0x120 ram memory
+	move.b #0x20,-2(A6)
+	move.b #8,-1(A6)         // 8 bytes
+	pea -4(A6)
+	move.w #3,-(SP)
+	move.w #0x19,-(SP)       // Ikbdws
+	trap #14 
+	addq.w #8,SP
+	move.l #0x43543630,D0    // CT60
+	bsr get_cookie
+	lea -8(A6),A0
+	moveq #4,D1              // CPU speed * 10 saved inside init_sdram
+	bsr conv_ascii_value
+	move.b -5(A6),-4(A6)
+	move.b #0x2E,-5(A6)
+	move.b #0x4D,-3(A6)      // MHz
+	move.b #0x48,-2(A6)
+	move.b #0x7A,-1(A6)
+	pea -8(A6)
+	move.w #7,-(SP)
+	move.w #0x19,-(SP)       // Ikbdws
+	trap #14 
+	addq.w #8,SP
+	bra.s .end_test_keyboard
 .keyboard_error:	
 	lea message76(PC),A0     // keyboard failure
 	bsr display_string
@@ -3806,7 +3946,16 @@ add_sdram:
 	bsr display_string_single
 	lea message15b(PC),A0
 	bsr display_string
+	clr.l -(SP)
+	move.l #CT60_BOOT_ORDER,-(SP)
+	move.w #CT60_MODE_READ,-(SP)
+	move.w #rw_parameter,-(SP)
+	trap #14
+	lea 12(SP),SP
+	btst #2,D0               // old boot
+	bne.s .old_boot
 	bsr test_keyboard
+.old_boot:
 	cmp.l #0x1357BD13,ramvalid
 	bne .not_sdram
 	move.l _sysbase,A0       // header ROM
@@ -3934,7 +4083,7 @@ add_sdram:
 .not_sdram:
 	bsr init_cookie_ct60
 	moveq #3,D0
-	jsr 0x00E00BD2
+	jsr 0xE00BD2
 	move.l hdv_boot,A0
 	jsr (A0)
 	tst.w D0
@@ -4404,11 +4553,14 @@ init_cookie_ct60:
 	bsr get_cookie
 	move.l A0,D0
 	beq.s .error_cookie_ct60
-	move.l A1,4(A0)
+	move.l 4(A0),D2          // CPU speed * 10 saved inside init_sdram
+	move.l A1,4(A0)          // buffer
 	moveq #(CT60_COOKIE_SIZE/4)-1,D0
 .clear_data_ct60_cookie:
 		clr.l (A1)+
 	dbf D0,.clear_data_ct60_cookie
+	move.l 4(A0),A0          // buffer
+	move.w D2,8(A0)          // CPU speed
 	move.l phystop,A0
 	clr.w count_io3_mfp(A0)
 	move.l _hz_200,start_hz_200(A0)
@@ -4458,7 +4610,7 @@ inter_io3_mfp:
 .loop_cookie_inter:
 		tst.l (A0)
 		beq.s .end_inter
-		cmp.l #0x43543630,(A0)
+		cmp.l #0x43543630,(A0)      // CT60
 		bne.s .next_cookie_inter
 		move.l 4(A0),D0
 		beq.s .end_inter

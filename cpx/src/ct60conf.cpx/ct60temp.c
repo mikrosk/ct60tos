@@ -1,6 +1,6 @@
 	
 /* CT60 TEMPerature - Pure C */
-/* Didier MEQUIGNON - v1.02 - August 2004 */
+/* Didier MEQUIGNON - v1.02b - October 2004 */
 
 #include <portab.h>
 #include <tos.h>
@@ -191,6 +191,8 @@ int main(int argc,const char *argv[])
 	long uptime,load,old_load=0,load_avg=0,load_avg_mn=0,delay=ITIME,avenrun[3]={0,0,0};
 	char *eiffel_temp;
 	char buffer[2];
+	static char load_ikbd[4] = {0x20,0x01,0x20,8};
+	char message_lcd[10];
 	CT60_COOKIE *ct60_arg=NULL;
 	static unsigned int old_time=9999;
 	static int error_flag=0,old_stop=0;
@@ -436,6 +438,9 @@ int main(int argc,const char *argv[])
 				tab_temp[60]=MAX_TEMP;
 			if(eiffel_temp!=NULL)
 			{
+				Ikbdws(3,load_ikbd);
+				sprintf(message_lcd," 60 %02d\337C",temp);
+				Ikbdws(7,message_lcd);
 				buffer[0]=3;			/* get temp */
 				Ikbdws(0,buffer);
 				for(i=61;i<121;i++)
@@ -502,11 +507,11 @@ int main(int argc,const char *argv[])
 					}
 				 	if(!start_lang)
 						sprintf(mess_alert,
-						"[0][      CT60 TEMPERATURE       |V1.02 MEQUIGNON Didier 08/2004| |Temp.: %d øC     Seuil: %d øC |Lien avec processus %d %s][OK]",
+						"[0][      CT60 TEMPERATURE       |V1.02b MEQUIGNON Didier 10/2004| |Temp.: %d øC     Seuil: %d øC |Lien avec processus %d %s][OK]",
 						temp,trigger_temp,app_id,app_name);
 					else
 						sprintf(mess_alert,
-						"[0][      CT60 TEMPERATURE       |V1.02 MEQUIGNON Didier 08/2004| |Temp.: %d øC Threshold: %d øC |Link with process %d %s][OK]",
+						"[0][      CT60 TEMPERATURE       |V1.02b MEQUIGNON Didier 10/2004| |Temp.: %d øC Threshold: %d øC |Link with process %d %s][OK]",
 						temp,trigger_temp,app_id,app_name);
 					MT_form_xalert(1,mess_alert,ITIME*10L,0L,myglobal);
 					break;

@@ -47,9 +47,16 @@ picture_boot:
 fix_modecode:
 
 	move.l D1,-(SP)
-	moveq #7,D1
 	move.w modecode,D0
 	and.w #0x1FF,D0                           // valid bits
+	move.b 0xFFFF8006,D1
+	lsr.w #6,D1                               // 0:ST nomo, 1:ST col, 2:VGA, 3:TV
+	bclr #4,D0                                // VGA
+	cmp.w #2,D1                               // VGA
+	bne.s .no_vga_monitor
+	bset #4,D0                                // VGA
+.no_vga_monitor:	
+	moveq #7,D1	
 	and.w D0,D1                               // bits/pixel code
 	btst #7,D0                                // STMODES
 	beq.s .normal_mode

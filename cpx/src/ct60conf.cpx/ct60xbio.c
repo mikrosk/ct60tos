@@ -1,6 +1,6 @@
 	
 /* CT60 XBIOS - Pure C */
-/* Didier MEQUIGNON - August 2004 */
+/* Didier MEQUIGNON - October 2004 */
 
 #include <tos.h>
 #include <stdio.h>
@@ -54,9 +54,9 @@ int main(void)
 	}
 	Cconws("\r\n\n");
 	Cconout(27);
-	Cconws("p XBIOS CT60 v1.02 ");
+	Cconws("p XBIOS CT60 v1.02b ");
 	Cconout(27);
-	Cconws("q August 2004\r\n");
+	Cconws("q October 2004\r\n");
 #ifdef TEST_MAGICMAC
     if(!get_cookie('MgMc'))
 #endif
