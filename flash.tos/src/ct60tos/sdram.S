@@ -21,6 +21,7 @@
 	.globl init_060
 	.globl init_sdram
 	.globl add_sdram
+	.globl display_ram_test
 	.globl ct60_read_info_sdram
 	.globl ct60_configure_sdram
 
@@ -276,6 +277,111 @@ init_sdram:
 	bsr display_string
 	unlk A6
 	lea message18(PC),A0     // MHz
+	bsr display_string
+	link A6,#-48
+	pea.l -48(A6)            // buffer
+	move.w #48,-(SP)         // size
+	clr.w -(SP)              // start
+	clr.w -(SP)              // read
+	move.w #46,-(SP)         // NVMaccess
+	trap #14
+	lea 12(SP),SP
+	lea -48(A6),A0           // buffer
+	movem.l 32(A0),D3/D4     // ABE code, SDR code
+	unlk A6
+	move.l D3,D0
+	move.l D4,D1
+	and.l #0xFF000000,D0
+	and.l #0xFF000000,D1
+	cmp.l #0x41000000,D0
+	beq.s .code_hard
+	cmp.l #0x53000000,D1
+	bne .no_code
+.code_hard:
+	cmp.l #0x41000000,D0
+	bne.s .no_abe_code
+	clr.l -(SP)
+	move.l #CT60_ABE_CODE,-(SP)
+	move.w #CT60_MODE_READ,-(SP)
+	move.w #rw_parameter,-(SP)
+	trap #14
+	lea 12(SP),SP 
+	cmp.l D0,D3
+	beq.s .no_abe_code
+	move.l D3,-(SP)
+	move.l #CT60_ABE_CODE,-(SP)
+	move.w #CT60_MODE_WRITE,-(SP)
+	move.w #rw_parameter,-(SP)
+	trap #14
+	lea 12(SP),SP 
+.no_abe_code:
+	move.l D4,D1
+	and.l #0xFF000000,D1
+	cmp.l #0x53000000,D1
+	bne.s .no_code
+	clr.l -(SP)
+	move.l #CT60_SDR_CODE,-(SP)
+	move.w #CT60_MODE_READ,-(SP)
+	move.w #rw_parameter,-(SP)
+	trap #14
+	lea 12(SP),SP 
+	cmp.l D0,D4
+	beq.s .no_code
+	move.l D4,-(SP)
+	move.l #CT60_SDR_CODE,-(SP)
+	move.w #CT60_MODE_WRITE,-(SP)
+	move.w #rw_parameter,-(SP)
+	trap #14
+	lea 12(SP),SP 
+.no_code:
+	clr.l -(SP)
+	move.l #CT60_ABE_CODE,-(SP)
+	move.w #CT60_MODE_READ,-(SP)
+	move.w #rw_parameter,-(SP)
+	trap #14
+	lea 12(SP),SP
+	move.l D0,D3 
+	clr.l -(SP)
+	move.l #CT60_SDR_CODE,-(SP)
+	move.w #CT60_MODE_READ,-(SP)
+	move.w #rw_parameter,-(SP)
+	trap #14
+	lea 12(SP),SP
+	move.l D0,D4
+	move.l D3,D0
+	move.l D4,D1
+	and.l #0xFF000000,D0
+	and.l #0xFF000000,D1
+	cmp.l #0x41000000,D0
+	beq.s .code_hard_display
+	cmp.l #0x53000000,D1
+	bne.s .no_code_display
+.code_hard_display:
+	lea message38(PC),A0
+	bsr display_string
+	cmp.l #0x41000000,D0
+	bne.s .no_abe_code_display
+	lea message39(PC),A0
+	bsr display_string
+	move.w D3,D0
+	lsr.w #8,D0
+	bsr display_char
+	move.w D3,D0
+	and.w #0xFF,D0
+	bsr display_char
+.no_abe_code_display:
+	cmp.l #0x53000000,D1
+	bne.s .no_code_display
+	lea message40(PC),A0
+	bsr display_string
+	move.w D4,D0
+	lsr.w #8,D0
+	bsr display_char
+	move.w D4,D0
+	and.w #0xFF,D0
+	bsr display_char
+.no_code_display:
+	lea crlf(PC),A0
 	bsr display_string
 	clr.l ramtop
 	clr.l ramvalid
@@ -557,7 +663,7 @@ message15:	.byte 27
 	.ascii "."
 	.byte ((VERSION/16) & 0xF) + 0x30
 	.byte (VERSION & 0xF) + 0x30
-	.ascii "c 2003 July "
+	.ascii "d 2003 July "
 	.byte 27
 	.ascii "q"
 	.byte 13,10,10
@@ -567,8 +673,7 @@ message16:	.byte 13,10
 	.asciz "            TOS copied in SDRAM"
 message17:   .ascii "MB/S"
 	.byte 13,10,0
-message18:	.ascii "MHz"
-	.byte 13,10,0
+message18:	.asciz "MHz"
 message19:	.byte 13,10,27 
 	.ascii "p SDRAM EEPROM DATA "
 	.byte 27
@@ -610,8 +715,26 @@ message36:	.byte 13,10
 	.asciz "Byte 93-94, Module Manufacturing Date : $"
 message37:	.byte 13,10
 	.asciz "Byte 95-98, Module Serial Number : $" 
+message38:	.byte 13,10
+	.asciz "            CT60 hardware"
+message39:	.asciz " ABEv"
+message40:	.asciz " SDRv"
 
 	.align 2
+	
+display_ram_test:
+
+	movem.l D0/D1/A0,-(SP)
+	link A6,#-8
+	moveq #6,D1
+	clr -2(A6)
+	lea -8(A6),A0
+	bsr conv_ascii_value
+	lea -8(A6),A0
+	bsr display_string
+	unlk A6
+	movem.l (SP)+,D0/D1/A0
+	rts
 
 conv_ascii_value:                     // A0:target ascii, D0.L:value, D1:len
 
@@ -693,7 +816,7 @@ display_char:
 	move #2,-(SP)
 	move #3,-(SP)
 	trap #13
-	addq #6,SP
+	addq.w #6,SP
 	movem.l (SP)+,D0-D2/A0-A2
 	rts
 

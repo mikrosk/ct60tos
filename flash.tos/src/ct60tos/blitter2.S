@@ -33,6 +33,9 @@
 #define phystop  0x42E
 #define _memtop  0x436
 #define _sysbase 0x4F2
+#define _cookie  0x5A0
+
+#define save_hz_200 -44
 #define save_source -40
 #define save_target -36
 #define save_contrl -32
@@ -132,6 +135,7 @@ cf3:
 	move.l (A0)+,(A1)+		
 	move.w (A0)+,(A1)+
 	move.l phystop,A2
+	clr.l save_hz_200(A2)
 	lea adr_fonts(A2),A2
 	lea 0xE4AFEC,A0
 	move.l D1,A1
@@ -344,4 +348,4 @@ free_stram:
 	addq.w #6,SP
 	movem.l (SP)+,D1-D2/A0-A2
 	rts
-
+	

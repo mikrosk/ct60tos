@@ -26,3 +26,23 @@
 begin1:
 	jsr	flush_cache_pexec
 end1:
+
+	.globl	det_gemdos
+
+	.align	2
+	.long	0x1DF62
+	.long	end2-begin2+0x80000000
+begin2:
+	.short	0x41F9
+	.long	det_gemdos
+end2:
+
+	.globl	det_vbl
+
+	.align	2
+	.long	0x214
+	.long	end3-begin3+0x80000000
+begin3:
+	move.l	#det_vbl,0x70.w
+end3:
+

@@ -8,6 +8,8 @@
 #define CT60_PARAM_TOSRAM 0L
 #define CT60_BLITTER_SPEED 1L
 #define CT60_PARAM_OFFSET_TLV 10L
+#define CT60_ABE_CODE 11L
+#define CT60_SDR_CODE 12L
 
 #define ct60_read_core_temperature(type_deg) (long)xbios(0xc60a,(short)type_deg)
 #define ct60_rw_parameter(mode,type_param,value) (long)xbios(0xc60b,(short)mode,(long)type_param,(long)value)

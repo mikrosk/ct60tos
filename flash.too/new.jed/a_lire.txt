@@ -1,0 +1,16 @@
+CT60
+MISE A JOUR ABE ET SDR
+
+ATTENTION :
+
+UNE PISTE SUR LA CT60 DOIT ETRE COUPEE !!
+
+Si vous avez re‡u la CT60 APRES le 5 Juillet 2003, c'est d‚ja fait.
+
+Si vous avez re‡u la CT60 AVANT le 5 juillet 2003, vous devez couper une piste !
+Reportez vous … l'image sur le site sur la page de mise … jour.
+http://www.czuba-tech.com
+
+Coupez la piste PUIS booter en mode 030 pour la mise … jour.
+
+

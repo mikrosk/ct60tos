@@ -63,3 +63,27 @@ end4:
 begin5:
 	jmp	add_sdram
 end5:
+
+	.align	2
+	.long	0x7A08
+	.long	end6-begin6
+begin6:
+	moveq	#9,D7
+end6:
+
+	.align	2
+	.long	0x7B1C
+	.long	end7-begin7
+begin7:
+	moveq	#9,D7
+end7:
+
+	.globl	display_ram_test
+
+	.align	2
+	.long	0x7D5A
+	.long	end8-begin8+0x80000000
+begin8:
+	jmp	display_ram_test
+end8:
+

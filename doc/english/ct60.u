@@ -4,7 +4,7 @@
 !title   Documentation of the
 !programimage ..\img\ct60.img
 !program CT60
-!version Version 0.98c
+!version Version 0.98d
 !date    (!today)
 !author  Didier MEQUIGNON
 !street  25, rue de l'Ascenseur
@@ -2043,6 +2043,21 @@ Pin Card !! Signal !! Comment
 !end_table
 !image ..\img\dsp.img
 !image ..\img\clock.img
+
+
+!subnode TOS Keyboard shortcuts
+
+!begin_verbatim
+CTRL:          Boot without AUTO folder and ACC.
+ALT:           Remove cache if pressed before the SDRAM init.
+               Boot without disk if pressed after.
+CTRL-SHIFL:    Boot without PMMU tree like a 68060 EC if pressed before 
+               the Atari logo.
+SHIFTL-SHIFTR: Boot without SDRAM if pressed before the Atari logo.
+SHIFTL:        Displays infos about the SDRAM module.
+CTRL-ALT-UNDO: NVM init if pressed before the SDRAM init and until the 
+               Reset.
+!end_verbatim
 
 
 !node Contacts

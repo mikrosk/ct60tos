@@ -21,4 +21,12 @@ cookie.S).
 - Flash parameters in 0xFFEF0000 (was 0x00EF0000 before, file 
 xbios.S).
  
+2003-07-09 0.98d
+----------------
+- Add versions of ABE & SDR inside the flash parameters (file 
+sdram.S) => use Flash Tool CT60.
+- Add a patch for the memory test, there are 6 digits for display TT 
+RAM size (128, 256 and 512 broken before, files pmmu.S & sdram.S).
+- Add a patch for a copyback alert inside Fread if the data start by 
+0x601A (files gemdos.S & gemdos2.S). 
 

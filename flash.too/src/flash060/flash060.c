@@ -78,6 +78,23 @@ typedef struct
 	} v;
 } COOKIE;
 
+typedef struct
+{
+	unsigned int bootpref;
+	char reserved[4];
+	unsigned char language;
+	unsigned char keyboard;
+	unsigned char datetime;
+	char separator;
+	unsigned char bootdelay;
+	char reserved2[3];
+	unsigned int vmode;
+	unsigned char scsi;
+	char reserved3[15];
+	unsigned long code_abe;
+	unsigned long code_sdr;
+} NVM;
+
 typedef void (*__Sigfunc) (int signum);
 __Sigfunc signal(int sig, __Sigfunc func);
 
@@ -313,6 +330,7 @@ int Button(int code)
 	int i,b,error,verify,repeat,lock_interrupts;
 	unsigned char tap_state;
 	char c;
+	NVM nvram;
 	COOKIE *p;
 	OBJECT *op;
 	TEDINFO *tp;
@@ -403,6 +421,12 @@ int Button(int code)
 						{
 							if(verify)
 							{
+								NVMaccess(0,0,(int)(sizeof(NVM)),&nvram);       /* read */
+								if(device==ABE)
+									nvram.code_abe=usercode;
+								if(device==SDR)
+									nvram.code_sdr=usercode;
+								NVMaccess(1,0,(int)(sizeof(NVM)),&nvram);       /* write */			
 								if(usercode!=usercode_jed)
 									error=ERROR_CODE;
 							}
@@ -443,7 +467,16 @@ int Button(int code)
 										if(error==ERROR_NONE && i!=ERROR_NONE)
 											error=i;
 									}
-								}		
+								}
+								if(error==NONE)
+								{
+									NVMaccess(0,0,(int)(sizeof(NVM)),&nvram);       /* read */
+									if(device==ABE)
+										nvram.code_abe=usercode_jed;
+									if(device==SDR)
+										nvram.code_sdr=usercode_jed;
+									NVMaccess(1,0,(int)(sizeof(NVM)),&nvram);       /* write */			
+								}
 							}
 							if(error==NONE)
 							{

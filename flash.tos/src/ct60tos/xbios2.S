@@ -268,7 +268,7 @@ wait7:
 	beq.s ct3
 	moveq #0,D2                                         // value
 	moveq #CT60_PARAM_OFFSET_TLV,D1                     // type_param
-	moveq #CT60_MODE_READ,D0                                         // read
+	moveq #CT60_MODE_READ,D0                            // read
 	bsr ct60_rw_param
 	add.l D3,D0                                         // offset
 	cmp.w #MES_TEMP_0,D0
@@ -371,7 +371,7 @@ save_param:
 	lea.l end_ct60_write_param(PC),A2
 	move.l phystop,A1
 	movec.l SRP,D3
-	sub.l #RESERVE_MEM_FONTS-0x6000,A1
+	sub.l #RESERVE_MEM_FONTS-0x6800,A1
 	cmp.l #0x1000000,D3
 	bcc.s .sdram
 	sub.l #RESERVE_MEM-RESERVE_MEM_FONTS,A1
@@ -383,7 +383,7 @@ save_param:
 	subq.l #1,D3
 copy_prog:
 		move.w (A0)+,(A1)+                     // copy program in the top of the STRAM
-	dbf D3,copy_prog
+	dbf D3,copy_prog                                    // after the copy of Atari logo
 	movec.l CACR,D3
 	move.l D3,A5                                        // save CACR
 	cpusha DC

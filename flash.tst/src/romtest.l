@@ -152,12 +152,14 @@ DEVCONNECT2:MACRO $\1,$\2,$\3,$\4;handshake d‚sactiv‚
 
 CACHE_OFF:MACRO
 
+ pea string4a(pc)
+ bsr display_string
+ addq.w #4,sp
  MOVE SR,-(SP)
  OR #$700,SR;masque IRQ
  MOVEQ #0,D0;inhibe & vide caches
  DC.L $4E7B0002;MOVEC.L D0,CACR
  IFEQ 1,FLASH
-  DC.W $F518;PFLUSHA
   DC.W $F4F8;CPUSHA BC
  ENDIF 
  MOVE (SP)+,SR
@@ -170,12 +172,14 @@ CACHE_OFF:MACRO
 CACHE_ON:MACRO
 
  movem.l D0-D1/A0,-(SP)
+ pea string4a(pc)
+ bsr display_string
+ addq.w #4,sp
  MOVE SR,-(SP)
  OR #$700,SR;masque IRQ
  IFEQ 1,FLASH
   DC.W $F4F8;CPUSHA BC
-  DC.W $F518;PFLUSHA
-  MOVE.L #$A0C08000,D0;68060
+  MOVE.L #$A0808000,D0;68060
   TST.B FLAG_CACHE+1
   SNE.B D1
   EXT.W D1
@@ -213,7 +217,6 @@ PMMU_OFF:MACRO
  OR #$700,SR;masque IRQ
  IFEQ 1,FLASH
   DC.W $F4F8;CPUSHA BC
-  DC.W $F518;PFLUSHA
   MOVEQ #0,D0
   DC.L $4E7B0007;MOVEC.L D0,DTT1
   DC.L $4E7B0005;MOVEC.L D0,ITT1
@@ -235,7 +238,6 @@ PMMU_ON:MACRO
  OR #$700,SR;masque IRQ
  IFEQ 1,FLASH
   DC.W $F4F8;CPUSHA BC
-  DC.W $F518;PFLUSHA
   MOVE.L #$807FE040,D0;zone $00000000-$7FFFFFFF en mode writethrough
   ;sauf signal CI venant de l'exterieur =>  cache inhibit imprecise)
   ;et la zone $80000000-$FFFFFFFF en cache inhibit precise
@@ -329,8 +331,7 @@ DEBUT:
 
 ; IFEQ 1,FLASH
 ;  DC.W $F4F8;CPUSHA BC
-;  DC.W $F518;PFLUSHA
-;  MOVE.L #$A0C08000,D0;68060
+;  MOVE.L #$A0808000,D0;68060
 ;  TST.B FLAG_CACHE+1
 ;  SNE.B D1
 ;  EXT.W D1
@@ -497,8 +498,8 @@ DEBUT:
 
 \stram_bad:
  clr.l _hz_200
- MOVE #$2300,SR;autorise interruptions
  CACHE_ON
+ MOVE #$2300,SR;autorise interruptions
 ; pea string_dsp1(pc)
 ; bsr display_string
 ; addq.w #4,sp
@@ -2654,6 +2655,7 @@ string3sdc:dc.b " Mips SDRAM:",0; (117):",0
 string4:dc.b  " Cache OFF               ",0
 string4b:dc.b " Cache ON (excepted data)",0
 string4c:dc.b " Cache ON (all caches)   ",0
+string4a:dc.b " Change cache...",0
 string5:dc.b " Display OFF",0
 string5b:dc.b " Display ON",0
 string6:dc.b " Set IPL 3",0
