@@ -31,6 +31,9 @@
 #include "command.h"
 #include "vars.h"
 
+// #define DEBUG_GEMDOS
+// => move.b #0x01,0x5695 or move.b #0x01,0x5695 before the Gemdos call
+
 #define MES_TEMP_0 197
 #define MES_TEMP_25 208
 #define MES_TEMP_50 218
@@ -79,6 +82,18 @@ det_xbios:
 	lea.l 8(SP),A0
 xb2:
 	move.w (A0),D0                                      // function
+#ifdef DEBUG_GEMDOS                                               
+	cmp.w #0xB,D0                                       // unused
+	bne.s .xb25
+	cmp.w #5,2(A0)
+	bne.s .xb25
+	cmp.w #0xF100,4(A0)
+	bne.s .xb25
+	move.l 6(A0),A0                                     // string
+	bsr debug_gemdos
+	rte
+.xb25:
+#endif
 	cmp.w #0x40,D0                                      // Blitmode
 	bne.s xb10
 	move.l 2(SP),D0                                     // PC
@@ -198,6 +213,132 @@ xb14:
 xb1:
 	move.l det_xbios-4,-(SP)
 	rts
+
+#ifdef DEBUG_GEMDOS
+debug_gemdos:
+
+	moveq #13,D0
+	bsr display_char
+	moveq #10,D0
+	bsr display_char
+.dg2:
+		move.b (A0)+,D0
+		beq .dg1
+		cmp.l #0x28777065,-1(A0) // '(wpe'
+		bne.s .dg4
+		moveq #0,D2
+		bra.s .dg3
+.dg4:
+		cmp.l #0x286C7065,-1(A0) // '(lpe'
+		bne.s .dg5
+		moveq #1,D2
+.dg3:
+		cmp.l #0x656B2028,3(A0) // 'ek ('
+		bne.s .dg5
+		cmp.l #0x6136202B,8(A0)  // 'a6 +'
+		beq.s .dg6
+		cmp.l #0x6136202D,8(A0)  // 'a6 -'
+		bne.s .dg5
+		bset #31,D2
+.dg6:
+		moveq #0x30,D0
+		bsr display_char
+		moveq #0x78,D0
+		bsr display_char
+		add.w #13,A0
+		bsr hex_value
+		tst.l D2
+		bpl.s .dg7
+		neg.l D0
+.dg7:
+		tst.w D2
+		bne.s .dg8
+		move.w (A6,D0.l),D0
+		bsr hex_word
+		bra.s .dg9
+.dg8:
+		move.l (A6,D0.l),D0
+		bsr hex_long
+.dg9:
+			move.b (A0)+,D0
+			beq.s .dg1	
+			cmp.b #0x29,D0 // )
+			bne.s .dg9
+		cmp.b #0x29,(A0)
+		bne.s .dg9
+		addq.w #1,A0
+		bra .dg2
+.dg5:	
+		bsr display_char
+	bra .dg2
+.dg1:
+	rts
+	
+hex_value:
+
+	movem.l D1/A0,-(SP)
+	moveq #0,D0
+.hv2:	
+		move.b (A0)+,D1
+		cmp.b #0x30,D1
+		bcs.s .hv1
+		cmp.b #0x39,D1
+		bhi.s .hv4
+		and.b #0xF,D1
+		bra.s .hv3
+.hv4:
+		cmp.b #0x41,D1
+		bcs.s .hv1
+		cmp.b #0x46,D1
+		bls.s .hv5
+		cmp.b #0x61,D1
+		bcs.s .hv1
+		cmp.b #0x66,D1
+		bhi.s .hv1		
+.hv5:
+		and.b #0xF,D1
+		add.b #0x9,D1
+.hv3:
+		asl.l #4,D0
+		or.b D1,D0
+	bra.s .hv2			
+.hv1:
+	movem.l (SP)+,D1/A0
+	rts
+	
+hex_long:
+	move.l D0,-(SP)
+	swap D0
+	bsr.s hex_word
+	move.l (SP)+,D0
+hex_word:
+	move.w D0,-(SP)
+	lsr.w #8,D0          
+	bsr.s hex_byte     
+	move.w (SP)+,D0
+hex_byte:
+	move.w D0,-(SP)
+	lsr.b #4,D0        
+	bsr.s hex_char      
+	move.w (SP)+,D0      
+hex_char:
+	and.b #0xF,D0      
+	or.b #0x30,D0      
+	cmp.b #0x3A,D0     
+	bcs.s display_char  
+	addq.b #7,D0   
+
+display_char:
+
+	movem.l D0-D2/A0-A2,-(SP)
+	move.w D0,-(SP)
+	move.w #2,-(SP)
+	move.w #3,-(SP)          // Bconout
+	trap #13
+	addq.w #6,SP
+	movem.l (SP)+,D0-D2/A0-A2
+	rts
+#endif
 
 ct60_read_temp:
 

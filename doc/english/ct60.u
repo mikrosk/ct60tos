@@ -4,7 +4,7 @@
 !title   Documentation of the
 !programimage ..\img\ct60.img
 !program CT60
-!version Version 1.02
+!version Version 1.02a
 !date    (!today)
 !author  Didier MEQUIGNON
 !street  25, rue de l'Ascenseur
@@ -354,7 +354,7 @@ instructions movep replaced.
 !item The bombs inside exceptions displayed with texts in clear of a crash.
 !item The emulation of unimplemented instructions (integers and FPU).
 !item The XBIOS CT60 function $C60A to $C60D (temperature, parameters in 
-flash, cache...), and the DSP (functions with handshake). 
+Flash, cache...), and the DSP (functions with handshake). 
 !item The needful patchs for the blitter, the system fonts and the Atari 
 logo copied at the top of the ST-RAM (needed if the TOS in ROM is a 4.02).
 !item The replacement of the XBIOS Bconout routine (display texts).
@@ -602,6 +602,120 @@ the '-' characters, the SDRAM is defective.
 For see 'Informations about the SDRAM' :
 
 During boot the Atari logo is displayed, press the right SHIFT key. 
+
+
+!node Atari Diagnostics
+
+Inside the second part of the Flash (in $00ED0000-$00EEFFFF) there are the 
+Atari Diagnostics updated for the CT60 (SDRAM added and 68060 fix).
+
+CTRL-ALT-SHIFTL-SHIFTR start the Atari Diagnostics if pressed before the 
+Atari logo.
+
+(!U)
+WARNING !
+(!u)
+
+(!U)
+Abnormal termination in this tests may result in lost data :
+(!u)
+
+!begin_itemize
+!item RTC/NVRAM.
+!item IDE.
+!item SCSI.
+!end_itemize
+
+
+!subnode Main Keys
+
+!begin_verbatim
+ R : SDRAM, ST-RAM and DSP SRAM.
+ O : O.S. ROM.
+ M : MIDI.
+ S : SCC Serial.
+ T : Timing MFP.
+ D : SDMA / DSP Port.
+ F : Floppy Disk.
+ P : Printer/Joy/Game.
+ L : Real Time Clock / NVRAM.
+ G : Short Blitter.
+ I : SCSI Port.
+ X : Expansion Bus.
+
+ A : Audio.
+ V : Video.
+ K : Keyboard.
+ Y : Floppy Disk (Write Protect).
+ H : IDE Hard Disk.
+
+ E : Examine / Modify System.
+ ? : Help.
+ $ : Version / Date.
+ UNDO : Goto TOS.
+ 
+ D : Diagnostic Field Service Menu.
+ E : Error Report.
+ > : Force Pass.
+
+ P : Pre Burn-In.
+ B : Burn-In.
+ F : Post Burn-In.
+ I : In Process Assembly.
+ U : Assembled Unit.
+ W : Erase Status and Start Over.
+!end_verbatim
+
+
+!subnode HELP
+
+Select a single test or any combination of tests by typing the 
+corresponding letter or letters, then typing the RETURN key. To run 
+repeated cycles of the test or (tests), follow the last letter with the 
+number of cycles to run. For example, "RSM25", will run RAM, Serial, and 
+MIDI tests 25 times. If 0 is entered, testing will be continuous.
+
+Use the ESC key to quit the test cycle. In some cases there will be a 
+delay before control returns to the keyboard.
+
+An RS232 terminal may be used for input and display. The Serial RS232 test 
+will not pass if a terminal is installed in place of the loopback plug.
+
+Normally a color monitor is used for all tests accept high resolution. If 
+an error occurs, an error message will be displayed and the screen will 
+turn red. When the test completes, Pass or Fail will be displayed, and the 
+screen will turn green or red.
+
+If multiple tests are run and an error occurs on any test, the screen will
+remain red, although successive tests pass. Once the test has halted, the
+SPACE BAR is used to return to the menu.
+
+The DMA and Printer/joystick/game port tests require that the port test
+fixtures be connected.
+
+The O.S. ROM test calculates a checksum/CRC of the ROMs and compares the
+resultant CRC with the value found in the ROMs.
+
+If the RAM test fails, the error code, address, data written, data read 
+and bad bits (0-15) are displayed.
+
+The short Blitter test does not display any graphics on the screen. The 
+long Blitter test, while appearing not to finish the rectangle, is ok.
+
+(!B)
+OPERATOR REQUIRED TESTS
+(!b)
+
+The Audio, Video, Keyboard, and IDE Hard Disk tests have few error 
+messages. The operator must determine if the output results are 
+acceptable.
+
+The Gen/lock test is run twice. Toggling the switch on the gen/lock 
+fixture should switch between the normal menu and no menu. With no menu a 
+"sweeping" cycle should be heard.  Reset the computer with each change of 
+the gen/lock switch. 
+
+NOTE - RUN THIS TEST ONLY WITH A COLOR MONITOR.
 
 
 !node Flash Tool
@@ -2384,9 +2498,12 @@ CTRL-SHIFL:    Boot without PMMU tree like a 68060 EC if pressed before
                the Atari logo.
 SHIFTL-SHIFTR: Boot without SDRAM if pressed before the Atari logo.
 SHIFTL:        Displays infos about the SDRAM module.
-CTRL-ALT-UNDO: CTRL-ALT-UNDO: NVM and Flash Parameters init if pressed 
-               during the memory test until the Reset. You need to set the 
-               delay at boot to 60 seconds with the configuration CPX.
+CTRL-ALT-UNDO: NVM and Flash Parameters init if pressed during the memory 
+               test until the Reset. You need to set the delay at boot to 
+               60 seconds with the configuration CPX. 
+CTRL-ALT-
+SHIFTL-SHIFTR: Start the Atari Diagnostics if pressed before the Atari 
+               logo.  
 !end_verbatim
 
 

@@ -37,6 +37,7 @@
 
 // #define RESET // removed because not works with some motherboards/SDR60 versions
 #define XFRB_SIZE 0x10000
+#define SPEED_BUFFER_SIZE 0x10000 // mini 512 bytes
 #define CT60_COOKIE_SIZE 256
 #define DEFAULT_BOOT_DELAY 800 // 4 seconds
 #define TIME_OUT_CMD 200       // 1 second
@@ -148,7 +149,7 @@ init_060:
 init_sdram:
 
 	movem.l D1-A6,-(SP)
-	bclr #5,0xFFFFFA07
+	bclr #5,0xFFFFFA07       // mask timer A
 	move.w SR,-(SP)
 	or #0x700,SR             // no interrupts
 	cpusha BC
@@ -980,13 +981,13 @@ message15:	.byte 27
 	.ascii "."
 	.byte ((VERSION/16) & 0xF) + 0x30
 	.byte (VERSION & 0xF) + 0x30
-	.asciz " "
+	.asciz "a "
 message15b:	
-	.ascii "2004 September "
+	.ascii "2004 October "
 	.byte 27
 	.ascii "q"
 	.byte 13,10,0
-	.ascii "Septembre 2004 "
+	.ascii "Octobre 2004 "
 	.byte 27
 	.ascii "q"
 	.byte 13,10,0
@@ -1208,11 +1209,40 @@ message91:	.byte 13,10
 	.byte 13,10
 	.asciz " Trouv‚ "
 message92:	.byte 13,10
-	.ascii "Boot drive has BPB invalid!"
+	.ascii "Boot drive has a BPB invalid!"
 	.byte 13,10,0
 	.byte 13,10
 	.ascii "Le lecteur de boot a un BPB invalide !"
 	.byte 13,10,0
+message93:	.asciz " ... is not a TOS binary!"
+	.asciz " ... n'est pas un ex‚cutable TOS !"
+message94:	.byte 13,10
+	.asciz "Error TOS : "
+	.byte 13,10
+	.asciz "Erreur TOS : "
+message95:	.byte 13,10,27 
+	.ascii "p START AUTO FOLDER "
+	.byte 27
+	.ascii "q"
+	.byte 13,10,0
+	.byte 13,10,27 
+	.ascii "p LANCEMENT DOSSIER AUTO "
+	.byte 27
+	.ascii "q"
+	.byte 13,10,0
+message96:	.byte 13,10,27 
+	.ascii "p START GEM "
+	.byte 27
+	.ascii "q"
+	.byte 13,10,0
+	.byte 13,10,27 
+	.ascii "p LANCEMENT DU GEM "
+	.byte 27
+	.ascii "q"
+	.byte 13,10,0
+	
+blue:	.byte 0x1B,0x62,0x34,0
+black:	.byte 0x1B,0x62,0x3F,0
 	
 #ifdef DEBUG
 debug1:	.byte 13,10
@@ -1281,7 +1311,7 @@ list_manufacturers:
 	.asciz "HYUNDAI" 
 	.byte 0xE0     // module source ?
 	.asciz "HYUNDAI"
-	.byte 0,0
+null:	.byte 0,0
 
 list_device_type:
 
@@ -1315,15 +1345,6 @@ boot_drive:
 
 	movem.l D0-A5,-(SP)
 	link A6,#-16
-	move.l #0x5F465242,D0    // _FRB cookie, internal clock
-	bsr get_cookie
-	move.l D0,-12(A6)        // SCSI buffer
-	move.w #3,-(SP)          // TT ram if possible
-	move.l #1024,-(SP)       // size
-	move.w #0x44,-(SP)       // Mxalloc
-	trap #1 
-	addq.w #8,SP
-	move.l D0,-16(A6)        // IDE buffer normally in SDRAM    
 	clr.l -(SP)
 	move.l #CT60_BOOT_ORDER,-(SP)
 	move.w #CT60_MODE_READ,-(SP)
@@ -1341,20 +1362,28 @@ boot_drive:
 	beq.s .loop_drive
 	lea boot_ide_2(PC),A5
 .loop_drive:
-		moveq #1,D1
+		clr.w -(SP)                       // stram
+		move.l #SPEED_BUFFER_SIZE,-(SP)   // size
+		move.w #0x44,-(SP)                // Mxalloc
+		trap #1 
+		addq.w #8,SP
+		move.l D0,-12(A6)                 // SCSI buffer
+		move.w #3,-(SP)                   // TT ram if possible
+		move.l #SPEED_BUFFER_SIZE,-(SP)   // size
+		move.w #0x44,-(SP)                // Mxalloc
+		trap #1 
+		addq.w #8,SP
+		move.l D0,-16(A6)                 // IDE buffer normally in SDRAM    
+		moveq #1,D1                       // counter logical unit
 .loop2_drive:
 			move.w D1,-(SP)      // logical unit
 			move.w 0x840,D4
 			move.b (A5,D4.w),D4
 			cmp.w #2,0x3E86      // number of planes
-			bls.s .black_end_white
-			moveq #0x1B,D0
-			bsr display_char
-			moveq #0x62,D0
-			bsr display_char
-			moveq #0x34,D0       // blue
-			bsr display_char
-.black_end_white:
+			bls.s .black_and_white
+			lea blue(PC),A0
+			bsr display_string_single
+.black_and_white:
 			lea message41(PC),A0
 			btst #4,D4
 			beq.s .scsi_drive
@@ -1373,14 +1402,10 @@ boot_drive:
 			or.w (SP),D0         // logical unit
 			bsr display_char
 			cmp.w #2,0x3E86      // number of planes
-			bls.s .black_end_white_2
-			moveq #0x1B,D0
-			bsr display_char
-			moveq #0x62,D0
-			bsr display_char
-			moveq #0x3F,D0       // black
-			bsr display_char
-.black_end_white_2:
+			bls.s .black_and_white_2
+			lea black(PC),A0
+			bsr display_string_single
+.black_and_white_2:
 			moveq #0,D7          // flags
 			btst #4,D4
 			bne .ide_drive
@@ -1779,9 +1804,9 @@ boot_drive:
 				move.b D0,1(A1)      // drive (C/D/H)
 				clr.w 2(A1)          // cyl high & low
 				clr.b 4(A1)          // sec num
-				move.b #XFRB_SIZE/512,5(A1) // sec count
+				move.b #SPEED_BUFFER_SIZE/512,5(A1) // sec count
 				clr.b 6(A1)          // features
-				move.l #XFRB_SIZE,D0 // bytes
+				move.l #SPEED_BUFFER_SIZE,D0 // bytes
 				bsr ide_read
 				bne.s .drive_not_ok_2
 			dbf D3,.loop_speed_ide 	
@@ -1833,9 +1858,9 @@ boot_drive:
 				asl.w #5,D1
 				move.b D1,1(A1)      // logical unit
 				clr.w 2(A1)          // logical block adress
-				move.b #XFRB_SIZE/512,4(A1) // num blocks
+				move.b #SPEED_BUFFER_SIZE/512,4(A1) // num blocks
 				clr.b 5(A1)          // control
-				move.l #XFRB_SIZE,D1 // DMA bytes length
+				move.l #SPEED_BUFFER_SIZE,D1 // DMA bytes length
 				moveq #6,D2          // cmd bytes length
 				bsr scsi_read
 				bne .drive_not_ok    // error
@@ -1885,6 +1910,19 @@ boot_drive:
 			bsr display_string
 			addq.l #1,D0
 		dbeq D1,.loop2_drive
+		move.l -16(A6),D0        // IDE buffer
+		beq.s .no_ide_buffer_2
+		move.l D0,-(SP)
+		move.w #0x49,-(SP)       // Mfree
+		trap #1 
+		addq.w #6,SP
+.no_ide_buffer_2:
+		move.l -12(A6),D0        // SCSI buffer
+		beq .next_drive
+		move.l D0,-(SP)
+		move.w #0x49,-(SP)       // Mfree
+		trap #1 
+		addq.w #6,SP
 		bra .next_drive
 .root_msdos_combined:
 		btst #4,D4
@@ -1960,6 +1998,7 @@ boot_drive:
 		tst.l D2
 		beq .next_drive          // no extended partition
 		moveq #1,D1              // 1 sector
+		moveq #-1,D0             // swap bytes
 		move.w D4,D0             // drive
 		move.l _dskbufp,A0       // read extended partition
 		bsr read_sectors
@@ -1983,6 +2022,7 @@ boot_drive:
 		bsr hex_long
 #endif
 		moveq #1,D1              // 1 sector
+		moveq #-1,D0             // swap bytes
 		move.w D4,D0             // drive
 		move.l _dskbufp,A0       // read boot sector
 		bsr read_sectors
@@ -2025,6 +2065,7 @@ boot_drive:
 		tst.l D2
 		beq .next_drive          // no ext sector for XGM
 		moveq #1,D1              // 1 sector
+		moveq #-1,D0             // swap bytes
 		move.w D4,D0             // drive
 		move.l _dskbufp,A0       // read ext sector for XGM
 		bsr read_sectors
@@ -2043,6 +2084,7 @@ boot_drive:
 		bsr hex_long
 #endif
 		moveq #1,D1              // 1 sector
+		moveq #-1,D0             // swap bytes
 		move.w D4,D0             // drive
 		move.l _dskbufp,A0       // read boot sector
 		bsr read_sectors
@@ -2059,6 +2101,7 @@ boot_drive:
 #endif
 		move.l hdv_rw,-(SP)
 		move.l D2,D1             // start of partition
+		moveq #-1,D0             // swap bytes
 		move.w D4,D0             // drive
 		bsr exec_boot
 		move.l (SP)+,D0
@@ -2106,6 +2149,20 @@ boot_drive:
 		beq.s .next_drive
 		bra.s .end_boot_drive
 .drive_ok:
+		move.l -16(A6),D0        // IDE buffer
+		beq.s .no_ide_buffer
+		move.l D0,-(SP)
+		move.w #0x49,-(SP)       // Mfree
+		trap #1 
+		addq.w #6,SP
+.no_ide_buffer:
+		move.l -12(A6),D0        // SCSI buffer
+		beq.s .no_scsi_buffer
+		move.l D0,-(SP)
+		move.w #0x49,-(SP)       // Mfree
+		trap #1 
+		addq.w #6,SP
+.no_scsi_buffer:
 		move.l _dskbufp,A0
 		bsr check_boot
 		beq.s .root_ok
@@ -2138,13 +2195,6 @@ boot_drive:
 //	lea crlf(PC),A0
 //	bsr display_string_single
 //.no_resvector:
-	move.l -16(A6),D0        // IDE buffer
-	beq.s .no_ide_buffer
-	move.l D0,-(SP)
-	move.w #0x49,-(SP)       // Mfree
-	trap #1 
-	addq.w #6,SP
-.no_ide_buffer:
 	unlk A6
 	movem.l (SP)+,D0-A5
 	rts
@@ -2161,11 +2211,11 @@ check_boot:
 	movem.l (SP)+,D0-D1/A0
 	rts
 	
-exec_boot:  		// D0 drive, D1.L: start of partition
+exec_boot:  		// D0 drive, D0.H: flag swap bytes, D1.L: start of partition
 
 	movem.l D1-D7/A4,-(SP)
-	link A6,#-20
-	move.w D0,D4             // drive
+	link A6,#-32
+	move.l D0,D4             // drive & flag swap bytes
 	move.l D1,D6             // start of partition
 	move.w #3,-(SP)          // TT ram if possible
 	move.l #-1,-(SP)         // size
@@ -2174,7 +2224,6 @@ exec_boot:  		// D0 drive, D1.L: start of partition
 	addq.w #8,SP
 	move.l D0,D5             // greater block
 	move.l D0,-4(A6)
-	move.l D0,-(SP)
 	move.w #3,-(SP)          // TT ram if possible
 	move.l D5,-(SP)          // size
 	move.w #0x44,-(SP)       // Mxalloc
@@ -2220,12 +2269,12 @@ exec_boot:  		// D0 drive, D1.L: start of partition
 	move.l D2,-20(A6)        // end directory
 	move.l D6,D2             // 1st sector directory
 .loop_read_dir:	
-		move.l A4,A0     // buffer
-		move.w D4,D0     // drive
-		moveq #1,D1      // 1 sector
-		bsr read_sectors // read directory
+		move.l -16(A6),A0               // buffer Mxalloc
+		moveq #1,D1                     // 1 sector
+		move.l D4,D0                    // drive & flag swap bytes
+		bsr read_sectors                // read directory
 		bmi .mfree_boot
-		move.l A4,A0     // buffer
+		move.l -16(A6),A0               // buffer Mxalloc
 		moveq #15,D1
 .next_entry_dir:
 			cmp.b #0x53,8(A0)  // S
@@ -2241,7 +2290,19 @@ exec_boot:  		// D0 drive, D1.L: start of partition
 	cmp.l -20(A6),D2
 	bcs.s .loop_read_dir
 	bra .mfree_boot
+.bad_file:
+	lea message93(PC),A0     // not a TOS binary
+	bsr display_string       
+	move.l -16(A6),A0        // buffer Mxalloc
+	moveml -28(A6),D2        // restore loop_read_dir context
+	moveq #1,D1              // 1 sector
+	move.l D4,D0             // drive & flag swap bytes
+	bsr read_sectors         // reload directory
+	bmi .mfree_boot
+	movem.l -32(A6),D1/D2/A0 // restore loop_read_dir context
+	bra.s .bad_ext 
 .ext_ok:
+	movem.l D1/D2/A0,-32(A6) // save loop_read_dir context
 	move.l A0,-(SP)
 	lea message91(PC),A0
 	bsr display_string       // display driver name
@@ -2265,9 +2326,10 @@ exec_boot:  		// D0 drive, D1.L: start of partition
 	add.l #0x1800,D5         // stack size
 	cmp.l -4(A6),D5          // size block Mxalloc
 	bhi .mfree_boot
-	move.l A4,A2
+	move.l -16(A6),A4        // buffer Mxalloc
 	add.l -4(A6),A4          // size block Mxalloc
-	lea -0x8000(A4),A4
+	lea -0x8000(A4),A4       // top of the block
+	move.l -16(A6),A2        // buffer Mxalloc
 	move.w 26(A0),D6         // 1st cluster
 	ror.w #8,D6
 	moveq #-1,D3
@@ -2281,7 +2343,7 @@ exec_boot:  		// D0 drive, D1.L: start of partition
 		mulu D1,D2               // * sec count * SPC
 		add.l -20(A6),D2         // + end directory = start sector
                           move.l A2,A0             // buffer file
-                          move.w D4,D0             // drive
+                          move.l D4,D0             // drive & flag swap bytes
 		bsr read_sectors
 		bmi.s .mfree_boot
 		asl.l #8,D1              // * 512
@@ -2296,7 +2358,7 @@ exec_boot:  		// D0 drive, D1.L: start of partition
 		move.l D2,D3
                           move.l A4,A0             // buffer FAT
 		moveq #1,D1              // sec count
-                          move.w D4,D0             // drive
+                          move.l D4,D0             // drive & flag swap bytes
 		bsr read_sectors
 		bmi.s .mfree_boot
 .not_reload_fat:
@@ -2307,8 +2369,8 @@ exec_boot:  		// D0 drive, D1.L: start of partition
 	bpl.s .loop_read_file
 	move.l -16(A6),A2        // buffer Mxalloc
 	move.l A2,A0             // buffer file
-	cmp.w #0x601A,(A0)+      // binary
-	bne .mfree_boot
+	cmp.w #0x601A,(A0)+      // binary test
+	bne .bad_file
 	lea 0x1C(A2),A1          // + header size
 	add.l (A0)+,A1           // + text segment
 	add.l (A0)+,A1           // + data segment
@@ -2363,11 +2425,11 @@ swap_buffer:		// A0: buffer, D0: count
 	movem.l (SP)+,D0-D2/A0
 	rts
 
-read_sectors: 	// A0: buffer, D0: drive, D1: count, D2.L: start sector
+read_sectors: 	// A0: buffer, D0: drive, D0.H: flag swap bytes, D1: count, D2.L: start sector
 		// return error code inside D0
 	movem.l D1-D4/A0-A4,-(SP)
 	move.l A0,A4             // buffer
-	move.w D0,D4             // physical drive
+	move.l D0,D4             // physical drive & flag swap bytes
 	move.w D1,D3             // count
 	btst #4,D4
 	beq .use_DMAread         // SCSI
@@ -2407,6 +2469,8 @@ read_sectors: 	// A0: buffer, D0: drive, D1: count, D2.L: start sector
 .end_read_sectors:
 	tst.l D0
 	bmi.s .end_read_sectors_swap
+	tst.l D4                 // flag swap bytes
+	bpl.s .end_read_sectors_swap
 	move.l D0,-(SP)
 	move.l A4,A0             // buffer
 	move.w D3,D0             // count
@@ -2827,7 +2891,6 @@ wait_end_cmd_ide:	// time-out inside D0.L, return D0 < 0 => time-out
 	
 menu_boot:
 
-	movem.l D0-D7/A0-A2,-(SP)
 	link A6,#-12
 	move.l _sysbase,A0       // header ROM
 	move.l 0x24(A0),A0       // kbshift
@@ -2999,9 +3062,225 @@ menu_boot:
 	jsr (A1)
 .normal_boot:
 	unlk A6
-	movem.l (SP)+,D0-D7/A0-A2
 	tst.w _cmdload
+	beq.s .no_command
+	lea message95(PC),A0     // start AUTO folder
+	bsr display_string
+	bsr auto_exec
+	move.l #0xE00000,_sysbase
+	pea null(PC)             // env
+	pea null(PC)             // command
+	pea 0xE00842             // file COMMAND.PRG
+	clr.w -(SP)              // load'n go
+	bra .go_pexec
+.no_command:
+	lea message95(PC),A0     // start AUTO folder
+	bsr display_string
+	bsr auto_exec
+	move.l #0xE00000,_sysbase
+	lea 0xE00836,A0          // PATH= ...
+	lea 0x840,A1
+	move.l A1,A2
+.loop_copy_env:
+		cmp.b #0x23,(A0)
+		bne.s .no_drive_letter
+		move.l A1,A2
+.no_drive_letter:
+		move.b (A0)+,(A1)+
+	bpl.s .loop_copy_env
+	move.w _bootdev,D0
+	add.b #0x41,D0
+	move.b D0,(A2)
+	lea message96(PC),A0     // start GEM
+	bsr display_string
+	pea 0x840                // env
+	pea null(PC)             // command
+	pea null(PC)             // file
+	move.w #5,-(SP)          // create basepage
+	move.w #0x4B,-(SP)       // Pexec
+	trap #1
+	add.w #16,SP
+	tst.l D0
+	bpl.s .basepage_ok
+	bsr error_tos
+	jmp 0xE00030             // reset
+.basepage_ok:
+	move.l D0,A0             // basepage
+	move.l exec_os,8(A0)
+	pea 0x840                // env
+	pea (A0)                 // command
+	pea null(PC)             // file
+	move.w #4,-(SP)          // run GEM
+.go_pexec:
+	move.w #0x4B,-(SP)       // Pexec
+	trap #1
+	add.w #16,SP
+	jmp 0xE00030             // reset
+
+error_tos:
+
+	move.l D0,-(SP)
+	pea message94(PC)        // error TOS
+	move.w #9,-(SP)          // Cconws
+	trap #1
+	addq.w #6,SP
+	move.l (SP)+,D0
+	neg.l d0
+	link A6,#-4
+	clr -2(A6)
+	lea -4(A6),A0
+             moveq #3,D1
+	bsr conv_ascii_value_optimized
+	pea -4(A6)
+	move.w #9,-(SP)          // Cconws
+	trap #1
+	addq.w #6,SP
+	unlk a6
+	move.w #7,-(SP)          // Crawcin
+	trap #1
+	addq.w #2,SP
 	rts
+
+auto_exec:
+
+	move.l _sysbase,A0       // header ROM
+	move.l 0x24(A0),A0       // kbshift
+	move.b (A0),D0
+	btst #2,D0               // CTRL
+	bne.s .end_auto_exec
+	move.l _drvbits,D0
+	move.w _bootdev,D1
+	btst D1,D0
+	beq.s .end_auto_exec     // no boot drive
+	lea 0xE010EE,A0          // \AUTO\*.PRG
+	lea 0xE010F4,A1          // *.PRG
+	move.l (SP)+,0xAE4       // PC
+	move.l A0,0xAE8          // path
+	move.l A1,0xAEC          // file
+	lea null(PC),A0
+	pea (A0)
+	pea (A0)
+	pea (A0)	
+	move.w #5,-(SP)          // create basepage
+	move.w #0x4B,-(SP)       // Pexec
+	trap #1
+	add.w #16,SP
+	tst.l D0
+	bpl.s .basepage_ok_2
+	bsr error_tos
+	bra.s .end_auto_exec_2
+.basepage_ok_2:
+	move.l D0,A0             // basepage
+	lea auto_exec_prg(PC),A1
+	move.l A1,8(A0)
+	pea null(PC)             // env
+	pea (A0)                 // command
+	pea null(PC)             // file
+	move.w #4,-(SP)          // run prg
+	move.w #0x4B,-(SP)       // Pexec
+	trap #1
+	add.w #16,SP
+	tst.l D0
+	bpl.s .end_auto_exec_2
+	bsr error_tos
+.end_auto_exec_2:
+	move.l 0xAE4,-(SP)       // return adress
+.end_auto_exec:
+	rts
+	
+auto_exec_prg:
+	
+	clr.l -(SP)
+	move.w #0x20,-(SP)       // Super
+	trap #1
+	addq.w #6,SP
+	move.l 4(SP),A6          // basepage
+	lea 256(A6),SP
+	move.l #256,-(SP)        // size
+	pea (A6)                 // old stack
+	clr.w -(SP)              // dummy
+	move.w #0x4A,-(SP)       // Mshrink
+	trap #1
+	add.w #12,SP
+	tst.w D0
+	bne .end_auto_prg        // error
+	move.w #7,-(SP)          // all files
+	move.l 0xAE8,-(SP)       // path
+	move.w #0x4E,-(SP)       // Fsfirst
+	moveq #8,D7              // for fix stack
+.loop_auto_folder:
+		pea 0xAF0            // buffer
+		move.w #0x1A,-(SP)   // Fsetdta
+		trap #1
+		addq.w #6,SP
+		trap #1              // Fsfirst or Fsnext
+		add.w D7,SP
+		tst.w D0
+		bne .end_auto_prg    // error
+		move.l 0xAE8,A0      // path
+		move.l 0xAEC,A2      // file
+		lea 0xB1C,A1         // auto name
+.loop_copy_path:
+			move.b (A0)+,(A1)+
+		cmp.l A2,A0
+		bcs.s .loop_copy_path
+		lea 0xB0E,A0         // name from dta buffer
+.loop_copy_name:
+		move.b (A0)+,(A1)+
+		bne.s .loop_copy_name
+		move.w #13,-(SP)
+		move.w #2,-(SP)      // Cconout
+		trap #1
+		move.w #10,-(SP)
+		move.w #2,-(SP)      // Cconout
+		trap #1
+		addq.w #8,SP
+		cmp.w #2,0x3E86      // number of planes
+		bls.s .black_and_white_3
+		pea blue(PC)
+		move.w #9,-(SP)      // Cconws
+		trap #1
+		addq.w #6,SP
+.black_and_white_3:
+		pea 0xB1C            // auto name
+		move.w #9,-(SP)      // Cconws
+		trap #1
+		addq.w #6,SP
+		cmp.w #2,0x3E86      // number of planes
+		bls.s .black_and_white_4
+		pea black(PC)
+		move.w #9,-(SP)      // Cconws
+		trap #1
+		addq.w #6,SP
+.black_and_white_4:
+		move.w #13,-(SP)
+		move.w #2,-(SP)      // Cconout
+		trap #1
+		move.w #10,-(SP)
+		move.w #2,-(SP)      // Cconout
+		trap #1
+		addq.w #8,SP
+		pea null(PC)        // env
+		pea null(PC)        // command
+		pea 0xB1C           // auto name
+		clr.w -(SP)         // load'n go
+		move.w #0x4B,-(SP)  // Pexec
+		trap #1
+		add.w #16,SP
+		tst.l D0
+		bpl.s .pexec_ok
+		cmp.l #-66,D0
+		beq.s .pexec_ok
+		bsr error_tos
+		bra.s .end_auto_prg
+.pexec_ok:
+		moveq #2,D7         // for fix stack
+		move.w #0x4F,-(SP)  // Fsnext
+	bra .loop_auto_folder
+.end_auto_prg:
+	lea 0x8870,SP            // stack
+	move.l 0xAE4,-(SP)       // return adress
+	rts	
 
 init_flash_parameters:
 
@@ -3191,7 +3470,7 @@ get_timer_c:
 display_mb_by_sec_disk:                // D0: total time
 	
 	movem.l D0-D1/A0,-(SP)
-	move.l #(XFRB_SIZE*256)/500,D1 // buffer test size * 256
+	move.l #(SPEED_BUFFER_SIZE*256)/500,D1 // buffer test size * 256
 	divu D0,D1
 	link A6,#-6
 	clr.w -2(A6)
@@ -3338,7 +3617,7 @@ display_char:
 	movem.l D0-D2/A0-A2,-(SP)
 	move.w D0,-(SP)
 	move.w #2,-(SP)
-	move.w #3,-(SP)
+	move.w #3,-(SP)          // Bconout
 	trap #13
 	addq.w #6,SP
 	movem.l (SP)+,D0-D2/A0-A2

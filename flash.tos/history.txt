@@ -166,7 +166,21 @@ now without -s option (2.4.25 need -s).
    support byte swapping needed by MSDOS format and search a *.SYS for 
    load the disk driver.
  * Add speed test for bootables devices.   
+- Four choices with the CT60_BOOT_ORDER parameter in flash for boot
+on SCSI drives before IDE drives or slave before master (file sdram.S).
 - Check and fix modecode get from NVM (file videl2.S).
 - Removed Eiffel END key because it's already used by F12 (SHIFT-F2),
 and add status Eiffel POWER key 0xF6 0x05 0x00 0x00 0x00 0x73 because 
 it's already used by the TOS (CTRL <-) (files xbios2.S).
+
+2001-10-02 1.02a
+----------------
+- Add Atari Diagnostics Cartridge (CT60 version) moved to 
+0x00ED0000-0x00EEFFFF. This diagnosics are called with 
+CTRL-ALT-SHIFT-SHIFT during the boot picture (file videl2.S).
+- CRC in TOS 4.04 flash used again (file blitter.S).
+- Display path for Auto folder files (file sdram.S).
+- Moved the format boot picture to XIMG TC16 for get free place for 
+the Atari Diagnostics.
+- Add a picture/demo code 'XIMG' at 0x00ED0000 for call a picture/demo 
+at 0x00ED0004 for replace the boot picture (file videl2.S). 

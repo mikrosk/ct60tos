@@ -36,8 +36,10 @@
 #define trp14ret   0x486
 #define __md       0x49E
 #define _hz_200    0x4BA
+#define _drvbits   0x4C2
 #define _dskbufp   0x4C6
 #define _sysbase   0x4F2
+#define exec_os    0x4FE
 #define memval3    0x51A
 #define cookie     0x5A0
 #define ramtop     0x5A4

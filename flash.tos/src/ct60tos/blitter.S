@@ -122,12 +122,12 @@ begin12:
 	jsr	get_font_ptr_a1
 end12:
 
-	.align	2
-	.long	0x000006AC	/* offset ROM */
-	.long	end13-begin13
-begin13:
-	.short	0x6000       /* test checksum */
-end13:
+//	.align	2
+//	.long	0x000006AC	/* offset ROM */
+//	.long	end13-begin13
+//begin13:
+//	.short	0x6000       /* test checksum */
+//end13:
 
 	.globl	logo_atari
 

@@ -1,5 +1,5 @@
 /* TOS 4.04 Videl patch for the CT60 board
-*  Didier Mequignon 2003 July, e-mail: aniplay@wanadoo.fr
+*  Didier Mequignon 2003-2004, e-mail: aniplay@wanadoo.fr
 *
 *  This library is free software; you can redistribute it and/or
 *  modify it under the terms of the GNU Lesser General Public
@@ -18,14 +18,13 @@
 
 	.globl	picture_boot
 
+#include "vars.h"
+
 #define measure_frame 0x3EC
 #define measure_line  0x3F0
 #define measure_clock 0x3F4
 #define vbl_count     0x3F8
 #define count_measure 0x3FA
-#define _frclock      0x466
-#define _hz_200       0x4BA
-#define cookie        0x5A0
 #define modecode      0x184C
 
 #define WIDTH  320          // TGA uncompressed picture & screen 
@@ -37,7 +36,9 @@
 
 picture_boot:
 
-	move.w #0x2300,SR
+	move.l #0x8000,D0                         // instruction cache
+	movec.l D0,CACR
+	move.w #0x2300,SR                         // enable interrupts
 	bsr fix_modecode
 	bsr screen_ntc_boot
 	moveq #0,D0
@@ -51,38 +52,38 @@ fix_modecode:
 	and.w #0x1FF,D0                           // valid bits
 	and.w D0,D1                               // bits/pixel code
 	btst #7,D0                                // STMODES
-	beq.s normal_mode
+	beq.s .normal_mode
 	bclr #6,D0                                // no OVERSCAN with STMODES
 	cmp.w #3,D1
-	bcs.s st_modes
+	bcs.s .st_modes
 	bclr #7,D0                                // remove STMODES in 256 or 65K colors
-	bra.s normal_mode
-st_modes:
+	bra.s .normal_mode
+.st_modes:
 	tst.w D1
-	bne.s not_640x400
+	bne.s .not_640x400
 	bset #3,D0                                // COL80
 	bclr #8,D0                                // VERTFLAG
 	btst #4,D0                                // VGA
-	bne.s normal_mode
+	bne.s .normal_mode
 	bset #8,D0                                // VERTFLAG interlaced
-	bra.s normal_mode
-not_640x400:
+	bra.s .normal_mode
+.not_640x400:
 	cmp.w #1,D1
-	bne.s not_640x200
+	bne.s .not_640x200
 	bset #3,D0                                // COL80
-	bra.s x200
-not_640x200:
+	bra.s .x200
+.not_640x200:
 	bclr #3,D0                                // no COL80 
-x200:
+.x200:
 	bset #8,D0                                // VERTFLAG double line
 	btst #4,D0                                // VGA
-	bne.s normal_mode
+	bne.s .normal_mode
 	bclr #8,D0                                // VERTFLAG
-normal_mode:
+.normal_mode:
 	btst #4,D0                                // VGA
-	beq.s no_vga
+	beq.s .no_vga
 	bclr #6,D0                                // no OVERSCAN in VGA
-no_vga:
+.no_vga:
 	move.w D0,modecode
 	move.l (SP)+,D1
 	rts
@@ -90,89 +91,238 @@ no_vga:
 picture_build:                                         // target A0
 
 	movem.l D0-D4/A0-A3,-(SP)
-	lea pic_boot+18(PC),A1                    // source TGA uncompressed 320 x 240
-	move.l A0,A3
-	move.w #HEIGHT-1,D1
-	move.w #WIDTH*2,D3 
-	btst #5,pic_boot+17(PC)
-	bne.s pb1                                 // inverted
-	move d1,D0
-	mulu D3,D0
-	neg.w D3
-	add.l D0,A3
-pb1:
-	             move.l A3,A2
-		move.w #WIDTH-1,D2
-pb2:
-			moveq #0,D0
-		             move.b 2(A1),D0 // B
-		             asl.l #8,D0
-		             move.b 1(A1),D0 // G
-		             asl.l #8,D0
-		             move.b (A1),D0  // R
-		             addq.w #3,A1    // source TC RGB
-			lsr.l #3,D0     // 000RRRRR 321GGGGG 321BBBBB
-			asl.b #2,D0     // 000RRRRR 321GGGGG 1BBBBB00
-			asl.w #3,D0     // 000RRRRR GGGGG1BB BBB00000
-			lsr.l #5,D0     // 00000000 RRRRRGGG GG1BBBBB
-			bclr #5,D0
-			move.w D0,(A2)+ // target NTC 65K colors
-		dbf D2,pb2
-		add.w D3,A3
-	dbf D1,pb1
+	lea pic_boot(PC),A1                       // source XIMG 65K colors 320 x 240
+	cmp.w #1,(A1)                             // version
+	bne.s .pb1                                // error
+	cmp.w #WIDTH,12(A1)
+	bne.s .pb1                                // error
+	cmp.w #HEIGHT,14(A1)
+	bne.s .pb1                                // error
+	cmp.w #16,4(A1)                           // planes
+	bne.s .pb1                                // error
+	move.l #WIDTH*HEIGHT*2,-(SP)              // size picture in bytes
+	move.w #WIDTH,-(SP)                       // words/line target
+	move.w 14(A1),-(SP)                       // height
+	move.w 12(A1),-(SP)                       // width
+	move.w 6(A1),-(SP)                        // pattern
+	move.w 4(A1),-(SP)                        // planes
+	pea (A0)                                  // target = screen
+	move.w 2(A1),D0                           // header size in words
+	add.w D0,D0
+	pea (A1,D0)                               // compressed data
+	bsr decompress_img
+	add.w #22,SP	
+.pb1:
 	lea pic_logo_ct60(PC),A1
-	move.l A0,A3
+	move.l A0,A3                              // target = screen
 	add.l #(HEIGHT-LOGO_CT60_HEIGHT)*WIDTH*2,A3
 	moveq #LOGO_CT60_HEIGHT-1,D1
-pb3:
+.pb3:
 		move.l A3,A2
 		moveq #LOGO_CT60_WIDTH-1,D2
-pb4:
+.pb4:
 			move.w (A1)+,D0
 			moveq #15,D3
-pb5:				
+.pb5:				
 				btst D3,D0
-				beq.s pb6
+				beq.s .pb6
 				move.w #0xF800,(A2) // red
-pb6:				addq.w #2,A2
-			dbf D3,pb5
-		dbf D2,pb4
+.pb6:				addq.w #2,A2
+			dbf D3,.pb5
+		dbf D2,.pb4
 		add.w #WIDTH*2,A3
-	dbf D1,pb3	
+	dbf D1,.pb3	
 	lea pic_logo_mot(PC),A1
-	move.l A0,A3
+	move.l A0,A3                              // target = screen
 	add.l #(WIDTH-(LOGO_MOT_WIDTH*16))*2,A3
 	moveq #LOGO_MOT_HEIGHT-1,D1
-pb7:
+.pb7:
 		move.l A3,A2
 		moveq #LOGO_MOT_WIDTH-1,D2
-pb8:
+.pb8:
 			move.w (A1)+,D0
 			moveq #15,D3
-pb9:				
+.pb9:				
 				btst D3,D0
-				beq.s pb10
+				beq.s .pb2
 				move.w #0x001F,(A2) // blue
-pb10:				addq.w #2,A2
-			dbf D3,pb9
-		dbf D2,pb8
+.pb2:
+				addq.w #2,A2
+			dbf D3,.pb9
+		dbf D2,.pb8
 		add.w #WIDTH*2,A3
-	dbf D1,pb7	
+	dbf D1,.pb7	
 	movem.l (SP)+,D0-D4/A0-A3
+	rts
+
+decompress_img:
+
+	link A6,#0
+	movem.l D1-A5,-(SP)
+	subq.w #1,22(A6)        // height in pixels
+	bmi .error_img
+	subq.w #1,18(A6)        // PATTERN_RUN counter
+	bmi .error_img
+	moveq #0,D6
+	move.w 20(A6),D6        // width in pixels
+	cmp.w #16,16(A6)        // planes
+	bne .error_img
+	lea store_ntc(PC),A1
+	add.l D6,D6             // bytes/line screen
+	move.w 22(A6),D4        // lines
+	move.l 8(A6),A2         // source
+	move.l 12(A6),D0        // target
+	move.l D0,A4
+	move.l D0,A3            // save target
+	add.l D0,26(A6)         // + size = end target
+	bra.s .loop_img
+.error_img:
+	moveq #-1,D0            // error
+	bra .end_img	
+.loop_img:
+		move.l A3,A0     // save line target
+		moveq #0,D3      // bytes/line counter
+		moveq #0,D0      // counter line repeated
+		moveq #1,D5      // counter byte color TC16
+		tst.b (A2)       // if 0x0000FF => line repeated
+		bne.s .next_bytes
+		tst.b 1(A2)
+		bne.s .next_bytes
+		cmp.b #-1,2(A2)
+		bne.s .next_bytes
+		move.b 3(A2),D0  // number of lines repeated
+		subq.w #1,D0
+		addq.w #4,A2     // jump line header
+.next_bytes:
+		cmp.l 26(A6),A3  // end target
+		bcc .end_img_ok
+		move.w 20(A6),D7 // width in pixels
+		and.b #0xF0,D7   // 16 pixels alignment
+		move.w 20(A6),D2
+		and.w #0xF,D2
+		beq.s .alignment_ok
+		add.w #16,D7
+.alignment_ok:
+		moveq #0,D2
+		cmp.w D7,D3      // end of line
+		bge .end_of_line
+		moveq #0,D1
+		move.b (A2)+,D1
+		beq.s .pattern_run // if 0 => pattern-run
+		cmp.b #128,D1
+		beq.s .bit_string  // if 128 => bit-string
+		// solid-run
+		bclr #7,D1         // clear b7
+		sne.b D2
+		subq.w #1,D1
+		bmi.s .next_bytes
+.loop_solid_run:
+			move.b D2,D7
+			jsr (A1)
+		dbf D1,.loop_solid_run
+		bra.s .next_bytes
+.pattern_run:
+		move.b (A2)+,D2  // number of repeats pattern-run
+		move.l A2,A5     // save start adr pattern-run
+		subq.w #1,D2
+		bmi.s .next_bytes
+.loop_pattern_run:
+			move.l A5,A2     // adr start pattern-run
+			move.w 18(A6),D1 // pattern-run counter
+.loop_pattern_run_2:
+				move.b (A2)+,D7 // pattern-run byte
+				jsr (A1)
+			dbf D1,.loop_pattern_run_2
+		dbf D2,.loop_pattern_run      // pattern-run counter
+		bra.s .next_bytes
+.bit_string:
+		move.b (A2)+,D2 // bytes to read
+		subq.w #1,D2
+		bmi.s .next_bytes
+.loop_bit_string:
+			move.b (A2)+,D7 // byte transfer
+			jsr (A1)
+		dbf D2,.loop_bit_string
+		bra.s .next_bytes
+.end_of_line:
+		move.w 24(A6),D2 // width target in words
+		add.l D2,D2      // bytes
+		add.l D2,12(A6)  // begin line
+		move.l 12(A6),A4 // new target
+		move.l A4,A3
+		subq.w #1,D0     // repeat line ?
+		bmi.s .next_line
+		// copy line decompressed
+.loop_copy_line:
+			move.l A0,A5  // restore adr target
+			move.w D6,D1  // bytes/ligne target
+			subq.w #1,D1
+.loop_copy_line_2:
+				move.b (A5)+,(A3)+
+			dbf D1,.loop_copy_line_2    // byte counter
+			add.l D2,A4   // next line target
+			move.l A4,A3  // new target
+			subq.w #1,D4  // next line
+		dbmi D0,.loop_copy_line    // repeat counter
+		bmi.s .end_img_ok
+		move.l A4,12(A6) // fix target
+.next_line:
+		cmp.l 26(A6),A3  // end target
+		bcc.s .end_img_ok
+	subq.w #1,D4            // next line
+	bpl .loop_img
+.end_img_ok:
+	moveq #0,D0             // OK
+.end_img:
+	movem.l (SP)+,D1-A5
+	unlk A6
+	rts
+	
+store_ntc:
+
+	subq.w #1,D5            // byte counter NTC
+	ble.s .first_bytes
+	cmp.w 20(A6),D3         // width in pixels
+	bcc.s .no_end_of_line
+	move.b D7,(A3)+
+.no_end_of_line:
+	moveq #1,D5             // byte counter NTC for 2 bytes
+	addq.w #1,D3            // pixel counter
+	rts
+.first_bytes:
+	cmp.w 20(A6),D3         // width in pixels
+	bcc.s .ret_ntc
+	move.b D7,(A3)+
+.ret_ntc:
+	rts
+	
+test_tests:
+
+	move.l _sysbase,A0      // header ROM
+	move.l 0x24(A0),A0      // kbshift
+	move.b (A0),D0
+	and.b #0xF,D0
+	cmp.b #0xF,D0           // ALT-CTRL-LSHIFT-RSHIFT
+	bne.s .no_tests
+	cmp.l #0xFA52235F,0x00ED0000
+	bne.s .no_tests
+	lea 0x00E00030,A6
+	jmp 0x00ED0004          // tests in flash
+.no_tests:
 	rts
 
 screen_ntc_boot:                     // 320 * 240 * 65K colors */
 
-	movem.l D0-A1,-(SP)
+	movem.l D0-A6,-(SP)
 	lea 0x10000,A0
 	moveq #0,D7
 	move.b 0xFFFF8006,D7
 	lsr.w #6,D7             // 0:ST nomo, 1:ST col, 2:VGA, 3:TV
-	beq v7                  // monochrome
+	beq .v7                 // monochrome
 	move.l A0,A1
 	move.w #38399,D0        // 154KB for test videl clock
-v9:		clr.l (A1)+
-	dbf D0,v9
+.v9:		clr.l (A1)+
+	dbf D0,.v9
 	move.w SR,-(SP)
 	or.w #0x700,SR          // no IRQ
 	move.l A0,-(SP)         // adress screen
@@ -180,10 +330,10 @@ v9:		clr.l (A1)+
 	move.w #HEIGHT*2,D1
 	lea.l videl_tv_320_240(PC),A1  
 	cmp.w #2,D7             // VGA
-	bne.s v2                // TV
+	bne.s .v2               // TV
 	lea.l videl_vga_320_240(PC),A1
 	add.w D1,D1
-v2:
+.v2:
 	move.l (A1)+,0x82(A0)   // hht,hbb
 	move.l (A1)+,0x86(A0)   // hbe,hdb
 	move.l (A1)+,0x8A(A0)   // hde,hss
@@ -197,10 +347,10 @@ v2:
 	add.w D4,D0             // vdb
 	add.w D0,D1
 	cmp.w #2,D7
-	bne.s v3                // TV
+	bne.s .v3               // TV
 	move.w D0,D3            // vbe
 	move.w D1,D2            // vbb
-v3:
+.v3:
 	movem.w D2/D3,0xA4(A0)  // vbb,vbe
 	movem.w D0/D1,0xA8(A0)  // vdb,vde
 	move.w (A1)+,0xAC(A0)   // vss
@@ -212,21 +362,33 @@ v3:
 	bclr #0,0xA(A0)         // internal clock
 	move.w #WIDTH,0x10(A0)  // words/line
 	cmp.w #2,D7             // VGA
-	beq.s v4                // VGA
+	beq.s .v4               // VGA
 	btst #5,modecode+1      // PAL
-	beq.s v5
+	beq.s .v5
 	bset #1,0xA(A0)         // PAL 50 Hz
-	bra.s v4
-v5:
+	bra.s .v4
+.v5:
 	bclr #1,0xA(A0)         // NTSC 60 Hz
-v4:
+.v4:
 	move.w (A1)+,0xC2(A0)   // vco, pred video clock (pixel)
 	move.w (A1),0xC0(A0)    // vco_hi, clock and monitor
 	move.w #0x100,0x66(A0)  // 65536 colors => no palette
 	clr.l 0xFFFF9800        // black border
 	move.w (SP)+,SR
 	bsr set_external_clock
-	lea 0x40000,A0
+	lea 0x40000,A0          // screen buffer
+	cmp.l #0x58494D47,0x00ED0000 // XIMG picture/demo code
+	bne.s .v11
+	move.l A0,-(SP)         // adress screen
+	lea.l 0xFFFF8200,A0     // VIDEL
+	move.b 1(SP),1(A0)      // adress high
+	move.b 2(SP),3(A0)      // middle
+	move.b 3(SP),0xD(A0)    // low
+	move.l (SP)+,A0         // adress screen
+	jsr 0xED0004            // picture/demo in flash
+	lea.l 0xFFFF8200,A0     // VIDEL
+	bra.s .v10
+.v11:
 	bsr picture_build
 	move.l A0,-(SP)         // adress screen
 	lea.l 0xFFFF8200,A0     // VIDEL
@@ -234,18 +396,20 @@ v4:
 	move.b 2(SP),3(A0)      // middle
 	move.b 3(SP),0xD(A0)    // low
 	addq.w #4,SP
-	move.l _hz_200,D0
-	add.l #400,D0           // tempo 2 S
-v6:
+.v10:
+	move.l _hz_200,D2
+	add.l #400,D2           // tempo 2 S
+.v6:
+		bsr test_tests
 		move.l _hz_200,D1
-		cmp.l D0,D1
-	blt.s v6
-	bra.s v1
-v7:	
+	cmp.l D2,D1
+	blt.s .v6
+	bra.s .v1
+.v7:	
 	move.l A0,A1
 	move.w #7999,D0         // 32KB mono for test videl clock
-v8:		clr.l (A1)+
-	dbf D0,v8
+.v8:		clr.l (A1)+
+	dbf D0,.v8
 	move.w SR,-(SP)
 	or.w #0x700,SR          // no IRQ
 	move.l A0,-(SP)         // adress screen
@@ -270,9 +434,9 @@ v8:		clr.l (A1)+
 	move.w (A1)+,0xC2(A0)   // vco, pred video clock (pixel)
 	move.w (SP)+,SR
 	bsr set_external_clock
-v1:
+.v1:
 	bclr #0,0xA(A0)         // internal clock
-	movem.l (SP)+,D0-A1
+	movem.l (SP)+,D0-A6
 	rts
 	
 set_external_clock:
@@ -340,6 +504,7 @@ measure_clock_videl:                 // return value in MHz
 	moveq #0,D1
 	move.l _hz_200,D2
 .wait_measure:
+		bsr test_tests
 		move.l _hz_200,D0
 		sub.l D2,D0
 		cmp.l #100,D0           // time-out

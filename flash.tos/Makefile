@@ -94,8 +94,6 @@ GENTOS_OBJS=	\
 		\
 		$(OBJDIR)/ct60tos/vectors2.o \
 		\
-		$(OBJDIR)/ct60tos/videl2.o \
-		\
 		$(OBJDIR)/ct60tos/debug2.o \
 		\
 		$(OBJDIR)/ct60tos/ataboot.o \
@@ -105,6 +103,8 @@ GENTOS_OBJS=	\
 		\
 		$(OBJDIR)/ct60tos/sdram.o \
 		$(OBJDIR)/ct60tos/pmmu2.o \
+		\
+		$(OBJDIR)/ct60tos/videl2.o \
 		\
 		$(OBJDIR)/ct60tos/end.o
 
@@ -130,7 +130,8 @@ SRCDISTFILES2=	$(foreach FILE,$(SRCDISTFILES),$(SRCDISTDIR)/$(FILE))
 NFARCHIVE=	$(PROGRAM)_nf.tgz
 NFDISTDIR=	./nonfree
 NFDISTFILES=	\
-		$(NFDISTDIR)/tos404.bin
+		$(NFDISTDIR)/tos404.bin \
+		$(NFDISTDIR)/sparrow.out
 
 all:	 $(FLASH_BINARY) $(TOS)
 

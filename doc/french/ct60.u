@@ -4,7 +4,7 @@
 !title   Documentation de la
 !programimage ..\img\ct60.img
 !program CT60
-!version Version 1.02
+!version Version 1.02a
 !date    (!today)
 !author  Didier MEQUIGNON
 !street  25, rue de l'Ascenseur
@@ -362,7 +362,7 @@ remplacement des instructions movep.
 plantage.
 !item L'‚mulation des instructions manquantes (entiers et FPU).
 !item Les fonctions XBIOS CT60 de $C60A … $C60D (temp‚rature, 
-paramŠtres en flash, cache...), et du DSP (fonctions avec handshake).
+paramŠtres en Flash, cache...), et du DSP (fonctions avec handshake).
 !item Les patches n‚cessaires pour le blitter, les fontes systŠmes et le 
 logo du boot sont copi‚s au sommet de la ST-RAM (indispensable si le TOS 
 en ROM est un 4.02).
@@ -383,7 +383,7 @@ et la SDRAM d‚clar‚e en copyback.
 !item La cr‚ation du buffer fastram ‚tendu et de son cookie 'XFRB'.
 !item L'affichage complet des informations sur la barette SDRAM.
 !item Le patch pour l'ordre de boot des disques IDE et SCSI (4 choix).
-!item Possibilit‚s supp‚mentaires du boot :
+!item Possibilit‚s suppl‚mentaires du boot :
 !begin_itemize
 !item Proc‚dure d'identification du p‚riph‚rique pour les lecteurs SCSI 
 et IDE, le boot attend si un disque amovible n'est pas prˆt.
@@ -616,6 +616,124 @@ Pour connaitre les 'Informations sur la SDRAM' :
 
 Pendant que logo Atari du boot apparait, appuyez sur la touche SHIFT 
 droit.
+
+
+!node Diagnostiques Atari
+
+La deuxiŠme partie de la Flash (en $00ED0000-$00EEFFFF) contient les 
+Diagnostiques Atari mis … jour pour la CT60 (ajout SDRAM et corrections 
+68060). Le clavier Azerty est ‚galement g‚r‚.
+
+CTRL-ALT-SHIFTL-SHIFTL lance les Diagnostiques Atari si il est appuy‚ 
+avant le logo Atari.  
+
+(!U)
+ATTENTION !
+(!u)
+
+(!U)
+La fin anormale de ces tests entraine une perte de donn‚es :
+(!u)
+
+!begin_itemize
+!item RTC/NVRAM.
+!item IDE.
+!item SCSI.
+!end_itemize
+
+
+!subnode Principales Touches
+
+!begin_verbatim
+ R : SDRAM, ST-RAM et DSP SRAM.
+ O : O.S. ROM.
+ M : MIDI.
+ S : SCC Serie.
+ T : D‚lais MFP.
+ D : SDMA / Port DSP.
+ F : Lecteur de Disquettes.
+ P : Imprimante / Manettes.
+ L : Horloge Temps R‚el / NVRAM.
+ G : Test Blitter court.
+ I : Port SCSI.
+ X : Bus d'Extension.
+
+ A : Audio.
+ V : Vid‚o.
+ K : Clavier.
+ Y : Lecteur de Disquettes (Protection en Ecriture).
+ H : Disque Dur IDE.
+
+ E : Examine / Modifie SystŠme.
+ ? : Aide.
+ $ : Version / Date.
+ UNDO : Lancer le TOS.
+ 
+ D : Menu Diagnostiques.
+ E : Rapport d'Erreurs.
+ > : Forcer Etat Bon.
+
+ P : Pr‚ 'Chauffage'.
+ B : 'Chauffage'.
+ F : AprŠs 'Chauffage'.
+ I : Processus d'Assemblage.
+ U : Unit‚s Assembl‚s.
+ W : Effacer Status et Recommencer.
+!end_verbatim
+
+
+!subnode Aide
+
+La s‚lection d'un simple test ou une combinaison de tests se fait en 
+tapant la ou les lettre(s) correspondante(s), et ensuite RETURN. Pour 
+lancer en r‚p‚tition de cycles d'un ou des test(s), faire suivre la 
+derniŠre lettre avec le nombre de cycles … lancer. Par exemple, "RSM25", 
+va lancer les tests RAM, Serie, MIDI 25 fois. Si 0 est ajout‚, le test se 
+fait en continu. 
+
+La touche ESC sert pour quitter le cycle. Dans certain cas il peut y avoir 
+un d‚lais avant d'avoir la main au clavier.
+
+Un terminal RS232 peut ˆtre utilis‚ pour l'affichage et la saisie. Le test 
+s‚rie RS232 ne fonctione pas si un terminal est install‚ … la place du 
+bouclage du port sur la connecteur.
+
+Normallement un moniteur couleur est utilis‚ pour tous les tests except‚ 
+la haute r‚solution. Si une erreur survient, un message d'erreur est 
+affich‚ et l'‚cran passe au rouge. Quand le test est fini, 'Pass' (Bon) ou 
+'Fail' (Mauvais) apparait, et l'‚cran doit passer au vert ou au rouge.
+
+Si de multiples tests tournent et une erreur survient sur un test, 
+l'ecran va rester au rouge, mˆme aprŠs une succession de tests exc‚cut‚s 
+correctement. Une fois le test arrˆt‚, la BARRE d'ESPACE est utilis‚e pour 
+retourner au menu.
+
+Les tests DMA et Imprimante / manettes demandent un accessoire … attacher.
+
+Le test O.S. ROM calculate un checksum/CRC des ROMs et compare le 
+r‚sultat CRC avec la valeur trouv‚e dans les ROMs.
+
+Si le test RAM sort en erreur, le code d'erreur, l'addresse, la donn‚e
+‚crite, la donn‚e lue et les bits mauvais (0-15) sont affich‚s.
+
+Le court test Blitter n'affiche rien sur l'‚cran. Le long test Blitter, 
+tant que n'apparait pas la fin du rectangle, est bon.
+
+(!B)
+TESTS OPERATEUR DEMANDE
+(!b)
+
+Les tests Audio, Vid‚o, Clavier, et Disque Dur IDE ont quelques messages 
+d'erreur. L'op‚rateur doit d‚terminer si les r‚sultats visibles sont 
+acceptables. 
+
+Le test Gen/lock est lanc‚ deux fois. Basculer l'interrupteur sur le 
+gen/lock incorpor‚ devrait basculer entre le mode normal avec menu et sans 
+menu. En cas d'abscence de menu un cycle de "balayage" devrait battre.  
+Faure un Reset de l'ordinateur avec chaque changement de l'interrupteur 
+gen/lock.  
+
+NOTE - LANCER CE TEST SEULEMENT AVEC UN MONITEUR COULEUR.
 
 
 !node Flash Tool
@@ -2414,6 +2532,9 @@ SHIFTL:        Affiche les informations sur le module SDRAM.
 CTRL-ALT-UNDO: Init NVM et ParamŠtres en Flash si appuy‚ pendant le test 
                m‚moire jusqu'au reset. Vous avez besoin de r‚gler le 
                d‚lais au boot … 60 secondes avec le CPX de configuration.
+CTRL-ALT-
+SHIFTR-SHIFTL: Lance les Diagnostiques Atari si appuy‚ avant le logo 
+               Atari.  
 !end_verbatim
 
 

@@ -24,7 +24,7 @@
 #ifndef	_MAIN_H
 #define	_MAIN_H	1
 
-#define VERSION 0x0101
+#define VERSION 0x0102
 
 #define Bit32u unsigned long
 #define Bit32s signed long
@@ -39,6 +39,7 @@
 #define FLASH_ADR  0x00E00000
 #define FLASH_SIZE 0x00100000
 #define PARAM_SIZE (64*1024)
+#define TESTS_SIZE 0x00020000
 
 #define	MAX_ERROR_LENGTH	256
 
