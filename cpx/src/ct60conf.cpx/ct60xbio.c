@@ -52,7 +52,7 @@ int main(void)
 	}
 	Cconws("\r\n\n");
 	Cconout(27);
-	Cconws("p XBIOS CT60 v0.98c ");
+	Cconws("p XBIOS CT60 v0.99 ");
 	Cconout(27);
 	Cconws("q July 2003\r\n");
 #ifdef TEST_MAGICMAC

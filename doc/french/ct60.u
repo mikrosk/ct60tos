@@ -4,7 +4,7 @@
 !title   Documentation de la
 !programimage ..\img\ct60.img
 !program CT60
-!version Version 0.98e
+!version Version 0.99a
 !date    (!today)
 !author  Didier MEQUIGNON
 !street  25, rue de l'Ascenseur
@@ -376,7 +376,9 @@ et la SDRAM d‚clar‚e en copyback.
 !item La d‚claration de la SDRAM au TOS.
 !item L'initialisation de la SDRAM, et l'affichage du nombre de Mo/S en 
 ‚criture.
-!item La cr‚ation du fastram buffer et de son cookie '_FRB'.
+!item La cr‚ation du buffer fastram et de son cookie '_FRB'.
+!item La cr‚ation du buffer fastram ‚tendu et de son cookie 'XFRB'.
+!item Le patch pour l'ordre de boot des disques IDE et SCSI.
 !item Le patch de la fonction Pexec pour le copyback (cpush aprŠs la 
 relocation).
 !item Les patchs blitter des fonctions VDI, vro_cpyfm, vr_trnfm, et 
@@ -661,6 +663,7 @@ microprocesseur.
 Sur cette page vour pouvez :
 
 !begin_itemize
+!item S‚lectionner l'ordre de boot sur les disques IDE et SCSI.
 !item S‚lectionner au d‚marrage le systŠme d'exploitation par d‚faut.
 !item S‚lectionner au d‚marrage l'arbitration SCSI.
 !item S‚lectionne au d‚marrage l'identificateur SCSI (0 to 7).
@@ -669,6 +672,7 @@ besoin de beaucoup de temps si vous voulez tester la STRAM et la SDRAM).
 !item Changer la vitesse du blitter.
 !item S‚lectionner le transfert du TOS 4.0x en RAM avec utilisation de la 
 PMMU.
+!item Couper les caches pendant 5 secondes lors du lancement d'un programme sous TOS.
 !end_itemize
 
 
@@ -834,6 +838,10 @@ pouvez essayer de couper les caches avec GENERAL6.CPX, lancer le
 programme et r‚activer les caches aprŠs. Par exemple PICCOLO 
 fonctionne avec cette m‚thode.
 
+Une solution globale est de couper les caches pendant 5 secondes lors du   
+lancement d'un programme sous TOS via le menu Boot du CPX de 
+configuration, mais cette m‚thode p‚nalise tous les programmes. 
+
 
 !subnode Programmes TSR qui plantent dans le dossier AUTO
 
@@ -848,8 +856,12 @@ Par exemple vous devez enlever les flags TT-ram de METAXBS.PRG
 flush aprŠs la relocation, ce n'est pas compatible avec la SDRAM et 
 le cache CPU en copyback.
 
+Une solution globale est de couper les caches pendant 5 secondes lors du   
+lancement d'un programme sous TOS via le menu Boot du CPX de 
+configuration, mais cette m‚thode p‚nalise tous les programmes. 
 
-!subnode Programs compress‚s avec Ice.
+
+!subnode Programs compress‚s avec Ice
 
 Le TOS teste les programmes compress‚s avec Ice, il y a un patch 
 pour faire un flush des caches (dans la fonction Pexec). Sans ce patch, 
@@ -905,7 +917,10 @@ AUTO.
 (!B)Logiciel(!b) !! (!B)ProblŠme(!b)  !! (!B)Solution(!b)
 !hline
 Port cartouche   !! Ne fonctionne pas !! Couper les caches.
-et 68060 EC      !!                   !! 
+et 68060 EC      !!                   !!
+!hline
+HD Driver et les !! Plante avec les   !! Acheter la derniŠre version.
+disques SCSI     !! fichiers > 65 Ko  !!
 !hline
 MagiC            !! Ne fonctionne pas !! Patcher MAGIC.RAM et utiliser
                  !!                   !! le nouveau MAGXBOOT.PRG.
@@ -922,8 +937,10 @@ Cubase Audio     !! Ne fonctionne pas !! Patcher CAF_20x.PRG et utiliser
 Spin METAXBS.PRG !! Plante            !! Enlever les flags Fast-Ram.
 !hline
 Picollo          !! Plante            !! Couper les caches au lancement
-Gembench         !! Plante            !! ou enlever les flags Fast-Ram.
-Swiftel Photo    !! Plante            !!
+D2M              !! Plante            !! ou enlever les flags Fast-Ram
+Gemview          !! Plante            !! ou utiliser le delais cache
+Gembench         !! Plante            !! dans le CPX de configuration
+Swiftel Photo    !! Plante            !! sous TOS.
 !hline
 Xcontrol         !! Plante            !! Utiliser la version patch‚e.
 !hline

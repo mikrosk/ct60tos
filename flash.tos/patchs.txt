@@ -24,7 +24,7 @@ writethrough and the SDRAM declaration in copyback.
 The possible copy of the TOS in SDRAM (excepted for 68060 EC or LC). 
 
 cookie.S
---------                w
+--------
 The installation of the cookies '_CPU', '_FPU', 'CT60'.
 
 cache.S, pmmu.S, periph.S, movep.S, and movep2.S
@@ -39,6 +39,10 @@ The bombs inside exceptions displayed with texts in clear of a crash.
 vector.S, vectors2.S (fpsp.S, isp.S)
 ------------------------------------
 The emulation of unimplemented instructions (integers and FPU).
+
+boot.S, sdram.S
+---------------
+The boot order patch for IDE and SCSI drives.
 
 xbios.S, xbios2.S
 -----------------
@@ -64,6 +68,8 @@ gemdos.S, gemdos2.S
 -------------------
 The patch for the Pexec function for the copyback (cpush after the 
 relocation).
+Test and alert box inside Fload for try to fix crashes with programs 
+loaded without Pexec.
 
 aes.S
 -----

@@ -31,8 +31,12 @@
 #define END_ZONE_EPROM 0x00F00000
 #define ZONE_IO 0x00F00000
 #define END_ZONE_IO 0x01000000
+#define F030_BUS_SLOT 0x00F10000
+#define END_F030_BUS_SLOT 0x00FA0000
 #define ZONE_CART 0x00FA0000
 #define END_ZONE_CART 0x00FC0000
+#define F030_UNUSED 0x00FC0000
+#define END_F030_UNUSED 0x00FF8000
 #define ZONE_SDRAM 0x01000000
 #define NB_32MB 17            /* 512MB/32 + 1 */
 
@@ -187,8 +191,12 @@ long init_mmu_tree(void)
 					for(pgi=0;pgi<PAGE_TABLE_SIZE;pgi++)       /* 3rd level of the mmu tree */
 					{
 						adr = (ri<<25UL) + (pi<<18UL) + (pgi<<13UL);
-						if(adr>=ZONE_CART && adr<END_ZONE_CART)
-							*p2++ = offset+(NOCACHE+SUPERBIT+READONLYBIT+RESIDENT);
+						if(adr>=F030_BUS_SLOT && adr<END_F030_BUS_SLOT)
+							*p2++ = offset+(NOCACHE+RESIDENT);
+						else if(adr>=ZONE_CART && adr<END_ZONE_CART)
+							*p2++ = offset+(NOCACHE+READONLYBIT+RESIDENT);
+						else if(adr>=F030_UNUSED && adr<END_F030_UNUSED)
+							*p2++ = INVALID;
 						else
 							*p2++ = offset+(NOCACHE+SUPERBIT+RESIDENT);
 						offset+=PAGESIZE;

@@ -65,6 +65,7 @@ GENTOS_OBJS=	\
 		$(OBJDIR)/ct60tos/periph.o \
 		$(OBJDIR)/ct60tos/cache.o \
 		$(OBJDIR)/ct60tos/movep.o \
+		$(OBJDIR)/ct60tos/boot.o \
 		$(OBJDIR)/ct60tos/blitter.o \
 		$(OBJDIR)/ct60tos/bios.o \
 		$(OBJDIR)/ct60tos/xbios.o \

@@ -1,6 +1,6 @@
 /*  Configure the CT60-SDRAM
  * 
- * Didier Mequignon 2001-2002, e-mail: didier-mequignon@wanadoo.fr
+ * Didier Mequignon 2001-2003, e-mail: didier-mequignon@wanadoo.fr
  *
  *  This library is free software; you can redistribute it and/or
  *  modify it under the terms of the GNU Lesser General Public
@@ -21,12 +21,15 @@
 	.globl init_060
 	.globl init_sdram
 	.globl add_sdram
+	.globl boot_drive
 	.globl display_ram_test
 	.globl ct60_read_info_sdram
 	.globl ct60_configure_sdram
 
 #include "main.h"
 #include "ct60.h"
+
+#define XFRB_SIZE 0x10000
 
 #define rw_parameter 0xc60b
 	
@@ -35,6 +38,7 @@
 #define resvector 0x42A
 #define phystop   0x42E
 #define _memtop   0x436
+#define hdv_rw    0x476
 #define hdv_boot  0x47A
 #define _hz_200   0x4BA
 #define _dskbufp  0x4C6
@@ -663,7 +667,7 @@ message15:	.byte 27
 	.ascii "."
 	.byte ((VERSION/16) & 0xF) + 0x30
 	.byte (VERSION & 0xF) + 0x30
-	.ascii "e 2003 July "
+	.ascii "a 2003 July "
 	.byte 27
 	.ascii "q"
 	.byte 13,10,10
@@ -719,9 +723,118 @@ message38:	.byte 13,10
 	.asciz "            CT60 hardware"
 message39:	.asciz " ABEv"
 message40:	.asciz " SDRv"
+message41:	.byte 13,10
+	.asciz "SCSI "
+message42:	.byte 13,10
+	.asciz "IDE  "
+message43:	.asciz " ... "
+message44:	.ascii "timeout "
+message45:	.asciz "error"
+message46:	.asciz "read error"
+message47:	.asciz "no boot"
+message48:	.asciz "boot"
+
+boot_ide:	.byte 16,8,9,10,11,12,13,14,15,255
+boot_scsi:	.byte 8,9,10,11,12,13,14,15,16,255
 
 	.align 2
-	
+
+boot_drive:
+
+	movem.l D0-D2/A0-A2/A5,-(SP)
+	clr.l -(SP)
+	move.l #CT60_BOOT_ORDER,-(SP)
+	move.w #CT60_MODE_READ,-(SP)
+	move.w #rw_parameter,-(SP)
+	trap #14
+	lea 12(SP),SP
+	lea boot_scsi(PC),A5
+	btst #0,D0
+	beq.s .loop_drive
+	lea boot_ide(PC),A5
+.loop_drive:
+		moveq #1,D1
+.loop2_drive:
+			move.l A5,-(SP)
+			move.w D1,-(SP)
+			move.w 0x840,D4
+			move.b (A5,D4.w),D4
+			lea message41(PC),A0
+			btst #4,D4
+			beq.s .scsi_drive
+			lea message42(PC),A0
+.scsi_drive:
+			bsr display_string
+			move.w D4,D0
+			and.w #7,D0
+			or.w #0x30,D0
+			bsr display_char
+			moveq #0x2E,D0
+			bsr display_char
+			moveq #0x30,D0
+			or.w (SP),D0
+			bsr display_char
+			lea message43(PC),A0
+			bsr display_string
+			move.w D4,-(SP)
+			move.l _dskbufp,-(SP)
+			move.w #1,-(SP)
+			clr.l -(SP)
+			jsr 0xE017CE
+			lea 12(SP),SP
+			move.w (SP)+,D1
+			move.l (SP)+,A5
+			tst.l D0
+			beq.s .drive_ok
+			lea message44(PC),A0 // timeout
+			cmp.l #-1,D0
+			beq.s .no_read_error
+			lea message45(PC),A0 // error
+			cmp.l #-11,D0
+			bne.s .no_read_error
+			lea message46(PC),A0 // read error
+.no_read_error:
+			bsr display_string
+			addq.l #1,D0
+		dbeq D1,.loop2_drive
+		bra.s .next_drive
+.boot_ok:
+		lea message48(PC),A0
+		bsr display_string
+		move.l _dskbufp,A0
+		move.l #0x444D4172,D3
+		move.w D4,D7
+		asl.w #5,D7
+		move.w 0xA80,D5
+		move.l A5,-(SP)
+		move.l hdv_rw,-(SP)
+		jsr (A0)
+		move.l (SP)+,D0
+		move.l (SP)+,A5
+		cmp.l hdv_rw,D0
+		beq.s .next_drive
+		bra.s .end_boot_drive
+.drive_ok:
+		move.l _dskbufp,A0
+		move.w #0xFF,D0
+		moveq #0,D1
+.loop_checksum:
+			add.w (A0)+,D1
+		dbf D0,.loop_checksum
+		cmp.w #0x1234,D1
+		beq.s .boot_ok
+		lea message47(PC),A0
+		bsr display_string
+.next_drive:
+		move.w 0x840,D4
+		addq.w #1,D4
+		move.w D4,0x840
+	tst.b (A5,D4)
+	bpl .loop_drive
+.end_boot_drive:
+	movem.l (SP)+,D0-D2/A0-A2/A5
+	rts
+
 display_ram_test:
 
 	movem.l D0/D1/A0,-(SP)
@@ -735,7 +848,7 @@ display_ram_test:
 	unlk A6
 	movem.l (SP)+,D0/D1/A0
 	rts
-
+	
 conv_ascii_value:                     // A0:target ascii, D0.L:value, D1:len
 
 	move.w D1,-(SP)
@@ -751,7 +864,7 @@ conv_ascii_value:                     // A0:target ascii, D0.L:value, D1:len
 		move.w D0,2(SP)
 		swap D0
 		or.w #0x30,D0
-		move.b D0,(A0,D1)
+		move.b D0,(A0,D1.w)
 	dbf D1,.dv1
 	addq.w #4,SP
 	move.w (SP)+,D1
@@ -762,15 +875,15 @@ conv_ascii_value:                     // A0:target ascii, D0.L:value, D1:len
 	bne.s .dv3
 	moveq #0,D0
 .dv4:
-		cmp.b #0x30,(A0,D0)
+		cmp.b #0x30,(A0,D0.w)
 		bne.s .dv2
-		move.b #0x20,(A0,D0)
+		move.b #0x20,(A0,D0.w)
 		addq.w #1,D0
 	cmp.w D1,D0
 	bne.s .dv4
 	bra.s .dv2
 .dv3:
-	move.b #0x3F,(A0,D1)
+	move.b #0x3F,(A0,D1.w)
 	dbf D1,.dv3
 .dv2:
 	rts
@@ -899,29 +1012,54 @@ add_sdram:
 	bsr display_string
 	move.w #0x14,-(SP)       // Maddalt
 	trap #1 
-	lea 10(SP),SP	
+	lea.l 10(SP),SP	
              tst.l D0
-             bmi.s .not_sdram
+             bmi .not_sdram
 	clr.w -(SP)              // stram
-	move.l #0x10000,-(SP)    // 64K
+	move.l #0x10000+16,-(SP) // 64K
 	move.w #0x44,-(SP)       // Mxalloc
 	trap #1 
-	addq #8,SP
+	addq.w #8,SP
 	tst.l D0
 	ble.s .not_sdram
+	addq.l #8,D0
+	addq.l #7,D0
+	and.b #0xF0,D0           // 16 bytes alignment
 	move.l D0,A1             // fastram buffer
+	clr.w -(SP)              // stram
+	move.l #XFRB_SIZE+16+20,-(SP) // 64K
+	move.w #0x44,-(SP)       // Mxalloc
+	trap #1 
+	addq.w #8,SP
+	tst.l D0
+	ble.s .not_sdram
+	move.l D0,A2             // XFRB struct
+	lea.l 18(A2),A0
+	move.w #0x101,(A2)       // version
+	move.l A0,2(A2)          // xflock
+	clr.w (A0)+
+	move.l A0,D0
+	addq.l #8,D0
+	addq.l #7,D0
+	and.b #0xF0,D0           // 16 bytes alignment
+	move.l D0,6(A2)          // buffer
+	move.l #XFRB_SIZE,10(A2) // size buffer
+	clr.l 14(A2)             // next XFRB struct
 	move.l cookie,D0
 	beq.s .not_sdram
 	move.l D0,A0
 .find_cookie:
 		tst.l (A0)
 		beq.s .cookie_free
-		addq #8,A0
+		addq.w #8,A0
 	bra.s .find_cookie
 .cookie_free:
 	move.l 4(A0),12(A0)      // copy size
 	move.l #0x5F465242,(A0)+ // _FRB
 	move.l A1,(A0)+
+	move.l 4(A0),12(A0)      // copy size
+	move.l #0x58465242,(A0)+ // XFRB
+	move.l A2,(A0)+
 	clr.l (A0)
 .not_sdram:
 	moveq #3,D0
@@ -1049,7 +1187,7 @@ ct60_configure_sdram:
 		cmp.w 2(A1),D0           // number of column adresses
 		beq.s .c5                // found
 .c4:
-		addq #8,A1
+		addq.w #8,A1
 	bra.s .c3
 .c2: 
 	moveq #CT60_CHIP_DENSITY_ERROR,D0

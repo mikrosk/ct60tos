@@ -24,7 +24,7 @@
 #ifndef	_MAIN_H
 #define	_MAIN_H	1
 
-#define VERSION 0x0098
+#define VERSION 0x0099
 
 #define Bit32u unsigned long
 #define Bit32s signed long

@@ -4,7 +4,7 @@
 !title   Documentation of the
 !programimage ..\img\ct60.img
 !program CT60
-!version Version 0.98e
+!version Version 0.99a
 !date    (!today)
 !author  Didier MEQUIGNON
 !street  25, rue de l'Ascenseur
@@ -367,7 +367,9 @@ writethrough and the SDRAM declaration in copyback.
 !item The declaration of the SDRAM to the TOS.
 !item The initialization of the SDRAM, and the MB/s during writing 
 displayed.
-!item The fastram buffer created and this cookie '_FRB'.
+!item The fastram buffer created and his cookie '_FRB'.
+!item The extended fastram buffer created and his cookie 'XFRB'.
+!item The patch for the boot order of the drives IDE and SCSI.
 !item The patch for the Pexec function for the copyback (cpush after the 
 relocation).
 !item The blitter patchs of the VDI functions, vro_cpyfm, vr_trnfm, and
@@ -645,13 +647,15 @@ microprocessor (BogoMips).
 At this page you can :
 
 !begin_itemize
-!item Select at boot the|operating system by default.
+!item Select the boot order on the IDE and SCSI drives.
+!item Select at boot the operating system by default.
 !item Select at boot the SCSI arbitration.
 !item Select at boot the SCSI identificator (0 to 7).
 !item Set the delay at boot in secondes (you need lot of time if you want test the 
 STRAM and the SDRAM).
 !item Change the speed of the blitter.
 !item Set the transfer of TOS 4.0x in RAM with using of the PMMU.
+!item Remove the caches during 5 seconds when a program is started under TOS.
 !end_itemize
 
 
@@ -814,6 +818,10 @@ If a program who use PARX.SYS crashes at start, you can try to remove the
 caches with GENERAL6.CPX, load the program and set to on the caches 
 after. For example PICCOLO works with this method.
 
+A global solution is to remove the caches during 5 seconds when a program 
+is started under TOS with the Boot menu inside the configuration CPX, but 
+this method penalize all programs.
+
 
 !subnode TSR programs who crashes in the AUTO folder
 
@@ -827,8 +835,12 @@ because when the OVL modules are loaded there are no flush after
 relocation, it's not compatible with the SDRAM and the CPU cache in 
 copyback. 
 
+A global solution is to remove the caches during 5 seconds when a program 
+is started under TOS with the Boot menu inside the configuration CPX, but 
+this method penalize all programs.
+                                                                                                     
 
-!subnode Programs packed by Ice.
+!subnode Programs packed by Ice
 
 The TOS test the programs packed by Ice, there are a patch for flush 
 caches (inside the Pexec function). Without this patch, programs packed by 
@@ -885,6 +897,9 @@ folder.
 Cartrige port    !! Not works         !! Remove the caches.
 and 68060 EC     !!                   !! 
 !hline
+HD Driver and    !! Crashes with      !! Buy the latest version.
+SCSI drives      !! files > 65 KB     !!
+!hline
 MagiC            !! Not works         !! Patch MAGIC.RAM and use the
                  !!                   !! new MAGXBOOT.PRG.
                  !!                   !! Install CT60XBIO.PRG and 
@@ -900,7 +915,9 @@ Cubase Audio     !! Not works         !! Patch CAF_20x.PRG and use the
 Spin METAXBS.PRG !! Crashes           !! Remove the Fast-Ram flags.
 !hline
 Picollo          !! Crashes           !! Remove the caches during start
-Gembench         !! Crashes           !! or remove the Fast-Ram flags.
+D2D              !! Crashes           !! or remove the Fast-Ram flags
+Gemview          !! Crashes           !! or use the cache delay inside
+Gembench         !! Crashes           !! the configuration CPX under TOS.
 Swiftel Photo    !! Crashes           !!
 !hline
 Xcontrol         !! Crashes           !! Use the patched version.

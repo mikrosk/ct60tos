@@ -1,6 +1,6 @@
 	
 /* CT60 TEMPerature - Pure C */
-/* Didier MEQUIGNON - v0.98 - December 2002 */
+/* Didier MEQUIGNON - v0.99 - July 2003 */
 
 #include <portab.h>
 #include <tos.h>
@@ -479,11 +479,11 @@ int main(int argc,const char *argv[])
 					}
 				 	if(!start_lang)
 						sprintf(mess_alert,
-						"[0][      CT60 TEMPERATURE       |V0.98 MEQUIGNON Didier 12/2002| |Temp.: %d øC     Seuil: %d øC |Lien avec processus %d %s][OK]",
+						"[0][      CT60 TEMPERATURE       |V0.99 MEQUIGNON Didier 07/2003| |Temp.: %d øC     Seuil: %d øC |Lien avec processus %d %s][OK]",
 						temp,trigger_temp,app_id,app_name);
 					else
 						sprintf(mess_alert,
-						"[0][      CT60 TEMPERATURE       |V0.98 MEQUIGNON Didier 12/2002| |Temp.: %d øC Threshold: %d øC |Link with process %d %s][OK]",
+						"[0][      CT60 TEMPERATURE       |V0.99 MEQUIGNON Didier 07/2003| |Temp.: %d øC Threshold: %d øC |Link with process %d %s][OK]",
 						temp,trigger_temp,app_id,app_name);
 					MT_form_xalert(1,mess_alert,ITIME*10L,0L,myglobal);
 					break;
