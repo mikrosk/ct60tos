@@ -1,6 +1,6 @@
 	
 /* CT60 XBIOS - Pure C */
-/* Didier MEQUIGNON - July 2003 */
+/* Didier MEQUIGNON - August 2003 */
 
 #include <tos.h>
 #include <stdio.h>
@@ -42,9 +42,10 @@ extern void det_vdi(void);
 int main(void)
 
 {
-	int start_lang;
+	int start_lang,i;
 	COOKIE cookie_ct60;
 	COOKIE *p;
+	char *ptr;
 	if((p=get_cookie('_AKP'))!=0)
 	{
 		if((p->v.c[2]==FRA) || (p->v.c[2]==SWF))
@@ -52,9 +53,9 @@ int main(void)
 	}
 	Cconws("\r\n\n");
 	Cconout(27);
-	Cconws("p XBIOS CT60 v0.99 ");
+	Cconws("p XBIOS CT60 v0.99b ");
 	Cconout(27);
-	Cconws("q July 2003\r\n");
+	Cconws("q August 2003\r\n");
 #ifdef TEST_MAGICMAC
     if(!get_cookie('MgMc'))
 #endif
@@ -84,8 +85,11 @@ int main(void)
 	{
 		p=&cookie_ct60;
 		p->ident=ID_CT60;
-		p->v.l=0L;
+		p->v.l=(long)Mxalloc(sizeof(CT60_COOKIE),3);
+		ptr=(char *)p->v.l;
 		add_cookie(p);
+		if(ptr!=NULL)
+			for(i=0;i<sizeof(CT60_COOKIE);ptr[i++]=0);
 		if(get_cookie('MagX')==0)
 			*(((long *)(&det_vdi))-1L)=(long)Setexc(34,(void(*)())det_vdi);	/* TRAP #2 */
 		*(((long *)(&det_xbios))-1L)=(long)Setexc(46,(void(*)())det_xbios);	/* TRAP #14 */

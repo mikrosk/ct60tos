@@ -51,3 +51,16 @@ method is used for flush the caches (file gemdos2.S).
 (file pmmu.c).
 - Add CT60_BOOT_ORDER parameter in flash for boot on SCSI drives 
 before IDE drives (files boot.S and sdram.S).
+
+2003-08-03 0.99b
+----------------
+- Last basepage displayed for the exception procedure (file debug2.S) 
+and Access Fault vector set before (file sdram.S).
+- Add measure of the FALCON VIDEL clock for use an external 32MHz 
+clock with the F030 BOOST and an RGB or monochome monitor. If the 
+internal clock is > 32MHz and the external clock is equal to 32 MHz, 
+the boot set the external clock. 2 cookies are created '_FRQ' with the 
+value of the internal clock (F030 BOOST) and '_FRE' with the value of 
+the external clock (file sdram.S and videl2.S).
+- Now the CT60 cookie value is a pointer of 256 bytes cleared during 
+the boot (used by the CPX).

@@ -1,6 +1,6 @@
 	
 /* CT60 TEMPerature - Pure C */
-/* Didier MEQUIGNON - v0.99 - July 2003 */
+/* Didier MEQUIGNON - v0.99b - August 2003 */
 
 #include <portab.h>
 #include <tos.h>
@@ -186,11 +186,12 @@ int main(int argc,const char *argv[])
 	register int i,temp;
 	unsigned long daytime;
 	unsigned int time,trigger_temp,daystop,timestop;
-	int temp_id,app_id=-1,app_sid,app_stype,flag_cpuload,event,ret,end=0,count=0,count_mn=0,loops=1,stop,cpu_060;
+	int temp_id,app_id=-1,app_sid,app_stype,flag_cpuload,event,ret,end=0,count=0,count_mn=0,loops=1,stop,cpu_060,flag_msg=0;
 	unsigned long ticks,start_ticks,new_ticks,sum_ticks=0;
 	long uptime,load,old_load=0,load_avg=0,load_avg_mn=0,delay=ITIME,avenrun[3]={0,0,0};
 	char *eiffel_temp;
 	char buffer[2];
+	CT60_COOKIE *ct60_arg=NULL;
 	static unsigned int old_time=9999;
 	static int error_flag=0,old_stop=0;
 	static WORD message[8],msg[8];
@@ -215,6 +216,19 @@ int main(int argc,const char *argv[])
 		if(argc>3)
 			timestop=(unsigned int)atoi(argv[3]);
 	}
+	else
+	{
+		if((p=get_cookie(ID_CT60))!=0)
+		{
+			ct60_arg=(CT60_COOKIE *)p->v.l;
+			if(ct60_arg!=NULL)
+			{
+					trigger_temp=(unsigned int)ct60_arg->trigger_temp;
+					daystop=(unsigned int)ct60_arg->daystop;
+					timestop=(unsigned int)ct60_arg->timestop;
+			}
+		}
+	}
 	if(trigger_temp==0)
 		trigger_temp=(MAX_TEMP*3)/4;
 	if(get_cookie('MiNT')
@@ -230,7 +244,7 @@ int main(int argc,const char *argv[])
 			start_lang=0;
 	}
 	eiffel_temp=NULL;
-    if((p=get_cookie('Temp'))!=0)
+	if((p=get_cookie('Temp'))!=0)
 		eiffel_temp=(char *)p->v.l;
 	tab_temp=tab_cpuload=NULL;
 	if((temp_id=MT_appl_init(myglobal))<=0)
@@ -254,9 +268,9 @@ int main(int argc,const char *argv[])
 	}
 	flag_xbios=1;
 #ifdef TEST_MAGICMAC
-    if(!get_cookie('MgMc'))
+	if(!get_cookie('MgMc'))
 #endif
-    {
+	{
 		if(((p=get_cookie('_MCH'))==0) || (p->v.l!=0x30000))	/* Falcon */
 		{
 			if(!start_lang)
@@ -445,7 +459,16 @@ int main(int argc,const char *argv[])
 		for(i=0;i<loops;i++)
 		{
 			event=MT_evnt_multi(MU_MESAG|MU_TIMER,0,0,0,0,&rect,0,&rect,message,delay,&mouse,&ret,&ret,myglobal);
-			if((event & MU_TIMER) && loops>1)
+			if(event & MU_TIMER)
+			{
+				if(!flag_msg && !_app && ct60_arg!=NULL)
+				{
+					trigger_temp=(unsigned int)ct60_arg->trigger_temp;
+					daystop=(unsigned int)ct60_arg->daystop;
+					timestop=(unsigned int)ct60_arg->timestop;
+				}
+			}			
+			if(loops>1)
 			{
 				new_ticks=clock();
 				if(new_ticks-ticks > (1000UL/CLOCKS_PER_SEC))
@@ -479,11 +502,11 @@ int main(int argc,const char *argv[])
 					}
 				 	if(!start_lang)
 						sprintf(mess_alert,
-						"[0][      CT60 TEMPERATURE       |V0.99 MEQUIGNON Didier 07/2003| |Temp.: %d øC     Seuil: %d øC |Lien avec processus %d %s][OK]",
+						"[0][      CT60 TEMPERATURE       |V0.99b MEQUIGNON Didier 08/2003| |Temp.: %d øC     Seuil: %d øC |Lien avec processus %d %s][OK]",
 						temp,trigger_temp,app_id,app_name);
 					else
 						sprintf(mess_alert,
-						"[0][      CT60 TEMPERATURE       |V0.99 MEQUIGNON Didier 07/2003| |Temp.: %d øC Threshold: %d øC |Link with process %d %s][OK]",
+						"[0][      CT60 TEMPERATURE       |V0.99b MEQUIGNON Didier 08/2003| |Temp.: %d øC Threshold: %d øC |Link with process %d %s][OK]",
 						temp,trigger_temp,app_id,app_name);
 					MT_form_xalert(1,mess_alert,ITIME*10L,0L,myglobal);
 					break;
@@ -491,6 +514,7 @@ int main(int argc,const char *argv[])
 					end=1;
 					break;				
 				case MSG_CT60_TEMP:
+					flag_msg=1;
 					app_id=message[1];
 					trigger_temp=(unsigned int)message[3];
 					daystop=(unsigned int)message[4];

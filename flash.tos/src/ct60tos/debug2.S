@@ -83,6 +83,10 @@ exception:
 	move.l 0x3C0,A0    // SSP
 	move.l 2(A0),D0    // PC
 	bsr hex_long
+	lea.l mess10(PC),A0 // Basepage
+	bsr display_string
+	move.l 0x6EE4,D0
+	bsr hex_long
 	lea.l mess5(PC),A0 // CACR
 	bsr display_string  
 	movec.l CACR,D0
@@ -284,6 +288,8 @@ mess8:	.byte 13,10
 	.asciz "Supervisor Stack (SSP): $"
 mess9:	.byte 13,10
 	.asciz "User Stack (USP): $"
+mess10:	.byte 13,10
+	.asciz "Basepage: $"
  
 tab_mess_exc:
 	.byte 0

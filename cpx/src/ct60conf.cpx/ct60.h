@@ -13,6 +13,13 @@
 #define CT60_ABE_CODE 11L
 #define CT60_SDR_CODE 12L
 
+typedef struct
+{
+	unsigned short trigger_temp;
+	unsigned short daystop;
+	unsigned short timestop;
+} CT60_COOKIE;
+
 #define ct60_read_core_temperature(type_deg) (long)xbios(0xc60a,(short)type_deg)
 #define ct60_rw_parameter(mode,type_param,value) (long)xbios(0xc60b,(short)mode,(long)type_param,(long)value)
 #define ct60_cache(cache_mode) (long)xbios(0xc60c,(short)cache_mode)

@@ -1,5 +1,5 @@
 /* TOS 4.04 Videl patch for the CT60 board
-*  Didier Mequignon 2002 December, e-mail: didier-mequignon@wanadoo.fr
+*  Didier Mequignon 2003 July, e-mail: didier-mequignon@wanadoo.fr
 *
 *  This library is free software; you can redistribute it and/or
 *  modify it under the terms of the GNU Lesser General Public
@@ -18,8 +18,15 @@
 
 	.globl	picture_boot
 
-#define modecode 0x184C
-#define _hz_200  0x4BA
+#define measure_frame 0x3EC
+#define measure_line  0x3F0
+#define measure_clock 0x3F4
+#define vbl_count     0x3F8
+#define count_measure 0x3FA
+#define _frclock      0x466
+#define _hz_200       0x4BA
+#define cookie        0x5A0
+#define modecode      0x184C
 
 #define WIDTH  320          // TGA uncompressed picture & screen 
 #define HEIGHT 240
@@ -112,7 +119,7 @@ screen_ntc_boot:                     // 320 * 240 * 65K colors */
 	moveq #0,D7
 	move.b 0xFFFF8006,D7
 	lsr.w #6,D7             // 0:ST nomo, 1:ST col, 2:VGA, 3:TV
-	beq v1                  // monochrome
+	beq v7                  // monochrome
 	move.w SR,-(SP)
 	or.w #0x700,SR          // no IRQ
 	move.l A0,-(SP)         // adress screen
@@ -165,21 +172,214 @@ v4:
 	move.w #0x100,0x66(A0)  // 65536 colors => no palette
 	clr.l 0xFFFF9800        // black border
 	move.w (SP)+,SR
+	bsr set_external_clock
 	move.l _hz_200,D0
 	add.l #400,D0           // tempo 2 S
 v6:
 		move.l _hz_200,D1
 		cmp.l D0,D1
 	blt.s v6
+	bra.s v1
+v7:	
+	move.l A0,A1
+	move.w #7999,D0         // 32KB mono for test videl clock
+v8:		clr.l (A1)+
+	dbf D0,v8
+	move.w SR,-(SP)
+	or.w #0x700,SR          // no IRQ
+	move.l A0,-(SP)         // adress screen
+	lea.l 0xFFFF8200,A0     // VIDEL
+	lea.l videl_mono_640_400(PC),A1  
+	move.l (A1)+,0x82(A0)   // hht,hbb
+	move.l (A1)+,0x86(A0)   // hbe,hdb
+	move.l (A1)+,0x8A(A0)   // hde,hss
+	move.w (A1)+,0xA2(A0)   // vft
+	move.l (A1)+,0xA4(A0)   // vbb,vbe
+	move.l (A1)+,0xA8(A0)   // vdb,vde
+	move.w (A1)+,0xAC(A0)   // vss
+	move.b 1(SP),1(A0)      // adress high
+	move.b 2(SP),3(A0)      // middle
+	move.b 3(SP),0xD(A0)    // low
+	addq.w #4,SP
+	clr.w 0xE(A0)           // offset for next line (in words)
+	bclr #0,0xA(A0)         // internal clock
+	move.w 2(A1),0xC0(A0)   // vco_hi, clock and monitor
+	move.b #2,0x60(A0)      // ST hight
+	move.w #0x28,0x10(A0)   // words/line
+	move.w (A1)+,0xC2(A0)   // vco, pred video clock (pixel)
+	move.w (SP)+,SR
+	bsr set_external_clock
 v1:
+	bclr #0,0xA(A0)         // internal clock
 	movem.l (SP)+,D0-A1
 	rts
+	
+set_external_clock:
+
+	movem.l D0-D1/A0-A1,-(SP)
+	lea.l 0xFFFF8200,A0     // VIDEL
+	bclr #0,0xA(A0)         // internal clock
+             bsr measure_clock_videl
+	move.l cookie,D1
+	beq.s .clock_ok
+	move.l D1,A1
+.find_cookie:
+		tst.l (A1)
+		beq.s .cookie_free
+		addq.w #8,A1
+	bra.s .find_cookie
+.cookie_free:
+             cmp.w #32,D0            // 32 MHz
+             bls.s .clock_ok
+	move.l 4(A1),12(A1)     // copy size
+	move.l #0x5F465251,(A1)+// _FRQ
+	move.l D0,(A1)+
+	clr.l (A1)
+	bset #0,0xA(A0)         // external clock
+             bsr measure_clock_videl
+	move.l 4(A1),12(A1)     // copy size
+	move.l #0x5F465245,(A1)+// _FRE
+	move.l D0,(A1)+
+	clr.l (A1)
+             cmp.w #32,D0            // 32 MHz
+             beq.s .clock_ok
+	bclr #0,0xA(A0)         // internal clock
+.clock_ok:
+	movem.l (SP)+,D0-D1/A0-A1
+	rts
+	
+measure_clock_videl:                 // return value in MHz
+                        
+	movem.l D1-A6,-(SP)
+	clr.l measure_frame     // nS
+	clr.l measure_line      // nS * 100
+	clr.l measure_clock     // nS * 100
+	clr.w vbl_count
+	move.w SR,-(SP)
+	or.w #0x700,SR          // no IRQ
+	lea irq_vbl_measure(PC),A0
+	move.l 0x70,A4
+	move.l A0,0x70
+	lea irq_timer_b_measure(PC),A0
+	move.l 0x120,A5
+	move.l A0,0x120
+	lea irq_timer_c_measure(PC),A0
+	move.l 0x114,A6
+	move.l A0,0x114
+	move.w (SP)+,SR
+	moveq #0,D1
+	move.l _hz_200,D2
+.wait_measure:
+		move.l _hz_200,D0
+		sub.l D2,D0
+		cmp.l #100,D0           // time-out
+		bge.s .timeout_measure
+	move.l measure_clock,D1
+	beq.s .wait_measure
+.timeout_measure:
+	move.l A4,0x70
+	move.l A5,0x120
+	move.l A6,0x114
+	moveq #0,D0
+	tst.l D1
+	beq.s .no_clock
+	move.l #100000,D0
+	divu D1,D0
+	ext.l D0
+	addq.w #1,D0
+	bclr #0,D0
+.no_clock:
+	movem.l (SP)+,D1-A6
+	rts
+
+irq_vbl_measure:	
+
+	movem.l D0-D2/A0,-(SP)
+	move.w SR,-(SP)
+	or.w #0x700,SR          // no IRQ
+	tst.w vbl_count
+	bne.s .no_first_vbl
+	lea 0xFFFFFA01,A0       // MFP
+	bclr #0,6(A0)           // IERA
+	bclr #0,0xA(A0)         // IPRA
+	bclr #0,0xE(A0)         // ISRA
+	clr.b 0x1A(A0)          // TBCR stop timer B
+	move.b #10,0x20(A0)     // TBDR
+	move.b #1,0x1A(A0)      // TBCR prediv /4 IRQ TIMER B at each 16.275 uS
+	                        // 16.275 uS = (10*4)/(2.4576*10^6)
+	bset #0,6(A0)           // IERA
+	bset #0,0x12(A0)        // IMRA
+	clr.w count_measure
+	bra .end_vbl
+.no_first_vbl:
+	move.w count_measure,D0
+	beq.s .no_measure
+	mulu #16275,D0          // time in nS of a frame 
+	move.l D0,measure_frame
+	move.w 0xFFFF82A2,D1    // VFT
+	lsr.w #1,D1             // number of lines
+	divu D1,D0              // time in nS of a line
+	mulu #100,D0            // * 100
+	move.l D0,measure_line
+	lsr.l #1,D0             // /2
+	move.w 0xFFFF8282,D1    // HHT
+	addq.w #2,D1            // time of a line, video counter
+	cmp.w #128,D1
+	bcc.s .high_hht
+	asl.w #4,D1
+	bra.s .div_1_clock
+.high_hht:
+	move.w 0xFFFF82C2,D2    // VCO pred clock
+	btst #2,D2              // /2
+	bne.s .div_2_clock
+	btst #3,D2
+	bne.s .high_hht         // /1
+	add.w D1,D1             // /4
+.div_2_clock:
+	add.w D1,D1
+.div_1_clock:
+	divu D1,D0
+	swap D0
+	tst.w D0
+	beq.s .no_rest
+	add.l #0x10000,D0
+.no_rest:
+	swap D0
+.no_measure:
+	move.w D0,measure_clock+2
+	lea 0xFFFFFA01,A0       // MFP
+	bclr #0,0x12(A0)        // IMRA
+	bclr #0,6(A0)           // IERA
+	bclr #0,0xA(A0)         // IPRA
+	bclr #0,0xE(A0)         // ISRA
+	clr.b 0x1A(A0)          // TBCR stop timer B
+.end_vbl:
+	addq.w #1,vbl_count
+	move.w (SP)+,SR
+	movem.l (SP)+,D0-D2/A0
+	addq.l #1,_frclock
+	rte
+
+irq_timer_b_measure:
+
+	addq.w #1,count_measure
+	bclr #0,0xFFFFFA0F      // MFP ISRA
+	rte
+	
+irq_timer_c_measure:
+
+	addq.l #1,_hz_200
+	bclr #5,0xFFFFFA11      // MFP ISRB
+	rte
 
 //	       nb_h  BK  BK   DE  DE  top  nb_v  BK   BK  DE   DE   top   
+//	       hht   hbb  hbe   hdb  hde  hss  vft   vbb   vbe  vdb   vde   vss
 videl_vga_320_240:
 	.short 0xC6,0x8D,0x15,0x2AC,0x91,0x96,0x419,0x3FF,0x3F,0x3F,0x3FF,0x415,5,0x186 // 25 MHz
 videl_tv_320_240:
 	.short 0xFE,0xCB,0x27,0x03A,0x9B,0xD8,0x271,0x265,0x2F,0x57,0x237,0x26B,0,0x181 // 32 MHz
+videl_mono_640_400:
+	.short 0x1A,0x00,0x00,0x20F,0x0C,0x14,0x3E9,0x000,0x00,0x43,0x363,0x2E7,8,0x180 // 32 MHz
 
 pic_logo_mot:
 	.short 0x0000,0x0000,0x3800,0x0000 

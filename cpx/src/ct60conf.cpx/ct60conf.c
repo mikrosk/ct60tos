@@ -1,5 +1,5 @@
 /* CT60 CONFiguration - Pure C */
-/* Didier MEQUIGNON - v0.99a - July 2003 */
+/* Didier MEQUIGNON - v0.99b - August 2003 */
 
 #include <portab.h>
 #include <tos.h>
@@ -387,7 +387,7 @@ char *rs_strings[] = {
 	"OK",
 	"Annule",
 	
-	"CT60 Configuration V0.99a Juillet 2003","","",
+	"CT60 Configuration V0.99b Aout 2003","","",
 	"Ce CPX et systŠme:","","",
 	"Didier MEQUIGNON","","",
 	"didier-mequignon@wanadoo.fr","","",
@@ -483,7 +483,7 @@ char *rs_strings_en[] = {
 	"OK",
 	"Cancel",
 
-	"CT60 Configuration V0.99a July 2003","","",
+	"CT60 Configuration V0.99b August 2003","","",
 	"This CPX and system:","","",
 	"Didier MEQUIGNON","","",
 	"didier-mequignon@wanadoo.fr","","",
@@ -844,6 +844,7 @@ UWORD pic_stop[]={
 #define UK 3
 #define SPA 4
 #define ITA 5
+#define SWE 6
 #define SWF 7
 #define SWG 8
 
@@ -862,13 +863,14 @@ char *lang[]={ "  English     ",
                "  Italiano    ",
                "  Suisse      ",
                "  Schweiz     " };
-char *spec_key[]={"USA","Deutsch","France","England","Espa¥a","Italia","Suisse","Schweiž"};
+char *spec_key[]={"USA","Deutsch","France","England","Espa¥a","Italia","Sweden","Suisse","Schweiž"};
 char *key[]={ "  USA            ",
               "  Deutschland    ",
               "  France         ",
               "  England & Eire ",
               "  Espa¥a         ",
               "  Italia         ",
+              "  Sweden         ",
               "  Suisse         ",
               "  Schweiž        " };
 char *spec_date[]={"MM/DD/YY","DD/MM/YY","YY/MM/DD","YY/DD/MM"};
@@ -885,7 +887,7 @@ char *spec_res[]={"320x200","320x400","640x200","640x400"};
 char *res[]={"  320 x 200 ","  320 x 400 ","  640 x 200 ","  640 x 400 "};
 #endif
 unsigned char code_lang[]= { USA, FRG, FRA, SPA, ITA, SWF, SWG };
-unsigned char code_key[]= { USA, FRG , FRA, UK, SPA, ITA, SWF, SWG };
+unsigned char code_key[]=  { USA, FRG, FRA, UK, SPA, ITA, SWE, SWF, SWG };
 unsigned char code_os[]={0,0x80,8,0x40,0x10,0x20};
 char *spec_os[]={"-","TOS","MagiC","TT SVR4","Linux","NetBSD"};
 char *os[]={"  -       ","  TOS     ","  MagiC   ","  TT SVR4 ","  Linux   ","  NetBSD  "};
@@ -1049,6 +1051,7 @@ CPXINFO* CDECL cpx_init(XCPB *xcpb)
 	COOKIE idt;
 	HEAD *header;
 	MX_KERNEL *mx_kernel;
+	CT60_COOKIE *ct60_arg=NULL;
 	Xcpb=xcpb;
 #ifdef DEBUG
 	printf("\r\nCPX init\r\nRead NVRAM");
@@ -1151,6 +1154,12 @@ CPXINFO* CDECL cpx_init(XCPB *xcpb)
 #ifdef DEBUG
 		printf("\r\nStart temperature task");
 #endif
+		if((*Xcpb->get_cookie)(ID_CT60,&(long)ct60_arg) && (ct60_arg!=NULL))
+		{
+			ct60_arg->trigger_temp=(unsigned int)trigger_temp;
+			ct60_arg->daystop=(unsigned int)daystop;
+			ct60_arg->timestop=(unsigned int)timestop;          /* ACC cannot receive arg */
+		}	
 		start_temp(&trigger_temp,&daystop,&timestop);			/* start thread or CT60TEMP.APP */
 	}
 #ifdef DEBUG
@@ -1820,7 +1829,7 @@ void CDECL cpx_button(MRETS *mrets,int nclicks,int *event)
 				objc_offset(rs_object,MENUBKEY,&menu.g_x,&menu.g_y);
 				menu.g_w=rs_object[MENUBKEY].ob_width;
 				menu.g_h=rs_object[MENUBKEY].ob_height;
-				ret=(*Xcpb->Popup)(key,8,keyboard,IBM,&menu,Work);
+				ret=(*Xcpb->Popup)(key,9,keyboard,IBM,&menu,Work);
 				if(ret>=0 && ret!=keyboard)
 				{
 					t_edinfo=rs_object[MENUBKEY].ob_spec.tedinfo;

@@ -163,19 +163,19 @@ _top_isp:
 	.long _060_mem_copy-_top_isp
 	.long _060_mem_copy-_top_isp
 	.long _060_mem_copy-_top_isp
-             .long _060_mem_read_word1-_top_isp
-             .long _060_mem_read_long-_top_isp
-             .long _060_mem_read_byte-_top_isp
-             .long _060_mem_read_word-_top_isp
-             .long _060_mem_read_long-_top_isp
-             .long _060_mem_write_byte-_top_isp
-             .long _060_mem_write_word-_top_isp
-             .long _060_mem_write_long-_top_isp
-             .long 0
-             .long 0
-             .long 0
-             .long 0
-             .long 0
+	.long _060_mem_read_word1-_top_isp
+	.long _060_mem_read_long-_top_isp
+	.long _060_mem_read_byte-_top_isp
+	.long _060_mem_read_word-_top_isp
+	.long _060_mem_read_long-_top_isp
+	.long _060_mem_write_byte-_top_isp
+	.long _060_mem_write_word-_top_isp
+	.long _060_mem_write_long-_top_isp
+	.long 0
+	.long 0
+	.long 0
+	.long 0
+	.long 0
              
 #include "../../nonfree/isp.S"
 
@@ -199,18 +199,18 @@ _top_fpsp:
 	.long _060_mem_copy-_top_fpsp
 	.long _060_mem_copy-_top_fpsp
 	.long _060_mem_copy-_top_fpsp
-             .long _060_mem_read_word1-_top_fpsp
-             .long _060_mem_read_long-_top_fpsp
-             .long _060_mem_read_byte-_top_fpsp
-             .long _060_mem_read_word-_top_fpsp
-             .long _060_mem_read_long-_top_fpsp
-             .long _060_mem_write_byte-_top_fpsp
-             .long _060_mem_write_word-_top_fpsp
-             .long _060_mem_write_long-_top_fpsp
-             .long 0
-             .long 0
-             .long 0
-             .long 0
-             .long 0
+	.long _060_mem_read_word1-_top_fpsp
+	.long _060_mem_read_long-_top_fpsp
+	.long _060_mem_read_byte-_top_fpsp
+	.long _060_mem_read_word-_top_fpsp
+	.long _060_mem_read_long-_top_fpsp
+	.long _060_mem_write_byte-_top_fpsp
+	.long _060_mem_write_word-_top_fpsp
+	.long _060_mem_write_long-_top_fpsp
+	.long 0
+	.long 0
+	.long 0
+	.long 0
+	.long 0
 	
 #include "../../nonfree/fpsp.S"

@@ -30,6 +30,7 @@
 #include "ct60.h"
 
 #define XFRB_SIZE 0x10000
+#define CT60_COOKIE_SIZE 256
 
 #define rw_parameter 0xc60b
 	
@@ -182,6 +183,21 @@ init_sdram:
 	move.l #0xA0808000,D0    // caches on
 	movec.l D0,CACR
 	move.w (SP)+,SR
+	move.l #0x00E00FB6,8     // set access fault vector
+	move.b 0xFFFF8006,D0
+	lsr.w #6,D0              // 0:ST nomo, 1:ST col, 2:VGA, 3:TV
+	cmp.w #2,D0              // VGA
+	beq.s .ok_screen
+	move.l #0x5F465251,D0    // _FRQ cookie, internal clock
+	bsr get_cookie
+	cmp.l #32,D0
+	bls.s .ok_screen
+	move.l #0x5F465245,D0    // _FRE cookie, external clock
+	bsr get_cookie
+	cmp.l #32,D0
+	bne.s .ok_screen
+	bset #0,0xFFFF820A       // external clock
+.ok_screen:	
 	clr.l -(SP)
 	move.l #CT60_BLITTER_SPEED,-(SP)
 	move.w #CT60_MODE_READ,-(SP)
@@ -622,6 +638,31 @@ display_infos_sdram:
 	movem.l (SP)+,D0/A0/A1
 	rts
 
+get_cookie:
+
+	move.l D1,-(SP)
+	move.l D0,D1
+	move.l cookie,D0
+	beq.s .cookie_not_found
+	move.l D0,A0
+.loop_cookie:
+		tst.l (A0)
+		beq.s .cookie_not_found
+		cmp.l (A0),D1
+		bne.s .next_cookie
+		move.l 4(A0),D0
+		bra.s .end_cookie
+.next_cookie:
+		addq.l #8,A0
+	bra.s .loop_cookie
+.cookie_not_found:
+	moveq #0,D0
+	move.l D0,A0
+.end_cookie:
+	move.l (SP)+,D1
+	tst.l D0
+	rts
+
 error1:	.asciz "            SDRAM not found"
 error2:	.asciz "            SDRAM chip density error"
 error3:	.asciz "            SDRAM number of banks error" 
@@ -667,7 +708,7 @@ message15:	.byte 27
 	.ascii "."
 	.byte ((VERSION/16) & 0xF) + 0x30
 	.byte (VERSION & 0xF) + 0x30
-	.ascii "a 2003 July "
+	.ascii "b 2003 August "
 	.byte 27
 	.ascii "q"
 	.byte 13,10,10
@@ -1062,6 +1103,24 @@ add_sdram:
 	move.l A2,(A0)+
 	clr.l (A0)
 .not_sdram:
+	move.w #3,-(SP)          // TT ram if possible
+	move.l #CT60_COOKIE_SIZE,-(SP)
+	move.w #0x44,-(SP)       // Mxalloc
+	trap #1 
+	addq.w #8,SP
+	tst.l D0
+	ble.s .error_cookie_ct60
+	move.l D0,A1
+	move.l #0x43543630,D0    // CT60
+	bsr get_cookie
+	move.l A0,D0
+	beq.s .error_cookie_ct60
+	move.l A1,4(A0)
+	moveq #(CT60_COOKIE_SIZE/4)-1,D0
+.clear_data_ct60_cookie:
+		clr.l (A1)+
+	dbf D0,.clear_data_ct60_cookie
+.error_cookie_ct60:	
 	moveq #3,D0
 	jsr 0x00E00BD2
 	move.l hdv_boot,A0
