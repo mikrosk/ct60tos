@@ -1,0 +1,42 @@
+
+;***** routine test CT60 *****
+
+;>>> REGISTRES <<<
+PBC		equ	$ffe0	;B0:initialisation I/O
+PCC		equ	$ffe1	;contr“le port C
+PCDDR 		equ	$ffe3	;direction donn‚es port C
+HCR		equ	$ffe8	;contr“le port host
+HSR		equ	$ffe9	;‚tat port host
+HTX		equ	$ffeb	;‚mission port host
+HRX		equ	$ffeb	;r‚ception port host
+CRA		equ	$ffec	;contr“le SSI CRA compteur programmable
+CRB		equ	$ffed	;contr“le SSI CRB
+SSR		equ	$ffee	;‚tat port SSI
+TX		equ	$ffef	;‚mission port s‚rie SSI
+RX		equ	$ffef	;r‚ception port s‚rie SSI
+BCR		equ	$fffe	;contr“le bus port A HOST
+IPR		equ	$ffff	;niveau priorit‚ interruptions 
+				;B0-2:IRQA B3-B5:IRQB B10-11:HOST B12-13:SSI 
+
+		org	X:$3fff
+info_debug	ds	1
+
+	org	P:0		;reset
+	jmp	debut
+				;programme principal
+	org	P:$40
+debut
+	movep	#0,X:<<BCR	;contr“le du bus
+	movep	#0,X:<<IPR	;pas d'interruptions
+	movep	#1,X:<<PBC	;init I/O port B = port HOST
+	movep	#8,X:<<HCR	;pas d'interruptions port HOST, HF2 a 1
+	movep	#$4100,X:<<CRA	;initialisations port SSI 16 bits st‚r‚o
+	movep	#$1f8,X:<<PCC	;initialisation liaison SSI port C
+	movep	#$f800,X:<<CRB	;initialisation port SSI RX/TX OK, active RX/TX, mode network
+att_re	jclr	#0,X:<<HSR,>att_re	;attente pr‚sence du mot
+	movep	X:<<HRX,A0		;r‚ception
+att_em	jclr	#1,X:<<HSR,>att_em	;attente prise du mot (CTS)
+	movep	A0,X:<<HTX	;‚mission
+	jmp <att_re
+
+	end

@@ -1,0 +1,13 @@
+;CPX.PRJ for Pure C
+
+CONVERT.PRG
+.C [ -2 ]
+.S [ -4 -S]
+=
+
+PCSTART.O          ; startup code
+
+CONVERT.C
+
+PCSTDLIB.LIB
+PCTOSLIB.LIB

@@ -1,0 +1,56 @@
+Note sur CT60CONF.CPX:
+----------------------
+S‚lection TOS en RAM :
+Quand cette option est activ‚e, le TOS est copi‚ en SDRAM de $E00000 … 
+$EEFFFF (le dernier secteur de la flash de $EE0000 … $EFFFFF est 
+utilis‚ pour sauver 16 paramŠtres), et les variables TOS ont copi‚s 
+en SDRAM soit de $0 … $1FFF (l'arbre PMMU utilise des pages de 8K).
+- Si seulement le TOS est utilis‚, vous pouvez activer cette option 
+pour augmenter les performances.
+- Si vous programmez, n'activez pas cette option parceque vous 
+ pouvez cr‚er des programmes bugg‚s. Par exemple l'‚criture en 0 ne 
+ provoque pas de bus erreur.
+- Si la protection m‚moire est utilis‚e sous MiNT, n'activez pas 
+cette option. L'arbre PMMU existe toujours, mais le cookie 'PMMU' 
+n'existe pas quand cette option est supprim‚e.
+ 
+Note sur GENERAL6.CPX:
+----------------------
+Ce CPX est une version patch‚e de GENERAL.CPX du Falcon pour le 68060. 
+La s‚lection avec/sans cache utilise maintenant des appels XBIOS, il 
+n'y a pas de problŠmes sous TOS parceque le XBIOS est contenu en FLASH 
+mais sous MagiC si vous utilisez ce CPX vous devez installer 
+CT60XBIO.PRG dans le dossier AUTO. Ce programme installe le XBIOS 
+pour la CT60 si le cookie 'CT60' n'est pas trouv‚.
+
+Note sur XCONTROL, ZCONTROL, COPS, et la SDRAM en copyback:
+-----------------------------------------------------------
+- Seulement COPS fait un flush des caches aprŠs chargement des CPX et 
+fonctionne trŠs bien.
+- ZCONTROL fonctionne sous MiNT 1.16/Xaaes.
+- XCONTROL plante.
+- La version patch‚e de XCONTROL.ACC dans ce r‚pertoire corrige le 
+problŠme par un nouveau appel XBIOS mais sous MagiC si vous utilisez 
+cet ACC vous devez installer CT60XBIO.PRG dans le dossier AUTO.
+
+Note sur les modules PARX.SYS et le copyback:
+---------------------------------------------
+- Si un programe qui utilise PARX.SYS plante au d‚marrage, vous 
+pouvez essayer de couper les caches avec GENERAL6.CPX, lancer le 
+parogramme et r‚activer les caches aprŠs. Par exemple PICCOLO 
+fonctionne avec cette m‚thode.
+
+Note sur les programmes TSR qui plantent dans le dossier AUTO:
+--------------------------------------------------------------
+- Tout comme les CPX, les programmes qui n'utilisent pas la fonction 
+Pexec  pour charger des modules plantent avec la SDRAM en copyback, 
+aussi la meilleure solution est de charger le programme en STRAM 
+(cache en writethrough). Vous pouvez utiliser FILEINFO.CPX dans ce 
+dossier.
+Par exemple vous devez enlever les flags TT-ram de METAXBS.PRG 
+(Metados) parceque quand les modules OVL sont charg‚s il n'y a pas de 
+flush aprŠs la relocation, ce n'est pas compatible avec la SDRAM et 
+le cache CPU en copyback.  
+
+Pour plus d'informations:
+didier-mequignon@wanadoo.fr

@@ -1,0 +1,11 @@
+Cubase Audio Patch
+------------------
+Ce programme cr‚e un nouveau CAF_060.PRG … partir de CAF_20x.PRG.
+Les appels au cache sont adapt‚s pour le 68060.
+Les fonctions DSP internes sont mofifi‚s (hansdhake).
+
+Vous devez installer EXCEP060.PRG dans le dossier AUTO pour corriger 
+l'erreur de format.
+
+Pour plus d'informations:
+didier-mequignon@wanadoo.fr

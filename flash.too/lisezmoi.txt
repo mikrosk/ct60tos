@@ -1,0 +1,40 @@
+FLASH060.PRG
+------------
+La tache principale de ce programme est de mettre une image binaire du 
+TOS (.BIN) dans la flash, mais la deuxiŠme tache est de mettre … jour 
+la partie hard de la CT60 avec deux fichiers jedec (.JED) pour les 
+composants ABE60 et SDR60 (XILINX XC95144XL CPLD).
+- Vous avez besoin de fabriquer un cable pour le connecteur JTAG CT60 
+en liaison avec le port //, regardez le sch‚ma dans CT60.HYP. Vous 
+devez remplacer le signal SELECT/ pin 13 sur le port // par le signal 
+ACK/ pin 10.
+- Normallement le cable doit ˆtre attach‚ et mis sous tension (par la 
+CT60) pour une propre verification. Seulement le composant SDR60 peut  
+ˆtre programm‚ (ou verifi‚) quand la CT60 est connect‚e … la carte 
+mŠre en mode normal 030 (si vous utilisez la mˆme machine CT60/F030 
+;-) ). Si vous mettez … jour le composant ABE60, vous devez enlever la 
+CT60 du bus. 
+- Si vous chargez les bons fichiers jedec, un autre bouton apparait 
+'verify'. Vous pouvez utiliser ce bouton pour comparer le fichier 
+jedec avec le composant. Le bouton 'program' efface, programme, et 
+verifie sa flash. 
+
+Connecteur JTAG CT60 (pins du commecteur 'tower' non utilis‚s):
+---------------------------------------------------------------
+Pin 12 VCC              --> Pin 1 sur le cable JTAG/parallŠle
+Pin 13 GND              --> Pin 2
+Pin 14 NC (pas de pin !)
+Pin 15 TCK              --> Pin 3
+Pin 16 TDO              --> Pin 4
+Pin 17 TDI              --> Pin 5
+Pin 18 TMS              --> Pin 6
+
+Notes sur le cable JTAG/parallŠle:
+----------------------------------
+Vous devez remplacer le signal SELECT/ pin 13 sur le port // par le 
+signal ACK/ pin 10. Sur le port // du Falcon, les pins 12, 13, 15 ne 
+sont pas connect‚s. 
+
+Pour plus d'informations:
+didier-mequignon@wanadoo.fr
+

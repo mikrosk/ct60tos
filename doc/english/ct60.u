@@ -1,0 +1,2213 @@
+!tex \documentstyle[11pt]{article}
+!stg @subject "Documentation"
+!english
+!title   Documentation of the
+!programimage ..\img\ct60.img
+!program CT60
+!version Version 0.98
+!date    (!today)
+!author  Didier MEQUIGNON
+!street  25, rue de l'Ascenseur
+!town    62510 ARQUES FRANCE
+!email   didier-mequignon@wanadoo.fr
+!use_auto_subtocs    [info,html,stg,tvh,win]
+!use_auto_subsubtocs [info,html,stg,tvh,win]
+!no_effects          [asc]
+!begin_document
+!maketitle
+!tableofcontents
+
+!node Presentation
+
+(!B)
+By Rodolphe Czuba
+(!b)
+
+You have more than enough to compile at the speed of a snail?
+
+You want to surf quickly on Web?
+
+You want calculate pictures under POV, make DTP or Graphics in a highly 
+speed? 
+
+You want to run suitably applications as one to encode MP3 or a console 
+Java under Mint? 
+
+You want keep totality of your software library?
+
+You do not want you separate from all which makes the charm of your 
+Falcon, his sound system, DSP, and all the connectique (SCSI, MIDI, 
+Joystick ports, etc...)?  
+
+You have not an accelerator or you search for an new fast accelerator, 
+seize the opportunity ! 
+
+Don't send your Falcon at the retirement !
+
+
+!subnode Features
+
+!begin_itemize
+
+!item SOCKETED 060 FULL(COPRO & PMMU) or LC (NO COPRO) or EC(NO COPRO & 
+PMMU) at 66 MHz or more... 
+
+!item Bus CT60 at 66 MHz or more (SDRAM & 060 BUS accesses).
+
+!item SDRAM PC100/133 at 66 MHz or more with READ & WRITE BURST accesses.
+
+!item 1 SDRAM PC-100/133 socket for 32 MB to 256 MB.
+
+!item FLASH of 1MB with BOOT, SETUP, 060 INIT and patchs for TOS. Can be 
+easely updated ! 
+
+!item Switch to commute between the 060 and the 030 of the Falcon.
+
+!item 100% Falcon 030 mode available. The 68882 is available with the 030 
+mode. 
+
+!item Easy fitting WITHOUT SOLDERS in the original Falcon case, without 
+the Falcon power supply that is replaced by an external standard ATX power 
+supply (or into an ATX tower).  
+
+!item 060 Bus Slot for adding a daughter card (PCI/AGP, PowerPC, ...).
+
+!item OPTION to boost the Falcon mainboard with 6 wires to be soldered : 
+DSP & VIDEL at 40 MHz, Bus at 20 MHz. 
+
+!end_itemize 
+
+
+!subnode Processor
+
+With its FULL (FL) version, the 68060, like the 68040, integrates a FPU 
+(Coprocessor) that is really more powerfull than the old 68882. 
+
+With the LC version, the 060 has no FPU.
+
+With the EC version, the 060 has no FPU and no PMMU.
+
+The 060 is a dream and the first reason is its wonderfull computing power 
+regarding the previous ones in the 68K familly : 
+
+!begin_table [|l|l|l|] !hline
+CPU                                         !! MIPS  !! FACTOR
+!hline
+68060 @ 75 MHz (from Motorola 2001)         !! 110   !! 19.1
+68060 @ 72 MHz (CT60/60)                    !! 105.6 !! 18.3
+68060 @ 66 MHz (CT60/50)                    !! 96.8  !! 16.8
+68060 @ 59 MHz (HADES60)                    !! 86.5  !! 15.0
+68040 @ 40 MHz (AB40 at 40 / Motorola 2001) !! 44    !! 7.6
+68040 @ 32 MHz (HADES40 & AB40 at 32)       !! 35.2  !! 6.1
+68040 @ 25 MHz (MILAN40)                    !! 27.5  !! 4.8
+68030 @ 50 MHz (CT2)                        !! 18    !! 3.1
+68030 @ 32 MHz (TT030)                      !! 11.5  !! 2.0
+68030 @ 16 MHz (Falcon/Motorola 2001)       !! 5.76  !! 1.0
+!hline
+!end_table
+
+
+!subnode RAM
+
+Upper 40 MHz, the SDRAM is accessed with 1 cycle while the EDO need 2 cycles.
+
+The RAM of the CT60 is equivalent with the TT-Ram (same address : $01000000).
+
+CT60 is the only one product that uses the SDRAM ! The consequences on 
+performances are clear : 
+
+!begin_table [|l|l|l|l|l|l|] !hline
+PRODUCT        !! BUS      !! RAM   !! READ      !! WRITE     !! FACTOR
+!hline
+CT60           !! 66 MHz   !! SDRAM !! 74 MB/s   !! 69 MB/s   !! 16.2 - 12.5
+HADES60 FPM    !! 29,5 MHz !! FPM   !! 43.0 MB/s !! 33.5 MB/s !! 9.5 - 6.1
+HADES40 FPM    !! 32 MHz   !! FPM   !! 46.5 MB/s !! 36.2 MB/s !! 10.2 - 6.6
+MILAN40        !! 25 MHz   !! EDO   !! 35.7 MB/s !! 21.5 MB/s !! 7.8 - 3.9
+CT2b           !! 50 MHz   !! EDO   !! 32.4 MB/s !! 38.7 MB/s !! 7.1 - 7.0
+AB40           !! 32 MHz   !! FPM   !! 34.6 MB/s !! 17.0 MB/s !! 7.6 - 3.1
+MEDUSA T40     !! 16 MHz   !! FPM   !! 20.0 MB/s !! 21.9 MB/s !! 4.4 - 4.0
+TT030 TT-RAM   !! 16 MHz   !! FPM   !! 12.6 MB/s !! 15.6 MB/s !! 2.8 - 2.8
+TT030 ST-RAM   !! 16 MHz   !! FPM   !!  7.9 MB/s !!  7.9 MB/s !! 1.7 - 1.4
+FALCON+MAGNUM  !! 16 MHz   !! FPM   !! 5.7 MB/s  !! 6.9 MB/s  !! 1.25 - 1.25
+FALCON(VGA16c) !! 16 MHz   !! FPM   !! 4.55 MB/s !! 5.5 MB/s  !! 1.00 - 1.00
+!hline
+!end_table
+
+(MB=MegaBytes) - ALL TESTS REALIZED WITH NEMBENCH 2.1
+
+The FALCON VGA2c values are a bit superior : 5.3 & 6.4 MB/s.
+
+
+!subnode Overclocking the FALCON mainboard !
+
+It is possible to boost the Falcon mainboard from 16 to 20 MHz. In such 
+case, the DSP and VIDEL are clocked at 40 MHz. In this case, 6 wires have 
+to be soldered on the mainboard...  
+
+
+!subnode Solders free !
+
+CT60 is PLUG'N PLAY !
+
+The previous accelerator boards always required you cut and solder on the 
+motherboard, but now thanks to a revolutionnary hardware design, the 
+mainboard is not touched by the fitting.  
+
+From a base Falcon, there are ANY SOLDERS to fit the CT60 ! In this case, 
+the Falcon mainboard is not boosted.
+
+The CT60 is compatible with all boosted Falcon mainboards, except those 
+boosted by a CT2... 
+
+From a CT2 accelerated Falcon, it is necessary to assemble back the Falcon 
+in base state. 
+This means if you remove a CT2, you have to put again the GAL chips 
+U62,63,67,68 and U44, and the CPU if it was unsoldered. 
+The timings of the equations in those GAL were not compatible with the 
+accesses at 50 MHz by the CT2, especially for the DSP. But CT60 accesses 
+the Falcon at 16 MHz and this didn't ever cause a problem in those GAL.  
+If you didn't keep these components, they will be furnished and the CPU 
+will be freely soldered. 
+
+
+!subnode BUS SLOT
+
+CT60 is evolutive ! The 060 busses (Data, Add & Control) are present on 
+two HE13 Male connectors of 2x25 pins, giving a total of 100 pins. 
+
+The first add-on card that will be available is a PCI adaptor. This one 
+will be very performant because of the 060 accesses with 32-bit wide data 
+at 66 MHz, what is 8 times faster than the slow rate of the actual or 
+futur (?) Eclipse adaptor connected on the Falcon bus 16-bit wide at 16 
+MHz : 66/16 MHz = 4.1 and 32/16 bits = 2. Sure, a new Eclipse with 32-bit 
+Data & 060 protocol could be a good solution...  
+
+And why not a AGP 1x adaptor at 66 MHz...
+
+A PPC card is too possible because the 060 SLOT has MASTER capabilities, 
+the arbitration with the 060 being already included in the CT60 logic.  
+
+In all case, the software & hardware developers are welcome.
+
+
+!subnode FALCON BUS cards
+
+ALL actual and old Falcon BUS add-on cards are compatible with the CT60 !
+
+Screen Eyes, Expose, Nova, Eclipse, Tempest (why not) can be used with 
+CT60 because CT60 don't modify the hardware of Falcon Bus (no solders for 
+the fitting).  
+
+The CT60 don't give you a new Falcon bus slot because it is not needed ! 
+The method is simple : keep your Falcon daughter card on the Falcon slot 
+and solder 2 Male/Male HE13 connectors (2x15 & 2x25) on your 'old' card 
+and plug the CT60 on it ! Sure, in this configuration the keyboard is out 
+of the Falcon case !
+
+
+!subnode ATX Power Supply
+
+CT60 needs a voltage of 3.3V and 8 Amperes at least for the 060, the 
+SDRAM, the 060 BUS port, the logic and the buffers, and the Falcon power 
+supply would have been not sufficient in the case of a 5V->3.3V expensive 
+voltage regulator on the CT60. An ATX power supply is absolutely required 
+to replace the Falcon power supply and free the area for the CT60.
+
+ATX power supplies of 250 Watts, with an ON/OFF AC switch, are available 
+anywhere for about 29 EUR. 
+
+
+!subnode ATX Tower
+
+The CT60 is featured with a HE13 connector for the features found on the 
+front of a modern tower : POWER Led, IDE Led, RESET push button, POWER 
+push button. Plus (no more present on the ATX tower) a NORMAL/TURBO switch 
+you will have to fix somewhere.
+
+With the POWER switch, you can power on your falcon. You have to 
+understand that the ATX power supplies (in the major cases) have no more 
+120/240V ON/OFF switch because they are drived by the ACPI modern OS 
+functions allowing to set the computer in a 'standby' or 'suspend' mode 
+instead of turning OFF the power supply. This low power setting is done by 
+the power push button of the tower, and the CT60 is managing this feature ! 
+
+A SLEEP function (SLP) was even added in the hardware and manageable by a 
+software (an ACC or a CPX) to 'sleep" the machine (like the windows menu). 
+
+The Power Led has a double utility managed by the CT60 : When the power 
+supply is ON, the led lighting normally, and when the power supply is 
+suspended (off in fact), the led is lighting weakly indicating that your 
+machine is OFF but stills connected to AC power.
+
+
+!subnode FALCON Mode
+
+The 030 allows you to launch the old software that cannot run on the 060 
+and to copy/patch the TOS in the CT60 Flash. 
+
+The PMMU and DSP routs patchs are necessary, by exemple.
+
+The Flash can be accessed by the 030 and by the 060 and will allow all 
+developers to modify and personalize their machine as they want. 
+
+The Falcon mode is your original Falcon and give you the inssurance that 
+software run like previously. 
+
+The small problems of the CT2, as the DSP INT, the FAST-Ram mapped by the 
+PMMU and the Bus Error under $400 are solved. 
+
+
+!node SDRAM
+
+(!B)
+By Rodolphe Czuba
+(!b)
+
+CT60 don't run without SDRAM !
+
+The CT60 supports the PC-100 & PC-133 standard SDRAM DIMMs, but some 
+obsolet or uneeded DIMMs are not accepted. 
+
+In general, PC market provides Unbuffured 64-bits models, what you need 
+for CT60. 
+
+ATTENTION : 
+
+Don't confuse SDRAM (logical) banks (2 or 4 into a chip) with DIMM 
+(physical) banks (Single or double side DIMM) ! 
+
+
+SDRAM DIMMs for CT60 :
+
+!begin_itemize
+
+!item Must be PC-100 or PC-133.
+
+!item Must be UNBUFFURED.
+
+!item Must be populated with 4 logical banks chips (2 banks, obsolet, are 
+refused). All DIMM > 32MB use 4 banks chips. 
+
+!item 64 Bits (no Parity / ECC = 72 / 80 bits).
+
+!end_itemize 
+!begin_table [|l|c|c|l|l|] !hline
+Module !! Nbr chips !! Nbr sizes !! Organization  !! PAGE
+!hline
+64 MB  !!    4      !!    2      !! 4M x 16 bits  !!  4KB
+64 MB  !!    8      !!    1      !! 8M x 8 bits   !!  8KB
+64 MB  !!    4      !!    1      !! 8M x 16 bits  !!  8KB
+128 MB !!    8      !!    2      !! 8M x 8 bits   !!  8KB
+128 MB !!    4      !!    2      !! 8M x 16 bits  !!  8KB
+128 MB !!    8      !!    1      !! 16M x 8 bits  !! 16KB
+128 MB !!    4      !!    1      !! 16M x 16 bits !!  8KB
+256 MB !!    8      !!    2      !! 16M x 8 bits  !! 16KB
+256 MB !!    4      !!    2      !! 16M x 16 bits !!  8KB
+256 MB !!    8      !!    1      !! 32M x 8 bits  !! 16KB
+512 MB !!    8      !!    2      !! 32M x 8 bits  !! 16KB
+512 MB !!    4      !!    2      !! 32M x 16 bits !! 16KB
+!hline
+!end_table
+
+NOT SUPPORTED SDRAM DIMMs :
+
+!begin_itemize
+
+!item All OBSOLET models : 8MB, 16MB & 32MB DIMMs.
+
+!item All DIMMs with 2 logical banks chips (needs 4 banks chips).
+
+!item REGISTERED / BUFFURED DIMMs (generally for Work Stations & Servers, 
+not consumer PC). 
+
+!item All DIMM with only TWO chips on one side (32-bit data width chips).
+
+!item 512 MB DIMM with chips on 1 side.
+
+!end_itemize 
+
+ 
+!node Fitting
+
+!subnode PLUG'N PLAY !
+
+
+!subnode SDMA clock modification
+
+With the CT60, the SDMA clock modification must be reduced to a minimum 
+(on R221), for example with an 74F08 :
+
+!image ..\img\buffer.img
+
+
+!subnode Boost F030
+
+(!B)
+By Rodolphe Czuba
+(!b)
+
+!subsubnode Pr‚paration de la carte mŠre (in french)
+
+Avec une pince coupante … bec trŠs fin ou une lame de cutter, coupez 
+et relevez l‚gŠrement les broches 3 et 4 de l'ACIA 68B50 U24 (… c“t‚ des 
+prises MIDI) et de l'ACIA clavier U52 (… gauche du connecteur clavier). 
+
+!image ..\img\acia.img
+!begin_verbatim
+
+!end_verbatim
+
+Localisez le SDMA (U36) sous l'emplacement du lecteur de disquettes. 
+Coupez la piste qui arrive sur la deuxiŠme broche du circuit (voir figure 
+ci-dessous).  
+
+!image ..\img\sdma.img
+!begin_verbatim
+
+!end_verbatim
+
+Grattez le vernis de la piste … droite de la coupure sur 2 mm et ‚tamez. 
+Prenez la r‚sistance fournie dans le paquet et coupez ses broches … 5 mm 
+de son corps. Soudez la sur la broche de l'AJAX et sur la piste ‚tam‚e 
+comme indiqu‚ sur la figure.
+
+Localisez le DSP (U38) sous l'emplacement du lecteur de disquettes. Coupez 
+la piste allant du (gros) trou avant droit de l'emplacement U37 de 
+l'oscillateur 32 MHz au DSP (voir figure ci-dessous).
+
+!image ..\img\dsp.img
+!begin_verbatim
+
+!end_verbatim
+
+La coupure doit se faire le plus prŠs possible du trou et sur une longueur 
+d'au moins 1 mm. Puis grattez le vernis de la piste … droite de la coupure 
+sur 2 mm et ‚tamez.  
+
+Coupez, au ras de la carte mŠre, la broche gauche de L102 situ‚e … c“t‚ de la NVRAM. Tournez 
+la vers l'arriŠre (voir figure ci-dessous) et ‚tamez sa broche coup‚e. 
+
+!image ..\img\clock.img
+!begin_verbatim
+
+!end_verbatim
+
+
+!subsubnode Cƒble NAPPE (in french)
+
+Posez la nappe sur un morceau de carton dur (par exemple), et grƒce au 
+cutter, s‚parez les fils jusqu'au connecteur. Coupez ensuite les fils … la 
+longueur indiqu‚e. D‚nudez sur 2 mm sauf les fils ACIA sur 4 mm. Torsadez 
+et ‚tamez. 
+
+!image ..\img\x9.img
+!begin_verbatim
+
+!end_verbatim
+
+Il reste … souder les 6 fils de cette nappe en commen‡ant par le nø2 qui 
+est vers vous. Certains fils devront ˆtre fix‚s sur la carte mŠre avec des 
+morceaux d'adh‚sif. Prenez un soin particulier … avoir le moins de fils 
+qui se croisent au niveau  du connecteur, l'id‚al ‚tant que tous les fils 
+soient parallŠles entre eux.
+
+(!B)
+RESPECTEZ CES REGLES :
+(!b)
+
+!begin_itemize
+!item Ne faites jamais de boucle avec un fil en le passant par exemple 
+autour d'une patte d'un composant.
+!item Ne croisez pas les fils de la nappe … quelqu' endroit que ce soit.
+!item Disposez les fils le plus droit possible et maintenez la plus grande 
+distance possible entre chacun d'eux : chaque fil perturbe ses voisins et 
+subit ses voisins ! 
+!item Ne faites pas passer un fil sur un circuit int‚gr‚ : l'activit‚ 
+‚lectronique de ce dernier pertubera le signal du fil !
+!end_itemize
+
+Soudez : 
+!begin_itemize
+!item Le fil 2 (MCLK) sur la carte mŠre/broche gauche de l'ancien 
+emplacement de L102 (maintenant relev‚) et non pas sur la broche gauche de 
+L102 relev‚e ! Laisser le fil 1 (GND1) coll‚ … lui jusqu'… 1 cm de la fin.
+!item Le fil 4 (CLK32) sur la broche gauche relev‚e de L102. Laisser le 
+fil 3 (GND2) coll‚ … lui jusqu'… 1 cm de la fin. 
+!item Le fil 5 (AC_M) sur les broches 3 et 4 de l'ACIA MIDI (et non pas 
+sur la carte mŠre !). 
+!item Le fil 6 (AC_K) sur les broches 3 et 4 de l'ACIA CLAVIER (et non pas 
+sur la carte mŠre !). 
+!item Le fil 7 (DSP) sur la piste coup‚e menant au DSP. Laisser le fil 8 
+(GND3) coll‚ … lui jusqu'… 1 cm de la fin. 
+!item le fil 9 (SDMA) sur la connexion de la r‚sistance avec la piste 
+coup‚e allant au SDMA (figure). Laisser le fil 10 (GND4) coll‚ … lui 
+jusqu'… 1 cm de la fin. 
+!end_itemize
+
+
+!node TOS in Flash
+
+!subnode Technical
+
+This is a TOS 4.04 patched, in this order there are :
+
+!begin_itemize
+!iten The validation of the superscalar dispatcher on the 68060 (PCR).
+!item The initialization of the translation registers (on all 68060's 
+types), the first zone mapped to 0 at $7FFFFFFF in copyback excepted for 
+the zone mapped to 0 … $FFFFFF in writethrough, and the second zone mapped 
+to $80000000 at $FFFFFFFF in cache inhibed.  
+!item The installation of the cookies '_CPU', '_FPU', 'CT60'.
+!item The patchs for cache, PMMU, adress in $00FFxxxx, and the 
+instructions movep replaced.
+!item The bombs inside exceptions displayed with texts in clear of a crash.
+!item The emulation of unimplemented instructions (integers and FPU).
+!item The XBIOS CT60 function $C60A to $C60D (temperature, parameters in 
+flash, cache...), and the DSP (functions with handshake). 
+!item The needful patchs for the blitter, the system fonts and the Atari 
+logo copied at the top of the STRAM (needed if the TOS in ROM is a 4.02).
+!item The replacement of the XBIOS Bconout routine (display texts).
+!item The picture in 65K colors displayed during 2 seconds.
+!item The display of the 68060's type (revision and mask).
+!item The modification of PCR for the bugged types revision 1.
+!item The reading and the display of the SDRAM's type from his EEPROM. 
+!item The initialization of the PMMU tree (excepted for 68060 EC or LC), 
+and the possible creation of the 'PMMU' cookie. All the STRAM is in 
+writethrough and the SDRAM declaration in copyback.
+!item The possible copy of the TOS in SDRAM (excepted for 68060 EC or LC). 
+!item The declaration of the SDRAM to the TOS.
+!item The initialization of the SDRAM, and the MB/s during writing 
+displayed.
+!item The fastram buffer created and this cookie '_FRB'.
+!item The patch for the Pexec function for the copyback (cpush after the 
+relocation).
+!item The blitter patchs of the VDI functions, vro_cpyfm, vr_trnfm, and
+vrt_cpyfm for work in SDRAM (an intermediate buffer inside STRAM is used).
+!end_itemize
+
+
+!subnode 68060 EC
+
+In spite of the PMMU (Memory Management Unit) removed, the performances 
+are equal, this is the differences from the TOS :
+
+!begin_itemize
+!item The memory zone of the FLACON's motherboard is declared with a 
+cache in writethrough (0 to $FFFFFF, bus on 24 bits), therefore the STRAM.
+!item The memory zone at $80000000 to $FFFFFFFF is without cache, therefore 
+the input/output, excepted the cartrige port (in $00FAxxxx - $00FBxxxx) !
+!item The memory zone at $01000000 to $7FFFFFFF is declared with a cache 
+in copyback, therefore the SDRAM (see also the part 'Cache').
+!item The 'PMMU' cookie not exist.
+!item The are no emulation of unimplementated FPU instructions.
+!item There are no 'Selection TOS in RAM'. 
+!end_itemize
+
+
+!subnode 68060 LC
+
+It's impossible to found difference between a 68060 LC and a 68060 EC, 
+so for the moment a 68060 LC is used like an EC.
+
+
+!subnode SDRAM test
+
+If the reading and the display of the SDRAM's type from his EEPROM is good
+but for example if the TOS logo not appears, maybe than the SDRAM is 
+defective or not adapted for the CT60.
+
+For test the SDRAM :
+
+!begin_itemize
+!item In normal mode and with the configuration CPX for the CT60, set the 
+delay at boot to 60 seconds.
+!item Switch off the computer.
+!item Set the turbo mode.
+!item Set the power to on.
+!item When you see the picture during the boot, press in the same time on 
+CTRL and left SHIFT keys, this is for effect to start the machine without 
+PMMU tree in SDRAM (like a 68060 EC).
+!item After the SDRAM initialization (to 0), begin the STRAM test and 
+after the TT-RAM test (the SDRAM here), if the 'X' characters replaces 
+the '-' characters, the SDRAM is defective.  
+!end_itemize
+
+
+!node Flash Tool
+
+!subnode Use Flash Tool
+
+!image ..\img\flash1.img
+!begin_verbatim
+
+!end_verbatim
+
+The main task of this program is to put TOS binary (.BIN) files inside 
+the flash. It's also possible to update the flash with the 68060 (turbo 
+mode), but in this case it's better to choice the 'Selection TOS in RAM' 
+(risk of crash when this option isn't actived).
+
+!image ..\img\flash2.img
+!begin_verbatim
+
+!end_verbatim
+
+The second task is to update the CT60 hardware with two jedec files (.JED) 
+for ABE60 et SDR60 chips (XILINX XC95144XL CPLD). 
+
+!begin_itemize
+
+!item You need to make the cable for the JTAG CT60 connector linked to // 
+port, look at 'JTAG/parallel download cable'. You must replace the SELECT/ 
+signal pin 13 on the // port by the ACK/ signal pin 10. 
+
+!item Normally the cable must be attached and powered (by the CT60) for 
+proper verification. Only SDR60 can be programmed (or verified) when 
+the CT60 is connected to the mother board in normal 030 mode (if you 
+use the same machine CT60/F030 ;-) ). If you update the ABE60 chip you 
+need to remove the CT60 from the bus. 
+
+!item If you load the good jedec files, another button appears 'verify'. 
+You can use this button for compare the jedec file with the chip. The 
+'program' button erase, program, and verify his flash. 
+ 
+!end_itemize
+                   
+
+!subnode JTAG CT60 connector
+
+This is the pins of tower connector not used (you see 'RESERVED' on the 
+board) :
+
+!begin_table [|c|l|l|] !hline
+Pin Card !! Signal   !! Pin JTAG/parallel download cable
+!hline
+   12    !! JTAG_VCC !! 1
+   13    !! JTAG_GND !! 2
+   14    !! JTAG_KEY !! (no pin !)
+   15    !! JTAG_TCK !! 3
+   16    !! JTAG_TDO !! 4
+   17    !! JTAG_TDI !! 5
+   18    !! JTAG_TMS !! 6
+!hline
+!end_table
+
+For information, this is the other pins of this connector :
+
+!begin_table [|c|l|l|] !hline
+Pin Card !! Signal   !! Comment
+!hline
+   1     !! PWR_SW+  !! Power Switch 
+   2     !! PWR_SW-  !! 
+   3     !! TRB_SW+  !! Turbo Switch
+   4     !! TRB_SW-  !! 
+   5     !! IDE_LED+ !! Led IDE
+   6     !! IDE_LED- !!
+   7     !! RST_SW+  !! Reset Switch
+   8     !! RST_SW-  !! 
+   9     !! PWR_LED+ !! Power led
+   10    !! NC
+   11    !! PWR_LED- !! 
+!hline
+!end_table
+
+
+!subnode JTAG/parallel download cable
+
+You must replace the SELECT/ signal pin 13 on the // port by the ACK/ 
+signal pin 10. On the Falcon // port, the pins 12, 13, 15 are not 
+connected.
+
+!image ..\img\schema.img
+!begin_verbatim
+
+!end_verbatim
+
+You need a 74HC125 or 74AHC125 and not a 74HCT125 or 74AHCT125 because the 
+power of the cable from the CT60 is in 3.3V.
+
+
+!node Configuration
+
+!subnode Introduction
+
+The CT60's configuration is set with a CPX, used normally with XCONTROL, 
+ZCONTROL, or COPS. 
+
+This CPX allows to :
+
+!begin_itemize
+!item Configure the Non Volatile Memory.
+!item Configure the boot in Flash Eprom.
+!item Measure MIPS.
+!item See the load of the system (MiNT or MagiC only).
+!item Measure the temperature of the 68060 (for overclocking) => With the 
+driver CT60XBIO.PRG or the TOS in flash. 
+!item Switch off the computer.
+!end_itemize
+
+!image ..\img\cpx2.img
+!begin_verbatim
+
+!end_verbatim
+
+There are five common buttons on this CPX :
+
+!begin_itemize
+!item Save : Button for save adjustments on the disk.
+!item Load : Button for load adjustments saved on the disk.
+!item OK : Button for validate the values changed into the non volatile 
+ram. 
+!item Cancel : Button for not change values to the configuration.
+!item i : Button for display informations.
+!end_itemize
+
+For check the temperature and use curves, the CPX :
+
+!begin_itemize
+!item Under TOS create a desk-accessory CT60TEMP.ACC and ask to reboot.
+!item Under MiNT create the program CT60TEMP.APP and start this program.
+!item Under MagiC start a thread.
+!end_itemize
+
+
+!subnode Average load
+
+!image ..\img\cpx1.img
+!begin_verbatim
+
+!end_verbatim
+
+At this page you can see for MiNT and MagiC :
+
+!begin_itemize
+!item The current value of CPU average load.
+!item The level of CPU average load.
+!item The curve of CPU average load during the last hour. Without MiNT 1.11 
+or more, this curve is very approximate. 
+!end_itemize
+
+!subnode Temperature
+
+!image ..\img\cpx2.img
+!begin_verbatim
+
+!end_verbatim
+
+At this page you can see :
+
+!begin_itemize
+!item The current value of the 68060's temperature.
+!item The level of the 68060's temperature, Red = Danger.
+!item Curve of 68060's temperature during the last hour.
+!end_itemize
+
+At this page you can change :
+
+!begin_itemize
+!item The trigger level for the temperature alarm.
+!end_itemize
+
+
+!subnode Memory / uP
+
+!image ..\img\cpx3.img
+!begin_verbatim
+
+!end_verbatim
+
+At this page you can see :
+
+!begin_itemize
+!item The total capacity of the ST-Ram.
+!item The total capacity of the Fast-Ram.
+!item The number of free bytes for the ST-Ram.
+!item The number of free bytes for the Fast-Ram.
+!item The number of millions instructions by second worked out by the 
+microprocessor (BogoMips).
+!end_itemize
+
+
+!subnode Boot
+
+!image ..\img\cpx4.img
+!begin_verbatim
+
+!end_verbatim
+
+At this page you can :
+
+!begin_itemize
+!item Select at boot the|operating system by default.
+!item Select at boot the SCSI arbitration.
+!item Select at boot the SCSI identificator (0 to 7).
+!item Set the delay at boot in secondes (you need lot of time if you want test the 
+STRAM and the SDRAM).
+!item Set the transfer of TOS 4.0x in RAM with using of the PMMU.
+!end_itemize
+
+
+!subsubnode Selection TOS in RAM 
+
+When this option is set, the TOS is copied in SDRAM $E00000 to 
+$EEFFFF (the last sector of the flash $EE0000 to $EFFFFF is used for 
+save 16 parameters).
+
+!begin_itemize
+
+!item If only the TOS is used you can set this option for increase speed.  
+
+!item If the memory protection is used under MiNT, don't set this option.
+The PMMU tree is always created, but the cookie 'PMMU' not exists when 
+this option is removed.
+
+!end_itemize 
+
+!subnode Stop
+
+!image ..\img\cpx5.img
+!begin_verbatim
+
+!end_verbatim
+
+At this page you can :
+
+!begin_itemize
+!item Select the mode of the stop programmed after a shutdown procedure.
+!item Enter the time if the mode of stop is actived.
+!end_itemize
+
+
+!subnode Langage
+
+!image ..\img\cpx6.img
+!begin_verbatim
+
+!end_verbatim
+
+At this page you can :
+
+!begin_itemize
+!item Select at boot the language by default.
+!item Select at boot the keyboard type.
+!item Select at boot the date format.
+!item Select at boot the time format 12 or 24 hours.
+!item Select at boot the date separator.
+!end_itemize
+
+
+!subnode Video
+
+!image ..\img\cpx7.img
+!begin_verbatim
+
+!end_verbatim
+
+At this page you can :
+
+!begin_itemize
+!item Select at boot the monitor type.
+!item Select at boot the display's mode : NTSC = 50 Hz, PAL = 60 Hz. 
+!item Select at boot the numbers of colors.
+!item Select at boot the screen resolution.
+!item Select at boot the ST compatibility mode.
+!item Select at boot the overscan mode on TV.
+!end_itemize
+
+
+!subnode BubbleGEM
+
+ Under a multitasking operating system (for example MagiC, MultiTOS, 
+Geneva etc) BubbleGEM can be placed in the auto start folder where it 
+will be automatically started as a GEM program on booting the system. 
+
+ Under single TOS BubbleGEM can be run as a desk accessory by renaming
+BUBBLE.APP to BUBBLE.ACC and copying it to the root directory of your
+boot partition, then rebooting.
+
+ BubbleGEM-aware programs send a message and pass a character string to 
+BubbleGEM if the user clicks with the right mouse button on an icon,
+button or window area.  BubbleGEM then displays the character string,
+formatted in a cute speech bubble which remains displayed until the user
+moves the mouse pointer to another window area, or until the user clicks
+again to burst the bubble.
+
+ Optionally bubbles can be displayed by clicking and holding down the 
+right mouse button; in this case the bubble bursts as soon as the 
+button is released again.
+
+ While a bubble is open two keyboard shortcuts are active: 
+!begin_verbatim
+<CTRL C> : The content of the bubble is copied to the clipboard and 
+           the bubble remains open. 
+<CTRL X> : The content of the bubble is copied to the clipboard and 
+           the bubble is closed.
+!end_verbatim
+
+The author of BubbleGEM is Thomas Much; his email address is:
+
+ Thomas.Much@stud.uni-karlsruhe.de
+
+
+!node Cache
+
+!subnode The 68060's caches
+
+There are two caches of 8KB inside the 68060, data and instruction.
+
+The STRAM is in writethrough, at each time than the 68060 write to the 
+RAM, he write in the same time than the data cache. 
+
+The SDRAM is in copyback, the 68060 write always inside his data cache, 
+he write in the memory the old data of his cache for found some place for 
+the new data.
+
+The 68060 has also an instruction cache, witch the direct link with the 
+data cache is only the memory. The result is than it's possible to obtain 
+incoherency between the data cache and the instruction cache. The example 
+is the exceution of a relocated program, without precaution and without 
+system call this is a crash.
+
+The 68060 has the ability to watch or snoop the external bus during 
+accesses by other bus masters (like DMA or blitter), maintaining coherency 
+between the 68060's caches and external memory.
+
+
+!subnode GENERAL6.CPX
+
+This CPX is a patched version of the Falcon GENERAL.CPX for the 
+68060. The cache on/off selection now uses XBIOS calls, there are no 
+problems under TOS because this XBIOS is inside the FLASH but under 
+MagiC if you use this CPX you need to install CT60XBIO.PRG inside the 
+AUTO folder. This program install the XBIOS for the CT60 if the cookie 
+'CT60' isn't found.
+
+
+!subnode XCONTROL, ZCONTROL, COPS, and SDRAM in copyback
+
+!begin_itemize
+
+!item COPS only flush caches after load the CPX and works fine.
+
+!item ZCONTROL works under MiNT 1.16/Xaaes.
+
+!item XCONTROL crashes.
+
+!item The patched XCONTROL.ACC fix this problem by a new XBIOS call but 
+under MagiC if you use this ACC you need to install CT60XBIO.PRG 
+inside the AUTO folder. 
+                     
+!end_itemize 
+
+
+!subnode PARX.SYS modules and the copyback
+
+If a program who use PARX.SYS crashes at start, you can try to remove the 
+caches with GENERAL6.CPX, load the program and set to on the caches 
+after. For example PICCOLO works with this method.
+
+
+!subnode TSR programs who crashes in the AUTO folder
+
+Like CPX, the programs who not uses the Pexec function for load 
+modules crashes with the SDRAM in copyback, so the best way is to load 
+the program in STRAM (cache in writethrough). You can use FILEINFO.CPX 
+for change the flags.
+
+For example you must remove TT-ram flags of METAXBS.PRG (Metados) 
+because when the OVL modules are loaded there are no flush after 
+relocation, it's not compatible with the SDRAM and the CPU cache in 
+copyback. 
+
+
+!node Compatibility
+
+!subnode Crashes
+
+You can try to remove the caches with GENERAL6.CPX, start the program who
+causes crashes, load the program and set to on the caches after.
+
+You can use FILEINFO.CPX for change the flags and force the program to 
+use STRAM.
+
+For more informations, you can read the part 'Cache'.
+
+
+!subnode DSP
+
+The 68060 is lot of faster than the DSP, so some problems arrives with
+the host port. The XBIOS fonctions of the TOS fix this problem by 
+test the handshake bit during each word send or received. Under MagiC you 
+must install the program DSPXBIOS inside the AUTO folder.
+
+The programs who use direct access to the DSP without use the XBIOS 
+functions can create problems. For continue to work with this programs, 
+you must set the caches to OFF with the CPX GENERAL6.CPX. 
+
+
+!subnode Patchs
+
+!subsubnode MagiC
+
+This MAGXBOOT.PRG a rewrited for the normal mode (68030) and the turbo 
+mode (68060), and in turbo MAGIC.RAM is patched for not overwrite some 
+parts of the TOS like FPU emulation, etc... You must install this 
+program in the AUTO folder. Tested under MagiC 6.10.
+
+You must use the Centek MAGIC.RAM patch (with MAGIC_P.PRG) before use
+MagiC. 
+
+You need to install CT60XBIO.PRG and DSPXBIOS.PRG inside the AUTO 
+folder. 
+
+
+!subnode Solutions
+
+!begin_table [|l|l|l|] !hline
+(!B)Software(!b) !! (!B)Problem(!b)   !! (!B)Solution(!b)
+!hline
+Cartrige port    !! Not works         !! Remove the caches.
+and 68060 EC     !!                   !! 
+!hline
+MagiC            !! Not works         !! Patch MAGIC.RAM and use the
+                 !!                   !! new MAGXBOOT.PRG.
+                 !!                   !! Install CT60XBIO.PRG and 
+                 !!                   !! DSPXBIOS.PRG inside the AUTO 
+                 !!                   !! folder.
+!hline
+Cubase Audio     !! Not works         !! Patch CAF_20x.PRG and use the 
+                 !!                   !! new CAF_060.PRG.
+                 !!                   !! Install EXCEP060.PRG inside the 
+                 !!                   !! AUTO folder, and the MROS3_45 
+                 !!                   !! patched. 
+!hline
+Spin METAXBS.PRG !! Crashes           !! Remove the Fast-Ram flags.
+!hline
+Picollo          !! Crashes           !! Remove the caches during start
+Gembench         !! Crashes           !! or remove the Fast-Ram flags.
+Swiftel Photo    !! Crashes           !!
+!hline
+Xcontrol         !! Crashes           !! Use the patched version.
+!hline
+!end_table
+
+
+!node CT60 HARDWARE GUIDE
+
+(!B)
+Rev 3.0  October 2000 / May 2003
+(c) Rodolphe Czuba
+(!b)
+
+!subnode FUNCTIONAL BLOCK DIAGRAM
+
+!image ..\img\ct60arch.img
+
+
+!subnode ADDRESSES & REGISTERS
+
+!subsubnode 68030 VIEW 24-Bit MAP 
+
+!begin_verbatim
+$xx000000 $xxDFFFFF  14 MB  ST-RAM
+$xxE00000 $xxEFFFFF   1 MB  TOS 4.0x ROM - BOOT   
+$xxE00000 $xxEFFFFF   1 MB  CT60 FLASH  CPU SPACE #3  
+$xxF00000 $xxF0FFFF  64 KB  I/O IDE     
+$xxF10000 $xxF9FFFF 576 KB  F030 BUS SLOT    
+$xxFA0000 $xxFBFFFF 128 KB  CARTRIDGE SLOT    
+$xxFC0000 $xxFEFFFF 192 KB  Unused    
+$xxFF0000 $xxFFFFFF  64 KB  I/O    
+!end_verbatim
+
+
+!subsubnode 68060 VIEW 32-Bit MAP  
+                
+!begin_verbatim 
+$00000000 $00DFFFFF   14 MB  ST-RAM               CACHE    - NO BURST
+$00E00000 $00EFFFFF    1 MB  CT60 FLASH           CACHE    - NO BURST
+$00F00000 $00F0FFFF   64 KB  I/O IDE              NO CACHE - NO BURST
+$00F10000 $00F9FFFF  576 KB  F030 BUS SLOT        NO CACHE - NO BURST 
+$00FA0000 $00FBFFFF  128 KB  CARTRIDGE SLOT       NO CACHE - NO BURST 
+$00FC0000 $00FEFFFF  192 KB  Unused               NO CACHE - NO BURST
+$00FF0000 $00FFFFFF   64 KB  I/O                  NO CACHE - NO BURST
+$01000000 $20FFFFFF  512 MB  SDRAM (TT-RAM)       CACHE    - BURST
+$21000000 $3FFFFFFF  496 MB  Reserved             CACHE    - BURST
+$40000000 $7FFFFFFF 1024 MB  060 BUS SLOT         CACHE    - BURST 
+$80000000 $BFFFFFFF 1024 MB  060 BUS SLOT         NO CACHE - NO BURST
+$C0000000 $EFFFFFFF  768 MB  Reserved             NO CACHE - NO BURST
+$F0000000 $FBFFFFFF  192 MB  CT60 I/O             NO CACHE - NO BURST
+$FC000000 $FEFFFFFF   48 MB  Reserved             NO CACHE - NO BURST
+$FF000000 $FFFFFFFF   16 MB  FALCON 24-Bit SHADOW NO CACHE - NO BURST
+!end_verbatim
+
+From the 030, the FLASH chip is accessible (to program and read it) by the 
+030 CPU SPACE #3. 
+
+From the 060, the TOS chip is NOT accessible.
+The FLASH is seen at the TOS addresses when booting.
+When programming the Flash, the 060 ALTERNATE SPACE #3 must be used.
+
+
+!subsubnode REGISTERS SUMMARY
+
+(!B)
+SDR-60
+(!b)
+
+!begin_verbatim
+EE EECL   $F0000000 I2C port for EEprom DIMM
+   EEDA   $F0800000
+  
+TH THCS   $F1000000 THermal sensor of the 060  
+   THCK   $F1800000  
+   THDA   $F1000000
+
+SDCNF     $F2000000 SDram CoNFiguration
+
+IVR       $F3000000 Int Vector Register
+
+RES       $F4000000 Reserved
+
+RES       $F5000000 Reserved
+
+RES       $F6000000 Reserved
+
+SVDL SVDL $F7000000 Super ViDeL ON / F030 Videl Unvisible.
+     SBLT $F7800000 Super BLiTter ON / F030 Blitter Unvisible.
+!end_verbatim
+
+(!B)
+ABE-60
+(!b)
+
+!begin_verbatim
+ULAR      $F8000000 UNlocked ARbiter
+
+FWEN      $F9000000 Flash Write ENable  (only from the 060/PPC)
+
+SLP       $FA000000 Sleep = Turn OFF the ATX power supply.
+
+RES       $FB000000 Reserved.
+!end_verbatim
+
+
+!subsubnode SDR60 REGISTERS DETAILS
+
+(!U)
+SDRAM EEPROM I2C Port :
+(!u)
+
+!begin_verbatim
+EECL (EEprom serial CLock)
+ Write at $F0000000 : WRITE 0 to EECL line.
+ Write at $F0400000 : WRITE 1 to EECL line.
+ Read  at $F0000000 : READ from the EECL line on the D1 CPU data line.
+
+EEDA (EEprom serial DAta) 
+ Write at $F0800000 : WRITE 0 to EEDA line.
+ Write at $F0C00000 : WRITE 1 to EEDA line.
+ Read  at $F0000000 : READ from the EEDA line on the D0 CPU data line.
+!end_verbatim
+
+(!U)
+060 THERMAL 3-wires Port :
+(!u)
+
+!begin_verbatim
+THCS (THermal Chip Select)
+ Write at $F1000000 : WRITE 0 to CS line.
+ Write at $F1400000 : WRITE 1 to CS line.
+
+THCK (THermal ClocK) 
+ Write at $F1800000 : WRITE 0 to CLK line.
+ Write at $F1C00000 : WRITE 1 to CLK line.
+
+THDA (THermal DAta)
+ Read  at $F1000000 : Read from the DO line on the D0 CPU data line.
+!end_verbatim
+
+(!U)          
+INTERRUPT REGISTER :
+(!u)
+
+!begin_verbatim
+IVR (Interrupt Vector Register)
+ Read at $F3000000
+!end_verbatim
+
+(!U)
+060 SUPER VIDEL :
+(!u)
+ 
+!begin_verbatim
+SVDL (Super ViDeL)
+ Write at $F7000000 : F030 VIDEL Visible.
+ Write at $F7400000 : F030 VIDEL Unvisible.
+  
+SBLT (Super BLiTter) 
+ Write at $F7800000 : F030 BLITTER Visible.
+ Write at $F7C00000 : F030 BLITTER Unvisible.
+!end_verbatim
+
+(!U)
+SDRAM CONTROLLER :
+(!u)
+
+!begin_verbatim
+SDCNF (SDram CoNFiguration)
+ Write a long at $F2xx0000 with xx = [A23..A16]
+ 
+Chip DensitY (EEPROM Byte #3 & #4) 		
+A23 = cdy2                                           EEPROM
+A22 = cdy1                                       Byte#3  Byte#4
+     [cdy2,cdy1] = 0,0 --> 8Mx8 / 8x16              $0C $09
+                 = 0,1 --> 16Mx8                    $0C $0A
+                 = 1,0 --> 16Mx16                   $0D $09
+                 = 1,1 --> 32Mx8 / 32Mx16           $0D $0A
+	
+Number of DIMM Banks (EEPROM Byte #5)
+A20 = nrb
+     [nrb] = 0 --> 1 bank
+           = 1 --> 2 banks 
+
+Module DensitY (EEPROM Byte #31 * EEPROM Byte #5)
+A19 = mdy2
+A18 = mdy1
+     [mdy2,mdy1,mdy0] = 0,0 -->  64MB
+                      = 0,1 --> 128MB
+                      = 1,0 --> 256MB
+                      = 1,1 --> 512MB
+
+ReFresh RaTe (EEPROM Byte #12)
+A16 = rfrt
+     [rfrt] = 0 --> 15.625 uS
+            = 1 --> 7.8125 uS
+!end_verbatim
+
+
+!subsubnode ABE60 REGISTERS DETAILS
+
+!begin_verbatim
+ULAR (UnLocked ARbiter)
+ 060 is MASTER locked after RESET.
+ F030 can't be Master locked but can obtain the bus. 
+ Write at  $F8000000 : Unlock Arbiter
+ Write at  $F8800000 : Lock   Arbiter
+
+NOTE : In a dual processor configuration (ie : a PPC on Slot), this 
+register can be used to lock the arbiter at any time to use the 060 or the 
+PPC alone.     
+
+FWEN (Flash Write ENable)
+ Only for the PowerPC write accesses.
+ Not needed for 030 and 060 write accesses. 
+ Write at $F9000000 : Can write
+ Write at $F9800000 : Cant write
+
+SLP (SleeP)
+ Write at $FA800000 : Turn OFF the power supply.
+!end_verbatim
+
+
+!subnode CRITICAL TIMINGS
+
+When boosting the CT60, some critical timings must be considered !
+
+The standard CT60 uses 7ns delay logic chips.
+
+Here are the time delay margins of ADD (ADDress) signals and TS (Transfer 
+Start) signal for -7 chips : 
+
+CLK to ADD
+
+!begin_verbatim
+060 at 66 MHz : Signal predriven :    3 (min) to  9.9 (max) ns
+                Signal from 3-state : 3 (min) to 10.4 (max) ns
+!end_verbatim
+
+ADD signals Marge  
+
+!begin_table [|l|l|] !hline
+Chip Speed !! -7ns
+!hline
+Input to clock Set Up time          !! 4.8 
+66 MHz margin (signal predriven)    !! 0.45 
+66 MHz margin (signal from 3-state) !! -0.05 
+!hline
+!end_table
+
+CLK to TS active
+
+!begin_verbatim
+060 at 66 MHz : 3 (min) to 9.5 (max) ns
+!end_verbatim
+
+TS signal Marge
+
+!begin_table [|l|l|] !hline
+Chip Speed !! -7ns
+!hline
+Input to clock Set Up time  !! 4.8
+66 MHz margin               !! 0.85 
+!hline
+!end_table
+
+
+!subsubnode CHIPS FUNCTIONNAL DIAGRAM
+
+!begin_verbatim
+      +-----------+   +-----------+    +-------+
+IN ---+    2.3    +-+-+    1.4    +----+ D   Q +---->
+      +-----------+ | +-----------+    |       |
+                    |                  |       |
+      +-----------+ |                  |       |
+CLK --+    1.5    +-----------------+--+ CLK   |
+      +-----------+ | +-----------+ |  |       |
+                    +-+    2.4    +-+  |       |
+                      +-----------+    +-------+
+Global CLK to Comb.CLK delay : 3.2 ns  Set Up time : 2.6 ns
+!end_verbatim   
+        
+Legend : First value is for -7 chip, second for -5.
+
+(!B)
+Conclusion
+(!b)
+
+There are no security margin for the CLK to ADD time at 66 MHz !
+
+
+!subnode THERMAL SENSOR
+
+The 68060 contains a Die Temperature Sensor with two external pins THERM0 
+& THERM1. The sensor is done with a temperature sensitive resistor which 
+has a 780 ohms value at 25øC and increases/decreases by steps of 2.8 ohms 
+per øC unit. By example, a 060 core at 80øC gives a resistance of 934 ohms 
+between the two THERMx pins.
+
+Equations :  R60 = 780 + 2.8 x (TEMP  25) or TEMP = (R60 - 710) / 2.8
+
+The CT60 uses a small slow Analog/Digital converter (TI TLV0831) to obtain 
+a 8-Bit value of the voltage between the THERMs pins.  
+
+The equation is : U60 = (3.34 x R60) / (1000 + R60) where R60 is the value 
+of the core sensor resistor; 3.34 is the power supply and 1000 is the 
+value of the resistor connected between the 3.34V and the positive 
+THERM0/IN+ line.
+
+(!U)
+TOLERANCES :
+(!u)
+
+!begin_itemize
+!item Power supply : 3.3V +/- 4% : From 3.168V to 3.432V. Curently, it is 
+3.30 to 3.34. 
+!item Resistor : 1K +/-1% : From 990 to 1010 Ohms. Curently, it is from 
+995 to 1005 ohms.
+!end_itemize
+
+The AD converter uses a REF voltage of 1.800 V. With 0 to 0.007 V between 
+the two pins of the AD converter, the digital result is 0. With 1.794 to 
+1.800 V, the result is 255. The value increases/decreases by steps of 
+0.007 V.
+
+The equation is :  Data = INT [U60/0.007]. 
+
+!begin_verbatim
+At   0øC : Vin+ = 1.387 V  Data = 197  R60=710 
+At  25øC : Vin+ = 1.464 V  Data = 208  R60=780 
+At  50øC : Vin+ = 1.535 V  Data = 218  R60=850 
+At 100øC : Vin+ = 1.662 V  Data = 236  R60=990 
+!end_verbatim
+
+(!U)
+ATTENTION : The varation of the data is not linear !!
+(!u)
+
+The CPU must access the TLV831 by a basic bit-by-bit protocol. It is the 
+software responsibility to respect the protocol &  timings of the 
+following chronogram, and assemble the bits.  
+
+!image ..\img\tlv.img
+
+!begin_verbatim
+f   : Clock frequency                         10 to 600 kHz (typical = 250)
+tsu : Setup time, CS LOW before CLK goes HIGH 350 ns MIN
+tpd : Propagation delay time :
+      output data after CLK goes HIGH         500 ns MAX (typical = 200)
+twh : Pulse duration, CS HIGH                 220 ns MIN
+tconv : Converstion Time (at 250kHz)          32 us 
+!end_verbatim
+
+Three registers are present in the SDR60 chip.
+
+The 060 CPU must drive THCS & THCK and read THDA by these registers.
+
+The address $F1000000, $F1800000 & $F1000000 are used respectively for 
+THCS, THCK & THDA.  
+
+!begin_verbatim
+THCS (Chip Select)
+LONG WRITE at $F1000000   WRITE 0 to CS Rising edge of CS (removed)
+LONG WRITE at $F1400000   WRITE 1 to CS Falling edge of CS (active)
+
+THCK (Clock)
+LONG WRITE at $F1800000   WRITE 0 to CLK Falling edge of CLK
+LONG WRITE at $F1C00000   WRITE 1 to CLK Rising edge of CLK
+
+THDA (Data Output)
+LONG READ at $F1000000   READ from DO
+                         Value is available on D0 of the CPU data bus.
+!end_verbatim
+
+For an example, see the example in the DIMM EEPROM chapter.
+
+
+!subnode DIMM EEPROM
+
+!subsubnode EEPROM DATA
+
+The DIMM standard allows the loading of the manufacturer informations from 
+a small 128 or 256 bytes EEPROM on the DIMM. Some of these informations 
+are needed to configure the SDRAM controller of the CT60.  
+
+The following bytes are uses by the CT60 :
+
+!begin_itemize
+!item (!B) Bold (!b) are used by the boot software to configure the SDRAM 
+controller. 
+!item Others are used only as user information in a SET UP menu.
+!end_itemize
+
+!begin_table [|l|l|l|] !hline
+Byte 2     !! Memory Type                !! FPM, EDO, NIBBLE, SDRAM (=$04)
+(!B)
+!hline
+Byte 3     !! Number of Row Addresses    !! 11,12,13,. : $B:11 / $C:12 / $D:13
+!hline
+Byte 4     !! Number of Column Addresses !! 8,9,10,... : $8:8  / $9:9  / $A:10
+!hline
+Byte 5     !! Number of DIMM Banks       !! 1 or 2  $01:1 / $02:2
+!hline
+(!b)
+Byte 6-7   !! Module Data Width          !! 64, 72 , 80, : $4000
+!hline
+Byte 8     !! Voltage Interface Level    !! TTL, LVTTL (1), HSTL, SSTL3, SSTL2
+           !! of this assembly           !!
+!hline
+Byte 9     !! SDRAM Cycle Time (tCYC)    !!
+!hline
+Byte 10    !! SDRAM Access from Clock    !!
+           !! (tAC)                      !!
+!hline
+Byte 11    !! SDRAM Configuration Type   !! None, Parity, ECC
+(!B)
+!hline
+Byte 12    !! Refresh Rate               !! 15.625uS:$80, 7.81uS:$82 
+!hline
+(!b)
+Byte 17    !! Number of Banks            !! 2 or 4 ($04)
+           !!  on SDRAM Device           !!
+!hline
+Byte 27    !! Minimum ROW Precharge      !!
+           !!  Time (tRP)                !!
+!hline
+Byte 28    !! Minimum ROW Active to      !!
+           !!  Active Delay (tRRD)       !!
+!hline
+Byte 29    !! Minimum RAS to CAS Delay   !!
+           !! (tRCD)                     !!
+(!B)
+!hline
+Byte 31    !! Module Bank Density        !! 16 ($04), 32 ($08), 64 ($10),
+           !!                            !! 128 ($20), 256 ($40), 512 ($80)
+!hline
+(!b)
+Byte 64-71 !! Module Manufacturers       !! EX : $A4000000 = IBM
+           !!  JEDEC ID Code             !!
+!hline
+Byte 73-90 !! Module Part Number         !!
+!hline
+Byte 93-94 !! Module Manufacturing Date  !!
+!hline
+Byte 95-98 !! Module Serial Number       !!
+!hline
+!end_table
+
+Some features are initialized by the logic chip into the DIMM module when 
+booting : 
+
+!begin_itemize
+!item BURST Length 1, 2, 4, 8 , Page.  4 is for 060, PPC, X86 processors
+!item CAS Latency  2, 3, 4,...  2 is possible with PC100 at 66 up to 80 MHz !
+!end_itemize
+
+(!B)
+Remarks :
+(!b)
+
+!begin_itemize
+!item Don't confuse SDRAM banks (2 or 4) with DIMM banks (1 or 2) !
+!item Bytes 128-255 are open for Customer Use and can be written - Not used 
+with CT60. 
+!item DIMM Density = Module Bank Density * Number of DIMM Banks (1 or 2).
+!end_itemize
+
+
+!subsubnode I2C 2-wire PROTOCOL
+
+The EEPROM device conforms to the I2C 2-wire protocol. CT60 only uses the 
+random read operations with the EEPROM. 
+
+During data input, the EEPROM samples the SDA signal on the rising edge of 
+the clock (SCL). For correct device operation, the SDA signal must be 
+stable during the clock low to high transition and data must change only 
+when the clock (SCL) line is low. 
+
+!image ..\img\i2c1.img
+
+
+!subsubnode RANDOM READ PROTOCOL & SOFTWARE
+
+!image ..\img\i2c2.img
+ 
+The slave address is 1010000. The eight bit is the R/W bit.
+
+Random read operations allow the master to access any memory location in a 
+random manner. Before issuing the slave address with the R/W bit set to 
+one (Read), the master must first perform a dummy write operation. The 
+master issues the start condition, slave address and then the word address 
+it is to read. After the word address ACK, the master immediately 
+re-issues the start condition and the slave address with the R/W bit set 
+to one. This will be followed by an ACK from the slave and then by the 
+eight bit word. The master will not ACK the transfer but will issue a stop 
+and the slave stops transmission and goes into standby.
+
+The device that controls the transfer is referred to as the master (SDR60 
+chip) and the device that receives the data (EEPROM) is referred to as the 
+slave device. The master will always start a data transfer (SDA line) and 
+will provide the serial clock (SCL line) for synchronization.
+
+The 060 CPU must drive the SCL and SDA lines. These lines are connected to 
+2 pins of the logic chip. 
+
+The address $F00xxxxx is used for SCL and $F08xxxxx is used for SDA signal.
+
+!begin_verbatim
+SCL (Clock)
+LONG WRITE at $F0000000   WRITE 0 to SCL Falling edge of SCL
+LONG WRITE at $F0400000   WRITE 1 to SCL Rising edge of SCL
+LONG READ  at $F0000000   READ from SCL
+                          Value is available on D1
+                          of the CPU data bus.
+SDA (Data)
+LONG WRITE at $F0800000   WRITE 0 to SDA
+LONG WRITE at $F0C00000   WRITE 1 to SDA
+LONG READ  at $F0000000   READ from SDA
+                          Value is available on D0
+                          of the CPU data bus.
+!end_verbatim
+
+(!U)
+EXAMPLE
+(!u)
+
+If you want to read the Byte #3 from the EEPROM :
+
+!begin_verbatim
+START condition
+LONG WRITE at $F0800000   WRITE 0 to SDA 
+LONG WRITE at $F0000000   WRITE 0 to SCL Falling edge of SCL
+
+SLAVE ADDRESS (Write at 1010000)
+Write 1
+LONG WRITE at $F0C00000   WRITE 1 to SDA
+LONG WRITE at $F0400000   WRITE 1 to SCL Rising edge of SCL
+LONG WRITE at $F0000000   WRITE 0 to SCL Falling edge of SCL
+Write 0
+LONG WRITE at $F0800000   WRITE 0 to SDA
+LONG WRITE at $F0400000   WRITE 1 to SCL Rising edge of SCL
+LONG WRITE at $F0000000   WRITE 0 to SCL Falling edge of SCL
+...
+Repeat for the values 10000 (the last 0 is for write)
+
+ACK condition
+LONG WRITE at $F0400000   WRITE 1 to SCL Rising edge of SCL
+LONG READ  at $F0000000   READ from SDA If =0, its an ACK
+LONG WRITE at $F0000000   WRITE 0 to SCL Falling edge of SCL
+
+
+WORD ADDRESS DATA (# 3 in this example)
+Write 0
+LONG WRITE at $F0800000   WRITE 0 to SDA
+LONG WRITE at $F0400000   WRITE 1 to SCL Rising edge of SCL
+LONG WRITE at $F0000000   WRITE 0 to SCL Falling edge of SCL
+...
+Repeat 5 times
+
+Write 1
+LONG WRITE at $F0C00000   WRITE 1 to SDA
+LONG WRITE at $F0400000   WRITE 1 to SCL Rising edge of SCL
+LONG WRITE at $F0000000   WRITE 0 to SCL Falling edge of SCL
+...
+Repeat 1 time
+
+ACK condition
+LONG WRITE at $F0400000   WRITE 1 to SCL Rising edge of SCL
+LONG READ  at $F0000000   READ from SDA If =0, its an ACK
+LONG WRITE at $F0000000   WRITE 0 to SCL Falling edge of SCL
+
+START condition immediately after ACK
+LONG WRITE at $F0C00000   WRITE 1 to SDA
+LONG WRITE at $F0400000   WRITE 1 to SCL Rising edge of SCL
+LONG WRITE at $F0800000   WRITE 0 to SDA 
+LONG WRITE at $F0000000   WRITE 0 to SCL Falling edge of SCL
+
+SLAVE ADDRESS (Read at 1010000)
+Write 1
+LONG WRITE at $F0C00000   WRITE 1 to SDA
+LONG WRITE at $F0400000   WRITE 1 to SCL Rising edge of SCL
+LONG WRITE at $F0000000   WRITE 0 to SCL Falling edge of SCL
+Write 0
+LONG WRITE at $F0800000   WRITE 0 to SDA
+LONG WRITE at $F0400000   WRITE 1 to SCL Rising edge of SCL
+LONG WRITE at $F0000000   WRITE 0 to SCL Falling edge of SCL
+...
+Repeat same procedure for the values 10001 (the last 1 is for read)
+
+ACK condition
+LONG WRITE at $F0400000   WRITE 1 to SCL Rising edge of SCL
+LONG READ  at $F0000000   READ from SDA If =0, its an ACK
+LONG WRITE at $F0000000   WRITE 0 to SCL Falling edge of SCL
+
+READ WORD DATA
+Bit#7
+LONG WRITE at $F0400000   WRITE 1 to SCL Rising edge of SCL
+LONG READ  at $F0000000   READ from SDA DATA Bit#7
+LONG WRITE at $F0000000   WRITE 0 to SCL Falling edge of SCL
+Bit#6
+LONG WRITE at $F0400000   WRITE 1 to SCL Rising edge of SCL
+LONG READ  at $F0000000   READ from SDA DATA Bit#6
+LONG WRITE at $F0000000   WRITE 0 to SCL Falling edge of SCL
+...
+Repeat 6 times
+
+Clock cycle (NO ACK)
+LONG WRITE at $F0400000   WRITE 1 to SCL Rising edge of SCL
+LONG WRITE at $F0000000   WRITE 0 to SCL Falling edge of SCL
+
+STOP condition
+LONG WRITE at $F0800000   WRITE 0 to SDA
+LONG WRITE at $F0400000   WRITE 1 to SCL Rising edge of SCL
+LONG WRITE at $F0C00000   WRITE 1 to SDA 
+!end_verbatim
+
+
+!subnode DIMM SDRAM for CT60
+
+The CT60 supports the modern PC100/133 standard SDRAM DIMMs, and the 
+obsolet or uneeded are not accepted.
+
+GOOD SDRAM DIMMs for CT60
+
+!begin_itemize
+!item PC-100 & PC-133.
+!item Must be UNBUFFURED type.
+!item Must be 64-bits (no parity or ECC = 72 / 80 bits).
+!end_itemize
+
+!begin_table [|l|c|c|l|c|c|r|r|] !hline
+Module !! Nbr   !! Nbr   !! Chip     !! RAS  !! CAS  !! PAGE   !! Refresh  
+Config !! chips !! banks !! organiz  !! Addr !! Addr !! Lentgh !! Rate (uS)
+!hline
+64 MB  !!  4     !! 2    !! 4Mx16b   !! 12   !!  8   !!  4 KB  !! 15.625
+64 MB  !!  8     !! 1    !! 8Mx8b    !! 12   !!  9   !!  8 KB  !! 15.625 
+64 MB  !!  4     !! 1    !! 8Mx16b   !! 12   !!  9   !!  8 KB  !! 15.625 
+!hline
+128 MB !!  8     !! 2    !! 8Mx8b    !! 12   !!  9   !!  8 KB  !! 15.625
+128 MB !!  4     !! 2    !! 8Mx16b   !! 12   !!  9   !!  8 KB  !! 15.625
+128 MB !!  8     !! 1    !! 16Mx8b   !! 12   !!  10  !! 16 KB  !! 15.625
+128 MB !!  4     !! 1    !! 16Mx16b  !! 13   !!  9   !!  8 KB  !! 7.8125
+!hline
+256 MB !!  8     !! 2    !! 16Mx8b   !! 12   !!  10  !! 16 KB  !! 15.625
+256 MB !!  4     !! 2    !! 16Mx16b  !! 13   !!  9   !!  8 KB  !! 7.8125
+256 MB !!  8     !! 1    !! 32Mx8b   !! 13   !!  10  !! 16 KB  !! 7.8125
+!hline
+512 MB !!  8     !! 2    !! 32Mx8b   !! 13   !!  10  !! 16 KB  !! 7.8125
+512 MB !!  4     !! 2    !! 32Mx16b  !! 13   !!  10  !! 16 KB  !! 7.8125
+!hline
+!end_table
+
+(!B)
+NOT SUPPORTED SDRAM DIMMs
+(!b)
+
+!begin_itemize
+!item All DIMM with chips density < 64Mbits : 8MB, 16MB & 32MB DIMMs. All 
+DIMMs with 2 logical banks chips = obsolet (CT60 needs 4 logical banks chips). 
+!item REGISTERED / BUFFURED DIMMs (generally for Work Stations & Servers, 
+not PC). 
+!item 512 MB DIMM with one physical bank (only 1 side populated).
+!end_itemize
+
+(!B)
+REMARK :
+(!b)
+
+Don't confuse SDRAM banks (2 or 4) with DIMM banks (1= Single Size or 
+2 = Double Size) !
+
+(!B)
+CONCLUSION : 
+(!b)
+
+In general, PC shops furnish only Unbuffured 64-bits models, what you 
+need.
+ 
+But the obsolet models may be in some old stocks !
+
+
+!subnode 060 BURST with SDRAM
+
+The CT60 bus clock = the 060 clock (060 in 'Full Bus mode').
+
+The 060 uses LINE BURST to & from the system memory. SDRAM is well adapted 
+for a such processor !
+
+A BURST LINE is a length of 4 LONG-WORDs (16 Bytes) that are transferred 
+with only : 
+
+(!B) PAGE HIT (!b) (access to a logical SDRAM page already open) :
+
+!begin_itemize
+!item 2,1,1,1 = 5 cycles for Burst Writes. Rate is 16Bytes/6cycles = 213 
+MBytes/s (Each access in the same page). 
+!item 4,1,1,1 = 7 cycles for Burst Reads. Rate is 16Bytes/8cycles  = 166 
+MBytes/s (Each access in the same page).
+!end_itemize
+
+(!B) PAGE MISS (!b) (access to a new logical SDRAM page (must be 
+precharged and open) : 
+
+!begin_itemize
+!item 7,1,1,1 = 10 cycles for Burst Writes. Rate is 16Bytes/10cycles = 107 
+MBytes/s (Each access in a new page).
+!item 9,1,1,1 = 12 cycles for Burst Reads. Rate is 16Bytes/12cycles  = 89 
+MBytes/s (Each access in a new page).
+!end_itemize
+
+The CT60 uses the 060 at the top of the possible performances with the 
+mighty COPYBACK mode ! Instead of the WRITETROUGH mode like other TOS 
+machines !
+
+(!B)
+Copyback mode is active for all SDRAM memory area.
+(!b)
+
+Copyback mode allows the 060 to write into the cache without writting into 
+the SDRAM, what is so more performant ! The cache lines are pushed into 
+SDRAM only when needed (060 needs place by example). With two 8Kbytes 
+caches, it gives to coders the possibility to do some incredibly speed 
+routs residing at 100% into the caches !
+
+The 060 uses BURST transfers with SDRAM in 99% of the cases. Here are the 
+cases when the 060 don't burst, this means, transfers Bytes, Words & 
+Long-Words :
+
+
+(!B)
+Byte, Word, and Long-Word READ Transfer Cycles from SDRAM
+(!b)
+
+Accesses that are implicitly NONCACHABLE :
+
+!begin_itemize
+!item Locked Read-Modify-Write accesses.
+!item Table Searches.
+!end_itemize
+
+Accesses that are not allocate in the data cache on a read miss :
+
+!begin_itemize
+!item Exception Vector Fetches.
+!item Exception stack Deallocation for an RTE Instruction.
+!end_itemize
+
+(!B)
+Byte, Word, and Long-Word WRITE Transfer Cycles to SDRAM
+(!b)
+
+Accesses that are implicitly NONCACHABLE :
+
+!begin_itemize
+!item Locked Read-Modify-Write accesses.
+!item Table Searches.
+!end_itemize
+
+Accesses that are not allocate in the data cache on a write miss :
+!begin_itemize
+!item Exception stacking.
+!end_itemize
+
+Cache Line pushes for lines containing a single dirty Long-word.
+
+Only with at least 2 processors (ie : 060 + PPC) that share common memory pages :
+!begin_itemize
+!item Write to WRITETHROUGH pages.
+!end_itemize
+
+(!B)
+Remark :
+(!b)
+
+For those of you who are a bit familiar with 64-bit processors like PPC, 
+don't forget that the syntax for data size is not the same : 
+
+With 32-Bit processors :
+
+!begin_itemize
+!item A WORD designates a 16-Bit entity.
+!item LONG-WORD designates a 32-Bit entity.
+!end_itemize
+
+With 64-Bit processors : 
+
+!begin_itemize
+!item A HALF-WORD designates a 16-Bit entity.
+!item A WORD designates a 32-Bit entity.
+!item A DOUBLE-WORD designates a 64-Bit entity.
+!end_itemize
+
+
+!subnode INTERRUPTS
+
+CT60 adds some new interrupts for the 060 Bus Slot, re-routing of the 
+Falcon INT Set to the second CPU (CPU#2 on the Bus Slot). 
+
+(!B)
+The /I6 , and /INT were added on CT60.
+(!b)
+
+/I6 is the interrupt from the 060 BUS SLOT and is merged with the others 
+from the Falcon. See table below for the priority position.  
+
+/INT is sent by SDR-60 to the CPU#2 to interrupt it. INT is synthetized 
+from the /IPL2, /IPL1 & /IPL0 signals and the I6. It is necessary when the 
+CPU#2 has to respond the interrupts instead of the primary 060...  
+
+(!U)
+060 INTERRUPTS PRIORITY TABLE
+(!u)
+
+!begin_table [|l|c|l|l|l|l|c|] !hline
+NAME   !! LEVEL !! ACTIVE !! TYPE     !! SOURCE           !! IVR   !! PRIORITY
+!hline
+I6     !! 6     !! Low    !! Software !! CT60 Bus Slot    !! 1,1,1 !! Highest
+INT6   !! 6     !! Low    !! Software !! F030 Bus Slot    !! 1,1,0 !!    ^
+MFPINT !! 6     !! Low    !! Software !! F030 MFP         !! 1,1,0 !!    |
+DSPREQ !! 6     !! Low    !! Software !! F030 DSP         !! 1,1,0 !!    |
+INT5   !! 5     !! Low    !! Software !! F030 SCC         !! 1,0,1 !!    |
+VBL    !! 4     !! Low    !! Auto     !! F030 VIDEL VSync !! 1,0,0 !!    |
+INT3   !! 3     !! High   !! Software !! F030 Bus Slot    !! 0,1,1 !!    |
+HBL    !! 2     !! Low    !! Auto     !! F030 VIDEL HSync !! 0,1,0 !!    v
+INT1   !! 1     !! High   !! Software !! F030 Bus Slot    !! 0,0,1 !! Lowest
+!hline
+!end_table
+ 
+INT1 & INT3 are High active !
+
+INT6 is also named MFPINT on atari documents because it is daisy chained 
+with the MFP. 
+
+To allow the PPC to read the level of the falcon re-routed interrupts, the 
+CT60 furnishes a register called IVR (Interrupt Vector Register). The IVR 
+column gives you the binary values encoded by the SDR60 chip...
+
+Note that the INT6, MFPINT and DSPREQ Interrupts are chained on the level 
+6 line... (its a stock Falcon feature !). 
+
+It is planned that the PPC board will contain a mechanism register to 
+generate a 68K like INT ACK cycle and  receive the software Vector from 
+the Falcon data bus. On CT60, the IVR contains only the level of the 
+pending INT...
+
+(!U)
+CPU#2 INTERRUPT
+(!u)
+
+!begin_table [|l|c|l|l||l|] !hline
+NAME !! LEVEL !! ACTIVE !! TYPE !! SOURCE
+!hline
+INT  !! None  !! Low     !! Auto !! F030 IPLx and CT60 I6
+!hline
+!end_table
+
+This interrupt is compatible with the PowerPC INT...
+
+
+!subnode 060 BUS SLOT
+
+A 060 bus Slot is present on the CT60 for some future daughter cards like 
+the PCI adaptor or a PPC developers system. 
+
+A minimal and usefull connector was choosen. It has only 100 pins (2 
+connectors of 2x25 pins) and furnishes the following signals and power 
+lines.  
+
+(!B)
+Signals Groups
+(!b)
+
+(!U)
+ADDRESS & DATA
+(!u)
+!begin_verbatim
+A31-A0    Address Bus
+D31-D0    Data Bus
+!end_verbatim
+
+(!U)
+TRANFER CONTROL
+(!u)
+!begin_verbatim
+/TS                      Transfer Start
+R/W                      Read Write
+/BS0, BS1/, /BS2, /BS3   Byte Select
+SIZ1, SIZ0               SIZe
+TT1, TT0, TM2, TM1, TM0  Transfer Type & Transfer Modifier
+/TA                      Transfer Acknowledge
+!end_verbatim
+
+(!U)
+ARBITRATION
+(!u)
+!begin_verbatim
+/BR     Bus Request
+/BG     Bus Grant
+/BB     Bus Busy
+!end_verbatim
+
+(!U)
+INTERRUPTS
+(!u)
+!begin_verbatim
+/TEA    Transfer Error Acknowledge
+/RST    ReSeT
+/I6     Interrupt 6 : Sent by the daughter card to the CT60
+/INT    INTerrupt : Sent by CT60 to the daughter card for a PPC
+!end_verbatim
+
+(!U)
+CLOCK
+(!u)
+!begin_verbatim
+CLK     CLocK (CT60 clock : 66MHz or more)
+!end_verbatim
+
+(!U)
+POWER
+(!u)
+!begin_verbatim
+-12V, +12V   Power supplies : used by some PCI cards and the fans (+12).
++3.3V, +5V   Power supplies : used by components and processors.
+             Each pin can drive up to 6 Amperes.
+GND (9)      GrouND pins.
+!end_verbatim
+
+(!U)
+MISCELANEOUS
+(!u)
+!begin_verbatim
+/PPC    PowerPC is present.
+!end_verbatim
+   
+(!B)
+Pinout
+(!b)
+
+(!U)
+Add Connector Data Connector
+(!u)
+!begin_verbatim
+#A1  #A2      #D1  #D2
+GND  GND      GND  GND 
++5V  /BR      TM0  +12V
+/TS  /BG      TM1  -12V
+R/W  /BB      TM2  +3.3V
+SIZ0 SIZ1     TT0  TT1
+/TA  /TEA     /BS0 /BS1
+/PPC CLK      /BS2 /BS3
+/RST GND      /I6  /INT
+A30  A31      D0   D1
+..   ..       ..   ..
+A0   A1       D30  D31
+GND  GND      GND  GND
+#A49 #A50     #D49 #D50
+!end_verbatim 
+
+
+!subnode CHIPSETS pinouts
+
+!subsubnode SDR-60      
+
+!begin_verbatim
+  1 VCC                            73 VCC                           
+  2 rstf                           74 cs1                           
+  3 PGND                           75 cs0                           
+  4 ta                             76 cas                           
+  5 PGND                           77 we                            
+  6 PGND                           78 a31                           
+  7 PGND                           79 a30                           
+  8 VCC                            80 a29                           
+  9 PGND                           81 a28                           
+ 10 a10                            82 a27                           
+ 11 a11                            83 a26                           
+ 12 a12                            84 VCC                           
+ 13 a13                            85 a25                           
+ 14 a14                            86 a24                           
+ 15 a15                            87 a23                           
+ 16 a2                             88 a22                           
+ 17 a3                             89 GND                           
+ 18 GND                            90 GND                           
+ 19 a4                             91 a21                           
+ 20 a5                             92 a20                           
+ 21 a6                             93 a19                           
+ 22 a7                             94 a18                           
+ 23 a8                             95 a17                           
+ 24 a9                             96 a16                           
+ 25 dm3                            97 tbi                           
+ 26 dm1                            98 PGND                          
+ 27 dm2                            99 GND                           
+ 28 dm0                            100 Reserved                          
+ 29 GND                            101 f30fil                          
+ 30 clk500                         102 tci                           
+ 31 cs3                            103 rst60                          
+ 32 clk                            104 PGND                          
+ 33 PGND                           105 PGND                          
+ 34 PGND                           106 int                           
+ 35 cs2                            107 PGND                          
+ 36 GND                            108 GND                           
+ 37 VCC                            109 VCC                           
+ 38 PGND                           110 PGND                          
+ 39 ideled                         111 ipl2f                         
+ 40 d2                             112 ipl1                          
+ 41 d1                             113 i6                            
+ 42 VCC                            114 GND                           
+ 43 d0                             115 ipl2                          
+ 44 Reserved                       116 bs1                           
+ 45 PGND                           117 ts                            
+ 46 ma12                           118 tt1                           
+ 47 GND                            119 PGND                           
+ 48 ma11                           120 PGND                           
+ 49 ba1                            121 ipl0                          
+ 50 ba0                            122 TDO                           
+ 51 ma10                           123 GND                           
+ 52 ma9                            124 siz1                          
+ 53 ma8                            125 rsto                          
+ 54 ma7                            126 eeda                          
+ 55 VCC                            127 VCC                           
+ 56 ma6                            128 thcs                          
+ 57 ma5                            129 rw                            
+ 58 ma4                            130 siz0                          
+ 59 ma3                            131 Reserved                          
+ 60 ma2                            132 PGND                           
+ 61 ma1                            133 PGND                           
+ 62 GND                            134 eecl                          
+ 63 TDI                            135 bs0                           
+ 64 ma0                            136 bs2                           
+ 65 TMS                            137 bs3                           
+ 66 PGND                           138 thck                          
+ 67 TCK                            139 ipl0f                         
+ 68 PGND                           140 ipl1f                         
+ 69 PGND                           141 VCC                           
+ 70 PGND                           142 thdi                          
+ 71 ras                            143 rst                          
+ 72 GND                            144 GND
+!end_verbatim
+                               
+
+!subsubnode ABE-60                     
+   
+!begin_verbatim
+  1 VCC                            73 VCC                           
+  2 avec                           74 d28                           
+  3 a13                            75 d27                           
+  4 ct60                           76 d26                           
+  5 a14                            77 d25                           
+  6 a15                            78 d24                           
+  7 ta                             79 d23                           
+  8 VCC                            80 d22                           
+  9 bs0                            81 d21                           
+ 10 flhoe                          82 d20                           
+ 11 flhwe                          83 d19                           
+ 12 ppc                            84 VCC                           
+ 13 halt                           85 d18                           
+ 14 a2                             86 d17                           
+ 15 a3                             87 d16                           
+ 16 tt0                            88 d15                           
+ 17 tm0                            89 GND                           
+ 18 GND                            90 GND                           
+ 19 bg1                            91 d14                           
+ 20 tm1                            92 d13                           
+ 21 bg2                            93 d12                           
+ 22 ts                             94 d11                           
+ 23 bg0                            95 d10                           
+ 24 tt1                            96 d9                            
+ 25 f30fil                         97 d8                            
+ 26 Reserved                       98 d7                            
+ 27 tm2                            99 GND                           
+ 28 as                             100 d6                            
+ 29 GND                            101 d5                            
+ 30 clk500                         102 d4                            
+ 31 bs1                            103 d3                            
+ 32 clk                            104 d2                            
+ 33 bs2                            105 d1                            
+ 34 i6                             106 br2                           
+ 35 dtk                            107 d0                            
+ 36 GND                            108 GND                           
+ 37 VCC                            109 VCC                           
+ 38 clkf                           110 fd15                          
+ 39 a2f                            111 fd14                          
+ 40 fc2                            112 fd13                          
+ 41 slp                            113 fd12                          
+ 42 VCC                            114 GND                           
+ 43 bs3                            115 fd11                          
+ 44 a3f                            116 fd10                          
+ 45 bb                             117 fd9                           
+ 46 fc1                            118 fd8                           
+ 47 GND                            119 fd7                           
+ 48 a16                            120 fd6                           
+ 49 a17                            121 fd5                           
+ 50 a18                            122 TDO                           
+ 51 a19                            123 GND                           
+ 52 a20                            124 fd4                           
+ 53 a21                            125 fd3                           
+ 54 a22                            126 fd2                           
+ 55 VCC                            127 VCC                           
+ 56 a23                            128 fd1                           
+ 57 a24                            129 fd0                           
+ 58 a25                            130 bg30                          
+ 59 a26                            131 uds                           
+ 60 a27                            132 lds                           
+ 61 a28                            133 a1f                           
+ 62 GND                            134 berr                          
+ 63 TDI                            135 br0                           
+ 64 a29                            136 rw                            
+ 65 TMS                            137 fc0                           
+ 66 a30                            138 br1                           
+ 67 TCK                            139 abdir                         
+ 68 a31                            140 bgk                           
+ 69 d31                            141 VCC                           
+ 70 d30                            142 tea                           
+ 71 d29                            143 rst                           
+ 72 GND                            144 GND
+!end_verbatim
+
+
+!node Annexes
+
+!subnode Board
+
+!image ..\img\board.img
+
+
+!subnode Connectors
+
+Connector F030 X4 (power supply motherboard)
+
+!begin_table [|c|l|l|l|] !hline
+Pin Card !! Signal !! Comment       !! Color wire
+!hline
+   1     !! +5V    !! +5V (output)  !! Red
+   2     !! GND    !! Ground (0V)   !! Black
+   3     !! GND    !! Ground (0V)   !! Black
+   4     !! +12V   !! +12V (output) !! Blue (or yellow)
+!hline
+!end_table
+
+Connector ATX POWER X5
+
+!begin_table [|c|l|l|l|] !hline
+Pin Card !! Signal !! Comment                  !! Color wire
+!hline
+   1     !! +3.3V  !! +3.3V (input)            !! Orange
+   2     !! +3.3V  !! +3.3V (input)            !! Orange
+   3     !! GND    !! Ground (0V)              !! Black
+   4     !! +5V    !! +5V (input)              !! Red
+   5     !! GND    !! Ground (0V)              !! Black
+   6     !! +5V    !! +5V (input)              !! Red 
+   7     !! GND    !! Ground (0V)              !! Black
+   8     !! PWOK   !! Power OK (not used)      !! Grey
+   9     !! +5VSB  !! +5V Standby (input)      !! Violet
+   10    !! +12V   !! +12V (input)             !! Yellow
+   11    !! +3.3V  !! +3.3V (input)            !! Orange
+   12    !! -12V   !! -12V                     !! Blue
+   13    !! GND    !! Ground (0V)              !! Black
+   14    !! PSON   !! Power Supply ON (output) !! Green
+   15    !! GND    !! Ground (0V)              !! Black
+   16    !! GND    !! Ground (0V)              !! Black
+   17    !! GND    !! Ground (0V)              !! Black
+   18    !! -5V    !! -5V (input)              !! Red
+   19    !! +5V    !! +5V (input)              !! Red
+   20    !! +5V    !! +5V (input)              !! Red
+!hline
+!end_table
+
+Connector TOWER X6
+
+!begin_table [|c|l|l|] !hline
+Pin Card !! Signal   !! Comment
+!hline
+   1     !! PWR_SW+  !! Power Switch 
+   2     !! PWR_SW-  !! 
+   3     !! TRB_SW+  !! Turbo Switch
+   4     !! TRB_SW-  !! 
+   5     !! IDE_LED+ !! Led IDE
+   6     !! IDE_LED- !!
+   7     !! RST_SW+  !! Reset Switch
+   8     !! RST_SW-  !! 
+   9     !! PWR_LED+ !! Power led
+   10    !! NC
+   11    !! PWR_LED- !! 
+!hline
+!end_table
+
+Connector F030 BOOST X9
+
+!begin_table [|c|l|l|] !hline
+Pin Card !! Signal !! Comment
+!hline
+   1     !! MCLK   !! Master Clock (output) 
+   2     !! GND1   !! Ground (0V)
+   3     !! CLK32  !! Clock 32MHz (input)
+   4     !! GND2   !! Ground (0V)
+   5     !! AC_K   !! Clock 500Khz Keyboard (output)
+   6     !! AC_M   !! Clock 500Khz Midi (output)
+   7     !! GND3   !! Ground (0V)
+   8     !! DCLK   !! DSP Clock (output)
+   9     !! GND4   !! Ground (0V)
+   10    !! SCLK   !! SDMA Clock (output)
+!hline
+!end_table
+
+The even pins and the odd pins are inverted on the flat cable !
+
+
+!node Contacts
+
+!begin_verbatim
+Hardware :
+Rodolphe CZUBA
+rczuba@free.fr
+http://www.czuba-tech.com
+
+Flash ttp, system :
+Xavier JOUBERT
+xavier.joubert@free.fr
+
+Flash Tool, Configuration, and system :
+Didier MEQUIGNON
+didier-mequignon@wanadoo.fr
+!end_verbatim
+ 
+!end_document

@@ -1,0 +1,15 @@
+Who to use the MagiC Shutdown for switch off the CT60 :
+-------------------------------------------------------
+
+1> Install CT60XBIO.PRG in the AUTO folder.
+2> With an editor for binary files, you need to search this hex 
+sequence inside C:\GEMSYS\GEMDESK\SHUTDOWN.PRG :
+360053406604760260027603
+and replace by :
+52403600B07C0004660276FF
+After you need to insert a 3rd button in the alert box.
+The beginning is "[3][SHUTDOWN:| |", normally it's the last message.
+
+For example :
+[3][SHUTDOWN:| |Shutdown r‚ussi.|Eteignez l'ordinateur!][Red‚marrer|Reset … froid]
+[3][SHUTDOWN:| |Shutdown r‚ussi.|Eteignez l'ordinateur!][Red‚marre|Reset|Eteindre]
