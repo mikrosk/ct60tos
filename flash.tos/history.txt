@@ -96,4 +96,8 @@ watercooling) :
 ----------------
 - SDRAM module data width 64 & 72 bits supported but there a message
 about data width error if there are a failure during the short memory 
-test of the SDRAM 72 bits (file sdram.S).
+test of the SDRAM 72 bits.
+
+2003-11-08 0.99f
+----------------
+- More infos displaed about the SDRAM module.

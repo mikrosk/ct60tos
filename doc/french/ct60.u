@@ -4,12 +4,12 @@
 !title   Documentation de la
 !programimage ..\img\ct60.img
 !program CT60
-!version Version 0.99d
+!version Version 0.99f
 !date    (!today)
 !author  Didier MEQUIGNON
 !street  25, rue de l'Ascenseur
 !town    62510 ARQUES FRANCE
-!email   didier-mequignon@wanadoo.fr
+!email   didier.mequignon@wanadoo.fr
 !use_auto_subtocs    [info,html,stg,tvh,win]
 !use_auto_subsubtocs [info,html,stg,tvh,win]
 !no_effects          [asc]
@@ -51,13 +51,13 @@ Ne mettez pas votre Falcon … la retraite !
 
 !item  SUR SUPPORT : 
 68060 FULL(AVEC COPRO & PMMU) ou LC (SANS COPRO) ou EC(SANS COPRO & PMMU) 
-… 66 MHz de base.  
+… 66 MHz (masque 1F43G) ou 100 MHz (masque 1E41J).  
 
-!item Bus CT60 … 66 MHz de base (accŠs SDRAM, BUS 060).
+!item Bus CT60 … 66 MHz ou 100 MHz (accŠs SDRAM, BUS 060).
 
 !item SDRAM … 66 MHz (de base) avec acces BURST en LECTURE & ECRITURE.
 
-!item 1 support SDRAM PC-100/133 pour 64 Mo … 512 Mo.
+!item 1 support SDRAM PC100/133 pour 64 Mo … 512 Mo.
 
 !item FLASH 1Mo avec BOOT, SET UP, 060 INIT et patchs du TOS.
 
@@ -92,9 +92,9 @@ ses pr‚d‚cesseurs :
 !begin_table [|l|l|l|] !hline
 CPU                                        !! MIPS  !! FACTEUR
 !hline
+68060 @ 100 MHz (CT60-100)                 !! 147   !! 25,5
 68060 @ 75 MHz (De Motorola 2001)          !! 110   !! 19,1
-68060 @ 72 MHz (CT60/60)                   !! 105,6 !! 18,3
-68060 @ 66 MHz (CT60/50)                   !! 96,8  !! 16,8
+68060 @ 66 MHz (CT60)                      !! 96,8  !! 16,8
 68060 @ 59 MHz (HADES60)                   !! 86,5  !! 15,0
 68040 @ 40 MHz (AB40 … 40 / Motorola 2001) !! 44    !! 7,6
 68040 @ 32 MHz (HADES40 & AB40 … 32)       !! 35,2  !! 6,1
@@ -117,25 +117,24 @@ La CT60 est le seul produit TOS … utiliser de la SDRAM ! Les performances
 s'en ressentent fortement : 
 
 !begin_table [|l|l|l|l|l|l|] !hline
-PRODUIT        !! BUS      !! RAM   !! LECTURE	 !! ECRITURE  !! FACTEUR
+PRODUIT        !! BUS      !! RAM   !! LECTURE	  !! ECRITURE   !! FACTEUR
 !hline
-CT60           !! 66 MHz   !! SDRAM !! 73,8 Mo/s !! 72,6 Mo/s !! 16,2 - 13,2
-HADES60 FPM    !! 29,5 MHz !! FPM   !! 43,0 Mo/s !! 33,5 Mo/s !! 9,5 - 6,1
-HADES40 FPM    !! 32 MHz   !! FPM   !! 46,5 Mo/s !! 36,2 Mo/s !! 10,2 - 6,6
-MILAN40        !! 25 MHz   !! EDO   !! 35,7 Mo/s !! 21,5 Mo/s !! 7,8 - 3,9
-CT2b           !! 50 MHz   !! EDO   !! 32,4 Mo/s !! 38,7 Mo/s !! 7,1 - 7,0
-AB40           !! 32 MHz   !! FPM   !! 34,6 Mo/s !! 17,0 Mo/s !! 7,6 - 3,1
-MEDUSA T40     !! 16 MHz   !! FPM   !! 20,0 Mo/s !! 21,9 Mo/s !! 4,4 - 4,0
-TT030 TT-RAM   !! 16 MHz   !! FPM   !! 12,6 Mo/s !! 15,6 Mo/s !! 2,8 - 2,8
-TT030 ST-RAM   !! 16 MHz   !! FPM   !! 7,9 Mo/s  !! 7,9 Mo/s  !! 1,7 - 1,4
-FALCON+MAGNUM  !! 16 MHz   !! FPM   !! 5,7 Mo/s  !! 6,9 Mo/s  !! 1,25 - 1,25
-FALCON(VGA16c) !! 16 MHz   !! FPM   !! 4,55 Mo/s !! 5,5 Mo/s  !! 1,00 - 1,00
+CT60-100       !! 100 MHz  !! SDRAM !! 104,4 Mo/s !! 102,8 Mo/s !! 22,9 - 18,7
+CT60           !! 66 MHz   !! SDRAM !!  73,8 Mo/s !!  72,6 Mo/s !! 16,2 - 13,2
+HADES60 FPM    !! 29,5 MHz !! FPM   !!  43,0 Mo/s !!  33,5 Mo/s !! 9,5 - 6,1
+HADES40 FPM    !! 32 MHz   !! FPM   !!  46,5 Mo/s !!  36,2 Mo/s !! 10,2 - 6,6
+MILAN40        !! 25 MHz   !! EDO   !!  35,7 Mo/s !!  21,5 Mo/s !! 7,8 - 3,9
+CT2b           !! 50 MHz   !! EDO   !!  32,4 Mo/s !!  38,7 Mo/s !! 7,1 - 7,0
+AB40           !! 32 MHz   !! FPM   !!  34,6 Mo/s !!  17,0 Mo/s !! 7,6 - 3,1
+MEDUSA T40     !! 16 MHz   !! FPM   !!  20,0 Mo/s !!  21,9 Mo/s !! 4,4 - 4,0
+TT030 TT-RAM   !! 16 MHz   !! FPM   !!  12,6 Mo/s !!  15,6 Mo/s !! 2,8 - 2,8
+TT030 ST-RAM   !! 16 MHz   !! FPM   !!  7,9 Mo/s  !!  7,9 Mo/s  !! 1,7 - 1,4
+FALCON+MAGNUM  !! 16 MHz   !! FPM   !!  5,7 Mo/s  !!  6,9 Mo/s  !! 1,25 - 1,25
+FALCON(VGA16c) !! 16 MHz   !! FPM   !!  4,55 Mo/s !!  5,5 Mo/s  !! 1,00 - 1,00
 !hline
 !end_table
 
 TESTS REALISES AVEC NEMBENCH 2.1
-
-Les valeurs FALCON VGA 2c sont l‚g‚rement sup‚rieures : 5,3 et 6,4 Mo/s.
 
 
 !subnode Overclocking de la carte m‚re du FALCON !
@@ -289,7 +288,7 @@ LES DIMMs SDRAM POUR CT60 :
 
 !begin_itemize
 
-!item Doit ˆtre PC-100 ou PC-133.
+!item Doit ˆtre PC100 ou PC133 CL2.
 
 !item Doit ˆtre UNBUFFURED.
 
@@ -417,7 +416,7 @@ aussi pour l'instant le 68060 LC est g‚r‚ comme un EC.
 Le TOS vient chercher les informations dans la EEPROM de la SDRAM afin de 
 configurer le controleur m‚moire (SDR60). En cas d'erreur (voir le 
 chapitre SDRAM pour les types reconnus) il suffit d'appuyer sur une touche 
-pour lister les informations sur la SDRAM.
+pour lister les 'Informations sur la SDRAM'.
 
 
 !subnode Test SDRAM
@@ -442,7 +441,7 @@ puis celui de la TT-RAM (la SDRAM ici), si a la place des '-' vous voyez
 des 'X', la SDRAM est d‚fectueuse.
 !end_itemize
 
-Pour connaitre les informations sur la SDRAM :
+Pour connaitre les 'Informations sur la SDRAM' :
 
 Pendant que logo Atari du boot apparait, appuyez sur la touche SHIFT 
 droit.
@@ -560,6 +559,7 @@ Ce CPX permet de :
 !item Mesurer la temp‚rature du 68060 (pour l'overclocking). => Avec le 
 driver CT60XBIO.PRG ou le TOS en flash.
 !item Eteindre l'ordinateur.
+!item Voir les 'Informations sur la SDRAM'.
 !end_itemize
 
 !image cpx2.img
@@ -575,7 +575,7 @@ Il y a 5 boutons communs sur ce CPX :
 !item OK : Bouton pour valider les changements dans la m‚moire non 
 volatile. 
 !item Annule: Bouton pour ne rien changer … la configuration.
-!item i : Bouton pour afficher des informations.
+!item i : Bouton pour afficher des informations (auteurs et SDRAM).
 !end_itemize
 
 Pour surveiller la temp‚rature et remonter les courbes, le CPX :
@@ -744,7 +744,7 @@ Sur cette page vous pouvez :
 
 !end_verbatim
 
-Sur cete page vous pouvez :
+Sur cette page vous pouvez :
 
 !begin_itemize
 !item S‚lectionner au d‚marrage le type de moniteur.
@@ -756,6 +756,40 @@ Sur cete page vous pouvez :
 !item S‚lectionner au d‚marrage le mode overscan sur TV.
 !end_itemize
 
+
+!subnode Informations sur la SDRAM
+
+Sur cette page vous pouvez voir :
+                                       
+!begin_itemize
+
+!item Le type de m‚moire (SDRAM).
+!item Le nombre de lignes d'adresses.
+!item Le nombre de colonnes d'adresses.
+!item Le nombre de banques DIMM (1 ou 2).
+!item La largeur de donn‚es du module (64).
+!item Le niveau de tension de l'interface (LVTTL).
+!item Le temps de cycle SDRAM (par exemple 10 nS pour une PC100).
+!item Le temps d'accŠs de l'horloge SDRAM.
+!item Le type SDRAM (sans parit‚).
+!item La fr‚quence rafraichissement (15.625 uS ou 7.8 uS).
+!item Le nombre de banques.
+!item Le temps de latence pour CAS (2).
+!item Le temps de latence pour CS (0).
+!item Le temps de latence pour WE (0).
+!item Les attributs du module (sans buffers).
+!item Le temps de pr‚chage minimum des lignes.
+!item Le d‚lais minimum entre activations de lignes.
+!item Le d‚lais minimum entre RAS et CAS.
+!item La largeur minimale de l'impulsion RAS.
+!item La densit‚ d'une banque du module (en Mo).
+!item L'ID du fabriquant du module (en hexa/ASCII).
+!item La r‚f‚rence du module (en ASCII).
+!item La date de fabrication du module (semaine/ann‚e).
+!end_itemize
+
+Ces valeurs sont stock‚s dans une petite EEPROM sur le module.
+ 
 
 !subnode BubbleGEM
 
@@ -1616,7 +1650,7 @@ obsolet or uneeded are not accepted.
 GOOD SDRAM DIMMs for CT60
 
 !begin_itemize
-!item PC-100 & PC-133.
+!item PC100 & PC133 CL2.
 !item Must be UNBUFFURED type.
 !item Must be 64-bits (no parity or ECC = 72 / 80 bits).
 !end_itemize
@@ -2125,7 +2159,7 @@ xavier.joubert@free.fr
 
 Flash Tool, Configuration, et systŠme :
 Didier MEQUIGNON
-didier-mequignon@wanadoo.fr
+didier.mequignon@wanadoo.fr
 !end_verbatim
  
 !end_document

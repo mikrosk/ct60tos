@@ -30,5 +30,5 @@ Pin 17 TDI              --> Pin 5
 Pin 18 TMS              --> Pin 6
 
 Pour plus d'informations:
-didier-mequignon@wanadoo.fr
+didier.mequignon@wanadoo.fr
 

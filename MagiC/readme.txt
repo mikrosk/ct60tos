@@ -11,4 +11,4 @@ You also need to install CT60XBIO.PRG and DSPXBIOS.PRG in the AUTO
 folder. 
 
 For more information:
-didier-mequignon@wanadoo.fr
+didier.mequignon@wanadoo.fr

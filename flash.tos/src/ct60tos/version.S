@@ -1,5 +1,5 @@
 /* TOS 4.04 boot version for for the CT60 board
-*  Didier Mequignon 2003 May, e-mail: didier-mequignon@wanadoo.fr
+*  Didier Mequignon 2003 May, e-mail: didier.mequignon@wanadoo.fr
 *
 *  This library is free software; you can redistribute it and/or
 *  modify it under the terms of the GNU Lesser General Public

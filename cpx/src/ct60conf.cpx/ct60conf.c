@@ -1,5 +1,5 @@
 /* CT60 CONFiguration - Pure C */
-/* Didier MEQUIGNON - v0.99d - August 2003 */
+/* Didier MEQUIGNON - v0.99f - November 2003 */
 
 #include <portab.h>
 #include <tos.h>
@@ -171,6 +171,8 @@ int CDECL cpx_hook(int event,WORD *msg,MRETS *mrets,int *key,int *nclicks);
 void CDECL cpx_close(int flag);
 int init_rsc(void);
 OBJECT* adr_tree(int num_tree);
+void infos_sdram(void);
+void add_latency(char *buffer_ascii,unsigned char val);
 int cdecl trace_temp(PARMBLK *parmblock);
 int cdecl cpu_load(PARMBLK *parmblock);
 CPXNODE* get_header(long id);
@@ -210,6 +212,7 @@ extern long ct60_read_temp(void);
 extern long ct60_stop(void);
 extern long mes_delay(void);
 extern long ct60_rw_param(int mode,long type_param,long value);
+extern int ct60_read_info_sdram(unsigned char *buffer);
 
 /* global variables in the 1st position of DATA segment */
 
@@ -299,7 +302,8 @@ unsigned short tab_temp[61],tab_temp_eiffel[61],tab_cpuload[61];
 #define INFOBOX 0
 #define INFOLOGO 1
 #define INFOOK 13
-#define INFOHELP 14
+#define INFOSDRAM 14
+#define INFOHELP 15
 
 #define ALERTBOX 0
 #define ALERTTITLE 1
@@ -311,9 +315,29 @@ unsigned short tab_temp[61],tab_temp_eiffel[61],tab_cpuload[61];
 #define ALERTLINE3 7
 #define ALERTLINE4 8
 #define ALERTLINE5 9
-#define ALERTB1 10
-#define ALERTB2 11
-#define ALERTB3 12
+#define ALERTLINE6 10
+#define ALERTLINE7 11
+#define ALERTLINE8 12
+#define ALERTLINE9 13
+#define ALERTLINE10 14
+#define ALERTLINE11 15
+#define ALERTLINE12 16
+#define ALERTLINE13 17
+#define ALERTLINE14 18
+#define ALERTLINE15 19
+#define ALERTLINE16 20
+#define ALERTLINE17 21
+#define ALERTLINE18 22
+#define ALERTLINE19 23
+#define ALERTLINE20 24
+#define ALERTLINE21 25
+#define ALERTLINE22 26
+#define ALERTLINE23 27
+#define ALERTLINE24 28
+#define ALERTLINE25 29
+#define ALERTB1 30
+#define ALERTB2 31
+#define ALERTB3 32
 
 #define OFFSETTLV 1
 #define OFFSETOK 2
@@ -387,10 +411,10 @@ char *rs_strings[] = {
 	"OK",
 	"Annule",
 	
-	"CT60 Configuration V0.99d Aout 2003","","",
+	"CT60 Configuration V0.99f Novembre 2003","","",
 	"Ce CPX et systŠme:","","",
 	"Didier MEQUIGNON","","",
-	"didier-mequignon@wanadoo.fr","","",
+	"didier.mequignon@wanadoo.fr","","",
 	"SystŠme:","","",
 	"Xavier JOUBERT","","",
 	"xavier.joubert@free.fr","","",
@@ -399,6 +423,7 @@ char *rs_strings[] = {
 	"rczuba@free.fr","","",
 	"http://www.czuba-tech.com","","",
 	"OK",
+	"SDRAM",
 	"Aide",
 	
 	"CT60 Temp‚rature","","",
@@ -407,6 +432,26 @@ char *rs_strings[] = {
 	"line3",
 	"line4",
 	"line5",
+	"line6",
+	"line7",
+	"line8",
+	"line9",	
+	"line10",
+	"line11",
+	"line12",
+	"line13",
+	"line14",
+	"line15",
+	"line16",
+	"line17",
+	"line18",
+	"line19",
+	"line20",
+	"line21",
+	"line22",
+	"line23",
+	"line24",
+	"line25",
 	"button1",
 	"button2",
 	"button3",
@@ -483,10 +528,10 @@ char *rs_strings_en[] = {
 	"OK",
 	"Cancel",
 
-	"CT60 Configuration V0.99d August 2003","","",
+	"CT60 Configuration V0.99f November 2003","","",
 	"This CPX and system:","","",
 	"Didier MEQUIGNON","","",
-	"didier-mequignon@wanadoo.fr","","",
+	"didier.mequignon@wanadoo.fr","","",
 	"System:","","",
 	"Xavier JOUBERT","","",
 	"xavier.joubert@free.fr","","",
@@ -495,6 +540,7 @@ char *rs_strings_en[] = {
 	"rczuba@free.fr","","",
 	"http://www.czuba-tech.com","","",
 	"OK",
+	"SDRAM",
 	"Help",
 	
 	"CT60 Temperature","","",
@@ -503,9 +549,29 @@ char *rs_strings_en[] = {
 	"line3",
 	"line4",
 	"line5",
+	"line6",
+	"line7",
+	"line8",
+	"line9",	
+	"line10",
+	"line11",
+	"line12",
+	"line13",
+	"line14",
+	"line15",
+	"line16",
+	"line17",
+	"line18",
+	"line19",
+	"line20",
+	"line21",
+	"line22",
+	"line23",
+	"line24",
+	"line25",
 	"button1",
 	"button2",
-	"button3"
+	"button3",
 	
 	"-00","Offset TLV 2.8øC/unit: ___ unit","X99",
 	"OK",
@@ -572,9 +638,9 @@ TEDINFO rs_tedinfo[] = {
 	(char *)164L,(char *)165L,(char *)166L,IBM,0,2,0x1180,0,0,38,1,
 	(char *)167L,(char *)168L,(char *)169L,IBM,0,2,0x1180,0,0,38,1,
 
-	(char *)172L,(char *)173L,(char *)174L,IBM,0,2,0x1480,0,-1,17,1,
+	(char *)173L,(char *)174L,(char *)175L,IBM,0,2,0x1480,0,-1,17,1,
 	
-	(char *)183L,(char *)184L,(char *)185L,IBM,0,0,0x1180,0,0,4,32 };
+	(char *)204L,(char *)205L,(char *)206L,IBM,0,0,0x1180,0,0,4,32 };
 	
 OBJECT rs_object[] = {
 	-1,1,78,G_BOX,FL3DBAK,NORMAL,0x1100L,0,0,32,11,
@@ -659,7 +725,7 @@ OBJECT rs_object[] = {
 	0,-1,-1,G_BOXCHAR,SELECTABLE|EXIT|LASTOB|FL3DIND|FL3DBAK,NORMAL,0x69ff1100L,29,9,2,1,	/* i */
 
 	/* info box */
-	-1,1,14,G_BOX,FL3DBAK,OUTLINED,0x21100L,0,0,40,24,
+	-1,1,15,G_BOX,FL3DBAK,OUTLINED,0x21100L,0,0,40,24,
 	2,-1,-1,G_IMAGE,NONE,NORMAL,0L,2,1,36,5,
 	3,-1,-1,G_TEXT,FL3DBAK,NORMAL,36L,1,7,38,1,
 	4,-1,-1,G_TEXT,FL3DBAK,NORMAL,37L,1,9,38,1,
@@ -672,31 +738,52 @@ OBJECT rs_object[] = {
 	11,-1,-1,G_TEXT,FL3DBAK,NORMAL,44L,1,18,38,1,
 	12,-1,-1,G_TEXT,FL3DBAK,NORMAL,45L,1,19,38,1,
 	13,-1,-1,G_TEXT,FL3DBAK,NORMAL,46L,1,20,38,1,
-	14,-1,-1,G_BUTTON,SELECTABLE|DEFAULT|EXIT|FL3DIND|FL3DBAK,NORMAL,170L,8,22,8,1,	/* OK */		
-	0,-1,-1,G_BUTTON,SELECTABLE|EXIT|LASTOB|FL3DIND|FL3DBAK,NORMAL,171L,24,22,8,1,	/* Help */	
+	14,-1,-1,G_BUTTON,SELECTABLE|DEFAULT|EXIT|FL3DIND|FL3DBAK,NORMAL,170L,4,22,8,1,	/* OK */		
+	15,-1,-1,G_BUTTON,SELECTABLE|EXIT|FL3DIND|FL3DBAK,NORMAL,171L,16,22,8,1,		/* SDRAM */
+	0,-1,-1,G_BUTTON,SELECTABLE|EXIT|LASTOB|FL3DIND|FL3DBAK,NORMAL,172L,28,22,8,1,	/* Help */	
 
 	/* alert box */
-	-1,1,12,G_BOX,FL3DBAK,OUTLINED,0x21100L,0,0,42,10,
+	-1,1,32,G_BOX,FL3DBAK,OUTLINED,0x21100L,0,0,42,30,
 	2,-1,-1,G_BOXTEXT,FL3DIND,NORMAL,47L,0,0,42,1,
 	3,-1,-1,G_IMAGE,NONE,NORMAL,1L,1,2,4,2,
 	4,-1,-1,G_IMAGE,NONE,NORMAL,2L,1,2,4,2,
 	5,-1,-1,G_IMAGE,NONE,NORMAL,3L,1,2,4,2,
-	6,-1,-1,G_STRING,NONE,NORMAL,175L,1,2,40,1,
-	7,-1,-1,G_STRING,NONE,NORMAL,176L,1,3,40,1,
-	8,-1,-1,G_STRING,NONE,NORMAL,177L,1,4,40,1,
-	9,-1,-1,G_STRING,NONE,NORMAL,178L,1,5,40,1,
-	10,-1,-1,G_STRING,NONE,NORMAL,179L,1,6,40,1,
-	11,-1,-1,G_BUTTON,SELECTABLE|DEFAULT|EXIT|FL3DIND|FL3DBAK,NORMAL,180L,1,8,10,1,
-	12,-1,-1,G_BUTTON,SELECTABLE|EXIT|FL3DIND|FL3DBAK,NORMAL,181L,12,8,10,1,
-	0,-1,-1,G_BUTTON,SELECTABLE|EXIT|LASTOB|FL3DIND|FL3DBAK,NORMAL,182L,23,8,10,1,
+	6,-1,-1,G_STRING,NONE,NORMAL,176L,1,2,40,1,
+	7,-1,-1,G_STRING,NONE,NORMAL,177L,1,3,40,1,
+	8,-1,-1,G_STRING,NONE,NORMAL,178L,1,4,40,1,
+	9,-1,-1,G_STRING,NONE,NORMAL,179L,1,5,40,1,
+	10,-1,-1,G_STRING,NONE,NORMAL,180L,1,6,40,1,
+	11,-1,-1,G_STRING,NONE,NORMAL,181L,1,7,40,1,
+	12,-1,-1,G_STRING,NONE,NORMAL,182L,1,8,40,1,
+	13,-1,-1,G_STRING,NONE,NORMAL,183L,1,9,40,1,
+	14,-1,-1,G_STRING,NONE,NORMAL,184L,1,10,40,1,
+	15,-1,-1,G_STRING,NONE,NORMAL,185L,1,11,40,1,
+	16,-1,-1,G_STRING,NONE,NORMAL,186L,1,12,40,1,
+	17,-1,-1,G_STRING,NONE,NORMAL,187L,1,13,40,1,
+	18,-1,-1,G_STRING,NONE,NORMAL,188L,1,14,40,1,
+	19,-1,-1,G_STRING,NONE,NORMAL,189L,1,15,40,1,
+	20,-1,-1,G_STRING,NONE,NORMAL,190L,1,16,40,1,
+	21,-1,-1,G_STRING,NONE,NORMAL,191L,1,17,40,1,
+	22,-1,-1,G_STRING,NONE,NORMAL,192L,1,18,40,1,
+	23,-1,-1,G_STRING,NONE,NORMAL,193L,1,19,40,1,
+	24,-1,-1,G_STRING,NONE,NORMAL,194L,1,20,40,1,
+	25,-1,-1,G_STRING,NONE,NORMAL,195L,1,21,40,1,
+	26,-1,-1,G_STRING,NONE,NORMAL,196L,1,22,40,1,
+	27,-1,-1,G_STRING,NONE,NORMAL,197L,1,23,40,1,
+	28,-1,-1,G_STRING,NONE,NORMAL,198L,1,24,40,1,
+	29,-1,-1,G_STRING,NONE,NORMAL,199L,1,25,40,1,
+	30,-1,-1,G_STRING,NONE,NORMAL,200L,1,26,40,1,
+	31,-1,-1,G_BUTTON,SELECTABLE|DEFAULT|EXIT|FL3DIND|FL3DBAK,NORMAL,201L,1,28,10,1,
+	32,-1,-1,G_BUTTON,SELECTABLE|EXIT|FL3DIND|FL3DBAK,NORMAL,202L,12,28,10,1,
+	0,-1,-1,G_BUTTON,SELECTABLE|EXIT|LASTOB|FL3DIND|FL3DBAK,NORMAL,203L,23,28,10,1,
 
 	/* TLV offset */
 	-1,1,3,G_BOX,FL3DBAK,OUTLINED,0x21100L,0,0,33,5,
 	2,-1,-1,G_FTEXT,EDITABLE|FL3DBAK,NORMAL,48L,1,1,31,1,
-	3,-1,-1,G_BUTTON,SELECTABLE|EXIT|FL3DIND|FL3DBAK,NORMAL,186L,7,3,6,1,					/* OK */
-	0,-1,-1,G_BUTTON,SELECTABLE|DEFAULT|EXIT|LASTOB|FL3DIND|FL3DBAK,NORMAL,187L,20,3,6,1 };	/* Cancel */
+	3,-1,-1,G_BUTTON,SELECTABLE|EXIT|FL3DIND|FL3DBAK,NORMAL,207L,7,3,6,1,					/* OK */
+	0,-1,-1,G_BUTTON,SELECTABLE|DEFAULT|EXIT|LASTOB|FL3DIND|FL3DBAK,NORMAL,208L,20,3,6,1 };	/* Cancel */
 
-long rs_trindex[] = {0L,79L,94L,107L};
+long rs_trindex[] = {0L,79L,95L,128L};
 struct foobar {
 	int dummy;
 	int *image;
@@ -815,14 +902,14 @@ UWORD pic_stop[]={
 	0x37FF,0xFFEC,0x1BFF,0xFFD8,0x0DFF,0xFFB0,0x06FF,0xFF60,
 	0x037F,0xFEC0,0x01BF,0xFD80,0x00C0,0x0300,0x007F,0xFE00 };
 
-#define NUM_STRINGS 188	/* number of strings */
+#define NUM_STRINGS 209	/* number of strings */
 #define NUM_FRSTR 0		/* strings form_alert */
 #define NUM_IMAGES 0
 #define NUM_BB 4		/* number of BITBLK */
 #define NUM_FRIMG 0
 #define NUM_IB 0		/* number of ICONBLK */
 #define NUM_TI 49		/* number of TEDINFO */
-#define NUM_OBS 111		/* number of objects */
+#define NUM_OBS 132		/* number of objects */
 #define NUM_TREE 4		/* number of trees */ 
 
 #define TREE1 0
@@ -2346,8 +2433,25 @@ void CDECL cpx_button(MRETS *mrets,int nclicks,int *event)
 				change_objc(MENUBINFO,NORMAL,Work);
 				if((info_tree=adr_tree(TREE2))!=0)
 				{
-					if(hndl_form(info_tree,0)==INFOHELP)
+					if(test_060())
+					{
+						info_tree[INFOSDRAM].ob_flags |= (SELECTABLE|EXIT);
+						info_tree[INFOSDRAM].ob_state &= ~DISABLED;
+					}
+					else
+					{
+						info_tree[INFOSDRAM].ob_flags &= ~(SELECTABLE|EXIT);
+						info_tree[INFOSDRAM].ob_state |= DISABLED;
+					}
+					switch(hndl_form(info_tree,0))
+					{
+					case INFOSDRAM :
+						infos_sdram();
+						break;
+					case INFOHELP:
 						call_st_guide();
+						break;
+					}
 				}
 				break;
 			}
@@ -2380,7 +2484,6 @@ int init_rsc(void)
 		if((nvram.language==FRA) || (nvram.language==SWF))
 		{
 			start_lang=0;
-
 			rs_str=rs_strings;
 		}
 		else
@@ -2491,6 +2594,259 @@ OBJECT* adr_tree(int num_tree)
 	return(0L);
 }
 
+void infos_sdram(void)
+
+{
+	static char mess_alert[26*61];
+	static unsigned char buffer[128];
+	static char buf[256];
+	char *save_title_alert;
+	OBJECT *alert_tree;
+	TEDINFO *t_edinfo;
+	int i;
+	long stack;
+	if(!test_060())
+		return;
+	stack=Super(0L);
+	i=ct60_read_info_sdram(buffer);
+	Super((void *)stack);
+	if(i<0)
+	{
+ 		if(!start_lang)
+			form_alert(1,"[1][Il n'est pas possible de lire|les informations de la SDRAM][OK]");
+		else
+			form_alert(1,"[1][Cannot read the|informations about the SDRAM][OK]");
+		return;	
+	}
+	if(start_lang)
+		strcpy(mess_alert,"[0][Memory Type : ");
+	else
+		strcpy(mess_alert,"[0][Type de m‚moire : ");
+	sprintf(buf,"%d",buffer[2]);
+	strcat(mess_alert,buf);
+	if(buffer[2]==4)
+		strcat(mess_alert," SDRAM");
+	if(start_lang)
+		strcat(mess_alert,"|Number of Row Addresses : ");
+	else
+		strcat(mess_alert,"|Nombre de lignes d'adresses : ");
+	sprintf(buf,"%d",buffer[3]);
+	strcat(mess_alert,buf);
+	if(start_lang)
+		strcat(mess_alert,"|Number of Column Addresses : ");
+	else
+		strcat(mess_alert,"|Nombre de colonnes d'adresses : ");
+	sprintf(buf,"%d",buffer[4]);
+	strcat(mess_alert,buf);
+	if(start_lang)
+		strcat(mess_alert,"|Number of DIMM Banks : ");
+	else
+		strcat(mess_alert,"|Nombre de banques DIMM : ");
+	sprintf(buf,"%d",buffer[5]);
+	strcat(mess_alert,buf);
+	if(start_lang)
+		strcat(mess_alert,"|Module Data Width : ");
+	else
+		strcat(mess_alert,"|Largeur donn‚es module : ");
+	sprintf(buf,"%d bits",(unsigned int)buffer[6]+(((unsigned int)buffer[7])<<8));
+	strcat(mess_alert,buf);
+	if(start_lang)
+		strcat(mess_alert,"|Voltage Interface Level : ");
+	else
+		strcat(mess_alert,"|Niveau de tension interface : ");
+	sprintf(buf,"%d",buffer[8]);
+	strcat(mess_alert,buf);
+	if(buffer[8]==1)
+		strcat(mess_alert," LVTTL");
+	if(start_lang)
+		strcat(mess_alert,"|SDRAM Cycle Time : ");
+	else
+		strcat(mess_alert,"|SDRAM Temps cycle : ");
+	sprintf(buf,"%d.%d nS ",buffer[9]>>4,buffer[9]&0xf);
+	strcat(mess_alert,buf);
+	if(buffer[9]>=0xA0)
+		strcat(mess_alert,"PC100");
+	else
+		strcat(mess_alert,"PC133");
+	if(start_lang)
+		strcat(mess_alert,"|SDRAM Access from Clock : ");
+	else
+		strcat(mess_alert,"|SDRAM AccŠs de l'horloge : ");
+	sprintf(buf,"%d.%d nS",buffer[10]>>4,buffer[10]&0xf);
+	strcat(mess_alert,buf);
+	if(start_lang)
+		strcat(mess_alert,"|SDRAM Configuration Type : ");
+	else
+		strcat(mess_alert,"|SDRAM Type : ");
+	sprintf(buf,"%d ",buffer[11]);
+	strcat(mess_alert,buf);
+	switch(buffer[11])
+	{
+	case 0:
+		if(start_lang)
+			strcat(mess_alert,"no parity");
+		else
+			strcat(mess_alert,"pas de parit‚");
+		break;
+	case 1:
+		if(start_lang)
+			strcat(mess_alert,"parity");
+		else
+			strcat(mess_alert,"parit‚");
+		break;
+	case 2:
+		strcat(mess_alert,"ECC");
+		break;
+	}
+	if(start_lang)
+		strcat(mess_alert,"|Refresh Rate : ");
+	else
+		strcat(mess_alert,"|Fr‚quence rafraichissement : ");
+	switch(buffer[12]&0x7f)
+	{
+	case 0: strcat(mess_alert,"15.625 uS"); break;
+	case 1: strcat(mess_alert,"3.9 uS"); break;
+	case 2: strcat(mess_alert,"7.8 uS"); break;
+	case 3: strcat(mess_alert,"31.3 uS"); break;
+	case 4: strcat(mess_alert,"62.5 uS"); break;
+	case 5: strcat(mess_alert,"125 uS"); break;
+	}
+	if(buffer[12]&0x80)
+		strcat(mess_alert,", self refresh");
+	if(start_lang)
+		strcat(mess_alert,"|Number of Banks : ");
+	else
+		strcat(mess_alert,"|Nombre de banques : ");
+	sprintf(buf,"%d ",buffer[17]);
+	strcat(mess_alert,buf);
+	if(start_lang)
+		strcat(mess_alert,"|CAS Latency : ");
+	else
+		strcat(mess_alert,"|CAS Latence : ");
+	add_latency(mess_alert,buffer[18]<<1);
+	if(start_lang)
+		strcat(mess_alert,"|CS Latency : ");
+	else
+		strcat(mess_alert,"|CS Latence : ");
+	add_latency(mess_alert,buffer[19]);
+	if(start_lang)
+		strcat(mess_alert,"|WE Latency : ");
+	else
+		strcat(mess_alert,"|WE Latence : ");
+	add_latency(mess_alert,buffer[20]);
+	if(start_lang)
+		strcat(mess_alert,"|SDRAM Module Attributes : $");
+	else
+		strcat(mess_alert,"|Attributs du module : $");
+	sprintf(buf,"%02x ",buffer[21]);
+	strcat(mess_alert,buf);
+	if(buffer[21]==0)
+	{
+		if(start_lang)
+			strcat(mess_alert," unbuffered");
+		else
+			strcat(mess_alert," sans buffers");	
+	}
+	if(start_lang)
+		strcat(mess_alert,"|Minimum Row Precharge Time : ");
+	else
+		strcat(mess_alert,"|Temps de pr‚chage mini lignes : ");
+	sprintf(buf,"%d nS",buffer[27]);
+	strcat(mess_alert,buf);
+	if(start_lang)
+		strcat(mess_alert,"|Minimum Row Active to Active Delay : ");
+	else
+		strcat(mess_alert,"|D‚lais mini entre activations lignes : ");
+	sprintf(buf,"%d nS",buffer[28]);
+	strcat(mess_alert,buf);
+	if(start_lang)
+		strcat(mess_alert,"|Minimum RAS to CAS Delay : ");
+	else
+		strcat(mess_alert,"|D‚lais mini entre RAS et CAS : ");
+	sprintf(buf,"%d nS",buffer[29]);
+	strcat(mess_alert,buf);
+	if(start_lang)
+		strcat(mess_alert,"|Minimum RAS Pulse Width : ");
+	else
+		strcat(mess_alert,"|Largeur mini impulsion RAS : ");
+	sprintf(buf,"%d nS",buffer[30]);
+	strcat(mess_alert,buf);
+	if(start_lang)
+		strcat(mess_alert,"|Module Bank Density : ");
+	else
+		strcat(mess_alert,"|Densit‚ banque du module : ");
+	if(start_lang)
+		sprintf(buf,"%d MB",((unsigned int)buffer[31])<<2);
+	else
+		sprintf(buf,"%d Mo",((unsigned int)buffer[31])<<2);
+	strcat(mess_alert,buf);
+	if(start_lang)
+		strcat(mess_alert,"|Module Manufacturers ID : $");
+	else
+		strcat(mess_alert,"|ID fabriquant du module : $");
+	sprintf(buf,"%02x ",buffer[64]);
+	strcat(mess_alert,buf);
+	for(i=0;i<7;i++)
+	{
+		if(buffer[65+i]<' ' || buffer[65+i]>=127)
+			break;
+		buf[i]=buffer[65+i];
+	}
+	buf[i]=0;
+	strcat(mess_alert,buf);
+	if(start_lang)
+		strcat(mess_alert,"|Module Part Number : ");
+	else
+		strcat(mess_alert,"|R‚f‚rence du module : ");
+	for(i=0;i<18;i++)
+		buf[i]=buffer[73+i];
+	buf[i]=0;
+	strcat(mess_alert,buf);
+	if(start_lang)
+		strcat(mess_alert,"|Module Manufacturing Date : ");
+	else
+		strcat(mess_alert,"|Date de fabrication du module : ");
+	sprintf(buf,"%d/%d",buffer[93],((unsigned int)buffer[94]+1900));
+	strcat(mess_alert,buf);
+	strcat(mess_alert,"][OK]");
+	if((alert_tree=adr_tree(TREE3))==0)
+		return;
+	t_edinfo=alert_tree[ALERTTITLE].ob_spec.tedinfo;
+	if(start_lang)
+		strcpy(buf,"SDRAM EEPROM DATA");
+	else
+		strcpy(buf,"SDRAM DONNEES EEPROM");
+	save_title_alert=t_edinfo->te_ptext;
+	t_edinfo->te_ptext=buf;
+	MT_form_xalert(1,mess_alert,0L,0L,0L);
+	t_edinfo->te_ptext=save_title_alert;
+}
+
+void add_latency(char *buffer_ascii,unsigned char val)
+
+{
+	int i,first;
+	char buf[]={"/0"};
+	first=1;
+	i=6;
+	while(i>0)
+	{
+		if(val&1)
+		{
+			if(first)
+			{
+				strcat(buffer_ascii,&buf[1]);
+				first=0;
+			}
+			else
+				strcat(buffer_ascii,buf);
+		}
+		val>>=1;
+		buf[1]++;
+		i--;
+	}
+}
+
 int cdecl trace_temp(PARMBLK *parmblock)
 
 {
@@ -2558,7 +2914,7 @@ int cdecl trace_temp(PARMBLK *parmblock)
 				v_pline(vdi_handle,2,xy);
 			}
 		}
-		else									/* temperature */            
+		else										/* temperature */            
 		{
 			for(i=20;i<MAX_TEMP;i+=20)				/* horizontal square */
 			{
@@ -3093,7 +3449,7 @@ int MT_form_xalert(int fo_xadefbttn,char *fo_xastring,long time_out,void (*call)
 	TEDINFO *t_edinfo;
 	EVNTDATA mouse;
 	WORD msg[8];
-	char line[5][61];
+	char line[25][61];
 	char button[3][21];
 	if((alert_tree=adr_tree(TREE3))==0)
 		return(0);
@@ -3147,14 +3503,14 @@ int MT_form_xalert(int fo_xadefbttn,char *fo_xastring,long time_out,void (*call)
 		flag_img=0;
 		break;
 	}
-	for(i=0;i<5;alert_tree[ALERTLINE1+i].ob_spec.free_string=&line[i][0],line[i++][0]=0);
+	for(i=0;i<25;alert_tree[ALERTLINE1+i].ob_spec.free_string=&line[i][0],line[i++][0]=0);
 	for(i=0;i<3;alert_tree[ALERTB1+i].ob_spec.free_string=&button[i][0],button[i++][0]=0);
 	fo_xastring+=4;
 	p=fo_xastring;				/* search the size of the box */
 	max_length_buttons=nb_lines=nb_buttons=0;
 	t_edinfo=alert_tree[ALERTTITLE].ob_spec.tedinfo;
 	max_length_lines=t_edinfo->te_txtlen-1;
-	for(i=0;*p!=']' && i<5;i++)
+	for(i=0;*p!=']' && i<25;i++)
 	{ 
 		for(j=0;*p!=']' && *p!='|' && j<60;j++)
 		{
@@ -3229,7 +3585,7 @@ int MT_form_xalert(int fo_xadefbttn,char *fo_xastring,long time_out,void (*call)
 		j=(i+2)*gr_hhchar;
 	alert_tree[ALERTBOX].ob_height=j;		/* height of box */
 	alert_tree[ALERTB1].ob_y=alert_tree[ALERTB2].ob_y=alert_tree[ALERTB3].ob_y=j-(gr_hhchar<<1);
-	for(i=0;i<5;i++)						/* copy texts of lines */
+	for(i=0;i<25;i++)						/* copy texts of lines */
 	{
 		if(i<nb_lines)
 		{

@@ -1,7 +1,7 @@
 ;CPX.PRJ for Pure C
 
 CT60CONF.CP
-.C [ -2 ]
+.C [ -2 -P]
 .S [ -4 -S]
 =
 
@@ -10,6 +10,7 @@ CPXSTART.O
 CT60CONF.C
 TEMP.S
 PARAM.S
+SDRAM.S
 
 MT_AES.LIB
 PCFLTLIB.LIB

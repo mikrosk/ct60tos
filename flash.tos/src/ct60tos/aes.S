@@ -1,5 +1,5 @@
 /* TOS 4.04 AES SHBUF patch for the CT60 board
-*  Didier Mequignon 2003 March, e-mail: didier-mequignon@wanadoo.fr
+*  Didier Mequignon 2003 March, e-mail: didier.mequignon@wanadoo.fr
 *  from SHBUF.FIL / Martin Osieka
 *
 *  This library is free software; you can redistribute it and/or

@@ -1,6 +1,6 @@
 /*  Configure the CT60-SDRAM and more
  * 
- * Didier Mequignon 2001-2003, e-mail: didier-mequignon@wanadoo.fr
+ * Didier Mequignon 2001-2003, e-mail: didier.mequignon@wanadoo.fr
  *
  *  This library is free software; you can redistribute it and/or
  *  modify it under the terms of the GNU Lesser General Public
@@ -547,89 +547,255 @@ init_sdram:
 display_infos_sdram:
 
 	movem.l D0-D2/A0-A1,-(SP)
-	link A6,#-128
+	link A6,#-134
+	clr.w -130(A6)
 	lea -128(A6),A0
 	bsr ct60_read_info_sdram
 	bmi .error_eeprom_sdram
 	lea -128(A6),A1
-	lea message20(PC),A0
+	lea message20(PC),A0     // type
 	bsr display_string
+	moveq #0,D0
 	move.b 2(A1),D0
-	bsr hex_byte
-	lea message21(PC),A0
+	lea -133(A6),A0
+             moveq #3,D1
+	bsr conv_ascii_value_optimized
+	lea -133(A6),A0
+	bsr display_string_single
+	cmp.b #4,2(A1)
+	bne.s .no_sdram
+	lea message20b(PC),A0
+	bsr display_string_single
+.no_sdram:	
+	lea message21(PC),A0     // row
 	bsr display_string
+	moveq #0,D0
 	move.b 3(A1),D0
-	bsr hex_byte
-	lea message22(PC),A0
+	lea -133(A6),A0
+             moveq #3,D1
+	bsr conv_ascii_value_optimized
+	lea -133(A6),A0
+	bsr display_string_single
+	lea message22(PC),A0     // column
 	bsr display_string
+	moveq #0,D0
 	move.b 4(A1),D0
-	bsr hex_byte
-	lea message23(PC),A0
+	lea -133(A6),A0
+             moveq #3,D1
+	bsr conv_ascii_value_optimized
+	lea -133(A6),A0
+	bsr display_string_single
+	lea message23(PC),A0     // banks
 	bsr display_string
+	moveq #0,D0
 	move.b 5(A1),D0
-	bsr hex_byte
-	lea message24(PC),A0
+	lea -133(A6),A0
+             moveq #3,D1
+	bsr conv_ascii_value_optimized
+	lea -133(A6),A0
+	bsr display_string_single
+	lea message24(PC),A0     // data width
 	bsr display_string
+	moveq #0,D0
 	move.w 6(A1),D0
-	bsr hex_word
-	lea message25(PC),A0
+	ror.w #8,D0
+	lea -134(A6),A0
+             moveq #4,D1
+	bsr conv_ascii_value_optimized
+	lea -134(A6),A0
+	bsr display_string_single
+	lea message24b(PC),A0
+	bsr display_string_single
+	lea message25(PC),A0     // voltage
 	bsr display_string
+	moveq #0,D0
 	move.b 8(A1),D0
-	bsr hex_byte
-	lea message26(PC),A0
+	lea -133(A6),A0
+             moveq #3,D1
+	bsr conv_ascii_value_optimized
+	lea -133(A6),A0
+	bsr display_string_single
+	cmp.b #1,8(A1)
+	bne.s .not_lvttl
+	lea message25b(PC),A0
+	bsr display_string_single
+.not_lvttl:	
+	lea message26(PC),A0     // cycle time
 	bsr display_string
 	move.b 9(A1),D0
-	bsr hex_byte
-	lea message27(PC),A0
+	bsr display_value_ns_10
+	lea message73(PC),A0
+	cmp.b #0xA0,9(A1)
+	bcc.s .pc100
+	lea message74(PC),A0
+.pc100:
+	bsr display_string_single
+	lea message27(PC),A0     // access from clock
 	bsr display_string
 	move.b 10(A1),D0
-	bsr hex_byte
-	lea message28(PC),A0
+	bsr display_value_ns_10
+	lea message28(PC),A0     // configuration type
 	bsr display_string
+	moveq #0,D0
 	move.b 11(A1),D0
-	bsr hex_byte
-	lea message29(PC),A0
+	lea -133(A6),A0
+             moveq #3,D1
+	bsr conv_ascii_value_optimized
+	lea -133(A6),A0
+	bsr display_string_single
+	lea message60(PC),A0
+	move.b 11(A1),D0
+	beq.s .parity
+	lea message61(PC),A0
+	cmp.b #1,D0
+	beq.s .parity
+	lea message62(PC),A0
+	cmp.b #2,D0
+	bne.s .no_ecc	
+.parity:
 	bsr display_string
+.no_ecc:	
+	lea message29(PC),A0     // refresh
+	bsr display_string
+	lea message63(PC),A0
 	move.b 12(A1),D0
-	bsr hex_byte
-	lea message30(PC),A0
+	and.b #0x7F,D0
+	beq.s .refresh_rate
+	lea message64(PC),A0
+	cmp.b #1,D0
+	beq.s .refresh_rate
+	lea message65(PC),A0
+	cmp.b #2,D0
+	beq.s .refresh_rate
+	lea message66(PC),A0
+	cmp.b #3,D0
+	beq.s .refresh_rate
+	lea message67(PC),A0
+	cmp.b #4,D0
+	beq.s .refresh_rate
+	lea message68(PC),A0
+	cmp.b #5,D0
+	bne.s .no_refresh_rate	
+.refresh_rate:
+	bsr display_string_single
+	tst.b 12(A1)
+	bpl.s .no_refresh_rate
+	lea message71(PC),A0
+	bsr display_string_single
+	bra.s .end_refresh_rate
+.no_refresh_rate:
+	moveq #0x24,D0
+	bsr display_char
+	move.b 12(A1),D0
+	bsr hex_byte		
+.end_refresh_rate:
+	lea message30(PC),A0     // banks device
 	bsr display_string
+	moveq #0,D0
 	move.b 17(A1),D0
-	bsr hex_byte
-	lea message53(PC),A0
+	lea -133(A6),A0
+             moveq #3,D1
+	bsr conv_ascii_value_optimized
+	lea -133(A6),A0
+	bsr display_string_single
+	lea message53(PC),A0     // CAS latency
 	bsr display_string
 	move.b 18(A1),D0
+	add.b D0,D0
+	bsr display_latency
+	lea message56(PC),A0     // CS latency
+	bsr display_string
+	move.b 19(A1),D0
+	bsr display_latency
+	lea message57(PC),A0     // WE latency
+	bsr display_string
+	move.b 20(A1),D0
+	bsr display_latency	
+	lea message37(PC),A0     // module attributes
+	bsr display_string
+	move.b 21(A1),D0
 	bsr hex_byte
-	lea message31(PC),A0
+	tst.b 21(A1)
+	bne.s .not_unbuffered
+	lea message72(PC),A0
+	bsr display_string
+.not_unbuffered:	
+	lea message31(PC),A0     // precharge time
 	bsr display_string
 	move.b 27(A1),D0
-	bsr hex_byte
-	lea message32(PC),A0
+	bsr display_value_ns
+	lea message32(PC),A0     // minimum row active
 	bsr display_string
 	move.b 28(A1),D0
-	bsr hex_byte
-	lea message33(PC),A0
+	bsr display_value_ns
+	lea message33(PC),A0     // minimum RAS to CAS delay
 	bsr display_string
 	move.b 29(A1),D0
-	bsr hex_byte
-	lea message34(PC),A0
+	bsr display_value_ns
+	lea message70(PC),A0     // minimum RAS pulse width
 	bsr display_string
+	move.b 30(A1),D0
+	bsr display_value_ns
+	lea message34(PC),A0     // bank density
+	bsr display_string
+	moveq #0,D0
 	move.b 31(A1),D0
+	asl.w #2,D0
+	lea -134(A6),A0
+             moveq #4,D1
+	bsr conv_ascii_value_optimized
+	lea -134(A6),A0
+	bsr display_string_single
+	lea message69(PC),A0
+	bsr display_string
+	lea message35(PC),A0     // ID
+	bsr display_string
+	move.b 64(A1),D0
 	bsr hex_byte
-	lea message35(PC),A0
+	moveq #0x20,D0
+	bsr display_char
+	lea 65(A1),A0            // manufacturer
+	moveq #6,D1
+.manufacturer:
+		move.b (A0)+,D0
+		cmp.b #0x20,D0
+		bcs.s .end_manufacturer
+		cmp.b #0x7F,D0
+		bcc.s .end_manufacturer
+		bsr display_char
+	dbf D1,.manufacturer
+.end_manufacturer:	
+	lea message58(PC),A0     // part number
 	bsr display_string
-	move.l 64(A1),D0
-	bsr hex_long
-	move.l 68(A1),D0
-	bsr hex_long
-	lea message36(PC),A0
+	lea 73(A1),A0
+	moveq #17,D1
+.part_number:
+		move.b (A0)+,D0
+		bsr display_char
+	dbf D1,.part_number	
+	lea message36(PC),A0     // date
 	bsr display_string
-	move.w 93(A1),D0
-	bsr hex_word
-	lea message37(PC),A0
-	bsr display_string
-	move.l 95(A1),D0
-	bsr hex_long
+	moveq #0,D0
+	move.b 93(A1),D0         // week
+	clr.w -130(A6)
+	lea -132(A6),A0
+             moveq #2,D1
+	bsr conv_ascii_value_optimized
+	lea -132(A6),A0
+	bsr display_string_single
+	moveq #0x2F,D0
+	bsr display_char
+             moveq #2,D1
+	bsr conv_ascii_value_optimized
+	bsr display_string_single
+	moveq #0,D0
+	move.b 94(A1),D0         // year
+	add.w #1900,D0
+	lea -134(A6),A0
+             moveq #4,D1
+	bsr conv_ascii_value_optimized
+	lea -134(A6),A0	
+	bsr display_string_single
 //	lea -128(A6),A1
 //	moveq #7,D1
 //.loop_dump1:
@@ -737,13 +903,13 @@ message15:	.byte 27
 	.ascii "."
 	.byte ((VERSION/16) & 0xF) + 0x30
 	.byte (VERSION & 0xF) + 0x30
-	.asciz "e "
+	.asciz "f "
 message15b:	
-	.ascii "2003 October "
+	.ascii "2003 November "
 	.byte 27
 	.ascii "q"
 	.byte 13,10,0
-	.ascii "Octobre 2003 "
+	.ascii "Novembre 2003 "
 	.byte 27
 	.ascii "q"
 	.byte 13,10,0
@@ -767,77 +933,80 @@ message19:	.byte 13,10,27
 	.ascii "q"
 	.byte 13,10,0
 message20:	.byte 13,10
-	.asciz "Byte 2, Memory Type : $"
+	.asciz "Byte 2, Memory Type : "
 	.byte 13,10
-	.asciz "Octet 2, Type de m‚moire : $"
+	.asciz "Octet 2, Type de m‚moire : "
+message20b:	.asciz " SDRAM"
 message21:	.byte 13,10
-	.asciz "Byte 3, Number of Row Addresses : $"
+	.asciz "Byte 3, Number of Row Addresses : "
 	.byte 13,10
-	.asciz "Octet 3, Nombre de lignes d'adresses : $"
+	.asciz "Octet 3, Nombre de lignes d'adresses : "
 message22:	.byte 13,10
-	.asciz "Byte 4, Number of Column Addresses : $"
+	.asciz "Byte 4, Number of Column Addresses : "
 	.byte 13,10
-	.asciz "Octet 4, Nombre de colonnes d'adresses : $"
+	.asciz "Octet 4, Nombre de colonnes d'adresses : "
 message23:	.byte 13,10
-	.asciz "Byte 5, Number of DIMM Banks :$"
+	.asciz "Byte 5, Number of DIMM Banks : "
 	.byte 13,10
-	.asciz "Octet 5, Nombre de banques DIMM :$"
+	.asciz "Octet 5, Nombre de banques DIMM : "
 message24:	.byte 13,10
-	.asciz "Bytes 6-7, Module Data Width : $"
+	.asciz "Bytes 6-7, Module Data Width : "
 	.byte 13,10
-	.asciz "Octets 6-7, Largeur donn‚es module : $"
+	.asciz "Octets 6-7, Largeur donn‚es module : "
+message24b:	.asciz " bits"
 message25:	.byte 13,10
-	.asciz "Byte 8, Voltage Interface Level : $"
+	.asciz "Byte 8, Voltage Interface Level : "
 	.byte 13,10
-	.asciz "Octet 8, Niveau de tension interface : $"
+	.asciz "Octet 8, Niveau de tension interface : "
+message25b:	.asciz " LVTTL"
 message26:	.byte 13,10
-	.asciz "Byte 9, SDRAM Cycle Time : $"
+	.asciz "Byte 9, SDRAM Cycle Time : "
 	.byte 13,10
-	.asciz "Octet 9, SDRAM Temps cycle : $"
+	.asciz "Octet 9, SDRAM Temps cycle : "
 message27:	.byte 13,10
-	.asciz "Byte 10, SDRAM Access from Clock : $"
+	.asciz "Byte 10, SDRAM Access from Clock : "
 	.byte 13,10
-	.asciz "Octet 10, SDRAM AccŠs de l'horloge : $"
+	.asciz "Octet 10, SDRAM AccŠs de l'horloge : "
 message28:	.byte 13,10
-	.asciz "Byte 11, SDRAM Configuration Type : $"
+	.asciz "Byte 11, SDRAM Configuration Type : "
 	.byte 13,10
-	.asciz "Octet 11, SDRAM Type : $"
+	.asciz "Octet 11, SDRAM Type : "
 message29:	.byte 13,10
-	.asciz "Byte 12, Refresh Rate : $"
+	.asciz "Byte 12, Refresh Rate : "
 	.byte 13,10
-	.asciz "Octet 12, Fr‚quence rafraichissement : $"
+	.asciz "Octet 12, Fr‚quence rafraichissement : "
 message30:	.byte 13,10
-	.asciz "Byte 17, Number of Banks : $"
+	.asciz "Byte 17, Number of Banks : "
 	.byte 13,10
-	.asciz "Octet 17, Nombre de banques : $"
+	.asciz "Octet 17, Nombre de banques : "
 message31:	.byte 13,10
-	.asciz "Byte 27, Minimum ROW Precharge Time : $"
+	.asciz "Byte 27, Minimum Row Precharge Time : "
 	.byte 13,10
-	.asciz "Octet 27, Temps de pr‚chage mini ROW : $"
+	.asciz "Octet 27, Temps de pr‚chage mini lignes : "
 message32:	.byte 13,10
-	.asciz "Byte 28, Minimum ROW Active to Active Delay : $"
+	.asciz "Byte 28, Minimum Row Active to Active Delay : "
 	.byte 13,10
-	.asciz "Octet 28, D‚lais mini entre activations de ROW : $"
+	.asciz "Octet 28, D‚lais mini entre activations de lignes : "
 message33:	.byte 13,10
-	.asciz "Byte 29, Minimum RAS to CAS Delay : $"
+	.asciz "Byte 29, Minimum RAS to CAS Delay : "
 	.byte 13,10
-	.asciz "Octet 29, D‚lais mini entre RAS et CAS : $"
+	.asciz "Octet 29, D‚lais mini entre RAS et CAS : "
 message34:	.byte 13,10
-	.asciz "Byte 31, Module Bank Density : $"
+	.asciz "Byte 31, Module Bank Density : "
 	.byte 13,10
-	.asciz "Octet 31, Densit‚ banque du module : $"
+	.asciz "Octet 31, Densit‚ banque du module : "
 message35:	.byte 13,10
 	.asciz "Bytes 64-71, Module Manufacturers ID : $"
 	.byte 13,10
-	.asciz "Octets 64-71, ID fabriquants du module : $"
+	.asciz "Octets 64-71, ID fabriquant du module : $"
 message36:	.byte 13,10
-	.asciz "Bytes 93-94, Module Manufacturing Date : $"
+	.asciz "Bytes 93-94, Module Manufacturing Date : "
 	.byte 13,10
-	.asciz "Octets 93-94, Date de fabrication du module : $"
+	.asciz "Octets 93-94, Date de fabrication du module : "
 message37:	.byte 13,10
-	.asciz "Bytes 95-98, Module Serial Number : $" 
+	.asciz "Byte 21, SDRAM Module Attributes : $" 
 	.byte 13,10
-	.asciz "Octets 95-98, Num‚ro de s‚rie du module : $" 
+	.asciz "Octet 21, Attributs du module : $" 
 message38:	.byte 13,10
 	.asciz "            CT60 hardware"
 message39:	.asciz " ABEv"
@@ -869,13 +1038,49 @@ message51:	.byte 13,10
 message52:	.byte 13,10
 	.asciz "Reset"
 message53:	.byte 13,10
-	.asciz "Octet 18, CAS Latency : $" 
+	.asciz "Byte 18, CAS Latency : " 
 	.byte 13,10
-	.asciz "Octet 18, CAS Latence : $"
+	.asciz "Octet 18, CAS Latence : "
 message54:	.asciz ", CAS Latency unsupported"
 	.asciz ", CAS Latence non support‚e"
 message55:	.asciz ", Data Width unsupported"
 	.asciz ", Largeur donn‚es non support‚e"
+message56:	.byte 13,10
+	.asciz "Byte 19, CS Latency : " 
+	.byte 13,10
+	.asciz "Octet 19, CS Latence : "
+message57:	.byte 13,10
+	.asciz "Byte 20, WE Latency : " 
+	.byte 13,10
+	.asciz "Octet 20, WE Latence : "
+message58:	.byte 13,10
+	.asciz "Bytes 73-90, Module Part Number : " 
+	.byte 13,10
+	.asciz "Octets 73-90, R‚f‚rence du module : "
+message59:	.asciz " nS"
+message60:	.asciz " no parity"
+	.asciz " pas de parit‚"
+message61:	.asciz " parity"
+	.asciz " parit‚"
+message62:	.asciz " ECC"
+	.asciz " ECC"
+message63:	.asciz "15.625 uS"
+message64:	.asciz "3.9 uS"
+message65:	.asciz "7.8 uS"
+message66:	.asciz "31.3 uS"
+message67:	.asciz "62.5 uS"
+message68:	.asciz "125 uS"
+message69:	.asciz " MB"
+	.asciz " Mo"
+message70:	.byte 13,10
+	.asciz "Byte 30, Minimum RAS Pulse Width : "
+	.byte 13,10
+	.asciz "Octet 30, Largeur mini impulsion RAS : "
+message71:	.asciz ", self refresh"
+message72:	.asciz " unbuffered"
+	.asciz " sans buffers" 
+message73:	.asciz " PC100"
+message74:	.asciz " PC133"
 
 boot_ide:	.byte 16,8,9,10,11,12,13,14,15,255
 boot_scsi:	.byte 8,9,10,11,12,13,14,15,16,255
@@ -1105,6 +1310,76 @@ display_xbra:
 .end_xbra:
 	unlk A6
 	movem.l (SP)+,D0/A0/A1
+	rts
+	
+display_value_ns_10:
+
+	movem.l D0/A0,-(SP)
+	link A6,#-4
+	clr -2(A6)
+	move.w D0,-(SP)
+	and.l #0xFF,D0
+	lsr.w #4,D0
+	lea -4(A6),A0
+             moveq #2,D1
+	bsr conv_ascii_value_optimized
+	lea -4(A6),A0
+	bsr display_string_single
+	moveq #0x2E,D0
+	bsr display_char
+	moveq #0x0F,D0
+	and.w (SP)+,D0
+	lea -3(A6),A0
+             moveq #1,D1
+	bsr conv_ascii_value_optimized
+	lea -3(A6),A0
+	bsr display_string_single
+	lea message59(PC),A0
+	bsr display_string_single
+	unlk A6
+	movem.l (SP)+,D0/A0
+	rts
+	
+display_value_ns:
+
+	movem.l D0/A0,-(SP)
+	link A6,#-4
+	clr -2(A6)
+	and.l #0xFF,D0
+	lea -4(A6),A0
+             moveq #3,D1
+	bsr conv_ascii_value_optimized
+	lea -4(A6),A0
+	bsr display_string_single
+	lea message59(PC),A0
+	bsr display_string_single
+	unlk A6
+	movem.l (SP)+,D0/A0
+	rts	
+	
+display_latency:
+
+	movem.l D0-D4/A0,-(SP)
+	move.l D0,D4	
+	moveq #0,D1
+	moveq #0,D2
+	moveq #6,D3
+.loop_latency:
+		btst D1,D4
+		beq.s .next_latency
+		tst.w D2
+		beq.s .first_latency
+		moveq #0x2F,D0
+		bsr display_char
+.first_latency:
+	             moveq #-1,D2
+		moveq #0x30,D0
+		add.w D1,D0
+		bsr display_char
+.next_latency:
+		addq.w #1,D1
+	dbf D3,.loop_latency	
+	movem.l (SP)+,D0-D4/A0
 	rts
 
 display_string:

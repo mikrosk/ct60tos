@@ -18,6 +18,7 @@ typedef struct
 	unsigned short trigger_temp;
 	unsigned short daystop;
 	unsigned short timestop;
+	unsigned short speed_fan;
 } CT60_COOKIE;
 
 #define ct60_read_core_temperature(type_deg) (long)xbios(0xc60a,(short)type_deg)

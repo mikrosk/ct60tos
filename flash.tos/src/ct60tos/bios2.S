@@ -1,5 +1,5 @@
 /* TOS 4.04 Bios bconout patch for the CT60 board
-*  Didier Mequignon 2001 December, e-mail: didier-mequignon@wanadoo.fr
+*  Didier Mequignon 2001 December, e-mail: didier.mequignon@wanadoo.fr
 *
 *  This library is free software; you can redistribute it and/or
 *  modify it under the terms of the GNU Lesser General Public
