@@ -1,5 +1,5 @@
 /* CT60 CONFiguration - Pure C */
-/* Didier MEQUIGNON - v1.03 - February 2005 */
+/* Didier MEQUIGNON - v1.03a - March 2005 */
 
 #include <portab.h>
 #include <tos.h>
@@ -11,12 +11,12 @@
 #include <string.h>
 #include <time.h>
 #include "ct60.h"
+#include "ct60ctcm.h"
 
 /* #define LIGHT */					/* without language & video */
 /* #define ALERT_INSTALL_CT60TEMP */
 /* #define DEBUG */
 /* #define TEST */
-/* #define TEST_MAGICMAC */
 
 #define ID_CPX (long)'CT60'
 #define VA_START 0x4711
@@ -52,38 +52,9 @@
 #define WEEKEND_STOP   9
 #define EVERYDAY_STOP  10
 
-/* CY27EE16ZE serial programmable clock registers */
-#define CTRLMACH  0x00
-#define ADRDEV8EE 0x05
-#define ADRDEVPLL 0x06
-#define DEFPLLCNF 0x07
-#define CLKOE     0x09
-#define DIV1N     0x0C
-#define PINCTRL   0x10
-#define WPREG     0x11
-#define OSCDRV    0x12
-#define INLOAD    0x13
-#define ADCREG    0x14
-#define CHARGEP   0x40
-#define PBCOUNTER 0x41
-#define QCOUNTER  0x42
-#define MATRIX1   0x44
-#define MATRIX2   0x45
-#define MATRIX3   0x46
-#define DIV2N     0x47
-#define CT60_CLOCK_READ 0
-#define CT60_CLOCK_WRITE_RAM 1
-#define CT60_CLOCK_WRITE_EEPROM 2
-#define REF                 10000UL /* KHz */
-#define MIN_FREQ            50000UL /* KHz */
-#define MAX_FREQ_REV1_BOOT  66000UL /* KHz */
-#define MAX_FREQ_REV1       80000UL /* KHz */
-#define MAX_FREQ_REV6_BOOT 100000UL /* KHz */
-#define MAX_FREQ_REV6      110000UL /* KHz */
-#define CT60_CALC_CLOCK_ERROR -2
-#define CT60_NULL_CLOCK_ERROR -3
-
 #define Suptime(uptime,avenrun) gemdos(0x13f,(long)(uptime),(long)(avenrun))
+#define Sync() gemdos(0x150)
+#define Shutdown(mode) gemdos(0x151,(long)(mode))
 
 typedef struct
 {
@@ -234,8 +205,6 @@ void stop_060(void);
 long version_060(void);
 int read_temp(void);
 int fill_tab_temp(void);
-long ct60_read_clock(void);
-int ct60_configure_clock(unsigned long frequency,int mode);
 unsigned long bogomips(void);
 void delay_loop(long loops);
 int get_MagiC_ver(unsigned long *crdate);
@@ -244,23 +213,24 @@ COOKIE *ncookie(COOKIE *p);
 COOKIE *get_cookie(long id);
 int add_cookie(COOKIE *cook);
 int test_060(void);
-long tempo_20ms(void);
 void reboot(void);
 void (*reset)(void);
+extern long ct60_read_clock(void);
+extern int ct60_configure_clock(unsigned long frequency,int mode);
+extern void tempo_20ms(void);
 extern long ct60_read_temp(void);
 extern long ct60_stop(void);
 extern long ct60_cpu_revision(void);
 extern long mes_delay(void);
 extern int ct60_read_info_sdram(unsigned char *buffer);
 extern int ct60_read_info_clock(unsigned char *buffer);
-extern int read_seq_device_i2c(int address,unsigned char *buffer);
 extern long ct60_rw_param(int mode,long type_param,long value);
 extern long ct60_rw_clock(int mode,int address,int data);
 extern int read_i2c(long device_address);
 
 /* global variables in the 1st position of DATA segment */
 
-HEAD config={0,2,2,0x11,'/',1,0x1b2,0x87,0,50,0,0,1,0,1,1,50000};
+HEAD config={0,2,2,0x11,'/',1,0x1b2,0x87,0,50,0,0,1,0,1,1,MIN_FREQ};
 
 #include "ct60temp.hex"
 
@@ -272,9 +242,11 @@ WORD global[15];
 int gr_hwchar,gr_hhchar;
 int	ap_id=-1,temp_id=-1,wi_id=-1;
 int mint,magic,flag_frequency,flag_cpuload,flag_xbios,thread=0,time_out_thread=-1,time_out_bubble=-1,bubblegem_right_click=1;
-unsigned long magic_date,st_ram,fast_ram,loops_per_sec=0,frequency=50000;
+unsigned long magic_date,st_ram,fast_ram,loops_per_sec=0,frequency=MIN_FREQ,min_freq=MIN_FREQ,max_freq=MAX_FREQ_REV6;
+extern unsigned long step_frequency;
 long cpu_cookie=0;
 char *eiffel_temp=NULL;
+short *eiffel_media_keys=NULL;
 extern unsigned long value_supexec;
 XCPB *Xcpb;
 GRECT *Work;
@@ -287,8 +259,8 @@ int ed_objc,new_objc,ed_pos,new_pos;
 int start_lang,flag_bubble,selection;
 int language,keyboard,datetime,vmode,bootpref,bootdelay,scsi,cpufpu,tosram,blitterspeed,cachedelay,bootorder,nv_magic_code;
 unsigned int trigger_temp,daystop,timestop;
-char *buffer_bubble=0;
-char *buffer_path=0;
+char *buffer_bubble=NULL;
+char *buffer_path=NULL;
 unsigned short tab_temp[61],tab_temp_eiffel[61],tab_cpuload[61];
 
 /* ressource */
@@ -466,7 +438,7 @@ char *rs_strings[] = {
 	"OK",
 	"Annule",
 	
-	"CT60 Configuration V1.03 F‚vrier 2005","","",
+	"CT60 Configuration V1.03a Mars 2005","","",
 	"Ce CPX et systŠme:","","",
 	"Didier MEQUIGNON","","",
 	"aniplay@wanadoo.fr","","",
@@ -587,7 +559,7 @@ char *rs_strings_en[] = {
 	"OK",
 	"Cancel",
 
-	"CT60 Configuration V1.03 February 2005","","",
+	"CT60 Configuration V1.03a March 2005","","",
 	"This CPX and system:","","",
 	"Didier MEQUIGNON","","",
 	"aniplay@wanadoo.fr","","",
@@ -1278,10 +1250,6 @@ CPXINFO* CDECL cpx_init(XCPB *xcpb)
 	else
 		fast_ram=0L;
 	Super((void *)stack);
-#ifdef TEST_MAGICMAC
-	if(!fast_ram && (*Xcpb->get_cookie)('MgMc',&value))
-		fast_ram=0x1000000L;					/* just for a test under MagiCMac */
-#endif
 	if(init_rsc()==0)
 		return(0);
 #ifdef DEBUG
@@ -1299,8 +1267,11 @@ CPXINFO* CDECL cpx_init(XCPB *xcpb)
 		idt.v.l=(((long)nvram.datetime)<<8) + (long)nvram.separator;
 		add_cookie(&idt);
 	}
+	eiffel_media_keys=NULL;
+	if((*Xcpb->get_cookie)('Eiff',&value))
+		eiffel_media_keys=(short *)value;
 	eiffel_temp=NULL;
-    if((*Xcpb->get_cookie)('Temp',&value))
+	if((*Xcpb->get_cookie)('Temp',&value))
 		eiffel_temp=(char *)value;
 	for(i=0;i<61;i++)
 		tab_temp[i]=tab_temp_eiffel[i]=tab_cpuload[i]=0;
@@ -1336,20 +1307,13 @@ CPXINFO* CDECL cpx_init(XCPB *xcpb)
 		 && (ap_id=appl_find("FREEDOM2"))<0)
 			ap_id=-1;
 	}
-	if( ((*Xcpb->get_cookie)(ID_CT60,&value))
-#ifdef TEST_MAGICMAC
-     || (*Xcpb->get_cookie)('MgMc',&value)
-#endif
-	)
+	if((*Xcpb->get_cookie)(ID_CT60,&value))
 		flag_xbios=1;
 	else
 		flag_xbios=0;
 	if(( (*Xcpb->get_cookie)('_MCH',&value) && (value==0x30000)	/* Falcon */
-	 && (flag_xbios || test_060())								/* & CT60 */
-#ifdef TEST_MAGICMAC
-     || (*Xcpb->get_cookie)('MgMc',&value)
-#endif
-	) && ap_id>=0 )
+	 && (flag_xbios || test_060()))								/* & CT60 */
+	 && ap_id>=0 )
 	{
 #ifdef DEBUG
 		printf("\r\nStart temperature task");
@@ -1361,30 +1325,6 @@ CPXINFO* CDECL cpx_init(XCPB *xcpb)
 			ct60_arg->timestop=(unsigned int)timestop;          /* ACC cannot receive arg */
 		}	
 		start_temp(&trigger_temp,&daystop,&timestop);			/* start thread or CT60TEMP.APP */
-#if 0
-		if(flag_xbios)
-			frequency=ct60_rw_parameter(CT60_MODE_READ,CT60_CLOCK,0L);
-		else
-		{
-			stack=Super(0L);
-			frequency=(int)ct60_rw_param(CT60_MODE_READ,CT60_CLOCK,0L);
-			Super((void *)stack);
-		}
-		if(frequency>=MIN_FREQ
-		 && ((frequency<=MAX_FREQ_REV1 && version_060()<6)
-		  || (frequency<=MAX_FREQ_REV6 && version_060()>=6)))
-		{
-#ifdef DEBUG
-		printf("\r\nRead clock");
-#endif
-			value=ct60_read_clock();
-			if(value>0)
-			{
-				if(value!=frequency)
-					ct60_configure_clock(frequency,CT60_CLOCK_WRITE_RAM);
-			}
-		}
-#endif
 	}
 #ifdef DEBUG
 	printf("\r\nCPX init finished");
@@ -1417,30 +1357,25 @@ int CDECL cpx_call(GRECT *work)
 #ifdef DEBUG
 	printf("\r\nTest cookies");
 #endif
-#ifdef TEST_MAGICMAC
-    if(!(*Xcpb->get_cookie)('MgMc',&value))
-#endif
-    {
-		if(!(*Xcpb->get_cookie)('_MCH',&value) || (value!=0x30000))	/* Falcon */
+	if(!(*Xcpb->get_cookie)('_MCH',&value) || (value!=0x30000))	/* Falcon */
+	{
+		if(!start_lang)
+			form_alert(1,"[1][Cette machine n'est|pas un FALCON 030][Annuler]");
+		else
+			form_alert(1,"[1][This computer isn't|a FALCON 030][Cancel]");
+		return(0);
+	}
+	if(!flag_xbios && !test_060())
+	{
+		stack=Super(0L);
+		tosram=(int)ct60_rw_param(CT60_MODE_READ,CT60_PARAM_TOSRAM,0L);
+		Super((void *)stack);
+		if(tosram<0)
 		{
 			if(!start_lang)
-				form_alert(1,"[1][Cette machine n'est|pas un FALCON 030][Annuler]");
+				form_alert(1,"[1][Pas de CT60 !][OK]");
 			else
-				form_alert(1,"[1][This computer isn't|a FALCON 030][Cancel]");
-			return(0);
-		}
-		if(!flag_xbios && !test_060())
-		{
-			stack=Super(0L);
-			tosram=(int)ct60_rw_param(CT60_MODE_READ,CT60_PARAM_TOSRAM,0L);
-			Super((void *)stack);
-			if(tosram<0)
-			{
-				if(!start_lang)
-					form_alert(1,"[1][Pas de CT60 !][OK]");
-				else
-					form_alert(1,"[1][CT60 not found!][OK]");
-			}
+				form_alert(1,"[1][CT60 not found!][OK]");
 		}
 	}
 	if((ap_id<0 || temp_id<0) && test_060())
@@ -1620,10 +1555,14 @@ int CDECL cpx_call(GRECT *work)
 		Super((void *)stack);
 	}
 	flag_frequency=0; /* modif */
-	if(frequency<MIN_FREQ
-	 || (frequency>MAX_FREQ_REV1 && version_060()<6)
-	 || (frequency>MAX_FREQ_REV6 && version_060()>=6))
-		frequency=MIN_FREQ;
+	step_frequency=125;
+	min_freq=MIN_FREQ;
+	if(version_060()<6)
+		max_freq=MAX_FREQ_REV1;
+	else
+		max_freq=MAX_FREQ_REV6;
+	if(frequency<min_freq || frequency>max_freq)
+		frequency=min_freq;
 #ifndef LIGHT
 	if(nv_magic_code=='NV')
 		rs_object[MENUNVM].ob_state |= SELECTED;
@@ -1652,12 +1591,23 @@ int CDECL cpx_call(GRECT *work)
 		selection=PAGE_TEMP;
 		ed_objc=MENUTRIGGER;
 		if((value=ct60_read_clock())<0)
-			frequency=0;
+			frequency=0;                 /* no programmable clock */
 		else
 		{
-			if(value<MIN_FREQ
-			 || (value>MAX_FREQ_REV1 && version_060()<6)
-			 || (value>MAX_FREQ_REV6 && version_060()>=6))
+			if(step_frequency==DAC_STEP) /* Dallas DS1085 programmable clock */
+			{
+				if((*Xcpb->get_cookie)(ID_CT60,&(long)ct60_arg) && (ct60_arg!=NULL)
+				 && ct60_arg->cpu_frequency!=0
+				 && (ct60_arg->cpu_frequency*100UL)<(MIN_FREQ_DALLAS+300UL))
+				{                        /* strap on CLK/2 */
+					min_freq=(MIN_FREQ_DALLAS+600UL)/2;
+					max_freq=MIN_FREQ_DALLAS;
+					value>>=1;           /* /2 */
+				}	                     /* strap on CLK */
+				else
+					min_freq=MIN_FREQ_DALLAS+600UL;
+			}
+			if(value<min_freq || value>max_freq)
 			{
 		 		if(!start_lang)
 					sprintf(mess_alert,"[1][ATTENTION !|La fr‚quence actuelle dans|le g‚n‚rateur d'horloge|est anormale: %ld MHz !][Continuer]",value/1000);
@@ -2145,12 +2095,12 @@ void CDECL cpx_button(MRETS *mrets,int nclicks,int *event)
 				}
 				break;
 			case MENUBLEFT:
-				if(frequency>MIN_FREQ)
+				if(frequency>min_freq)
 				{
 					change_objc(MENUBLEFT,SELECTED,Work);
-					frequency-=125;
-					if(frequency<MIN_FREQ)
-						frequency=MIN_FREQ;
+					frequency-=step_frequency;
+					if(frequency<min_freq)
+						frequency=min_freq;
 					flag_frequency=1;
 					aff_slider(Work);						
 					change_objc(MENUBLEFT,NORMAL,Work);
@@ -2166,12 +2116,10 @@ void CDECL cpx_button(MRETS *mrets,int nclicks,int *event)
 					frequency+=1000;
  				else
 					frequency-=1000;
-				if(frequency<MIN_FREQ)
-					frequency=MIN_FREQ;
-				if(frequency>MAX_FREQ_REV1 && version_060()<6)
-					frequency=MAX_FREQ_REV1;
-				if(frequency>MAX_FREQ_REV6 && version_060()>=6)
-				 	frequency=MAX_FREQ_REV6;
+				if(frequency<min_freq)
+					frequency=min_freq;
+				if(frequency>max_freq)
+					frequency=max_freq;
 				flag_frequency=1;
 				aff_slider(Work);
 				do
@@ -2182,27 +2130,20 @@ void CDECL cpx_button(MRETS *mrets,int nclicks,int *event)
 				wind_update(BEG_MCTRL);
 				ret=graf_slidebox(rs_object,MENUBOXSLIDER,MENUSLIDER,0);
 				wind_update(END_MCTRL);
-				if(version_060()<6)
-					frequency=MAX_FREQ_REV1;
-				else
-					frequency=MAX_FREQ_REV6;
-				frequency=((unsigned long)ret*(frequency-MIN_FREQ))/1000UL;
-				frequency/=125;
-				frequency*=125;
-				frequency+=50000;
+				frequency=((unsigned long)ret*(max_freq-min_freq))/1000UL;
+				frequency/=step_frequency;
+				frequency*=step_frequency;
+				frequency+=min_freq;
 				flag_frequency=1;
 				aff_slider(Work);
 				break;
 			case MENUBRIGHT:
-				if((frequency<MAX_FREQ_REV1 && version_060()<6)
-				 || (frequency<MAX_FREQ_REV6 && version_060()>=6))
+				if(frequency<max_freq)
 				{
 					change_objc(MENUBRIGHT,SELECTED,Work);
-					frequency+=125;
-					if(frequency>MAX_FREQ_REV1 && version_060()<6)
-						frequency=MAX_FREQ_REV1;
-					if(frequency>MAX_FREQ_REV6 && version_060()>=6)
-				 		frequency=MAX_FREQ_REV6;
+					frequency+=step_frequency;
+					if(frequency>max_freq)
+						frequency=max_freq;
 					flag_frequency=1;
 					aff_slider(Work);
 					change_objc(MENUBRIGHT,NORMAL,Work);
@@ -2642,13 +2583,23 @@ void CDECL cpx_button(MRETS *mrets,int nclicks,int *event)
 				header->timestop=(((unsigned int)atoi(t_edinfo->te_ptext)/100)<<11)
 				                +(((unsigned int)atoi(t_edinfo->te_ptext)%100)<<5);
                 header->frequency=frequency;
-				save_header();
+                if(nclicks<=1)
+					save_header();
 				if(((nclicks>1 && test_060()) || (flag_frequency && !test_060())) && frequency!=0)
 				{
 					value=ct60_read_clock();
 					if(value>0)
 					{
-						if(!test_060() && (value<MIN_FREQ || value>MAX_FREQ_REV6))
+						if(step_frequency==DAC_STEP) /* Dallas DS1085 programmable clock */
+							min_freq=MIN_FREQ_DALLAS+600UL;
+ 						else
+							min_freq=MIN_FREQ;
+						if(frequency<min_freq)
+							frequency=min_freq;
+						init_slider();
+						display_objc(MENUBSELECT,Work);
+						display_selection(selection,1);
+						if(!test_060() && (value<min_freq || value>max_freq))
 						{					
 		 					if(!start_lang)
 								sprintf(mess_alert,"[1][ATTENTION !|La fr‚quence actuelle dans|le g‚n‚rateur d'horloge|est anormale: %ld MHz !][Continuer]",value/1000);
@@ -2659,9 +2610,14 @@ void CDECL cpx_button(MRETS *mrets,int nclicks,int *event)
 						if(value!=frequency && test_060())
 						{
 							if(!start_lang)
-								form_alert(1,"[1][Vous devez essayer|cette fr‚quence avant son|‚criture en EEPROM du|g‚n‚rateur d'horloge !][Annuler]");
+								ret=form_alert(2,"[1][Vous devez essayer|cette fr‚quence avant son|‚criture en EEPROM du|g‚n‚rateur d'horloge !][Essayer|Annuler]");
 							else
-								form_alert(1,"[1][You must test the|frequency before writing to|the EEPROM of the|clock generator!][Cancel]");
+								ret=form_alert(2,"[1][You must test the|frequency before writing to|the EEPROM of the|clock generator!][Try|Cancel]");
+							if(ret==1)
+							{
+								change_objc(MENUBSAVE,NORMAL,Work);
+								goto _ok_;
+							}
 						}
 						else if(test_060()
 						 && ((frequency>MAX_FREQ_REV1_BOOT && version_060()<6)
@@ -2675,9 +2631,9 @@ void CDECL cpx_button(MRETS *mrets,int nclicks,int *event)
 						else
 						{
 					 		if(!start_lang)
-								ret=form_alert(1,"[2][Sauver l'horloge|dans le g‚n‚rateur ?|ATTENTION ! L'ordinateur va d‚marrer|avec la nouvelle fr‚quence lors de la|prochaine mise sous tension !][Sauver|Annuler]");
+								ret=form_alert(2,"[2][Sauver l'horloge|dans le g‚n‚rateur ?|ATTENTION ! L'ordinateur va d‚marrer|avec la nouvelle fr‚quence lors de la|prochaine mise sous tension !][Sauver|Annuler]");
 							else
-								ret=form_alert(1,"[2][Save the clock|inside the generator?|WARNING! The computer will start|with this new frequency|during the next power-on!][Save|Cancel]");
+								ret=form_alert(2,"[2][Save the clock|inside the generator?|WARNING! The computer will start|with this new frequency|during the next power-on!][Save|Cancel]");
 							if(ret==1)
 							{
 								value=ct60_configure_clock(frequency,CT60_CLOCK_WRITE_EEPROM);
@@ -2870,10 +2826,8 @@ void CDECL cpx_button(MRETS *mrets,int nclicks,int *event)
 						i=2359;	
 					sprintf(t_edinfo->te_ptext,"%04d",i);
 					frequency=header->frequency;
-					if(frequency<MIN_FREQ
-					 || (frequency>MAX_FREQ_REV1 && version_060()<6)
-					 || (frequency>MAX_FREQ_REV6 && version_060()>=6))
-						frequency=MIN_FREQ;
+					if(frequency<min_freq || frequency>max_freq)
+						frequency=min_freq;
 					if(test_060() && ct60_read_clock()<0)
 						frequency=0;
 					init_slider();
@@ -2883,6 +2837,7 @@ void CDECL cpx_button(MRETS *mrets,int nclicks,int *event)
 				change_objc(MENUBLOAD,NORMAL,Work);
 				break;
 			case MENUBOK:
+_ok_:
 #ifndef LIGHT
 				nvram.language=code_lang[language];
 				nvram.keyboard=code_key[keyboard];
@@ -3097,8 +3052,10 @@ int init_rsc(void)
 			rs_object[MENUMIPS].ob_y-=(h+5);
 			rs_object[MENUBFPU-1].ob_y-=(h+3);
 			rs_object[MENUBFPU].ob_y-=(h+3);
+			rs_object[MENUBLEFT].ob_x--;
 			rs_object[MENUBLEFT].ob_y-=(h+2);
 			rs_object[MENUBOXSLIDER].ob_y-=(h+2);
+			rs_object[MENUBRIGHT].ob_x++;
 			rs_object[MENUBRIGHT].ob_y-=(h+2);
 			rs_object[MENUBOXLANG].ob_y+=(h+1);
 			rs_object[MENUBOXLANG].ob_height+=h;
@@ -3181,20 +3138,15 @@ OBJECT* adr_tree(int num_tree)
 void init_slider(void)
 
 {
-	unsigned long max_freq;
 	TEDINFO *t_edinfo;
 	if(frequency)
 	{
-		if(version_060()<6)
-			max_freq=MAX_FREQ_REV1;
-		else
-			max_freq=MAX_FREQ_REV6;
 		rs_object[MENUBLEFT].ob_flags &= ~HIDETREE;	
 		rs_object[MENUBOXSLIDER].ob_flags &= ~HIDETREE;
 		rs_object[MENUSLIDER].ob_flags &= ~HIDETREE;
 		rs_object[MENUBRIGHT].ob_flags &= ~HIDETREE;
 		rs_object[MENUSLIDER].ob_x = (int)
-		 (((frequency-MIN_FREQ) * (unsigned long)(rs_object[MENUBOXSLIDER].ob_width - rs_object[MENUSLIDER].ob_width))/(max_freq-MIN_FREQ));
+		 (((frequency-min_freq) * (unsigned long)(rs_object[MENUBOXSLIDER].ob_width - rs_object[MENUSLIDER].ob_width))/(max_freq-min_freq));
 		t_edinfo=rs_object[MENUSLIDER].ob_spec.tedinfo;
 		sprintf(t_edinfo->te_ptext,"%ld.%03ld",frequency/1000,frequency%1000);
 	}
@@ -4312,7 +4264,7 @@ int MT_form_xalert(int fo_xadefbttn,char *fo_xastring,long time_out,void (*call)
 				}
 				else
 				{
-					if(time_out)
+					if(time_out && nb_buttons==0) /* no buttons and clic inside the box */
 						answer=fo_xadefbttn;		
 				}
 			}
@@ -4439,7 +4391,8 @@ void call_st_guide(void)
 	register int st_guide_id;
 	static WORD msg[8];
 	if(ap_id>=0 && buffer_path
-	 && (st_guide_id=appl_find("ST-GUIDE"))>=0)
+	 && ((st_guide_id=appl_find("ST-GUIDE"))>=0
+	  || (st_guide_id=appl_find("HYP_VIEW"))>=0))
 	{
 		strcpy(buffer_path,"*:\\CT60.HYP");
 		msg[0]=VA_START;
@@ -4494,7 +4447,18 @@ long cdecl temp_thread(unsigned int *param)				/* used with MagiC > 4.5 */
     		   old_load is the number of processes running previous time. */
 		daytime=Gettime();
 		time=(unsigned int)(daytime & 0xffe0L);					/* mn */
-		stop=test_stop(daytime,daystop,timestop);
+		if(eiffel_media_keys!=NULL)
+		{
+			if(*eiffel_media_keys==0x73)						/* POWER */
+			{
+				*eiffel_media_keys=0;
+				stop=1;
+			}
+			else
+				stop=test_stop(daytime,daystop,timestop);
+		}
+		else
+			stop=test_stop(daytime,daystop,timestop);
 		if(stop && !old_stop)
 		{
 			bip();
@@ -4560,7 +4524,7 @@ long cdecl temp_thread(unsigned int *param)				/* used with MagiC > 4.5 */
 				delay=ITIME;
 				loops=1;
 			}
-			else
+			else							/* Suptime() not supported */
 			{
 				if(count_mn)
 					load=load_avg_mn/(long)count_mn;
@@ -4572,8 +4536,8 @@ long cdecl temp_thread(unsigned int *param)				/* used with MagiC > 4.5 */
 				if(load>MAX_CPULOAD)
 					load=MAX_CPULOAD;
 				tab_cpuload[60]=(unsigned short)load;
-				delay=ITIME/CLOCKS_PER_SEC;
-				loops=CLOCKS_PER_SEC;
+				delay=ITIME/(CLOCKS_PER_SEC>>2);
+				loops=CLOCKS_PER_SEC>>2;
 			}
 			for(i=0;i<60;i++)
 				tab_temp[i]=tab_temp[i+1];
@@ -4603,12 +4567,12 @@ long cdecl temp_thread(unsigned int *param)				/* used with MagiC > 4.5 */
 				MT_form_xalert(1,mess_alert,ITIME*10L,0L,myglobal);
 			}
 		}
-		if(loops>1)
+		if(loops>1)							/* Suptime() not supported */
 			ticks=clock();
 		for(i=0;i<loops;i++)
 		{
 			event=MT_evnt_multi(MU_MESAG|MU_TIMER,0,0,0,0,&rect,0,&rect,message,delay,&mouse,&ret,&ret,myglobal);
-			if((event & MU_TIMER) && loops>1)
+			if((event & MU_TIMER) && loops>1) 								/*  MU_TIMER & Suptime() not supported */
 			{
 				new_ticks=clock();
 				if(new_ticks-ticks > (1000UL/CLOCKS_PER_SEC))
@@ -4915,6 +4879,8 @@ void stop_060(void)
 
 {
 	long value;
+	Sync();
+	Shutdown(0L);
 	if(((*Xcpb->get_cookie)('_CPU',&value)) && (value==60L))
 		Supexec(ct60_stop);		
 	while(1);
@@ -4986,177 +4952,6 @@ int fill_tab_temp(void)
 		return(1);
 	}
 	return(0);
-}
-
-long ct60_read_clock(void)
-
-{
-	int val;
-	long stack;
-	unsigned long p,q,pb,frequency;
-	static unsigned char buffer[128];
-	/* frequency (KHz) = (REF (KHz) * p) / q) / post divider */
-	stack=Super(0L);
-	val=ct60_read_info_clock(buffer);
-	if(val>=0)
-	{
-		q=(unsigned long)(buffer[QCOUNTER] & 127)+2;
-		p=(unsigned long)buffer[QCOUNTER]>>7; /* P0 */
-		pb=((unsigned long)(buffer[CHARGEP]&3)<<8);
-		pb|=(unsigned long)buffer[PBCOUNTER];
-		p+=((pb+4)<<1);
-		frequency=(REF*p)/q;
-		if(p==8 && q==2
-		 && buffer[CLKOE]==0 && buffer[DIV1N]==0
-		 && buffer[PINCTRL]==0 && buffer[WPREG]==0 && buffer[OSCDRV]==0
-		 && buffer[INLOAD]==0 && buffer[ADCREG]==0 && buffer[MATRIX1]==0
-		 && buffer[MATRIX2]==0 && buffer[MATRIX3]==0 && buffer[DIV2N]==0)
-			val=CT60_NULL_CLOCK_ERROR;
-		if((buffer[DIV1N]&0x7F)<4)
-			buffer[DIV1N]+=4;
-		if((buffer[DIV2N]&0x7F)<4)
-			buffer[DIV2N]+=4;
-		switch((buffer[MATRIX2]&0x70)>>4) /* clock 4 */
-		{
-			case 0:
-				frequency=REF;
-				break;
-			case 1:
-				if(buffer[DIV1N]&0x80)
-					frequency=REF/(buffer[DIV1N]&0x7F);
-				else
-					frequency/=(buffer[DIV1N]&0x7F);
-				break;
-			case 2:
-				if(buffer[DIV1N]&0x80)
-					frequency=REF>>1;
-				else
-					frequency>>=1;
-				break;
-			case 3:
-				if(buffer[DIV1N]&0x80)
-					frequency=REF/3;
-				else
-					frequency/=3;
-				break;
-			case 4:
-				if(buffer[DIV2N]&0x80)
-					frequency=REF/(buffer[DIV2N]&0x7F);
-				else
-					frequency/=(buffer[DIV2N]&0x7F);
-				break;
-			case 5:
-				if(buffer[DIV2N]&0x80)
-					frequency=REF>>1;
-				else
-					frequency>>=1;
-				break;
-			case 6:
-				if(buffer[DIV2N]&0x80)
-					frequency=REF>>2;
-				else
-					frequency>>=2;
-				break;
-		}
-#ifdef DEBUG
-	for(val=0;val<0x48;val++)
-	{
-		if((val&7)==0)
-			printf("\r\n");
-		printf("%02x ",buffer[val]);
-	}
-#endif
-	}
-	Super((void *)stack);
-	if(val<0)
-		return((long)val);
-	return((long)frequency);		
-}
-
-int ct60_configure_clock(unsigned long frequency,int mode)
-
-{
-	unsigned char matrix3,chargep;
-	int i,error;
-	long stack;
-	unsigned long p,q,pll;
-	static unsigned char tab_reg[] = {
-		CLKOE,0x69,    /* clocks 1, 4, 5, 6           */
-		DIV1N,0x04,    /* post divider /4             */
-		PINCTRL,0x50,  /* output enable pin           */
-		WPREG,0x08,    /* write protect pin           */
-		OSCDRV,0x28,   /* clock REF                   */
-		INLOAD,0x6B,   /* capacity load               */
-		ADCREG,0x00,
-		MATRIX1,0x49,  /* clocks 1 to 4 DIV1CLK/2     */
-		MATRIX2,0x2E,
-		DIV2N,0x05,    /* post divider /5             */
-		0,0 };
-	/* frequency (KHz) = (REF (KHz) * p) / q) / post divider */
-	/* => p/q = (frequency * post divider) / REF (KHz)       */
-	/* p = (2 * (PB  + 4)) + P0   q = Q + 2                  */
-	/* 8 <= p <= 2055             2 <= q <= 129              */
-	p=(frequency*2000)/REF;
-	q=REF/250;         /* 250 KHz mini => max value for q    */
-	while((p*q)>2055000 && q>=2)
-		q--;
-	if(q<2 || q>129)
-		return(CT60_CALC_CLOCK_ERROR);
-	pll=(p/1000)*REF;
-	if(pll<100000 || pll>400000) /* PLL between 100 and 400 MHz */
-		return(CT60_CALC_CLOCK_ERROR);
-	p*=q;
-	p/=1000;
-	if(p<8 || p>2055)
-		return(CT60_CALC_CLOCK_ERROR);
-	chargep=(unsigned char)((((p>>1)-4)>>8) & 0xFF);
-	chargep|=0xC0;
-	if(p>=45 && p<=479)
-		chargep|=0x04;
-	else if(p>=480 && p<=639)
-		chargep|=0x08;
-	else if(p>=640 && p<=799)
-		chargep|=0x0C;
-	else if(p>=800)
-		chargep|=0x10;
-	graf_mouse(BUSYBEE,(MFORM*)0);
-	stack=Super(0L);
-	if(frequency>77000)
-		matrix3=0x4F;   /* clocks 5 & 6 DIV1CLK/DIV1N /4 */
-	else if(frequency>51000 && frequency<=77000)
-		matrix3=0xDF;   /* clocks 5 & 6 DIV1CLK/3 */
-	else
-		matrix3=0x97;   /* clocks 5 & 6 DIV1CLK/2 */
-	error=ct60_rw_clock(mode,MATRIX3,(int)matrix3);
-	if(error>=0)
-	{
-		tempo_20ms();
-		error=ct60_rw_clock(mode,CHARGEP,(int)chargep);
-		if(error>=0)
-		{
-			tempo_20ms();
-			error=ct60_rw_clock(mode,PBCOUNTER,(int)(((p>>1)-4) & 0xFF));
-			if(error>=0)
-			{
-				tempo_20ms();
-				error=ct60_rw_clock(mode,QCOUNTER,(int)((((p & 1)<<7)+q-2) & 0xFF));
-				if(error>=0)
-				{
-					tempo_20ms();
-					i=error=0;
-					while((tab_reg[i] || tab_reg[i+1]) && error>=0)
-					{
-					 	error=ct60_rw_clock(mode,tab_reg[i],tab_reg[i+1]);
-						tempo_20ms();
-						i+=2;
-					}
-				}
-			}
-		}
-	}
-	Super((void *)stack);
-	graf_mouse(ARROW,(MFORM*)0);
-	return(error);
 }
 
 unsigned long bogomips(void)
@@ -5283,15 +5078,6 @@ int test_060(void)
 #else
 	return(1);
 #endif
-}
-
-long tempo_20ms(void)
-
-{
-	unsigned long 	start_time;
-	start_time	=*(unsigned long *)0x4BA;
-	while( ((*(unsigned long *)0x4BA) - start_time) <= 4); /* 20 mS */
-	return( 0L );
 }
 
 void reboot(void)

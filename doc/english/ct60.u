@@ -4,7 +4,7 @@
 !title   Documentation of the
 !programimage ..\img\ct60.img
 !program CT60
-!version Version 1.03
+!version Version 1.03a
 !date    (!today)
 !author  Didier MEQUIGNON
 !street  25, rue de l'Ascenseur
@@ -366,6 +366,22 @@ The pin 9 is connect to the ground, cut this pin.
 
 !subnode Programmable clock generator
 
+There are two solutions for install a programmable clock generator on the 
+CT60 :
+
+!begin_itemize
+
+!item The first, more precise, use a german module ak-modul-bus with a 
+chip Cypress CY27EE16 (quartz reference and phase looked loop PLL).
+
+!item The second, less expensive on a little board, use a CTCM module 
+with a chip Dallas DS1085Z-50 (voltage control oscillator VCO).
+
+!end_itemize
+
+
+!subsubnode The ak-modul-bus module with a CY27EE16
+
 It's possible to add a programmable clock generator by step of 125 KHz on 
 the CT60. The module use a CY27EE16 connected on the CT60 oscillator socket 
 and two SDRAM module I2C signals SDA (82) and SLC (83) found on R11 / R12.
@@ -382,10 +398,10 @@ can use some wires for connect the module to the CT60 like this :
 ATTENTION !
 (!u)
 
-If you think you're not ready to solder two very fine wires on R11 et R12, 
+If you think you're not ready to solder two very fine wires on R11 and R12, 
 return the CT60 and put the 2 wires on the pins 82 and 83 of the SDRAM socket 
 (front right). Rodolphe suggest to use the DIL14 socket by the pins 2 (SCL 
-to the pin 83 of the SDRAM socket) et 3 (SDA of the pin 83 of the SDRAM 
+to the pin 83 of the SDRAM socket) and 3 (SDA to the pin 83 of the SDRAM 
 socket) in order to remove easily the clock module.
 
 !image ..\img\dimm168p.img
@@ -425,9 +441,17 @@ short circuit with the CT60 CLK.
             (or pin 83 of the SDRAM socket)
 !end_verbatim
 
+(!B)
+Synoptic
+(!b)
+!image ..\img\cy_clock.img
+!begin_verbatim
+
+!end_verbatim
+
 !begin_itemize
 
-!item Programmable CT60 clock output is CLK1 or CLK4.
+!item The programmable CT60 clock output is CLK1 or CLK4.
 
 !item CLK2 and CLK 3 are disabled.
  
@@ -488,6 +512,96 @@ List of components :
 1 x flat cable 10 wires.
 1 x female SUBD 9 pins.
 !end_verbatim
+
+(!B)
+Remark :
+(!b)
+For the frequency to 100 MHz, you must fix the CT60 clock (look at 
+'CT60-100 clock'). 
+
+
+!subsubnode The CTCM module with a DS1085Z-50
+                
+It's possible to add a programmable clock generator by step of 50 KHz on 
+the CT60. The module use a DS1085Z-50 connected on the CT60 oscillator 
+socket and two SDRAM module I2C signals SDA (82) and SLC (83).
+
+!image ..\img\dimm168p.img
+
+!image ..\img\ct60_clk.img
+
+(!U)
+ATTENTION !
+(!u)
+
+The CTCM module use the two unused pins on the DIL14 socket by the pins 2 
+SCL to the pin 83 of the SDRAM socket, and 3 SDA to the pin 83 of the SDRAM 
+socket in order to remove easily the clock module. Solder two very fine 
+wires.
+
+!image ..\img\ctcm.img
+
+!begin_verbatim
+
+               +-------------+
+               |            +5V      CLK      CLK
+               |           14o__o__o__o__o__o__o
+               |        +-------------'        |8
+               |        |    |                 |
+               |        |     )   CT60 clock   |
+   ____________o__o__o__o_   |      socket     |
+  |strap      +5V      OUT  1|SCL SDA          |7
+  |  X                  0|   o--o--o--o--o--o--o
+  |        CTCM   +-------------+  | GND      GND
+  |       module  |      |         |  |
+  |               |  +-------------+  |
+  +---------------o--o--o-GND         |
+                SCL SDA +-------------+
+!end_verbatim
+
+(!B)
+Synoptic
+(!b)
+!image ..\img\ds_clock.img
+!begin_verbatim
+
+!end_verbatim
+
+!begin_itemize
+
+!item The programmable CT60 clock output is OUT0. If the CTRL0 input is 
+at 1 the clock is between 33 and 66 MHz (strap cut). If the CTRL0 input 
+is at 0 the clock is between 66 and 110 MHz (strap put).
+
+!item OUT1 can be used for VIDEL clock, but there are always a link with 
+the CT60 clock like this : 
+
+!end_itemize
+
+!begin_table [|c|c|c|] !hline
+CT60 clock (MHz) !! OUT1 (MHz) !! Factor
+!hline
+      50.000      !!   50.000    !!  /1
+      51.000      !!   51.000    !!  /1
+!hline         
+      51.050      !!   25.025    !!  /2
+      66.600      !!   33.300    !!  /2
+     100.000      !!   50.000    !!  /2
+     110.000      !!   55.000    !!  /2
+!hline
+!end_table
+
+(!B)
+Remark :
+(!b)
+This possibility is disabled on the CTCM module because the CTRL1 pin is 
+at 1 (connected to the +5V).
+
+The TOS check if the module exist and can change the clock between 33 and 
+66 MHz or 66 and 110 MHz according to the strap on the module (see also the 
+part 'Change the CT60 frequency'). 
+
+Look at http://www.czuba-tech.com for more informations about this module.
 
 (!B)
 Remark :
@@ -1336,7 +1450,7 @@ mode), but in this case it's better to choice the 'Selection TOS in RAM'
 !end_verbatim
 
 The second task is to update the CT60 hardware with two jedec files (.JED) 
-for ABE60 et SDR60 chips (XILINX XC95144XL CPLD). 
+for ABE60 and SDR60 chips (XILINX XC95144XL CPLD). 
 
 !begin_itemize
 
@@ -1543,25 +1657,57 @@ With the slider inside the page 'Memory / uP' of the CPX, if necessary it's
 possible to change the CT60 frequency.
 
 For do this task, a programmable clock generator module using a CY27EE16 
-must be connected on the CT60's I2C port with some wires (see also the 
-part 'Programmable clock generator'). 
+or a DS1085Z-50 must be connected on the CT60's I2C port with some wires 
+(see also the part 'Programmable clock generator'). 
 
-The adjustment works by step of 125 KHz between 50 and 110 MHz, the value 
-is writed in RAM for a test after 'OK'. The TOS during the boot when the 
-Atari logo arrive send equally this value to the clock, but in case of a 
-problem it's possible to bypass this feature and use the original 
-frequency by press CTRL or ALT.
+The adjustment works by step of 125 KHz between 50 and 110 MHz for the 
+CY27EE16 (ak-modul-bus module), or by step of 50 KHz between 66 and 110 
+MHz for the DS1085Z-50 (CTCM module), the value is writed in RAM for a 
+test after 'OK'. The TOS during the boot when the Atari logo arrive send 
+equally this value to the clock, but in case of a problem it's possible to 
+bypass this feature and use the original frequency by press CTRL or ALT.
+
+(!U)
+ATTENTION !
+(!u)
+
+So long as you not cut the power on the machine, the clock gererator works 
+with the latest frequency writed inside his RAM. During the power on 
+sequency, the clock generator copy himself inside his RAM the original 
+frequency saved in his EEPROM. Press on CTRL or ALT has no effect if you 
+not cut the power before.
+
+(!U)
+Initialisation
+(!u)
 
 The original frequency saved in EEPROM is also modifiable after a 
 confirmation with a double click on 'Save' but it's very dangerous ! 
 
 Yet, when it's impossible to restart the computer, the last solution is 
-to connect the module on the MODEM 2 port with a link HE10 SUBD and 
-reprogram in 030 mode the EEPROM of the module with the 'Save' button. 
-This operation is essential for load a new module. The module must be 
-powered by the CT60.
+to connect the (!B) ak-modul-bus module (!b) on the MODEM 2 port with a 
+link HE10 SUBD and reprogram in 030 mode the EEPROM of the module with the 
+'Save' button. This operation is essential for load a new module. (!B) The 
+module must be powered by the CT60 and the signals SDA and SCL must be 
+disconnected because during the 030 mode the CT60 force these signals to 
+0 ! (!b)
 
 !image ..\img\subd.img
+!begin_verbatim
+
+!end_verbatim
+
+When it's impossible to restart the computer with the (!B) CTCM module 
+(!b) you must cut the strap for divide by two the frequency (clock between 
+33 and 66 MHz), and after reprogram again the module with the CT60 by 
+saving a new value inside the EEPROM. Now, the frequency is multiplyed by 
+two when the strap is again in place !
+
+Like the (!B) ak-modul-bus module (!b), the last solution is to connect 
+the (!B) CTCM module (!b) on the MODEM 2 port with a link HE10 SUBD and 
+reprogram in 030 mode the EEPROM of the module with the 'Save' button.
+
+!image ..\img\modem2.img
 !begin_verbatim
 
 !end_verbatim 
@@ -1659,6 +1805,41 @@ At this page you can :
 IKBD clock instead of the RTC. This feature is for fix NVM problems caused 
 by a battery failure.
 !end_itemize
+
+
+!subnode CT60TEMP.APP
+
+This program is created by the CPX. For check the temperature and use 
+curves, the CPX : 
+
+!begin_itemize
+!item Under TOS create a desk-accessory CT60TEMP.ACC and ask to reboot.
+!item Under MiNT create the program CT60TEMP.APP and start this program.
+!item Under MagiC start a thread.
+!end_itemize
+
+Some is the solution used (thead, accessory or application), it's 
+possible to use the multimedia keys features of the Eiffel PS/2 interface 
+(http://eiffel3.atari.org), especially with the set number 2 PS/2. The 
+(!B) POWER (!b) key start a stop after a shutdown procedure.
+
+If CT60TEMP.APP is used under MagiC or MiNT (for MagiC boot under TOS and 
+copy CT60TEMP.ACC to CT60TEMP.APP), by using environment variables, it's 
+possible to use others multimedia keys of the Eiffel PS/2 interface :
+
+!begin_itemize
+!item (!B) WWW HOME : (!b) Start the internet navigator with the 
+environment variable BROWSER.
+!item (!B) E-MAIL : (!b) Start the email program with the environment 
+variable MAILER. 
+!item (!B) WWW SEARCH : (!b) Start the internet navigator with the 
+environment variable BROWSER with the home page of Google.
+!item (!B) MY COMPUTER : (!b) Start the hypertexte viewer with the 
+environment variable HELPVIEWER with the documentation of the CT60.
+!end_itemize
+
+You must install the program E_TEMP.PRG inside the AUTO folder (the 
+'Eiff' cookie is used).
 
 
 !subnode Informations about the SDRAM

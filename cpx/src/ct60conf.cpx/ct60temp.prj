@@ -1,8 +1,9 @@
-;CPX.PRJ for Pure C
+;CT60TEMP.PRJ for Pure C
 
 CT60TEMP.APP
 .C [ -2 ]
 .S [ -4 -S]
+.L [-S=32768]
 =
 
 PCSTART.O          ; startup code

@@ -1,16 +1,15 @@
 	
 /* CT60 TEMPerature - Pure C */
-/* Didier MEQUIGNON - v1.03 - February 2005 */
+/* Didier MEQUIGNON - v1.03a - March 2005 */
 
 #include <portab.h>
 #include <tos.h>
 #include <mt_aes.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <time.h>
 #include "ct60.h"
-
-/* #define TEST_MAGICMAC */
 
 #define ITIME 1000L	/* mS */
 #define MAX_CPULOAD 10000
@@ -31,6 +30,8 @@
 #define EVERYDAY_STOP 10
 
 #define Suptime(uptime,avenrun) gemdos(0x13f,(long)(uptime),(long)(avenrun))
+#define Sync() gemdos(0x150)
+#define Shutdown(mode) gemdos(0x151,(long)(mode))
 
 typedef struct
 {
@@ -77,6 +78,9 @@ typedef struct {
 
 /* prototypes */
 
+void var_name_app(char *env,char *app_name);
+int start_app(char *path_app,char *cmd,WORD *global);
+void call_app(char *var_env,char *cmd,WORD *global);
 void rsc_calc(OBJECT *tree);
 OBJECT* adr_tree(int num_tree);
 int MT_form_xalert(int fo_xadefbttn,char *fo_xastring,long time_out,void (*call)(),WORD *global);
@@ -95,7 +99,7 @@ extern long ct60_stop(void);
 
 /* global variables */
 
-int start_lang,flag_xbios,gr_hwchar,gr_hhchar,gr_hwbox,gr_hhbox;
+int start_lang,flag_xbios,mint,magic,gr_hwchar,gr_hhchar,gr_hwbox,gr_hhbox;
 WORD myglobal[15];
 
 /* ressource */
@@ -191,6 +195,7 @@ int main(int argc,const char *argv[])
 	unsigned long ticks,run_ticks,start_ticks,new_ticks,sum_ticks=0;
 	long uptime,load,old_load=0,load_avg=0,load_avg_mn=0,delay=ITIME,avenrun[3]={0,0,0};
 	char *eiffel_temp;
+	short *eiffel_media_keys;
 	char buffer[2];
 	static char load_ikbd[4] = {0x20,0x01,0x20,8};
 	char message_lcd[10];
@@ -234,8 +239,12 @@ int main(int argc,const char *argv[])
 	}
 	if(trigger_temp==0)
 		trigger_temp=(MAX_TEMP*3)/4;
-	if(get_cookie('MiNT')
-	 || (get_cookie('MagX') && (mx_kernel=(MX_KERNEL *)Dcntl(KER_GETINFO,NULL,0L))!=0
+	mint=magic=0;
+	if(get_cookie('MiNT'))
+		mint=1;
+	if(get_cookie('MagX'))
+		magic=1;
+	if(mint || (magic && (mx_kernel=(MX_KERNEL *)Dcntl(KER_GETINFO,NULL,0L))!=0
 	  && *mx_kernel->pe_slice>=0))	/* preemptive */
 		flag_cpuload=1;
 	else
@@ -246,6 +255,9 @@ int main(int argc,const char *argv[])
 		if((p->v.c[2]==FRA) || (p->v.c[2]==SWF))
 			start_lang=0;
 	}
+	eiffel_media_keys=NULL;
+	if((p=get_cookie('Eiff'))!=0)
+		eiffel_media_keys=(short *)p->v.l;
 	eiffel_temp=NULL;
 	if((p=get_cookie('Temp'))!=0)
 		eiffel_temp=(char *)p->v.l;
@@ -270,22 +282,17 @@ int main(int argc,const char *argv[])
 		b_itblk->bi_pdata=(int *)pic_stop;
 	}
 	flag_xbios=1;
-#ifdef TEST_MAGICMAC
-	if(!get_cookie('MgMc'))
-#endif
+	if(((p=get_cookie('_MCH'))==0) || (p->v.l!=0x30000))	/* Falcon */
 	{
-		if(((p=get_cookie('_MCH'))==0) || (p->v.l!=0x30000))	/* Falcon */
-		{
-			if(!start_lang)
-				MT_form_alert(1,"[1][Cette machine n'est|pas un FALCON 030][Annuler]",myglobal);
-			else
-				MT_form_alert(1,"[1][This computer isn't|a FALCON 030][Cancel]",myglobal);
-			MT_appl_exit(myglobal);
-			return(0);
-		}
-		if(!get_cookie(ID_CT60))
-			flag_xbios=0;
+		if(!start_lang)
+			MT_form_alert(1,"[1][Cette machine n'est|pas un FALCON 030][Annuler]",myglobal);
+		else
+			MT_form_alert(1,"[1][This computer isn't|a FALCON 030][Cancel]",myglobal);
+		MT_appl_exit(myglobal);
+		return(0);
 	}
+	if(!get_cookie(ID_CT60))
+		flag_xbios=0;
 	cpu_060=0;
 	if(((p=get_cookie('_CPU'))!=0) && (p->v.l==0x3C))
 		cpu_060=1;
@@ -344,7 +351,35 @@ int main(int argc,const char *argv[])
     		   old_load is the number of processes running previous time. */			
 		daytime=Gettime();
 		time=(unsigned int)(daytime & 0xffe0L);					/* mn */
-		stop=test_stop(daytime,daystop,timestop);
+		if(eiffel_media_keys!=NULL)
+		{
+			switch(*eiffel_media_keys)
+			{
+				case 0x73:										/* POWER */
+					*eiffel_media_keys=0;
+					stop=1;
+					break;
+				case 0x3A:										/* WWW HOME */
+					*eiffel_media_keys=0;
+					call_app("BROWSER",NULL,myglobal);
+					break;
+				case 0x48:										/* E-MAIL */
+					*eiffel_media_keys=0;
+					call_app("MAILER",NULL,myglobal);
+					break;
+				case 0x10:										/* WWW SEARCH */
+					*eiffel_media_keys=0;
+					call_app("BROWSER","http://www.google.com",myglobal);
+					break;
+				case 0x40:										/* MY COMPUTER */
+					*eiffel_media_keys=0;
+					call_app("HELPVIEWER","*:\\CT60.HYP",myglobal);
+					break;
+				default: stop=test_stop(daytime,daystop,timestop); break;
+			}
+		}
+		else
+			stop=test_stop(daytime,daystop,timestop);
 		if(stop && !old_stop)
 		{
 			bip();
@@ -417,7 +452,7 @@ int main(int argc,const char *argv[])
 				delay=ITIME;
 				loops=1;
 			}
-			else
+			else						/* Suptime() not supported */
 			{
 				if(count_mn)
 					load=load_avg_mn/(long)count_mn;
@@ -429,8 +464,8 @@ int main(int argc,const char *argv[])
 				if(load>MAX_CPULOAD)
 					load=MAX_CPULOAD;
 				tab_cpuload[60]=(unsigned short)load;
-				delay=ITIME/CLOCKS_PER_SEC;
-				loops=CLOCKS_PER_SEC;
+				delay=ITIME/(CLOCKS_PER_SEC>>2);
+				loops=CLOCKS_PER_SEC>>2;
 			}
 			for(i=0;i<60;i++)
 				tab_temp[i]=tab_temp[i+1];
@@ -460,7 +495,7 @@ int main(int argc,const char *argv[])
 				MT_form_xalert(1,mess_alert,ITIME*10L,0L,myglobal);
 			}
 		}
-		if(loops>1)
+		if(loops>1)						/* Suptime() not supported */
 			ticks=clock();
 		for(i=0;i<loops;i++)
 		{
@@ -474,7 +509,7 @@ int main(int argc,const char *argv[])
 					timestop=(unsigned int)ct60_arg->timestop;
 				}
 			}			
-			if(loops>1)
+			if(loops>1)					/* Suptime() not supported */
 			{
 				new_ticks=clock();
 				if(new_ticks-ticks > (1000UL/CLOCKS_PER_SEC))
@@ -508,11 +543,11 @@ int main(int argc,const char *argv[])
 					}
 				 	if(!start_lang)
 						sprintf(mess_alert,
-						"[0][      CT60 TEMPERATURE       |V1.03 MEQUIGNON Didier 02/2005| |Temp.: %d øC     Seuil: %d øC |Lien avec processus %d %s][OK]",
+						"[0][      CT60 TEMPERATURE       |V1.03a MEQUIGNON Didier 03/2005| |Temp.: %d øC     Seuil: %d øC |Lien avec processus %d %s][OK]",
 						temp,trigger_temp,app_id,app_name);
 					else
 						sprintf(mess_alert,
-						"[0][      CT60 TEMPERATURE       |V1.03 MEQUIGNON Didier 02/2005| |Temp.: %d øC Threshold: %d øC |Link with process %d %s][OK]",
+						"[0][      CT60 TEMPERATURE       |V1.03a MEQUIGNON Didier 03/2005| |Temp.: %d øC Threshold: %d øC |Link with process %d %s][OK]",
 						temp,trigger_temp,app_id,app_name);
 					MT_form_xalert(1,mess_alert,ITIME*10L,0L,myglobal);
 					break;
@@ -549,6 +584,83 @@ int main(int argc,const char *argv[])
 		Mfree(tab_temp);
 	MT_appl_exit(myglobal);
 	return(0);
+}
+
+void var_name_app(char *env,char *app_name)
+{
+	register int i;
+	char *p;
+	for(i=0;i<8;app_name[i++]=' ');
+	i=0;
+	p=env;
+	while(env[i])
+	{
+		if(env[i]=='\\')
+			p=&env[i+1];
+		i++;		
+	}
+	for(i=0;i<8 && p[i] && p[i]!='.';i++)
+	{
+		if(p[i]>='a' && p[i]<'z')
+			app_name[i]=p[i]|0x20;
+		else
+			app_name[i]=p[i];	
+	}
+}
+
+int start_app(char *path_app,char *cmd,WORD *global)
+
+{
+	register int i,ret;
+	char *p;
+	char path[1024],cmd_line[256];
+	if(*cmd)
+	{
+		strcpy(&cmd_line[1],cmd);
+		cmd_line[0]=(char)strlen(cmd);
+	}
+	else
+		cmd_line[0]=cmd_line[1]=0;
+	if(path_app[1]==':' && path_app[2]=='\\'
+	 && ((path_app[0]>='a' && path_app[0]<='z')
+	  || (path_app[0]>='A' && path_app[0]<='Z')))
+	{ 
+		Dsetdrv((int)(path_app[0]&0x1F)-1);
+		strcpy(path,&path_app[2]);
+		i=0;
+		p=path;
+		while(path[i])
+		{
+			if(path[i]=='\\')
+				p=&path[i+1];
+			i++;		
+		}
+		*p=0;
+    	Dsetpath(path);
+	}
+	if(magic)
+		ret=MT_shel_write(1,1,SHW_PARALLEL,path_app,cmd_line,global);
+	else
+		ret=MT_shel_write(0,1,SHW_CHAIN,path_app,cmd_line,global);
+	evnt_timer(100L);
+	return(ret);
+}
+
+void call_app(char *var_env,char *cmd,WORD *global)
+
+{
+	char app_name[]="        ";
+	char *env;
+	if(_app)
+	{
+		env=getenv(var_env);
+		if(env!=NULL && env[0])
+		{
+			var_name_app(env,app_name);
+			if(MT_appl_find(app_name,global)<0)
+				start_app(env,cmd,global);
+		}
+	}
 }
 
 void rsc_calc(OBJECT *tree)
@@ -801,7 +913,7 @@ int MT_form_xalert(int fo_xadefbttn,char *fo_xastring,long time_out,void (*call)
 				}
 				else
 				{
-					if(time_out)
+					if(time_out && nb_buttons==0) /* no buttons and clic inside the box */
 						answer=fo_xadefbttn;		
 				}
 			}
@@ -916,6 +1028,8 @@ void stop_60(void)
 
 {
 	COOKIE *p;
+	Sync();
+	Shutdown(0L);
 	if(((p=get_cookie('_CPU'))!=0) && (p->v.l==60L))
 		Supexec(ct60_stop);	
 	while(1);

@@ -176,13 +176,13 @@ it's already used by the TOS (CTRL <-) (files xbios2.S).
 2004-10-02 1.02a
 ----------------
 - Add Atari Diagnostics Cartridge (CT60 version) moved to 
-0x00ED0000-0x00EEFFFF. This diagnosics are called with 
+0x00ED0000-0x00EEFFFF. This diagnostics are called with 
 CTRL-ALT-SHIFT-SHIFT during the boot picture (file videl2.S).
 - CRC in TOS 4.04 flash used again (file blitter.S).
 - Display path for Auto folder files (file sdram.S).
 - Moved the format boot picture to XIMG TC16 for get free place for 
 the Atari Diagnostics.
-- Add a picture/demo code 'XIMG' at 0x00ED0000 for call a picture/demo 
+- Add a picture/demo code 'XIMG' test at 0x00ED0000 for call a picture/demo 
 at 0x00ED0004 for replace the boot picture (file videl2.S).
 
 2004-10-26 1.02b
@@ -207,3 +207,9 @@ sdram.S).
 - Add test and setting of a programmable clock generator module (with 
 a CY27EE16) connected on the I2C port (file sdram.S).
 
+2005-03-04 1.03a
+----------------
+- Add test and setting of a 2nd programmable clock generator with 
+a DS1085 connected on the I2C port (file sdram.S).
+- Add write protect and reset for the 1st programmable clock generator 
+with a CY27EE16 (file sdram.S).

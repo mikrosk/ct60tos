@@ -20,14 +20,30 @@
 	.export ct60_read_info_sdram
 	.export ct60_read_info_clock
 	.export read_seq_device_i2c
+	.export write_seq_device_i2c
 	.export ct60_configure_sdram
 	.export ct60_rw_clock
 	.export read_i2c
 	.export write_i2c
 	
-SLAVE_SDRAM_ADRESS      equ $50 ;7 bits 1010xxx
-SLAVE_CY_EEPROM_ADRESS  equ $68
-SLAVE_CY_SRAM_ADRESS    equ $69
+SLAVE_SDRAM_ADDRESS     equ $50 ;7 bits 1010xxx
+SLAVE_DS_ADDRESS        equ $58   
+SLAVE_CY_EEPROM_ADDRESS equ $68
+SLAVE_CY_SRAM_ADDRESS   equ $69
+
+;DS1085 serial programmable clock registers
+DIVWORD   equ $01
+MUXWORD   equ $02
+DACWORD   equ $08
+ADR       equ $0D
+OFFSET    equ $0E
+RANGEWORD equ $37
+WRITE     equ $3F
+
+CT60_CLOCK_READ         equ 0
+CT60_CLOCK_WRITE_RAM    equ 1
+CT60_CLOCK_WRITE_EEPROM equ 2
+CT60_CLOCK_RESET        equ 3
 
 CT60_READ_ERROR         equ -1
 CT60_CHIP_DENSITY_ERROR equ -2
@@ -60,7 +76,7 @@ macro WAIT_US
 	local wait
 	move.b (A0),D0
 wait:
-	cmp.b (A0),D0            ;26uS (timer C) or 6,5uS (timer B)
+	cmp.b (A0),D0            ;26uS (timer C) or 6.5uS (timer B)
 	beq.s wait
 	endm
 	
@@ -106,41 +122,108 @@ macro SDA_SCC
 	sne.b D0
 	endm
 	
-ct60_rw_clock:               ;D0.W: mode (0: read, 1:write ram, 2: write eeprom)
+ct60_rw_clock:               ;D0.W: mode (0: read, 1:write ram, 2: write eeprom) B15:cypress(0)/dallas(1)
                              ;D1.W: address, D2:.W data, D0 return data or error
-	tst.w D0                 ;mode: read ram
+	tst.w D0                 ;mode
+	bmi.s .4                 ;dallas
+	cmp.w #CT60_CLOCK_READ,D0
 	bne.s .2
 	move.w D1,D0             ;address
 	bra read_i2c_cy_sram
 .2:
-	cmp.w #1,D0              ;mode write ram
+	cmp.w #CT60_CLOCK_WRITE_RAM,D0
 	bne.s .3
 	move.w D1,D0             ;address
 	move.w D2,D1             ;data
 	bra write_i2c_cy_sram
 .3:
-	cmp.w #2,D0              ;mode write eeprom
-	bne.s .1
+	cmp.w #CT60_CLOCK_WRITE_EEPROM,D0
+	bne.s .12
 	move.w D1,D0             ;address
 	move.w D2,D1             ;data
 	bra write_i2c_cy_eeprom
+.12:
+	cmp.w #CT60_CLOCK_RESET,D0
+	bne .1
+	moveq #0,D0              ;address
+	move.w #$80,D1           ;data: reset soft
+	bra write_i2c_cy_sram
+.4:
+	bclr #15,D0              ;mode
+	cmp.w #CT60_CLOCK_READ,D0
+	bne.s .5
+	moveq #SLAVE_DS_ADDRESS,D0
+	swap D0
+	move.w D1,D0             ;address
+	cmp.w #ADR,D0
+	beq.s .8                 ;byte
+	cmp.w #OFFSET,D0	
+	bne.s .7                 ;word	
+.8:
+	bra read_i2c
+.7:
+	link A6,#-2
+	lea -2(A6),A0
+	moveq #2,D1              ;len
+	bsr read_seq_device_i2c
+	bmi.s .11
+	move.w (A0),D0           ;data
+.11:
+	unlk A6
+	rts 
+.5:
+	cmp.w #CT60_CLOCK_WRITE_RAM,D0
+	bne.s .6
+	moveq #SLAVE_DS_ADDRESS,D0
+	swap D0
+	move.w D1,D0             ;address
+	cmp.w #ADR,D0
+	beq.s .10                ;byte
+	cmp.w #OFFSET,D0	
+	bne.s .9                 ;word	
+.10:
+	move.w D2,D1             ;data
+	bra write_i2c
+.9:
+	link A6,#-2
+	lea -2(A6),A0
+	move.w D2,(A0)           ;data
+	moveq #2,D1              ;len
+	bsr write_seq_device_i2c
+	unlk A6
+	rts
+.6:
+	cmp.w #CT60_CLOCK_WRITE_EEPROM,D0
+	bne.s .1
+	moveq #SLAVE_DS_ADDRESS,D0
+	swap D0
+	move.w #WRITE,D0         ;address
+	moveq #0,D1              ;len
+	lea 0,A0                 ;no data
+	bra write_seq_device_i2c
 .1:
 	moveq #CT60_READ_ERROR,D0
 	rts
  
 ct60_read_info_sdram:        ;A0: 128 bytes buffer, D0 return error
 
-	move.w #SLAVE_SDRAM_ADRESS,D0
+	moveq #SLAVE_SDRAM_ADDRESS,D0
+	swap D0
+	move.w #128,D1
 	bra.s read_seq_device_i2c
 
 ct60_read_info_clock:        ;A0: 128 bytes buffer, D0 return error
 
-	move.w #SLAVE_CY_SRAM_ADRESS,D0
+	moveq #SLAVE_CY_SRAM_ADDRESS,D0
+	swap D0
+	move.w #128,D1
 		 
-read_seq_device_i2c:         ;D0: device, A0: 128 bytes buffer, D0 return error
+read_seq_device_i2c:         ;D0.L: address, D0.H: device, D1: len (bytes), A0: buffer, D0 return error
 
 	movem.l D1-D4/A0-A3,-(SP) 
-	move.w D0,D4             ;device
+	move.l D0,D4
+	swap D4                  ;device
+	move.w D1,D3             ;len (bytes)
 	move.l A0,A3
 	move SR,-(SP)
 	or #$700,SR              ;no interrupts
@@ -148,7 +231,7 @@ read_seq_device_i2c:         ;D0: device, A0: 128 bytes buffer, D0 return error
 	move.l 8,A1              ;bus error
 	move.l A0,8
 	move.l SP,A2
-	lea _tcdr_mfp,A0         ;timer C value changed at each 26 uS (clock 19,2 KHz)
+	lea _tcdr_mfp,A0         ;timer C value changed at each 26 uS (clock 19.2 KHz)
 	tst.b _tbcr_mfp
 	bne.s .6                 ;timer B used
 	bclr #0,_imra_mfp
@@ -156,8 +239,8 @@ read_seq_device_i2c:         ;D0: device, A0: 128 bytes buffer, D0 return error
 	bclr #0,_ipra_mfp
 	bclr #0,_isra_mfp    
 	lea _tbdr_mfp,A0 
-	move.b #2,(A0)           ;clock = 78,125 KHz (value changed at each 6,4 uS)
-	move.b #3,_tbcr_mfp      ;2,4576MHz/16
+	move.b #2,(A0)           ;clock = 78.125 KHz (value changed at each 6.4 uS)
+	move.b #3,_tbcr_mfp      ;2.4576MHz/16
 .6:
 	bsr start_bit_i2c
 	move.l A1,8
@@ -171,15 +254,22 @@ read_seq_device_i2c:         ;D0: device, A0: 128 bytes buffer, D0 return error
 	bsr read_bit_i2c         ;ack
 	btst #0,D0 
 	bne .3                   ;no acknoledge
+	swap D4                  ;address
 	moveq #0,D0
-	bsr write_bit_wait_slave_i2c ;address 1st bit
+	add.b D4,D4  
+	addx.b D0,D0             ;address 1st bit
+	bsr write_bit_wait_slave_i2c
 	moveq #6,D2              ;8 bits
-.4:		moveq #0,D0          ;address
+.4:
+		moveq #0,D0
+		add.b D4,D4  
+		addx.b D0,D0         ;address
 		bsr write_bit_i2c
 	dbf D2,.4
 	bsr read_bit_i2c         ;ack
 	bne.s .3                 ;no acknoledge
 	bsr start_bit_wait_slave_i2c
+	swap D4
 	move.w D4,D0             ;device
 	bsr write_device_i2c
 	moveq #1,D0              ;read data
@@ -187,7 +277,9 @@ read_seq_device_i2c:         ;D0: device, A0: 128 bytes buffer, D0 return error
 	bsr read_bit_i2c         ;ack
 	btst #0,D0 
 	bne.s .3                 ;no acknoledge
-	moveq #127,D3            ;128 bytes
+	subq.w #1,D3             ;len (bytes) -1
+	bpl.s .8
+	moveq #0,D3
 .8:
 		moveq #0,D1          ;data
 		bsr read_bit_wait_slave_i2c  ;1st bit
@@ -206,7 +298,99 @@ read_seq_device_i2c:         ;D0: device, A0: 128 bytes buffer, D0 return error
 		bsr write_bit_i2c
 	dbf D3,.8
 	bsr stop_bit_i2c
-	moveq #0,D0 ; OK
+	moveq #0,D0              ; OK
+	bra.s .2
+.3:
+	bsr stop_bit_i2c
+.9:
+	moveq #CT60_READ_ERROR,D0    ;error
+	bra.s .2
+.1:
+	moveq #CT60_READ_ERROR,D0    ;bus error
+	move.l A1,8
+	move.l A2,SP
+.2:
+	lea _tbdr_mfp,A1
+	cmp.l A0,A1
+	bne.s .7
+	clr.b _tbcr_mfp          ;timer B stopped
+.7:
+	move (SP)+,SR
+	tst.l D0
+	movem.l (SP)+,D1-D4/A0-A3
+	rts
+
+write_seq_device_i2c:        ;D0.L: address, D0.H: device, D1: len (bytes), A0: buffer, D0 return error
+
+	movem.l D1-D4/A0-A3,-(SP) 
+	move.l D0,D4
+	swap D4                  ;device
+	move.w D1,D3             ;len (bytes)
+	move.l A0,A3
+	move SR,-(SP)
+	or #$700,SR              ;no interrupts
+	lea .1(PC),A0
+	move.l 8,A1              ;bus error
+	move.l A0,8
+	move.l SP,A2
+	lea _tcdr_mfp,A0         ;timer C value changed at each 26 uS (clock 19.2 KHz)
+	tst.b _tbcr_mfp
+	bne.s .6                 ;timer B used
+	bclr #0,_imra_mfp
+	bclr #0,_iera_mfp
+	bclr #0,_ipra_mfp
+	bclr #0,_isra_mfp    
+	lea _tbdr_mfp,A0 
+	move.b #2,(A0)           ;clock = 78.125 KHz (value changed at each 6.4 uS)
+	move.b #3,_tbcr_mfp      ;2.4576MHz/16
+.6:
+	bsr start_bit_i2c
+	move.l A1,8
+	move.l A2,SP
+	btst #0,D0
+	beq .9                   ;SDA always at 0
+	move.w D4,D0             ;device
+	bsr write_device_i2c
+	moveq #0,D0              ;write address
+	bsr write_bit_i2c        ;r/w
+	bsr read_bit_i2c         ;ack
+	btst #0,D0 
+	bne .3                   ;no acknoledge
+	swap D4                  ;address
+	moveq #0,D0
+	add.b D4,D4  
+	addx.b D0,D0             ;address 1st bit
+	bsr write_bit_wait_slave_i2c
+	moveq #6,D2              ;8 bits
+.4:
+		moveq #0,D0
+		add.b D4,D4  
+		addx.b D0,D0         ;address
+		bsr write_bit_i2c
+	dbf D2,.4
+	bsr read_bit_i2c         ;ack
+	bne.s .3                 ;no acknoledge
+	subq.w #1,D3             ;len (bytes) -1
+	bmi.s .10
+.8:
+		move.b (A3)+,D1          ;data
+		moveq #0,D0
+		add.b D1,D1  
+		addx.b D0,D0             ;data 1st bit
+		bsr write_bit_wait_slave_i2c
+		moveq #6,D2              ;8 bits
+.5:
+			moveq #0,D0
+			add.b D1,D1  
+			addx.b D0,D0         ;data
+			bsr write_bit_i2c
+		dbf D2,.5
+		bsr read_bit_i2c         ;ack
+	dbne D3,.8
+	bne.s .3                 ;no acknoledge
+.10:
+	bsr stop_bit_i2c
+	moveq #0,D0              ; OK
 	bra.s .2
 .3:
 	bsr stop_bit_i2c
@@ -365,28 +549,28 @@ ct60_configure_sdram:
 read_i2c_sdram:              ;D0: address, D0 return data or error
 
 	swap D0
-	move.w #SLAVE_SDRAM_ADRESS,D0
+	move.w #SLAVE_SDRAM_ADDRESS,D0
 	swap D0
 	bra.s read_i2c
 	
 read_i2c_cy_sram:            ;D0: address, D0 return data or error
 
 	swap D0
-	move.w #SLAVE_CY_SRAM_ADRESS,D0
+	move.w #SLAVE_CY_SRAM_ADDRESS,D0
 	swap D0
 
 read_i2c:                    ;D0.L: address, D0.H: device, D0 return data or error
 
 	movem.l D1-D3/A0-A2,-(SP)
-	move.l D0,D3             ;device
-	swap D3
+	move.l D0,D3
+	swap D3                  ;device
 	move SR,-(SP)
 	or #$700,SR              ;no interrupts
 	lea .1(PC),A0
 	move.l 8,A1              ;bus error
 	move.l A0,8
 	move.l SP,A2
-	lea _tcdr_mfp,A0         ;timer C value changed at each 26 uS (clock 19,2 KHz)
+	lea _tcdr_mfp,A0         ;timer C value changed at each 26 uS (clock 19.2 KHz)
 	tst.b _tbcr_mfp
 	bne.s .6                 ;timer B used
 	bclr #0,_imra_mfp
@@ -394,8 +578,8 @@ read_i2c:                    ;D0.L: address, D0.H: device, D0 return data or err
 	bclr #0,_ipra_mfp
 	bclr #0,_isra_mfp    
 	lea _tbdr_mfp,A0 
-	move.b #2,(A0)           ;clock = 78,125 KHz (value changed at each 6,4 uS)
-	move.b #3,_tbcr_mfp      ;2,4576MHz/16
+	move.b #2,(A0)           ;clock = 78.125 KHz (value changed at each 6.4 uS)
+	move.b #3,_tbcr_mfp      ;2.4576MHz/16
 .6:
 	move.w D0,D1             ;address
 	bsr start_bit_i2c
@@ -470,21 +654,21 @@ read_i2c:                    ;D0.L: address, D0.H: device, D0 return data or err
 write_i2c_cy_eeprom:         ;D0: address, D1:data, D0 return data or error
 
 	swap D0
-	move.w #SLAVE_CY_EEPROM_ADRESS,D0
+	move.w #SLAVE_CY_EEPROM_ADDRESS,D0
 	swap D0
 	bra.s write_i2c
 	
 write_i2c_cy_sram:           ;D0: address, D1:data, D0 return data or error
 
 	swap D0
-	move.w #SLAVE_CY_SRAM_ADRESS,D0
+	move.w #SLAVE_CY_SRAM_ADDRESS,D0
 	swap D0
  
 write_i2c:                   ;D0.L: address, D0.H: device, D1:data, D0 return error
 
 	movem.l D1-D4/A0-A2,-(SP)
-	move.l D0,D3             ;device
-	swap D3
+	move.l D0,D3
+	swap D3                  ;device
 	move.w D1,D4             ;data
 	move SR,-(SP)
 	or #$700,SR              ;no interrupts
@@ -492,7 +676,7 @@ write_i2c:                   ;D0.L: address, D0.H: device, D1:data, D0 return er
 	move.l 8,A1              ;bus error
 	move.l A0,8
 	move.l SP,A2
-	lea _tcdr_mfp,A0         ;timer C value changed at each 26 uS (clock 19,2 KHz)
+	lea _tcdr_mfp,A0         ;timer C value changed at each 26 uS (clock 19.2 KHz)
 	tst.b _tbcr_mfp
 	bne.s .6                 ;timer B used
 	bclr #0,_imra_mfp
@@ -500,8 +684,8 @@ write_i2c:                   ;D0.L: address, D0.H: device, D1:data, D0 return er
 	bclr #0,_ipra_mfp
 	bclr #0,_isra_mfp    
 	lea _tbdr_mfp,A0 
-	move.b #2,(A0)           ;clock = 78,125 KHz (value changed at each 6,4 uS)
-	move.b #3,_tbcr_mfp      ;2,4576MHz/16
+	move.b #2,(A0)           ;clock = 78.125 KHz (value changed at each 6.4 uS)
+	move.b #3,_tbcr_mfp      ;2.4576MHz/16
 .6:
 	move D0,D1               ;address
 	bsr start_bit_i2c
@@ -545,7 +729,7 @@ write_i2c:                   ;D0.L: address, D0.H: device, D1:data, D0 return er
 	bne.s .3                 ;no acknoledge
 	bsr stop_bit_i2c
 	moveq #0,D0
-	move.w D1,D0               ;8 bits data
+	move.w D1,D0             ;8 bits data
 	bra.s .2
 .3:
 	bsr stop_bit_i2c

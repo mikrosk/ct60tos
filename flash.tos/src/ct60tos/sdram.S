@@ -1,6 +1,6 @@
 /*  Configure the CT60-SDRAM and more
  * 
- * Didier Mequignon 2001-2004, e-mail: aniplay@wanadoo.fr
+ * Didier Mequignon 2001-2005, e-mail: aniplay@wanadoo.fr
  *
  *  This library is free software; you can redistribute it and/or
  *  modify it under the terms of the GNU Lesser General Public
@@ -46,11 +46,57 @@
 
 #define rw_parameter 0xc60b
 
-#define SLAVE_SDRAM_ADRESS            0x50 // 7 bits 1010xxx + r/w
-#define SLAVE_CY_EEPROM_ADRESS        0x68
-#define SLAVE_CY_SRAM_ADRESS          0x69
+#define SLAVE_SDRAM_ADDRESS           0x50 // 7 bits 1010xxx + r/w
+#define SLAVE_DS_ADDRESS              0x58  
+#define SLAVE_CY_EEPROM_ADDRESS       0x68
+#define SLAVE_CY_SRAM_ADDRESS         0x69
 
-// CY27EE16ZE serial programmable clock registers
+#define CT60_CLOCK_READ         0
+#define CT60_CLOCK_WRITE_RAM    1
+#define CT60_CLOCK_WRITE_EEPROM 2
+#define CT60_CLOCK_RESET        3
+#define CT60_CALC_CLOCK_ERROR  -2
+#define CYPRESS 0x0000
+#define DALLAS  0x8000
+#define MIN_FREQ_DALLAS     66000 // KHz
+#define MAX_FREQ_DALLAS    133000 // KHz
+#define MIN_FREQ            50000 // KHz
+#define MAX_FREQ           110000 // KHz
+
+/* DS1085 serial programmable clock registers */
+#define DIVWORD   0x01
+#define MUXWORD   0x02
+#define DACWORD   0x08
+#define ADR       0x0D
+#define OFFSET    0x0E
+#define RANGEWORD 0x37
+#define WRITEE2   0x3F
+#if 0
+// DS1085Z-10
+#define BASE_FREQ  61400 // KHz
+#define DEF_FREQ   97100 // KHz
+#define DAC_STEP      10 // KHz
+#define DAC_DEF      500
+#define OFFSET_STEP 5120 // KHz
+// DS1085Z-25
+#define BASE_FREQ  51200 // KHz
+#define DEF_FREQ  104600 // KHz
+#define DAC_STEP      25 // KHz
+#define DAC_DEF      600
+#define OFFSET_STEP 6400 // KHz
+#endif
+// DS1085Z-50
+#define BASE_FREQ  38400 // KHz
+#define DEF_FREQ  101800 // KHz
+#define DAC_STEP      50 // KHz
+#define DAC_DEF      500
+#define OFFSET_STEP 6400 // KHz 
+
+/* CY27EE16ZE serial programmable clock registers */
+#define CTRLMACH  0x00
+#define ADRDEV8EE 0x05
+#define ADRDEVPLL 0x06
+#define DEFPLLCNF 0x07
 #define CLKOE     0x09
 #define DIV1N     0x0C
 #define PINCTRL   0x10
@@ -65,13 +111,7 @@
 #define MATRIX2   0x45
 #define MATRIX3   0x46
 #define DIV2N     0x47
-#define CT60_CLOCK_READ 0
-#define CT60_CLOCK_WRITE_RAM 1
-#define CT60_CLOCK_WRITE_EEPROM 2
 #define REF       10000           // KHz
-#define MIN_FREQ  50000           // KHz
-#define MAX_FREQ 110000           // KHz
-#define CT60_CALC_CLOCK_ERROR -2
 
 #define CT60_READ_ERROR         -1
 #define CT60_CHIP_DENSITY_ERROR -2
@@ -260,60 +300,38 @@ init_sdram:
 	bne.s .mask_060_ok       // mask info only for 060 full
 	bsr display_string
 .mask_060_ok:
-	link A6,#-128
-	move.l _sysbase,A0       // header ROM
-	move.l 0x24(A0),A0       // kbshift
-	moveq #0xC,D0            // ALT or CTRL
-	and.b (A0),D0
-	bne.s .measure_mhz
-	lea -128(A6),A0          // buffer
-	bsr ct60_read_info_clock
-	bmi.s .measure_mhz       // no clock generator
+	moveq #0,D7
 	clr.l -(SP)
 	move.l #CT60_CLOCK,-(SP)
 	move.w #CT60_MODE_READ,-(SP)
 	move.w #rw_parameter,-(SP)
 	trap #14
 	lea 12(SP),SP
-	cmp.l #MIN_FREQ,D0
+	cmp.l #MIN_FREQ_DALLAS/2,D0
 	bcs.s .measure_mhz
 	cmp.l #MAX_FREQ,D0
 	bhi.s .measure_mhz
+	move.l _sysbase,A0       // header ROM
+	move.l 0x24(A0),A0       // kbshift
+	moveq #0xC,D1            // ALT or CTRL
+	and.b (A0),D1
+	bne.s .reset_clock
 	moveq #CT60_CLOCK_WRITE_RAM,D1
 	bsr ct60_configure_clock
+	move.l D0,D7
+	bsr tempo_20ms
+	bra.s .measure_mhz
+.reset_clock:
+ 	moveq #0,D2
+	moveq #0,D1
+	move.w #CT60_CLOCK_RESET+CYPRESS,D0
+	bsr ct60_rw_clock
+	move.l D0,D7 
+	bsr tempo_20ms
 .measure_mhz:
-	unlk A6
-	move.w SR,-(SP)
-	move.w #0x2500,SR
-	moveq #0,D0
-	move.l _hz_200,D1
-.sync_timer:
-	cmp.l _hz_200,D1
-	beq.s .sync_timer
-	moveq #9,D2
-.next_mes:
-		move.l _hz_200,D1
-		moveq #0,D3
-.loop_mes:
-		addq.l #1,D3
-		cmp.l _hz_200,D1
-		beq.s .loop_mes
-		cmp.l D0,D3
-		bcs.s .not_maxi
-		move.l D3,D0
-.not_maxi:
-	dbf D2,.next_mes
-	move.w (SP)+,SR
-	divu #250,D0             // MHz * 10
-	swap D0
-	tst.w D0
-	beq.s .end_mes
-	add.l #0x10000,D0
-.end_mes:
-	clr.w D0
-	swap D0
 	link A6,#-6
-	move.l D0,-4(A6)
+	bsr measure_cpu_frequency
+	move.l D0,-4(A6)         // CPU frequency in MHz * 10
 	move.l #0x43543630,D0    // CT60
 	bsr get_cookie
 	move.l A0,D0
@@ -412,11 +430,13 @@ init_sdram:
 	move.l D4,D1
 	and.l #0xFF000000,D0
 	and.l #0xFF000000,D1
+	moveq #0,D6              // flag display hardware
 	cmp.l #0x41000000,D0
 	beq.s .code_hard_display
 	cmp.l #0x53000000,D1
 	bne.s .no_code_display
 .code_hard_display:
+	moveq #-1,D6             // flag display hardware
 	lea message38(PC),A0
 	bsr display_string_single
 	cmp.l #0x41000000,D0
@@ -441,6 +461,55 @@ init_sdram:
 	and.w #0xFF,D0
 	bsr display_char
 .no_code_display:
+	clr.l -(SP)
+	move.l #CT60_CLOCK,-(SP)
+	move.w #CT60_MODE_READ,-(SP)
+	move.w #rw_parameter,-(SP)
+	trap #14
+	lea 12(SP),SP
+	cmp.l #MIN_FREQ_DALLAS/2,D0
+	bcs.s .no_pclock_display
+	cmp.l #MAX_FREQ,D0
+	bhi.s .no_pclock_display
+	tst.w D6
+	bne.s .no_display_hard
+	lea message38(PC),A0
+	bsr display_string_single
+.no_display_hard:
+	tst.l D7                 // error code programmable clock generator
+	bpl.s .pclock_ok
+             moveq #0x20,D0
+             bsr display_char
+	lea error12(PC),A0
+	cmp.w #CT60_CALC_CLOCK_ERROR,D7
+	beq.s .pclock_error
+	lea error11(PC),A0
+.pclock_error:
+	bsr display_string
+	bra.s .no_pclock_display
+.pclock_ok:
+	lea message99(PC),A0
+	bsr display_string_single
+             cmp.l #100000,D0         // KHz
+             bcs.s .low_100000
+             move.l D0,-(SP)
+             moveq #0x20,D0
+             bsr display_char
+             move.l (SP)+,D0
+.low_100000:	
+             link A6,#-8
+             clr.w -2(A6)
+	lea -8(A6),A0
+	moveq #6,D1
+	bsr conv_ascii_value
+	move.b -4(A6),-3(A6)
+	move.b -5(A6),-4(A6)
+	move.b #0x2E,-5(A6)
+	bsr display_string_single
+	unlk A6
+	lea message18(PC),A0     // MHz
+	bsr display_string_single
+.no_pclock_display:
 	lea crlf(PC),A0
 	bsr display_string_single
 	clr.l ramtop
@@ -586,7 +655,7 @@ init_sdram:
 	lea message54(PC),A0     // warning CAS latency
 	bsr display_string
  	bra.s .test_ok
- .error_test:
+.error_test:
 	move.l A0,-(SP)
 	lea error10(PC),A0
 	bsr display_string
@@ -989,6 +1058,42 @@ dump:
 	rts
 #endif
 
+measure_cpu_frequency:                 // return CPU frequency in MHz * 10
+
+	movem.l D1-D3,-(SP)
+	move.w SR,-(SP)
+	move.w #0x2500,SR
+	moveq #0,D0
+	move.l _hz_200,D1
+.sync_timer:
+	cmp.l _hz_200,D1
+	beq.s .sync_timer
+	moveq #9,D2
+.next_mes:
+		move.l _hz_200,D1
+		moveq #0,D3
+.loop_mes:
+		addq.l #1,D3
+		cmp.l _hz_200,D1
+		beq.s .loop_mes
+		cmp.l D0,D3
+		bcs.s .not_maxi
+		move.l D3,D0
+.not_maxi:
+	dbf D2,.next_mes
+	move.w (SP)+,SR
+	divu #250,D0             // MHz * 10
+	swap D0
+	tst.w D0
+	beq.s .end_mes
+	add.l #0x10000,D0
+.end_mes:
+	clr.w D0
+	swap D0
+	tst.l D0
+	movem.l (SP)+,D1-D3
+	rts
+
 get_cookie:
 
 	move.l D1,-(SP)
@@ -1014,28 +1119,32 @@ get_cookie:
 	tst.l D0
 	rts
 
-error1:	.asciz "            SDRAM not found"
-	.asciz "            SDRAM non trouv‚e"
-error2:	.asciz "            SDRAM chip density error"
-	.asciz "            SDRAM erreur densit‚ puces"
-error3:	.asciz "            SDRAM number of banks error" 
-	.asciz "            SDRAM erreur nombre de banques" 
-error4:	.asciz "            SDRAM density error" 
-	.asciz "            SDRAM erreur densit‚" 
-error5:	.asciz "            SDRAM burst length error" 
-	.asciz "            SDRAM erreur longueur burst" 
-error6:	.asciz "            SDRAM data width error"
-	.asciz "            SDRAM erreur largeur donn‚es"
-error7:	.asciz "            SDRAM voltage error"
-	.asciz "            SDRAM erreur tension"
-error8:	.asciz "            SDRAM type error"
-	.asciz "            SDRAM erreur type"
-error9:	.asciz "            SDRAM refresh rate error"
-	.asciz "            SDRAM refresh rate error"
+error1:	.asciz "SDRAM not found"
+	.asciz "SDRAM non trouv‚e"
+error2:	.asciz "SDRAM chip density error"
+	.asciz "SDRAM erreur densit‚ puces"
+error3:	.asciz "SDRAM number of banks error" 
+	.asciz "SDRAM erreur nombre de banques" 
+error4:	.asciz "SDRAM density error" 
+	.asciz "SDRAM erreur densit‚" 
+error5:	.asciz "SDRAM burst length error" 
+	.asciz "SDRAM erreur longueur burst" 
+error6:	.asciz "SDRAM data width error"
+	.asciz "SDRAM erreur largeur donn‚es"
+error7:	.asciz "SDRAM voltage error"
+	.asciz "SDRAM erreur tension"
+error8:	.asciz "SDRAM type error"
+	.asciz "SDRAM erreur type"
+error9:	.asciz "SDRAM refresh rate error"
+	.asciz "SDRAM refresh rate error"
 error10:	.byte 13,10
-	.asciz "            SDRAM read failure at $"
+	.asciz "SDRAM read failure at $"
 	.byte 13,10
-	.asciz "            SDRAM erreur v‚rification en $"
+	.asciz "SDRAM erreur v‚rification en $"
+error11:	.asciz "CTCM not found"
+	.asciz "CTCM non trouv‚e"
+error12:	.asciz "CTCM frequency error"
+	.asciz "CTCM erreur fr‚quence"
 name1:	.asciz "Eiffel"
 message0:	.byte 0x1B,0x62,0x34,0x41
 	.byte 0x1B,0x62,0x32,0x54
@@ -1081,13 +1190,13 @@ message15:	.byte 27
 	.ascii "."
 	.byte ((VERSION/16) & 0xF) + 0x30
 	.byte (VERSION & 0xF) + 0x30
-	.asciz " "
+	.asciz "a "
 message15b:	
-	.ascii "2005 February "
+	.ascii "2005 March "
 	.byte 27
 	.ascii "q"
 	.byte 13,10,0
-	.ascii "F‚vrier 2005 "
+	.ascii "Mars 2005 "
 	.byte 27
 	.ascii "q"
 	.byte 13,10,0
@@ -1350,6 +1459,7 @@ message98:	.byte 13,10
 	.asciz "Value (dec) ? "
 	.byte 13,10	
 	.asciz "Valeur (dec) ? "
+message99:	.asciz " CTCM"
 	
 blue:	.byte 0x1B,0x62,0x34,0
 black:	.byte 0x1B,0x62,0x3F,0
@@ -4290,13 +4400,114 @@ add_sdram:
 ct60_configure_clock:	// D0.L: frequency, D1: mode
 
 	movem.l D1-A0,-(SP)
+	move.l D0,D6 // frequency
+	move.w D1,D7 // mode
+	moveq #ADR,D1
+	move.w #CT60_CLOCK_READ+DALLAS,D0  // Dallas DS1085
+	bsr ct60_rw_clock 
+	bmi .ccc11
+	move.w D0,D3 // adr
+	// frequency = (DEF_FREQ + (OFFSET_STEP * (offset-offset_def)))
+	//           - ((DAC_DEF-dac) * DAC_STEP))
+	moveq #RANGEWORD,D1
+	move.w #CT60_CLOCK_READ+DALLAS,D0
+	bsr ct60_rw_clock 
+	bmi .ccc10
+	move.w D0,D2
+	moveq #11,D0
+	lsr.w D0,D2  // offset_def
+	cmp.l #MIN_FREQ_DALLAS+333,D6
+	bhi.s .ccc14 // strap on CLK
+	add.l D6,D6  // strap on CLK/2
+.ccc14:
+	cmp.l #MIN_FREQ_DALLAS,D6
+	blt .ccc1    // error	
+	cmp.l #MAX_FREQ_DALLAS,D6
+	bhi .ccc1    // error	
+	move.w D2,D4 // offset = offset_def
+	move.l D6,D5 // frequency
+	sub.l #DEF_FREQ,D5
+	divs.l #DAC_STEP,D5
+	add.l #DAC_DEF,D5
+	bmi.s .ccc15
+	cmp.l #1023,D5 // dac
+	bls.s .ccc16
+.ccc15:
+	move.l D6,D4 // frequency
+	sub.l #DEF_FREQ,D4
+	divs.l #OFFSET_STEP,D4
+	cmp.l #-6,D4 // offset
+	blt .ccc1    // error
+	cmp.l #6,D4
+	bgt .ccc1    // error
+	add.w D2,D4  // offset_def
+	bmi .ccc1    // error
+	cmp.l #31,D4
+	bhi .ccc1    // error
+	move.w D4,D0 // offset
+	sub.w D2,D0  // offset def
+	muls #OFFSET_STEP,D0
+	add.l #DEF_FREQ,D0 // fos
+	move.l D6,D5 // frequency
+	sub.l D0,D5  // fos
+	divs.l #DAC_STEP,D5
+	add.l #DAC_DEF,D5
+	bmi .ccc1    // error
+	cmp.l #1023,D5 // dac
+	bhi .ccc1    // error
+.ccc16:
+	moveq #8,D0  // WC = 0
+	and.w D3,D0  // adr
+	bne.s .ccc13
+	moveq #8,D2  // WC = 1 => use WRITEE2 command for the EEPROM
+	moveq #ADR,D1
+	move.w #CT60_CLOCK_WRITE_RAM+DALLAS,D0
+	bsr ct60_rw_clock
+	bmi .ccc10   // error
+	bsr tempo_20ms
+.ccc13:
+	// MUX : PDN0/1 = 0, SEL0 = 1, EN0 = 0, 0M = 1, 1M = 0, DIV1 = 1 
+             move.w #0x1240,D2 // mux
+	cmp.l #51000,D6 // frequency
+	bcs.s .ccc17
+	or.w #0x80,D2   // 1M = 1 => /2
+.ccc17:
+	moveq #MUXWORD,D1
+	move.w #CT60_CLOCK_WRITE_RAM+DALLAS,D0
+	bsr ct60_rw_clock
+	bmi .ccc10   // error
+	move.w D5,D2 // dac
+	asl.w #6,D2	
+	moveq #DACWORD,D1
+	move.w #CT60_CLOCK_WRITE_RAM+DALLAS,D0
+	bsr ct60_rw_clock
+	bmi .ccc10   // error
+	move.w D4,D2 // offset
+	moveq #OFFSET,D1
+	move.w #CT60_CLOCK_WRITE_RAM+DALLAS,D0
+	bsr ct60_rw_clock
+	bmi .ccc10   // error
+             cmp.w #CT60_CLOCK_WRITE_EEPROM,D7 // mode
+             bne.s .ccc12
+             moveq #0,D2
+	moveq #WRITEE2,D1
+	move.w #CT60_CLOCK_WRITE_EEPROM+DALLAS,D0
+	bsr ct60_rw_clock
+.ccc12:
+	tst.l D0
+	bra .ccc10
+.ccc11:
+	moveq #CLKOE,D1
+	move.w #CT60_CLOCK_READ+CYPRESS,D0 // Cypress CY27EE16
+	bsr ct60_rw_clock 
+	bmi .ccc10
 	// frequency (KHz) = (REF (KHz) * p) / q) / post divider
 	// => p/q = (frequency * post divider) / REF (KHz)
 	// p = (2 * (PB  + 4)) + P0   q = Q + 2
 	// 8 <= p <= 2055             2 <= q <= 129
-	move.w D1,D7 // mode
+	or.w #CYPRESS,D7
 	move.l #REF,D2
-	move.l D0,D3 // frequency
+	move.l D6,D3 // frequency
 	mulu.l #2000,D3
 	divu.l D2,D3 // p
 	move.l #(REF/250),D4 // q
@@ -4316,25 +4527,47 @@ ct60_configure_clock:	// D0.L: frequency, D1: mode
 	bhi .ccc1    // error
 	move.l D3,D5 // p
 	divu.l #1000,D5
-	mulu.l D2,D5  // * REF => pll
+	mulu.l D2,D5 // * REF => pll
 	cmp.l #100000,D5
-	bcs .ccc1
+	bcs .ccc1    // error
 	cmp.l #400000,D5
-	bhi .ccc1	
-	mulu.l D4,D3  // p = (p * q) / 1000
+	bhi .ccc1	// error
+	mulu.l D4,D3 // p = (p * q) / 1000
 	divu.l #1000,D3
 	cmp.l #8,D3
-	bcs .ccc1
+	bcs .ccc1    // error
 	cmp.l #2055,D3
-	bhi .ccc1
-	move.w #0x97,D2 // clocks 5 & 6 DIV1CLK/2
-	cmp.l #51000,D1 // frequency
+	bhi .ccc1    // error
+	cmp.w #CT60_CLOCK_WRITE_EEPROM+CYPRESS,D7 // mode
+	bne.s .ccc18	
+	moveq #0x0C,D2 // enable EEPROM writing
+	moveq #WPREG,D1
+	move.w #CT60_CLOCK_WRITE_RAM+CYPRESS,D0
+	bsr ct60_rw_clock 
+	bsr tempo_20ms
+	moveq #0x0C,D2 // enable EEPROM writing
+	moveq #WPREG,D1
+	move.w #CT60_CLOCK_WRITE_RAM+CYPRESS,D0
+	bsr ct60_rw_clock 
+	bmi .ccc10
+.ccc18:
+	move.w #0xDF,D2
+	move.w #0x6F,D1 // clocks 5 & 6 DIV2CLK/2
+	cmp.l #51000,D6 // frequency
 	bls.s .ccc9
-	move.w #0xDF,D2 // clocks 5 & 6 DIV1CLK/3
-	cmp.l #77000,D1
+	move.w #0xDE,D2
+	move.w #0xDF,D1 // clocks 5 & 6 DIV1CLK/3
+	cmp.l #77000,D6 // frequency
 	bls.s .ccc9
-	move.w #0x4F,D2 // clocks 5 & 6 DIV1CLK/DIV1N /4
+	move.w #0xDF,D2
+	move.w #0xB7,D1 // clocks 5 & 6 DIV2CLK/4
 .ccc9:
+	move.w D1,D6
+	moveq #MATRIX2,D1
+	move.w D7,D0
+	bsr ct60_rw_clock
+	bmi .ccc10 
+	move.w D6,D2
 	moveq #MATRIX3,D1
 	move.w D7,D0
 	bsr ct60_rw_clock 
@@ -4366,15 +4599,15 @@ ct60_configure_clock:	// D0.L: frequency, D1: mode
 	moveq #CHARGEP,D1
 	move.w D7,D0
 	bsr ct60_rw_clock
-	bmi .ccc10
-	move.l D3,D2 // p
+	bmi .ccc10    // error
+	move.l D3,D2  // p
 	lsr.l #1,D2
 	subq.l #4,D2
 	and.w #0xFF,D2	
 	moveq #PBCOUNTER,D1
 	move.w D7,D0
 	bsr ct60_rw_clock
-	bmi .ccc10
+	bmi .ccc10  // error
 	moveq #1,D2
 	and.l D3,D2 // p
 	asl.l #7,D2
@@ -4383,7 +4616,7 @@ ct60_configure_clock:	// D0.L: frequency, D1: mode
 	moveq #QCOUNTER,D1
 	move.w D7,D0
 	bsr ct60_rw_clock
-	bmi.s .ccc10
+	bmi.s .ccc10 // error
 	lea clock_registers(PC),A0
 .ccc4:
 		moveq #0,D0
@@ -4395,8 +4628,7 @@ ct60_configure_clock:	// D0.L: frequency, D1: mode
 		move.b (A0)+,D2 // data 		
 		move.w D7,D0    // mode
 		bsr ct60_rw_clock
-		bmi.s .ccc10
-		addq.w #2,A0
+		bmi.s .ccc10    // error
 	bra.s .ccc4
 .ccc1:
 	moveq #CT60_CALC_CLOCK_ERROR,D0
@@ -4404,59 +4636,127 @@ ct60_configure_clock:	// D0.L: frequency, D1: mode
 	movem.l (SP)+,D1-A0
 	rts
  
-ct60_rw_clock:               // D0.W: mode (0: read, 1:write ram, 2: write eeprom)
+ct60_rw_clock:               // D0.W: mode (0: read, 1:write ram, 2: write eeprom, 3: reset)
+                             //       B15:Cypress(0)/Dallas(1)
                              // D1.W: address, D2:.W data, D0 return data or error
-	tst.w D0                 // mode: read ram
+	tst.w D0                 // mode
+	bmi.s .rwc4              // Dallas DS1085
+	cmp.w #CT60_CLOCK_READ,D0
 	bne.s .rwc2
 	move.w D1,D0             // address
 	bra read_i2c_cy_sram
 .rwc2:
-	cmp.w #1,D0              // mode write ram
+	cmp.w #CT60_CLOCK_WRITE_RAM,D0
 	bne.s .rwc3
 	move.w D1,D0             // address
 	move.w D2,D1             // data
 	bra write_i2c_cy_sram
 .rwc3:
-	cmp.w #2,D0              // mode read eeprom
-	bne.s .rwc1
+	cmp.w #CT60_CLOCK_WRITE_EEPROM,D0
+	bne.s .rwc12
 	move.w D1,D0             // address
 	move.w D2,D1             // data
 	bra write_i2c_cy_eeprom
+.rwc12:
+	cmp.w #CT60_CLOCK_RESET,D0
+	bne .rwc1
+	moveq #CTRLMACH,D0       // address
+	move.w #0x80,D1          // data: reset soft
+	bra write_i2c_cy_sram
+.rwc4:                                // Dallas DS1085
+	bclr #15,D0              // mode
+	cmp.w #CT60_CLOCK_READ,D0
+	bne.s .rwc5
+	moveq #SLAVE_DS_ADDRESS,D0
+	swap D0
+	move.w D1,D0             // address
+	cmp.w #ADR,D0
+	beq.s .rwc8              // byte
+	cmp.w #OFFSET,D0	
+	bne.s .rwc7              // word	
+.rwc8:
+	bra read_i2c
+.rwc7:
+	link A6,#-2
+	lea -2(A6),A0
+	moveq #2,D1              // len
+	bsr read_seq_device_i2c
+	bmi.s .rwc11
+	move.w (A0),D0           // data
+.rwc11:
+	unlk A6
+	rts 
+.rwc5:
+	cmp.w #CT60_CLOCK_WRITE_RAM,D0
+	bne.s .rwc6
+	moveq #SLAVE_DS_ADDRESS,D0
+	swap D0
+	move.w D1,D0             // address
+	cmp.w #ADR,D0
+	beq.s .rwc10             // byte
+	cmp.w #OFFSET,D0	
+	bne.s .rwc9              // word	
+.rwc10:
+	move.w D2,D1             // data
+	bra write_i2c
+.rwc9:
+	link A6,#-2
+	lea -2(A6),A0
+	move.w D2,(A0)           // data
+	moveq #2,D1              // len
+	bsr write_seq_device_i2c
+	unlk A6
+	rts
+.rwc6:
+	cmp.w #CT60_CLOCK_WRITE_EEPROM,D0
+	bne.s .rwc1
+	moveq #SLAVE_DS_ADDRESS,D0
+	swap D0
+	move.w #WRITEE2,D0       // address
+	moveq #0,D1              // len
+	lea 0,A0                 // no data
+	bra write_seq_device_i2c
 .rwc1:
 	moveq #CT60_READ_ERROR,D0
 	rts
  
 ct60_read_info_sdram:        // A0: 128 bytes buffer, D0 return error
 
-	move.w #SLAVE_SDRAM_ADRESS,D0
+	moveq #SLAVE_SDRAM_ADDRESS,D0
+	swap D0
+	move.w #128,D1
 	bra.s read_seq_device_i2c
 
 ct60_read_info_clock:        // A0: 128 bytes buffer, D0 return error
 
-	move.w #SLAVE_CY_SRAM_ADRESS,D0
+	moveq #SLAVE_CY_SRAM_ADDRESS,D0
+	swap D0
+	move.w #128,D1
 		 
-read_seq_device_i2c:         // D0: device, A0: 128 bytes buffer, D0 return error
+read_seq_device_i2c:         // D0.L: address, D0.H: device, D1: len (bytes), A0: 128 bytes buffer, D0 return error
 
 	movem.l D1-D4/A0-A3,-(SP) 
-	move.w D0,D4             // device
+	move.l D0,D4
+	swap D4                  // device
+	move.w D1,D3             // len (bytes)
 	move.l A0,A3
 	move SR,-(SP)
 	or #0x700,SR             // no interrupts
-	lea .i1(PC),A0
+	lea .ri1(PC),A0
 	move.l 8,A1              // bus error
 	move.l A0,8
 	move.l SP,A2
-	lea _tcdr_mfp,A0         // timer C value changed at each 26 uS (clock 19,2 KHz)
+	lea _tcdr_mfp,A0         // timer C value changed at each 26 uS (clock 19.2 KHz)
 	tst.b _tbcr_mfp
-	bne.s .i6                // timer B used
+	bne.s .ri6               // timer B used
 	bclr #0,_imra_mfp
 	bclr #0,_iera_mfp
 	bclr #0,_ipra_mfp
 	bclr #0,_isra_mfp    
 	lea _tbdr_mfp,A0 
-	move.b #2,(A0)           // clock = 78,125 KHz (value changed at each 6,4 uS)
-	move.b #3,_tbcr_mfp      // 2,4576MHz/16
-.i6:
+	move.b #2,(A0)           // clock = 78.125 KHz (value changed at each 6.4 uS)
+	move.b #3,_tbcr_mfp      // 2.4576MHz/16
+.ri6:
 	bsr start_bit_i2c
 	move.l A1,8
 	move.l A2,SP
@@ -4466,59 +4766,158 @@ read_seq_device_i2c:         // D0: device, A0: 128 bytes buffer, D0 return erro
 	bsr write_bit_i2c        // r/w
 	bsr read_bit_i2c         // ack
 	btst #0,D0 
-	bne .i3                  // no acknoledge
+	bne .ri3                 // no acknoledge
+	swap D4                  // address
 	moveq #0,D0
-	bsr write_bit_wait_slave_i2c // address 1st bit
+	add.b D4,D4  
+	addx.b D0,D0             // address 1st bit
+	bsr write_bit_wait_slave_i2c
 	moveq #6,D2              // 8 bits
-.i4:         	moveq #0,D0          // address
+.ri4:
+		moveq #0,D0
+		add.b D4,D4  
+		addx.b D0,D0         // address
 		bsr write_bit_i2c
-	dbf D2,.i4
+	dbf D2,.ri4
 	bsr read_bit_i2c         // ack
-	bne.s .i3                // no acknoledge
+	bne.s .ri3               // no acknoledge
 	bsr start_bit_wait_slave_i2c
+	swap D4
 	move.w D4,D0             // device
 	bsr write_device_i2c
 	moveq #1,D0              // read data
 	bsr write_bit_i2c        // r/w
 	bsr read_bit_i2c         // ack
 	btst #0,D0 
-	bne.s .i3                // no acknoledge
-	moveq #127,D3            // 128 bytes
-.i8:
+	bne.s .ri3               // no acknoledge
+	subq.w #1,D3             // len (bytes) -1
+	bpl.s .ri8
+	moveq #0,D3
+.ri8:
 		moveq #0,D1          // data
 		bsr read_bit_wait_slave_i2c  // 1st bit
 		lsr.l #1,D0          // data
 		addx.w D1,D1
 		moveq #6,D2          // 8 bits
-.i5:
+.ri5:
 			bsr read_bit_i2c
 			lsr.l #1,D0      // data
 			addx.w D1,D1
-		dbf D2,.i5
+		dbf D2,.ri5
 		move.b D1,(A3)+
 		tst D3
 		seq.b D0
 		and #1,D0            // ack master = 1 => no other byte
 		bsr write_bit_i2c
-	dbf D3,.i8
+	dbf D3,.ri8
 	bsr stop_bit_i2c
 	moveq #0,D0                  //  OK
-	bra.s .i2
-.i3:
+	bra.s .ri2
+.ri3:
 	bsr stop_bit_i2c
 	moveq #CT60_READ_ERROR,D0    // error
-	bra.s .i2
-.i1:
+	bra.s .ri2
+.ri1:
 	moveq #CT60_READ_ERROR,D0    // bus error
 	move.l A1,8
 	move.l A2,SP
-.i2:
+.ri2:
 	lea _tbdr_mfp,A1
 	cmp.l A0,A1
-	bne.s .i7
+	bne.s .ri7
 	clr.b _tbcr_mfp          // timer B stopped
-.i7:
+.ri7:
 	move.w (SP)+,SR
+	tst.l D0
+	movem.l (SP)+,D1-D4/A0-A3
+	rts
+	
+write_seq_device_i2c:        // D0.L: address, D0.H: device, D1: len (bytes), A0: buffer, D0 return error
+
+	movem.l D1-D4/A0-A3,-(SP) 
+	move.l D0,D4
+	swap D4                  // device
+	move.w D1,D3             // len (bytes)
+	move.l A0,A3
+	move SR,-(SP)
+	or #0x700,SR             // no interrupts
+	lea .wi1(PC),A0
+	move.l 8,A1              // bus error
+	move.l A0,8
+	move.l SP,A2
+	lea _tcdr_mfp,A0         // timer C value changed at each 26 uS (clock 19.2 KHz)
+	tst.b _tbcr_mfp
+	bne.s .wi6               // timer B used
+	bclr #0,_imra_mfp
+	bclr #0,_iera_mfp
+	bclr #0,_ipra_mfp
+	bclr #0,_isra_mfp    
+	lea _tbdr_mfp,A0 
+	move.b #2,(A0)           // clock = 78.125 KHz (value changed at each 6.4 uS)
+	move.b #3,_tbcr_mfp      // 2.4576MHz/16
+.wi6:
+	bsr start_bit_i2c
+	move.l A1,8
+	move.l A2,SP
+	move.w D4,D0             // device
+	bsr write_device_i2c
+	moveq #0,D0              // write address
+	bsr write_bit_i2c        // r/w
+	bsr read_bit_i2c         // ack
+	btst #0,D0 
+	bne .wi3                 // no acknoledge
+	swap D4                  // address
+	moveq #0,D0
+	add.b D4,D4  
+	addx.b D0,D0             // address 1st bit
+	bsr write_bit_wait_slave_i2c
+	moveq #6,D2              // 8 bits
+.wi4:
+		moveq #0,D0
+		add.b D4,D4  
+		addx.b D0,D0         // address
+		bsr write_bit_i2c
+	dbf D2,.wi4
+	bsr read_bit_i2c         // ack
+	bne.s .wi3               // no acknoledge
+	subq.w #1,D3             // len (bytes) -1
+	bmi.s .wi10
+.wi8:
+		move.b (A3)+,D1          // data
+		moveq #0,D0
+		add.b D1,D1  
+		addx.b D0,D0             // data 1st bit
+		bsr write_bit_wait_slave_i2c
+		moveq #6,D2              // 8 bits
+.wi5:
+			moveq #0,D0
+			add.b D1,D1  
+			addx.b D0,D0         // data
+			bsr write_bit_i2c
+		dbf D2,.wi5
+		bsr read_bit_i2c         // ack
+	dbne D3,.wi8
+	bne.s .wi3               // no acknoledge
+.wi10:
+	bsr stop_bit_i2c
+	moveq #0,D0              // OK
+	bra.s .wi2
+.wi3:
+	bsr stop_bit_i2c
+.wi9:
+	moveq #CT60_READ_ERROR,D0    // error
+	bra.s .wi2
+.wi1:
+	moveq #CT60_READ_ERROR,D0    // bus error
+	move.l A1,8
+	move.l A2,SP
+.wi2:
+	lea _tbdr_mfp,A1
+	cmp.l A0,A1
+	bne.s .wi7
+	clr.b _tbcr_mfp          // timer B stopped
+.wi7:
+	move (SP)+,SR
 	tst.l D0
 	movem.l (SP)+,D1-D4/A0-A3
 	rts
@@ -4666,14 +5065,14 @@ ct60_configure_sdram:
 read_i2c_sdram:              // D0: address, D0 return data or error
 
 	swap D0
-	move.w #SLAVE_SDRAM_ADRESS,D0
+	move.w #SLAVE_SDRAM_ADDRESS,D0
 	swap D0
 	bra.s read_i2c
 	
 read_i2c_cy_sram:            // D0: address, D0 return data or error
 
 	swap D0
-	move.w #SLAVE_CY_SRAM_ADRESS,D0
+	move.w #SLAVE_CY_SRAM_ADDRESS,D0
 	swap D0
 
 read_i2c:                    // D0.L: address, D0.H: device, D0 return data or error
@@ -4687,7 +5086,7 @@ read_i2c:                    // D0.L: address, D0.H: device, D0 return data or e
 	move.l 8,A1              // bus error
 	move.l A0,8
 	move.l SP,A2
-	lea _tcdr_mfp,A0         // timer C value changed at each 26 uS (clock 19,2 KHz)
+	lea _tcdr_mfp,A0         // timer C value changed at each 26 uS (clock 19.2 KHz)
 	tst.b _tbcr_mfp
 	bne.s .r6                // timer B used
 	bclr #0,_imra_mfp
@@ -4695,8 +5094,8 @@ read_i2c:                    // D0.L: address, D0.H: device, D0 return data or e
 	bclr #0,_ipra_mfp
 	bclr #0,_isra_mfp    
 	lea _tbdr_mfp,A0 
-	move.b #2,(A0)           // clock = 78,125 KHz (value changed at each 6,4 uS)
-	move.b #3,_tbcr_mfp      // 2,4576MHz/16
+	move.b #2,(A0)           // clock = 78.125 KHz (value changed at each 6.4 uS)
+	move.b #3,_tbcr_mfp      // 2.4576MHz/16
 .r6:
 	move.w D0,D1             // address
 	bsr start_bit_i2c
@@ -4768,21 +5167,21 @@ read_i2c:                    // D0.L: address, D0.H: device, D0 return data or e
 write_i2c_sdram:             // D0: address, D1:data, D0 return data or error
 
 	swap D0
-	move.w #SLAVE_SDRAM_ADRESS,D0
+	move.w #SLAVE_SDRAM_ADDRESS,D0
 	swap D0
 	bra.s write_i2c
 
 write_i2c_cy_eeprom:         // D0: address, D1:data, D0 return data or error
 
 	swap D0
-	move.w #SLAVE_CY_EEPROM_ADRESS,D0
+	move.w #SLAVE_CY_EEPROM_ADDRESS,D0
 	swap D0
 	bra.s write_i2c
 	
 write_i2c_cy_sram:           // D0: address, D1:data, D0 return data or error
 
 	swap D0
-	move.w #SLAVE_CY_SRAM_ADRESS,D0
+	move.w #SLAVE_CY_SRAM_ADDRESS,D0
 	swap D0
  
 write_i2c:                   // D0.L: address, D0.H: device, D1:data, D0 return error
@@ -4797,7 +5196,7 @@ write_i2c:                   // D0.L: address, D0.H: device, D1:data, D0 return 
 	move.l 8,A1              // bus error
 	move.l A0,8
 	move.l SP,A2
-	lea _tcdr_mfp,A0         // timer C value changed at each 26 uS (clock 19,2 KHz)
+	lea _tcdr_mfp,A0         // timer C value changed at each 26 uS (clock 19.2 KHz)
 	tst.b _tbcr_mfp
 	bne.s .w6                // timer B used
 	bclr #0,_imra_mfp
@@ -4805,8 +5204,8 @@ write_i2c:                   // D0.L: address, D0.H: device, D1:data, D0 return 
 	bclr #0,_ipra_mfp
 	bclr #0,_isra_mfp    
 	lea _tbdr_mfp,A0 
-	move.b #2,(A0)           // clock = 78,125 KHz (value changed at each 6,4 uS)
-	move.b #3,_tbcr_mfp      // 2,4576MHz/16
+	move.b #2,(A0)           // clock = 78.125 KHz (value changed at each 6.4 uS)
+	move.b #3,_tbcr_mfp      // 2.4576MHz/16
 .w6:
 	move.w D0,D1             // address
 	bsr start_bit_i2c
@@ -4988,7 +5387,7 @@ stop_bit_i2c:
 	WAIT_US
 	rts
 
-wait_26us:                            // 26uS (timer C) or 6,5uS (timer B)
+wait_26us:                            // 26uS (timer C) or 6.5uS (timer B)
 
 	move.b (A0),D0
 .wu1:
@@ -4996,18 +5395,29 @@ wait_26us:                            // 26uS (timer C) or 6,5uS (timer B)
 	beq.s .wu1
 	rts
 
+tempo_20ms:	
+
+	movem.l D0/D1,-(SP)
+	move.l _hz_200,D1	
+.t20:
+		move.l _hz_200,D0
+		sub.l D1,D0
+	cmp.l #4,D0               // 20 mS
+	ble.s .t20
+	movem.l (SP)+,D0/D1
+	rts
+
 clock_registers:
 
-	dc.b CLKOE,  0xC9        // clocks 1, 4, 5, 6
-	dc.b DIV1N,  0x04        // post divider /4
+	dc.b CLKOE,  0x69        // clocks 1, 4, 5, 6
+	dc.b DIV1N,  0x06        // post divider /6
 	dc.b PINCTRL,0x50        // output enable pin
-	dc.b WPREG,  0x08        // write protect pin
 	dc.b OSCDRV, 0x28        // clock REF
 	dc.b INLOAD, 0x6B        // capacity load
 	dc.b ADCREG, 0x00
-	dc.b MATRIX1,0x49        // clocks 1 to 4 DIV1CLK/2
-	dc.b MATRIX2,0x2E
-	dc.b DIV2N,  0x05        // post divider /5
+	dc.b MATRIX1,0xB6        // clocks 1 to 4 DIV2CLK/2
+	dc.b DIV2N,  0x08        // post divider /4
+	dc.b WPREG,  0x1C        // write protect soft on, in last position */
 	dc.b 0,0
 
 chip_density:                         // A23-A22 cdy2-1
@@ -5033,14 +5443,14 @@ init_cookie_ct60:
 	bsr get_cookie
 	move.l A0,D0
 	beq.s .error_cookie_ct60
-	move.l 4(A0),D2          // CPU speed * 10 saved inside init_sdram
+	move.l 4(A0),D2          // CPU frequency in MHz * 10 saved inside init_sdram
 	move.l A1,4(A0)          // buffer
 	moveq #(CT60_COOKIE_SIZE/4)-1,D0
 .clear_data_ct60_cookie:
 		clr.l (A1)+
 	dbf D0,.clear_data_ct60_cookie
 	move.l 4(A0),A0          // buffer
-	move.w D2,8(A0)          // CPU speed
+	move.w D2,8(A0)          // CPU frequency in MHz * 10
 	move.l phystop,A0
 	clr.w count_io3_mfp(A0)
 	move.l _hz_200,start_hz_200(A0)

@@ -4,7 +4,7 @@
 !title   Documentation de la
 !programimage ..\img\ct60.img
 !program CT60
-!version Version 1.03
+!version Version 1.03a
 !date    (!today)
 !author  Didier MEQUIGNON
 !street  25, rue de l'Ascenseur
@@ -349,7 +349,7 @@ vous avez besoin de cette modification :
 
 A la gauche de l'oscillateur 100 MHz, se trouve IC3, un CY2309.
 
-Ce circuit int‚gr‚ possŠde une PLL (boucle … verrouillage de phase), iil 
+Ce circuit int‚gr‚ possŠde une PLL (boucle … verrouillage de phase), il 
 est possible d'utiliser cette partie du circuit pour obtenir une 
 meilleure horloge.
 
@@ -374,6 +374,23 @@ La pin 9 est connect‚e … la masse, couper cette pin.
 
 
 !subnode G‚n‚rateur d'horloge programmable
+
+Il y a deux solutions pour installer un g‚n‚rateur d'horloge programmable 
+sur la CT60 :
+
+!begin_itemize
+
+!item La premiŠre, plus pr‚cise, utilise un module allemand ak-modul-bus 
+avec un circuit Cypress CY27EE16 (r‚f‚rence … quartz et boucle … 
+verrouillage de phase PLL).
+
+!item La seconde, moins chŠre et plus petite, utilise le module CTCM avec 
+un circuit Dallas DS1085Z-50 (oscillateur command‚ en tension VCO).
+
+!end_itemize
+
+
+!subsubnode Le module ak-modul-bus avec un CY27EE16
 
 Il est possible d'ajouter un g‚n‚rateur d'horloge programmable par pas de 
 125 KHz sur la CT60. Le module utilise un CY27EE16 connect‚ sur le support 
@@ -435,6 +452,14 @@ il y a un court circuit avec le signal CLK CT60.
                          v     v
                         R12   R11 (ou pin 82 du support SDRAM)
             (ou pin 83 du support SDRAM)
+!end_verbatim
+
+(!B)
+Synoptique
+(!b)
+!image ..\img\cy_clock.img
+!begin_verbatim
+
 !end_verbatim
 
 !begin_itemize
@@ -501,6 +526,97 @@ Liste des composants :
 1 x cable plat 10 fils.
 1 x female SUBD 9 contacts femelle.
 !end_verbatim
+
+(!B)
+Note :
+(!b)
+Pour des fr‚quences vers 100 MHz, il faut modifier pour am‚liorer 
+l'horloge de la CT60 (voir la partie 'Horloge CT60-100').
+
+
+!subsubnode Le module CTCM avec un DS1085Z-50
+
+Il est possible d'ajouter un g‚n‚rateur d'horloge programmable par pas de 
+50 KHz sur la CT60. Le module CTCM utilise un DS1085Z-50 connect‚ sur le 
+support de l'oscillateur et deux signaux I2C du module SDRAM SDA (82) et 
+SLC (83).
+
+!image ..\img\dimm168p.img
+
+!image ..\img\ct60_clk.img
+
+(!U)
+ATTENTION !
+(!u)
+
+Le module CTCM utilise les pins non utilis‚s du support DIL14 soit 2 SCL 
+vers la pin 83 du support SDRAM, et 3 SDA vers la pin 82 du support SDRAM, 
+afin de pouvoir d‚monter l'ensemble facilement. Souder deux fils trŠs fins.
+ 
+!image ..\img\ctcm.img
+
+!begin_verbatim
+
+               +-------------+
+               |            +5V      CLK      CLK
+               |           14o__o__o__o__o__o__o
+               |        +-------------'        |8
+               |        |    |                 |
+               |        |     )  Horloge CT60  |
+   ____________o__o__o__o_   |      support    |
+  |pont       +5V      OUT  1|SCL SDA          |7
+  |  X                  0|   o--o--o--o--o--o--o
+  |       Module  +-------------+  | GND      GND
+  |        CTCM   |      |         |  |
+  |               |  +-------------+  |
+  +---------------o--o--o-GND         |
+                SCL SDA +-------------+
+!end_verbatim
+
+(!B)
+Synoptique
+(!b)
+!image ..\img\ds_clock.img
+!begin_verbatim
+
+!end_verbatim
+
+!begin_itemize
+
+!item La sortie horloge CT60 programmable est OUT0. Si l'entr‚e CTRL0 est 
+… 1 la plage va de 33 … 66 MHz (pont coup‚). Si l'entr‚e CTRL0 est … 0 la 
+plage va de 66 … 110 MHz (pont mis).
+
+!item OUT1 peut ˆtre utilis‚ pour l'horloge VIDEL, mais il y a toujours 
+un lien avec l'horloge CT60 comme ceci : 
+
+!end_itemize
+
+!begin_table [|c|c|c|] !hline
+Horloge CT60 (MHz) !! OUT1 (MHz) !! Facteur
+!hline
+      50.000       !!   50.000    !!  /1
+      51.000       !!   51.000    !!  /1
+!hline         
+      51.050       !!   25.025    !!  /2
+      66.600       !!   33.300    !!  /2
+     100.000       !!   50.000    !!  /2
+     110.000       !!   55.000    !!  /2
+!hline
+!end_table
+
+(!B)
+Note :
+(!b)
+Cette possibilit‚ est inhib‚ sur le module CTCM parceque la pin CTRL1 
+est … 1 (connect‚e au +5V).
+
+Le TOS contr“le si le module existe et peut changer l'horloge entre 33 et 
+66 MHz ou 66 et 110 MHz suivant le pont sur le module (voir la partie 
+'Changer la fr‚quence de la CT60'). 
+
+Regardez sur http://www.czuba-tech.com pour plus d'informations au sujet 
+du module. 
 
 (!B)
 Note :
@@ -1573,25 +1689,59 @@ Avec le curseur de la page 'M‚moire / uP' du CPX de configuration, il est
 ‚ventuellement possible de changer la fr‚quence de la CT60.
 
 Pour cela un module g‚n‚rateur d'horloge programmable utilisant un 
-CY27EE16 doit ˆtre connect‚ sur le port I2C de la CT60 via quelques fils 
-(voir ‚galement la partie 'G‚n‚rateur d'horloge programmable'). 
+CY27EE16 ou un DS1085Z-50 doit ˆtre connect‚ sur le port I2C de la CT60 
+via quelques fils (voir aussi pour plus d'informations la partie 
+'G‚n‚rateur d'horloge programmable').  
 
-Le r‚glage se fait par pas de 125 KHz de 50 … 110 MHz, il est pris en 
-compte en RAM pour essai aprŠs 'OK'. Le TOS lors du boot pendant 
-l'apparition du logo Atari envoi ‚galement cette valeur … l'horloge mais 
-en en cas de problŠme il est possible de rester sur la fr‚quence d'origine 
-en appuyant CTRL ou ALT.
+Le r‚glage se fait par pas de 125 KHz de 50 … 110 MHz pour le CY27EE16 
+(module ak-modul-bus), ou par pas de 50 KHz de 66 … 110 MHz pour le 
+DS1085Z-50 (module CTCM), il est pris en compte en RAM pour essai aprŠs 
+'OK'. Le TOS lors du boot pendant l'apparition du logo Atari envoi 
+‚galement cette valeur … l'horloge mais en en cas de problŠme il est 
+possible de rester sur la fr‚quence d'origine en appuyant CTRL ou ALT.
+
+(!U)
+ATTENTION !
+(!u)
+
+Tant que vous ne coupez pas la machine, le g‚n‚rateur d'horloge fonctionne 
+avec la derniŠre fr‚quence ‚crite dans sa RAM. A la mise sous tension le 
+g‚n‚rateur d'horloge copie lui-mˆme dans sa RAM la fr‚quence d'origine 
+sauv‚e dans sa EEPROM. Appuyer sur CTRL ou ALT ne sert donc … rien si l'on 
+ne coupe pas la machine ‚galement.
+
+(!U)
+Initialisation
+(!u)
 
 La fr‚quence d'origine sauv‚e en EEPROM est aussi modifiable aprŠs 
 confirmation via un double clic sur 'Sauve' mais ceci est trŠs dangereux !
 
-Toutefois en cas d'impossibilit‚e de red‚marrer la machine, il reste 
-possible de raccorder le module sur le port MODEM 2 via un cable de 
-liaison HE10 SUBD et de reprogrammer en mode 030 la EEPROM du module avec 
-le bouton 'Sauve'. Cette manipulation est par ailleurs indispensable pour 
-un module neuf. Le module doit ˆtre aliment‚ par la CT60.
+Toutefois en cas d'impossibilit‚ de red‚marrer la machine, il reste 
+possible de raccorder le (!B) module ak-modul-bus (!b) sur le port MODEM 2 
+via un cable de liaison HE10 SUBD et de reprogrammer en mode 030 la 
+EEPROM du module avec le bouton 'Sauve'. Cette manipulation est par ailleurs 
+indispensable pour un module neuf. (!B) Le module doit ˆtre aliment‚ par la 
+CT60 et les signaux SDA et SCL ne doivent pas ˆtre raccord‚s car en mode 
+030 ils sont forc‚s … 0 par la CT60 ! (!b)
 
 !image ..\img\subd.img
+!begin_verbatim
+
+!end_verbatim 
+
+En cas d'impossibilit‚ de red‚marrer la machine avec le (!B) module CTCM 
+(!b) il faut couper le pont pour diviser par deux la fr‚quence soit une 
+plage de 33 … 66 MHz, et ensuite le reprogrammer … nouveau avec la CT60 en 
+sauvant une nouvelle valeur dans la EEPROM. La fr‚quence est alors doubl‚e 
+lorsque le pont est … nouveau en place !
+
+Comme le (!B) module ak-modul-bus (!b), il reste possible de raccorder 
+le (!B) module CTCM (!b) sur le port MODEM 2 via un cable de liaison HE10 
+SUBD et de reprogrammer en mode 030 la EEPROM du module avec le bouton 
+'Sauve'.
+
+!image ..\img\modem2.img
 !begin_verbatim
 
 !end_verbatim 
@@ -1694,6 +1844,43 @@ Sur cette page vous pouvez :
 utiliser l'horloge IKBD au lieu du RTC. Cette possibilit‚ est la pour 
 corriger les problŠmes occasionn‚s par la pile us‚e.
 !end_itemize
+
+
+!subnode CT60TEMP.APP
+
+Ce programme est cr‚‚ par le CPX. Pour surveiller la temp‚rature et 
+remonter les courbes, le CPX : 
+
+!begin_itemize
+!item Sous TOS cr‚e l'accessoire CT60TEMP.ACC et demande de rebooter.
+!item Sous MiNT cr‚e l'application CT60TEMP.APP et la lance.
+!item Sous MagiC lance un thread.
+!end_itemize
+
+Quelque soit la solution utilis‚e (thead, accessoire ou application), il 
+est possible de profiter des touches multim‚dia de l'interface PS/2 Eiffel 
+(http://eiffel3.atari.org), surtout avec le jeu num‚ro 2 PS/2. La touche 
+(!B) POWER (!b) lance le mode d'extinction imm‚diat aprŠs une proc‚dure de 
+shutdown. 
+
+Si on utilise CT60TEMP.APP sous MagiC ou MiNT (pour MagiC booter sous TOS 
+et copier CT60TEMP.ACC en CT60TEMP.APP), en utilisant les variables 
+d'environnement, il est possible d'utiliser d'autres touches multim‚dia de 
+l'interface PS/2 Eiffel :
+
+!begin_itemize
+!item (!B) WWW HOME : (!b) Lance le navigateur internet via la variable 
+d'environnement BROWSER.
+!item (!B) E-MAIL : (!b) Lance le logicel de messagerie via la variable 
+d'environnement MAILER.
+!item (!B) WWW SEARCH : (!b) Lance le navigateur internet via la variable 
+d'environnement BROWSER avec la page d'accueil de Google.
+!item (!B) MY COMPUTER : (!b) Lance le visualisateur hypertexte via la 
+variable d'environnement HELPVIEWER avec la documentation de la CT60.
+!end_itemize
+
+Il faut imp‚rativement installer le programme E_TEMP.PRG dans le dossier 
+AUTO (utilisation du cookie 'Eiff').
 
 
 !subnode Informations sur la SDRAM
