@@ -19,6 +19,7 @@
 	.text
  
 	.globl init_vectors
+	.globl _init_emulation_vectors
 	
 init_vectors:
 
@@ -28,30 +29,74 @@ init_vectors:
 next_vect:
 	add.l D1,A0
 	dbf D0,init_vectors
+	
+_init_emulation_vectors:
+
+	movem.l D0/A0,-(SP)
 	lea.l _top_isp+0x80(PC),A0
+	cmp.l 0xF4,A0
+	beq.s .ok1
+	move.l 0xF4,0x7D8
 	move.l A0,0xF4        // Unimplemented Integer Instruction
+.ok1:
 	movec.l PCR,D0
 	btst #16,D0
-	bne.s .no_fpu         // EC or LC
+	bne .no_fpu           // EC or LC
 	lea.l _top_fpsp+0x80(PC),A0
+	cmp.l 0xD8,A0
+	beq.s .ok2
+	move.l 0xD8,0x7DC
 	move.l A0,0xD8        // Floating-Point SNAN
+.ok2:
 	addq.l #8,A0
+	cmp.l 0xD0,A0
+	beq.s .ok3
+	move.l 0xD0,0x7E0
 	move.l A0,0xD0        // Floating-Point Operand Error
+.ok3:
 	addq.l #8,A0
+	cmp.l 0xD4,A0
+	beq.s .ok4
+	move.l 0xD4,0x7E4
 	move.l A0,0xD4        // Floating-Point Overflow
+.ok4:
 	addq.l #8,A0
+	cmp.l 0xCC,A0
+	beq.s .ok5
+	move.l 0xCC,0x7E8
 	move.l A0,0xCC        // Floating-Point Underflow
+.ok5:
 	addq.l #8,A0
+	cmp.l 0xC8,A0
+	beq.s .ok6
+	move.l 0xC8,0x7EC
 	move.l A0,0xC8        // Floating-Point Divide-by-Zero
+.ok6:
 	addq.l #8,A0
+ 	cmp.l 0xC4,A0
+	beq.s .ok7
+	move.l 0xC4,0x7F0
 	move.l A0,0xC4        // Floating-Point Inexact Result
+.ok7:
 	addq.l #8,A0
+	cmp.l 0x2C,A0
+	beq.s .ok8
+	move.l 0x2C,0x7F4
 	move.l A0,0x2C        // Floating-Point Unimplemented Instruction
+.ok8:
 	addq.l #8,A0
+	cmp.l 0xDC,A0
+	beq.s .ok9
+	move.l 0xDC,0x7F8
 	move.l A0,0xDC        // Floating-Point Unimplemented Data Type
+.ok9:
 	addq.l #8,A0
+	cmp.l 0xF0,A0
+	beq.s .no_fpu
+	move.l 0xF0,0x7FC
 	move.l A0,0xF0        // Unimplemented Effective Address 
 .no_fpu:
+	movem.l (SP)+,D0/A0
 	rts
 
 _060_mem_copy1:
@@ -101,7 +146,11 @@ _060_real_access:
 _060_isp_done:
 _060_real_lock_page:
 _060_real_unlock_page:
+	rte
+	
 _060_real_fline:
+	jmp ([0x7F4])
+
 _060_real_trap:
 _060_fpsp_done:
 	rte
@@ -122,16 +171,46 @@ _060_real_bsun:
 	rte
 
 _060_real_snan:
+	fsave -(SP)
+	move.w #0x6000,2(SP)
+	frestore (SP)+
+	fmovem.l #0,FPCR
+	jmp ([0x7DC])
+	
 _060_real_operr:
+	fsave -(SP)
+	move.w #0x6000,2(SP)
+	frestore (SP)+
+	fmovem.l #0,FPCR
+	jmp ([0x7E0])
+	
 _060_real_ovfl:
+	fsave -(SP)
+	move.w #0x6000,2(SP)
+	frestore (SP)+
+	fmovem.l #0,FPCR
+	jmp ([0x7E4])
+	
 _060_real_unfl:
+	fsave -(SP)
+	move.w #0x6000,2(SP)
+	frestore (SP)+
+	fmovem.l #0,FPCR
+	jmp ([0x7E8])
+
 _060_real_dz:
+	fsave -(SP)
+	move.w #0x6000,2(SP)
+	frestore (SP)+
+	fmovem.l #0,FPCR
+	jmp ([0x7EC])
+
 _060_real_inex:
 	fsave -(SP)
 	move.w #0x6000,2(SP)
 	frestore (SP)+
 	fmovem.l #0,FPCR
-	rte
+	jmp ([0x7F0])
 	
 _060_real_fpu_disabled:
 	move.l D0,-(SP)

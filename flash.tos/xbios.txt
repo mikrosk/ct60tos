@@ -32,7 +32,7 @@ CacheCtrl()                  XBIOS Function 160.
           trap    #14
           addq.l  #4,sp
           
-  Return: The value or ERROR (-1) if there are a read error.
+  Return: The value or ERROR (-1) if there is a read error.
 
 *************************************************************************
 				ct60_rw_parameter
@@ -45,7 +45,7 @@ CacheCtrl()                  XBIOS Function 160.
        long ct60_rw_parameter(short mode,long type_param,long value);
 
   Description:
-          Read or change a parameter inside the flash eprom.
+          Read or write a parameter inside the flash eprom.
           The fonction returns the value.
           
   mode:
@@ -57,28 +57,28 @@ CacheCtrl()                  XBIOS Function 160.
 
   type_param:
           CT60_PARAM_TOSRAM 0
-          If the value is set to 1, the TOS is copied inside the 
-          SDRAM during boot (PMMU used and cookie PMMU created).
-          If the value is set to 0, the TOS in flash eprom is used. 
+          If the value is set to 1, TOS is copied to SDRAM during
+          boot (PMMU is used and the PMMU cookie is created).
+          If the value is set to 0, TOS in the flash eprom is used. 
           
           CT60_BLITTER_SPEED 1
-          If the value is set to 0, the blitter runs a 8/10 MHz.
-          If the value is set to 1, the blitter runs a 16/20 MHz.          
+          If the value is set to 0, the blitter runs at 8/10 MHz.
+          If the value is set to 1, the blitter runs at 16/20 MHz.          
 
           CT60_CACHE_DELAY 2
           If the value is set to 0, the Pexec function is normal 
-          (flush cache).
-          If the value is set to 1, remove the caches during 5 seconds 
+          (flushes cache).
+          If the value is set to 1, the caches are disabled for 5 seconds 
           when a program is started under TOS with the Pexec function. 
 
           CT60_BOOT_ORDER 3
-          If the value is set to 0, the TOS boot on SCSI drives before 
+          If the value is set to 0, TOS boots from SCSI drives before 
           IDE drives.
-          If the value is set to 1, the TOS boot on IDE drives before 
+          If the value is set to 1, TOS boots from IDE drives before 
           SCSI drives.
 
           CT60_PARAM_OFFSET_TLV 10
-          Value contains a signed offset in points. A point is equal 
+          Value contains a signed offset in points.  A point is equal 
           to 2.8 øC. 
 
   Binding:
@@ -89,7 +89,7 @@ CacheCtrl()                  XBIOS Function 160.
           trap    #14
           lea     12(sp),sp
 
-  Return: The value or return :
+  Return: The value or:
           EBADRQ (-5) if the parameter is >=15. 
           EWRITF (-10) for a write fault.
           EUNDEV (-15) if the flash device is not found.
@@ -105,13 +105,13 @@ CacheCtrl()                  XBIOS Function 160.
        long ct60_cache(short cache_mode);
 
   Description:
-          This function is used to set or remove the 68060 caches 
-          inside the patched version of General.cpx.
+          This function is used to enable or disable the 68060 caches 
+          in the patched version of General.cpx.
           
   cache_mode:
-          1 set the caches to on.
-          0 remove the caches.
-          -1 without change.
+          1 enable the caches.
+          0 disable the caches.
+          -1 no change.
 
   Binding:
           move.w  cache_mode,-(sp)
@@ -119,9 +119,9 @@ CacheCtrl()                  XBIOS Function 160.
           trap    #14
           addq.l  #4,sp
 
-  Return: Returns CACR.
+  Return: Returns the contents of the CACR.
   
-  Note: Please use the CacheCtrl() function.
+  Note: For normal programs, the CacheCtrl() function is preferred.
 
 *************************************************************************
 				ct60_flush_cache
@@ -135,16 +135,16 @@ CacheCtrl()                  XBIOS Function 160.
 
   Description:
           This function is used to flush the instruction and data 
-          caches inside the patched version of Xcontrol.
+          caches in the patched version of Xcontrol.
 
   Binding:
           move.w  #$c60d,-(sp)
           trap    #14
           addq.l  #2,sp
 
-  Return: ct60_flush_cache return E_OK (0).
+  Return: ct60_flush_cache returns E_OK (0).
 
-  Note: Please use the CacheCtrl() function.
+  Note: For normal programs, the CacheCtrl() function is preferred.
 
 *************************************************************************
 				CacheCtrl
@@ -157,7 +157,7 @@ CacheCtrl()                  XBIOS Function 160.
        long CacheCtrl(short OpCode,short Param);
 
   Description:
-          This function is compatible with the MilanTOS.
+          This function is compatible with MilanTOS.
 
   OpCode:
           OpCode  Param 
@@ -180,10 +180,10 @@ CacheCtrl()                  XBIOS Function 160.
 
   Return: Inquire value, E_OK (0) or BADRQ (-5) if the OpCode is > 7.
 
-  Note: Under the CT60 XBIOS, OpCode 5/7 has the same effect :
+  Note: Under the CT60 XBIOS, OpCodes 5/7 have the same effect :
         mode : 0 = disable all caches.
                1 = enable all caches.
-        All caches ares : Data Cache, Store Buffer, Branch Cache, 
+        All caches are : Data Cache, Store Buffer, Branch Cache, 
         Instruction Cache.
 
 *************************************************************************

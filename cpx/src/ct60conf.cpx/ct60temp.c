@@ -1,6 +1,6 @@
 	
 /* CT60 TEMPerature - Pure C */
-/* Didier MEQUIGNON - v0.99b - August 2003 */
+/* Didier MEQUIGNON - v0.99c - August 2003 */
 
 #include <portab.h>
 #include <tos.h>
@@ -322,7 +322,7 @@ int main(int argc,const char *argv[])
 				if(!start_lang)
 					MT_form_alert(1,"[1][Pas de CT60 !][Annuler]",myglobal);
 				else
-					MT_form_alert(1,"[1][CT60 not found !][Cancel]",myglobal);
+					MT_form_alert(1,"[1][CT60 not found!][Cancel]",myglobal);
 			}
 		}
 	}
@@ -348,7 +348,7 @@ int main(int argc,const char *argv[])
 			if(!start_lang)
 				ret=MT_form_xalert(1,"[2][ATTENTION !|Arrˆt programm‚ de votre|ordinateur dans 30 secondes ?][OK|Annuler]",ITIME*30L,0L,myglobal);
 			else
-				ret=MT_form_xalert(1,"[2][WARNING !|Stop programmed of your|computer in 30 seconds ?][OK|Cancel]",ITIME*30L,0L,myglobal);
+				ret=MT_form_xalert(1,"[2][WARNING!|Stop programmed for your|computer in 30 seconds?][OK|Cancel]",ITIME*30L,0L,myglobal);
 			if(ret==1)
 			{
 				if(myglobal[0]>=0x399)									/* version AES */
@@ -357,7 +357,7 @@ int main(int argc,const char *argv[])
 				if(!start_lang)
 					MT_form_xalert(1,"[1][ATTENTION !|Arrˆt de votre ordinateur...][]",ITIME*5L,stop_60,myglobal);
 				else
-					MT_form_xalert(1,"[1][WARNING !|Stop of your computer...][]",ITIME*5L,stop_60,myglobal);
+					MT_form_xalert(1,"[1][WARNING!|Stopping your computer...][]",ITIME*5L,stop_60,myglobal);
 			}
 		}
 		old_stop=stop;
@@ -370,7 +370,7 @@ int main(int argc,const char *argv[])
 		 		if(!start_lang)
 					MT_form_xalert(1,"[1][Il n'est pas possible de lire|la temp‚rature car le capteur|donne de mauvaises valeurs][OK]",0L,0L,myglobal);
 				else
-					MT_form_xalert(1,"[1][It's not possible to read|temperature because the captor|returns bad values][OK]",0L,0L,myglobal);
+					MT_form_xalert(1,"[1][Cannot determine temperature|because the monitor has|returned bad values][OK]",0L,0L,myglobal);
 				error_flag=1;
 			}
 		}
@@ -380,7 +380,7 @@ int main(int argc,const char *argv[])
 			if(!start_lang)
 				sprintf(mess_alert,"[3][ATTENTION !|Votre 060 est trop chaud: %d øC|La destruction est … %d øC|Arrˆt du microprocesseur dans 10 S|aprŠs ce message !][OK]",temp,MAX_TEMP);
 			else
-				sprintf(mess_alert,"[3][WARNING !|Your 060 is too hot: %d øC|The destruction is at %d øC|Stop of your microprocessor in 10 S|after this message !][OK]",temp,MAX_TEMP);
+				sprintf(mess_alert,"[3][WARNING!|Your 68060 is too hot: %d øC|Destruction begins at %d øC|Your system will be stopped|10 secs after this message!][OK]",temp,MAX_TEMP);
 			MT_form_xalert(1,mess_alert,ITIME*5L,0L,myglobal);
 			if(myglobal[0]>=0x399)									/* version AES */
 				MT_shel_write(SHW_SHUTDOWN,1,0,"","",myglobal);		/* send AP_TERM to all applications */
@@ -390,7 +390,7 @@ int main(int argc,const char *argv[])
 			if(!start_lang)
 				sprintf(mess_alert,"[3][ATTENTION !|Votre 060 est trop chaud: %d øC|La destruction est … %d øC| |SystŠme Arrˆt‚ ! ][]",temp,MAX_TEMP);
 			else
-				sprintf(mess_alert,"[3][WARNING !|Your 060 is too hot: %d øC|The destruction is at %d øC| |System halted !][]",temp,MAX_TEMP);
+				sprintf(mess_alert,"[3][WARNING!|Your 68060 is too hot: %d øC|Destruction begins at %d øC| |System halted!][]",temp,MAX_TEMP);
 			MT_form_xalert(1,mess_alert,ITIME*2L,stop_60,myglobal);
 		}
 		if(time!=old_time)
@@ -450,7 +450,7 @@ int main(int argc,const char *argv[])
 			 	if(!start_lang)
 					sprintf(mess_alert,"[3][ATTENTION !|Votre 060 est trop chaud: %d øC|La destruction est … %d øC|Arrˆtez votre ordinateur !][OK]",temp,MAX_TEMP);
 				else
-					sprintf(mess_alert,"[3][WARNING !|Your 060 is too hot: %d øC|The destruction is at %d øC|Stop your computer !][OK]",temp,MAX_TEMP);
+					sprintf(mess_alert,"[3][WARNING!|Your 68060 is too hot: %d øC|Destruction begins at %d øC|Shut down your computer NOW!][OK]",temp,MAX_TEMP);
 				MT_form_xalert(1,mess_alert,ITIME*10L,0L,myglobal);
 			}
 		}
@@ -502,11 +502,11 @@ int main(int argc,const char *argv[])
 					}
 				 	if(!start_lang)
 						sprintf(mess_alert,
-						"[0][      CT60 TEMPERATURE       |V0.99b MEQUIGNON Didier 08/2003| |Temp.: %d øC     Seuil: %d øC |Lien avec processus %d %s][OK]",
+						"[0][      CT60 TEMPERATURE       |V0.99c MEQUIGNON Didier 08/2003| |Temp.: %d øC     Seuil: %d øC |Lien avec processus %d %s][OK]",
 						temp,trigger_temp,app_id,app_name);
 					else
 						sprintf(mess_alert,
-						"[0][      CT60 TEMPERATURE       |V0.99b MEQUIGNON Didier 08/2003| |Temp.: %d øC Threshold: %d øC |Link with process %d %s][OK]",
+						"[0][      CT60 TEMPERATURE       |V0.99c MEQUIGNON Didier 08/2003| |Temp.: %d øC Threshold: %d øC |Link with process %d %s][OK]",
 						temp,trigger_temp,app_id,app_name);
 					MT_form_xalert(1,mess_alert,ITIME*10L,0L,myglobal);
 					break;

@@ -1,4 +1,4 @@
-/*  Configure the CT60-SDRAM
+/*  Configure the CT60-SDRAM and more
  * 
  * Didier Mequignon 2001-2003, e-mail: didier-mequignon@wanadoo.fr
  *
@@ -22,6 +22,7 @@
 	.globl init_sdram
 	.globl add_sdram
 	.globl boot_drive
+	.globl fix_bug_nvdi
 	.globl display_ram_test
 	.globl ct60_read_info_sdram
 	.globl ct60_configure_sdram
@@ -29,6 +30,7 @@
 #include "main.h"
 #include "ct60.h"
 
+// #define RESET // removed because not works with some motherboards/SDR60 versions
 #define XFRB_SIZE 0x10000
 #define CT60_COOKIE_SIZE 256
 
@@ -80,6 +82,13 @@
 
 init_060:
 
+	move.w #0x2700,SR
+#ifdef RESET
+	move.w 0xFFFF8006,D0
+	reset
+#endif
+	move.w 0xFFFF8006,D0
+	move.w #7,0xFFFF8940	
 	movec.l PCR,D0
 	bset #0,D0               // superscalar
 	movec.l D0,PCR
@@ -87,6 +96,7 @@ init_060:
 	movec.l D0,VBR
 	movec.l D0,CACR
 	cinva BC
+	pflusha
 	move.l #0x00000108,D0    // default zone in copyback for 68060 EC
 	movec.l D0,TCR
 	move.l #0x0000E000,D0    // zone at $00000000 to $00FFFFFF in writethrough for 68060 EC
@@ -96,80 +106,46 @@ init_060:
 	                         // and the zone $80000000-$FFFFFFFF in cache inhibit precise
 	movec.l D0,DTT0
 	movec.l D0,ITT0
+	cmp.l #0xFA52235F,0x00FA0000
+	bne.s .no_cartrige
+	lea .no_cartrige(PC),A6
+	jmp 0x00FA0004
+.no_cartrige:
 	move.w #0x20,0xFFFF828C
 	move.w #0x10,0xFFFF8282
 	or.b #0x21,0xFFFF8007
 	btst #6,0xFFFF8007
 	beq .end_init_060
-	lea .ret1(PC),A6
+	lea .ret(PC),A6
 	jmp 0x00E00C1C
-.ret1:
+.ret:
 	bne .end_init_060
 	move.b memctrl,0xFFFF8001 // config STRAM
-.ret2:
 	cmp.l #0x31415926,resvalid
 	bne .end_init_060
 	move.l resvector,D0
 	btst #0,D0
 	bne .end_init_060
-	move.l D0,A0
 	cmp.l #0x1357BD13,ramvalid
-	bne .not_mmu
+	bne .not_sdram_found
 	lea _sdcnf,A0
 	moveq #0,D0
 	move.b memctrl+1,D0      // config SDRAM saved A23-A16
-	move.w D0,D1
 	swap D0
 	add.l D0,A0
 	clr.l (A0)               // config SDRAM
 	move.l resvector,A0
 	cmp.l #0x01000000,A0     // base SDRAM
 	beq .end_init_060
-	movec.l PCR,D0
-	btst #16,D0
-	bne .not_mmu             // EC or LC
-	lsr.w #2,D1
-	and.w #3,D1
-	add.w #26,D1             // size 0-3 for 64MB-512MB
-	moveq #0,D0
-	bset D1,D0
-	add.l #0x01000000,D0
-	move.l D0,ramtop
-	lea ._rte(PC),A0
-	move.l A0,0xB4           // trap #13
-	move.l A0,0xB8           // trap #14
-	clr.l cookie
-	move.w 0xFFFF8006,D0
-	lsr.w #8,D0
-	lsr.b #1,D0
-	move.b D0,D1
-	and.b #1,D1              // B9
-	lsr.b #2,D0
-	and.b #6,D0              // B13-B12
-	move.l 0x80000,D0
-	asl.l D1,D0
-	cmp.b #5,D1
-	bne.s .size_stram
-	move.l #0xE00000,D0      // 14MB max
-.size_stram:
-	sub.l #RESERVE_MEM_FONTS,D0
-	move.l phystop,-(SP)
-	move.l D0,phystop
-	lea _init_mmu_tree,A0
-	add.l #0xE80000,A0
-	sub.l #_ct60tos_half_flash,A0
-	jsr (A0)                 // restore MMU tree
-	move.l (SP)+,D0
-	move.l resvector,A0
-	cmp.l phystop,D0
-	bcc.s .not_mmu
-	move.l D0,phystop
-.not_mmu:
-	lea .ret2(PC),A6
-	jmp (A0)
-._rte:
-	moveq #0,D0
-	rte
+.not_sdram_found:
+	cmp.l #0x31415926,resvalid
+	bne .end_init_060
+	move.l resvector,D0
+	btst #0,D0
+	bne .end_init_060
+	move.l D0,A0
+	lea .not_sdram_found(PC),A6
+	jmp (A0)                 // resvector
 .end_init_060:
 	jmp 0x00E000C8
 
@@ -213,7 +189,7 @@ init_sdram:
 	bhi.s .title_colors
 	lea message0b(PC),A0
 .title_colors:
-	bsr display_string
+	bsr display_string_single
 	movec.l PCR,D0
 	swap D0
 	lea message8(PC),A0      // 68060
@@ -294,10 +270,10 @@ init_sdram:
 	bsr conv_ascii_value
 	move.b -3(A6),-2(A6)
 	move.b #0x2E,-3(A6)
-	bsr display_string
+	bsr display_string_single
 	unlk A6
 	lea message18(PC),A0     // MHz
-	bsr display_string
+	bsr display_string_single
 	link A6,#-48
 	pea.l -48(A6)            // buffer
 	move.w #48,-(SP)         // size
@@ -378,11 +354,11 @@ init_sdram:
 	bne.s .no_code_display
 .code_hard_display:
 	lea message38(PC),A0
-	bsr display_string
+	bsr display_string_single
 	cmp.l #0x41000000,D0
 	bne.s .no_abe_code_display
 	lea message39(PC),A0
-	bsr display_string
+	bsr display_string_single
 	move.w D3,D0
 	lsr.w #8,D0
 	bsr display_char
@@ -393,7 +369,7 @@ init_sdram:
 	cmp.l #0x53000000,D1
 	bne.s .no_code_display
 	lea message40(PC),A0
-	bsr display_string
+	bsr display_string_single
 	move.w D4,D0
 	lsr.w #8,D0
 	bsr display_char
@@ -402,7 +378,7 @@ init_sdram:
 	bsr display_char
 .no_code_display:
 	lea crlf(PC),A0
-	bsr display_string
+	bsr display_string_single
 	clr.l ramtop
 	clr.l ramvalid
 	move.l phystop,D0
@@ -462,9 +438,9 @@ init_sdram:
 	moveq #0,D5
 	bset D0,D5
 	lea crlf(PC),A0
-	bsr display_string
+	bsr display_string_single
 	lea message1(PC),A0
-	bsr display_string
+	bsr display_string_single
 	lea message5(PC),A0
 	cmp.w #3,D4
 	beq.s .ok_sdram2
@@ -476,7 +452,7 @@ init_sdram:
 	beq.s .ok_sdram2
 	lea message2(PC),A0
 .ok_sdram2:
-	bsr display_string
+	bsr display_string_single
 	lea message6(PC),A0
 	bsr display_string
 	lea 0x1000000,A0
@@ -543,11 +519,11 @@ init_sdram:
 	jsr (A0)
 	tst.l D0
 	beq.s .end_sdram
-	lea message16(PC),A0	
+	lea message51(PC),A0     // TOS in RAM
 	bsr display_string	
 .end_sdram:
 	lea crlf(PC),A0
-	bsr display_string
+	bsr display_string_single
 	movem.l (SP)+,D1-A6
 	rts
 
@@ -664,16 +640,27 @@ get_cookie:
 	rts
 
 error1:	.asciz "            SDRAM not found"
+	.asciz "            SDRAM non trouv‚e"
 error2:	.asciz "            SDRAM chip density error"
+	.asciz "            SDRAM erreur densit‚ puces"
 error3:	.asciz "            SDRAM number of banks error" 
+	.asciz "            SDRAM erreur nombre de banques" 
 error4:	.asciz "            SDRAM density error" 
+	.asciz "            SDRAM erreur densit‚" 
 error5:	.asciz "            SDRAM burst length error" 
+	.asciz "            SDRAM erreur longueur burst" 
 error6:	.asciz "            SDRAM data width error"
+	.asciz "            SDRAM erreur largeur donn‚es"
 error7:	.asciz "            SDRAM voltage error"
+	.asciz "            SDRAM erreur tension"
 error8:	.asciz "            SDRAM type error"
+	.asciz "            SDRAM erreur type"
 error9:	.asciz "            SDRAM refresh rate error"
+	.asciz "            SDRAM refresh rate error"
 error10:	.byte 13,10
 	.asciz "            SDRAM read failure at $"
+	.byte 13,10
+	.asciz "            SDRAM erreur v‚rification en $"
 message0:	.ascii "            "
 	.byte 0x1B,0x62,0x32,0x41
 	.byte 0x1B,0x62,0x34,0x54
@@ -690,33 +677,49 @@ message0:	.ascii "            "
 message0b:	.ascii "            ATARI FALCON/CT60 TOS4.04"
 crlf:	.byte 13,10,0
 message1:	.asciz "            SDRAM "
-message2:	.asciz "64MB"
-message3:	.asciz "128MB"
-message4:	.asciz "256MB"
-message5:	.asciz "512MB"
-message6:	.asciz " detected" 
+message2:	.asciz "64"
+message3:	.asciz "128"
+message4:	.asciz "256"
+message5:	.asciz "512"
+message6:	.asciz "MB detected"
+	.asciz "Mo d‚tect‚e" 
 message8:	.asciz "            68060 Rev."
+	.asciz "            68060 R‚v."
 message9:	.asciz "            68EC060 / 68LC060 Rev."
-message10:	.asciz "            unknow CPU "
+	.asciz "            68EC060 / 68LC060 R‚v."
+message10:	.asciz "            unknown CPU "
+	.asciz "            CPU inconnu"
 message11:	.asciz " Mask D00W/D11W" // revision 0
+	.asciz " Masque D00W/D11W"
 message12:	.asciz " Mask F43G/G65V" // revision 1
+	.asciz " Masque F43G/G65V"
 message13:	.asciz " Mask F84W"      // revision 2
+	.asciz " Masque F84W"
 message14:	.asciz " Mask E41J"      // revision 6 (3 -> 5 ?)
+	.asciz " Masque E41J" 
 message15:	.byte 27 
 	.ascii "p Boot v"
 	.byte ((VERSION/256) & 0xF) + 0x30
 	.ascii "."
 	.byte ((VERSION/16) & 0xF) + 0x30
 	.byte (VERSION & 0xF) + 0x30
-	.ascii "b 2003 August "
+	.asciz "c "
+message15b:	
+	.ascii "2003 August "
 	.byte 27
 	.ascii "q"
-	.byte 13,10,10
-	.asciz "Init SDRAM" 
+	.byte 13,10,0
+	.ascii "Aout 2003 "
+	.byte 27
+	.ascii "q"
+	.byte 13,10,0
 message16:	.byte 13,10
-//	.asciz "            TOS copied in SDRAM (0-1FFF E00000-EEFFFF)"
-	.asciz "            TOS copied in SDRAM"
+	.asciz "Initialization SDRAM"
+	.byte 13,10 
+	.asciz "Initialisation SDRAM" 
 message17:   .ascii "MB/S"
+	.byte 13,10,0
+	.ascii "Mo/S"
 	.byte 13,10,0
 message18:	.asciz "MHz"
 message19:	.byte 13,10,27 
@@ -724,42 +727,83 @@ message19:	.byte 13,10,27
 	.byte 27
 	.ascii "q"
 	.byte 13,10,0
+	.byte 13,10,27 
+	.ascii "p SDRAM DONNEES EEPROM "
+	.byte 27
+	.ascii "q"
+	.byte 13,10,0
 message20:	.byte 13,10
 	.asciz "Byte 2, Memory Type : $"
+	.byte 13,10
+	.asciz "Octet 2, Type de m‚moire : $"
 message21:	.byte 13,10
 	.asciz "Byte 3, Number of Row Addresses : $"
+	.byte 13,10
+	.asciz "Octet 3, Nombre de lignes d'adresses : $"
 message22:	.byte 13,10
 	.asciz "Byte 4, Number of Column Addresses : $"
+	.byte 13,10
+	.asciz "Octet 4, Nombre de colonnes d'adresses : $"
 message23:	.byte 13,10
 	.asciz "Byte 5, Number of DIMM Banks :$"
+	.byte 13,10
+	.asciz "Octet 5, Nombre de banques DIMM :$"
 message24:	.byte 13,10
-	.asciz "Byte 6-7, Module Data Width : $"
+	.asciz "Bytes 6-7, Module Data Width : $"
+	.byte 13,10
+	.asciz "Octets 6-7, Largeur donn‚es module : $"
 message25:	.byte 13,10
 	.asciz "Byte 8, Voltage Interface Level : $"
+	.byte 13,10
+	.asciz "Octet 8, Niveau de tension interface : $"
 message26:	.byte 13,10
 	.asciz "Byte 9, SDRAM Cycle Time : $"
+	.byte 13,10
+	.asciz "Octet 9, SDRAM Temps cycle : $"
 message27:	.byte 13,10
 	.asciz "Byte 10, SDRAM Access from Clock : $"
+	.byte 13,10
+	.asciz "Octet 10, SDRAM AccŠs de l'horloge : $"
 message28:	.byte 13,10
 	.asciz "Byte 11, SDRAM Configuration Type : $"
+	.byte 13,10
+	.asciz "Octet 11, SDRAM Type : $"
 message29:	.byte 13,10
 	.asciz "Byte 12, Refresh Rate : $"
+	.byte 13,10
+	.asciz "Octet 12, Fr‚quence rafraichissement : $"
 message30:	.byte 13,10
 	.asciz "Byte 17, Number of Banks : $"
+	.byte 13,10
+	.asciz "Octet 17, Nombre de banques : $"
 message31:	.byte 13,10
 	.asciz "Byte 27, Minimum ROW Precharge Time : $"
+	.byte 13,10
+	.asciz "Octet 27, Temps de pr‚chage mini ROW : $"
 message32:	.byte 13,10
 	.asciz "Byte 28, Minimum ROW Active to Active Delay : $"
+	.byte 13,10
+	.asciz "Octet 28, D‚lais mini entre activations de ROW : $"
 message33:	.byte 13,10
 	.asciz "Byte 29, Minimum RAS to CAS Delay : $"
+	.byte 13,10
+	.asciz "Octet 29, D‚lais mini entre RAS et CAS : $"
 message34:	.byte 13,10
 	.asciz "Byte 31, Module Bank Density : $"
+	.byte 13,10
+	.asciz "Octet 31, Densit‚ banque du module : $"
 message35:	.byte 13,10
-	.asciz "Byte 64-71, Module Manufacturers ID : $"
+	.asciz "Bytes 64-71, Module Manufacturers ID : $"
+	.byte 13,10
+	.asciz "Octets 64-71, ID fabriquants du module : $"
 message36:	.byte 13,10
-	.asciz "Byte 93-94, Module Manufacturing Date : $"
+	.asciz "Bytes 93-94, Module Manufacturing Date : $"
+	.byte 13,10
+	.asciz "Octets 93-94, Date de fabrication du module : $"
 message37:	.byte 13,10
-	.asciz "Byte 95-98, Module Serial Number : $" 
+	.asciz "Bytes 95-98, Module Serial Number : $" 
+	.byte 13,10
+	.asciz "Octets 95-98, Num‚ro de s‚rie du module : $" 
 message38:	.byte 13,10
 	.asciz "            CT60 hardware"
 message39:	.asciz " ABEv"
@@ -769,11 +813,27 @@ message41:	.byte 13,10
 message42:	.byte 13,10
 	.asciz "IDE  "
 message43:	.asciz " ... "
-message44:	.ascii "timeout "
+message44:	.asciz "no answer"
+	.asciz "pas de r‚ponse"
 message45:	.asciz "error"
+	.asciz "erreur"
 message46:	.asciz "read error"
-message47:	.asciz "no boot"
-message48:	.asciz "boot"
+	.asciz "erreur lecture"
+message47:	.asciz "no boot found"
+	.asciz "pas de boot trouv‚"
+message48:	.asciz "boot in progress"
+	.asciz "boot en cours"
+message49:	.asciz " -> "
+message50:	.asciz "no XBRA"
+	.asciz "pas de XBRA"
+message51:	.byte 13,10
+//	.asciz "            TOS copied to SDRAM (0-1FFF E00000-EEFFFF)"
+	.asciz "            TOS copied to SDRAM"
+	.byte 13,10
+//	.asciz "            TOS copi‚ en SDRAM (0-1FFF E00000-EEFFFF)"
+	.asciz "            TOS copi‚ en SDRAM"
+message52:	.byte 13,10
+	.asciz "Reset"
 
 boot_ide:	.byte 16,8,9,10,11,12,13,14,15,255
 boot_scsi:	.byte 8,9,10,11,12,13,14,15,16,255
@@ -805,7 +865,7 @@ boot_drive:
 			beq.s .scsi_drive
 			lea message42(PC),A0
 .scsi_drive:
-			bsr display_string
+			bsr display_string_single
 			move.w D4,D0
 			and.w #7,D0
 			or.w #0x30,D0
@@ -816,7 +876,7 @@ boot_drive:
 			or.w (SP),D0
 			bsr display_char
 			lea message43(PC),A0
-			bsr display_string
+			bsr display_string_single
 			move.w D4,-(SP)
 			move.l _dskbufp,-(SP)
 			move.w #1,-(SP)
@@ -873,21 +933,71 @@ boot_drive:
 	tst.b (A5,D4)
 	bpl .loop_drive
 .end_boot_drive:
+	cmp.l #0x31415926,resvalid
+	bne.s .no_resvector
+	tst.l resvector
+	beq.s .no_resvector
+	lea message52(PC),A0
+	bsr display_string_single
+	move.l resvector,A0
+	bsr display_xbra
+	lea crlf(PC),A0
+	bsr display_string_single
+.no_resvector:
 	movem.l (SP)+,D0-D2/A0-A2/A5
+	rts
+	
+fix_bug_nvdi:
+
+	movec.l CACR,D0
+	move.l D0,-(SP)
+	jsr 0xE0085A             // caches off
+	moveq #3,D0
+	jsr 0xE34348             // v_opnwk
+	cmp.l #0xA0808000,(SP)+
+	bne.s .no_caches	
+	jsr 0xE250C8             // caches on	
+.no_caches:
 	rts
 
 display_ram_test:
 
 	movem.l D0/D1/A0,-(SP)
 	link A6,#-8
-	moveq #6,D1
 	clr -2(A6)
 	lea -8(A6),A0
+	moveq #6,D1
 	bsr conv_ascii_value
 	lea -8(A6),A0
-	bsr display_string
+	bsr display_string_single
 	unlk A6
 	movem.l (SP)+,D0/D1/A0
+	rts
+
+conv_ascii_value_optimized:           // A0:target ascii, D0.L:value, D1:len
+
+	move.l A1,-(SP)
+	link A6,#-16
+	move.l A0,-(SP)
+	lea -16(A6),A0
+	move.w D1,-(SP)
+	bsr conv_ascii_value
+	move.w (SP)+,D1
+	move.l (SP)+,A0
+	lea -16(A6),A1
+	subq.w #1,D1
+	bmi.s .co3
+.co1:
+		move.b (A1)+,D0
+		cmp.b #0x20,D0
+		beq.s .co2
+		move.b D0,(A0)+
+.co2:
+	dbf D1,.co1
+	clr.b (A0)
+.co3:
+	unlk A6
+	move.l (SP)+,A1
 	rts
 	
 conv_ascii_value:                     // A0:target ascii, D0.L:value, D1:len
@@ -929,7 +1039,53 @@ conv_ascii_value:                     // A0:target ascii, D0.L:value, D1:len
 .dv2:
 	rts
 
+display_xbra:
+
+	movem.l D0/A0/A1,-(SP)
+	link A6,#-6
+	clr.w -2(A6)
+	move.l A0,A1
+.loop_xbra:
+		lea message49(PC),A0
+		bsr display_string_single
+		cmp.l #0x58425241,-12(A1) // XBRA
+		bne.s .no_xbra
+		move.l -8(A1),-6(A6)
+		lea -6(A6),A0
+		bsr display_string_single // ID
+		move.l -4(A1),D0          // next
+		beq.s .end_xbra
+		move.l D0,A1
+	bra.s .loop_xbra
+.no_xbra:
+	lea message50(PC),A0
+	bsr display_string
+.end_xbra:
+	unlk A6
+	movem.l (SP)+,D0/A0/A1
+	rts
+
 display_string:
+
+	movem.l D0/A0,-(SP)	
+	move.l A0,-(SP)
+	move.l #0x5F414B50,D0    // _AKP cookie
+	bsr get_cookie
+	move.l (SP)+,A0
+	lsr.w #8,D0
+	cmp.w #2,D0              // FRA
+	beq.s .french
+	cmp.w #7,D0              // SWF
+	bne.s .english
+.french:
+	tst.b (A0)+
+	bne.s .french
+.english:
+	bsr display_string_single	
+	movem.l (SP)+,D0/A0
+	rts
+
+display_string_single:
 
 	movem.l D0/A0,-(SP)
 .os2:
@@ -977,6 +1133,10 @@ display_char:
 add_sdram:
 
 	movem.l D1-D7/A1-A5,-(SP)
+	lea message15(PC),A0     // boot version
+	bsr display_string_single
+	lea message15b(PC),A0
+	bsr display_string
 	cmp.l #0x1357BD13,ramvalid
 	bne .not_sdram
 	move.l _sysbase,A0       // header ROM
@@ -995,7 +1155,6 @@ add_sdram:
 	bsr display_char
 	moveq #10,D0
 	bsr display_char
-	bsr display_char
 .not_infos:
 	move.l #0x01000000,D1
 	move.l ramtop,D0
@@ -1007,8 +1166,8 @@ add_sdram:
 	add.l D0,A4
 	move.l D0,D7
 	lsr.l #8,D7
-	lea message15(PC),A0
-	bsr display_string
+	lea message16(PC),A0
+	bsr display_string       // init SDRAM
 	move.l _hz_200,A5
 	moveq #0,D0
 	moveq #0,D1
@@ -1047,7 +1206,7 @@ add_sdram:
 	bsr conv_ascii_value
 	move.b -3(A6),-2(A6)
 	move.b #0x2E,-3(A6)
-	bsr display_string
+	bsr display_string_single
 	unlk A6
 	lea message17(PC),A0     // MB/S
 	bsr display_string
@@ -1166,7 +1325,7 @@ ct60_read_info_sdram:        // A0: 128 bytes buffer, D0 return error
 	moveq #0,D0
 	bsr write_bit_wait_slave_i2c // adress 1st bit
 	moveq #6,D2              // 8 bits
-.i4:		moveq #0,D0          // adress
+.i4:         	moveq #0,D0          // adress
 		bsr write_bit_i2c
 	dbf D2,.i4
 	bsr read_bit_i2c         // ack

@@ -324,3 +324,12 @@ end33:
 begin34:
 	lea.l	0xE28206,A0
 end34:
+
+	.globl	fix_bug_nvdi
+
+	.align	2
+	.long	0x34258
+	.long	end35-begin35+0x80000000
+begin35:
+	jsr	fix_bug_nvdi
+end35:

@@ -281,7 +281,7 @@ mess4:	.byte 13,10
 mess5:	.byte 13,10
 	.asciz "Cache Register (CACR): $"
 mess6:	.byte 13,10
-	.asciz "Adress Fault: $"	
+	.asciz "Address Fault: $"	
 mess7:	.byte 13,10
 	.asciz "Fault Status Word (FSLW): "
 mess8:	.byte 13,10
@@ -294,8 +294,8 @@ mess10:	.byte 13,10
 tab_mess_exc:
 	.byte 0
 	.byte 0
-	.asciz "Acces Fault"
-	.asciz "Adress Error"
+	.asciz "Access Fault"
+	.asciz "Address Error"
 	.asciz "Illegal Instruction"
 	.asciz "Integer Zero Divide"
 	.byte 0

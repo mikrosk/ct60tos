@@ -1,0 +1,55 @@
+HiSoft Gen30 680x0 Macro Assembler v3.10   08/04/:3  20:13:38  Page 1
+K:\CT60\XCTL_PAT.S
+
+
+    1 T  00000000                      ;
+    2 T  00000000                      ; the following is the source for a patch to XCONTROL v1.31, to support
+    3 T  00000000                      ; the copyback cache of the CT60.  this requires flushing the cache after
+    4 T  00000000                      ; program relocation, via a (new) xbios call.
+    5 T  00000000                      ;
+    6 T  00000000                      ;
+    7 T  00000000                      ; original author:      didier mequignon
+    8 T  00000000                      ; modified by:          roger burrows (august/2003)
+    9 T  00000000                      ;       . create source in devpac 3.10 format
+   10 T  00000000                      ;       . add test for no fixup data
+   11 T  00000000                      ;       . change xbios opcode to 'original' flush cache value
+   12 T  00000000                      ;
+   13 T  00000000                      ;
+   14 T  00000000                      ; known offsets for this patch in XCONTROL v1.31:
+   15 T  00000000                      ;       country    size   offset
+   16 T  00000000                      ;       -------    ----   ------
+   17 T  00000000                      ;       France    44990    26194
+   18 T  00000000                      ;       UK        44685    26222
+   19 T  00000000                      ;       USA       44681    26218
+   20 T  00000000                      ; all values are decimal
+   21 T  00000000                      ;
+   22 T  00000000                      perform_relocation:
+   23 T  00000000 2F0A                         move.l  a2,-(a7)                ;save work reg
+   24 T  00000002 2019                         move.l  (a1)+,d0                ;a1 -> relocation bytes, d0 = offset of first in text
+   25 T  00000004 6724                         beq.s   exit                    ;zero means no fixup ...
+   26 T  00000006 2450                         movea.l (a0),a2                 ;a2 -> start of text
+   27 T  00000008 600C                         bra.s   normal                  ; & go calc offset of first byte to fixup
+   28 T  0000000A                      
+   29 T  0000000A                      check_special:
+   30 T  0000000A B03C0001                     cmp.b   #1,d0                   ;is it special?
+   31 T  0000000E 6606                         bne.s   normal                  ;no
+   32 T  00000010 45EA00FE                     lea     254(a2),a2              ;yes - up offset
+   33 T  00000014 6006                         bra.s   next                    ; & go check next byte
+   34 T  00000016                      
+   35 T  00000016                      normal:
+   36 T  00000016 D5C0                         adda.l  d0,a2                   ;up offset
+   37 T  00000018 2210                         move.l  (a0),d1                 ;d1 = start of text
+   38 T  0000001A D392                         add.l   d1,(a2)                 ;do relocation
+   39 T  0000001C                      next:
+   40 T  0000001C 7000                         moveq   #0,d0
+   41 T  0000001E 1019                         move.b  (a1)+,d0                ;get next relocation byte
+   42 T  00000020 66E8                         bne.s   check_special           ; & loop if not end
+   43 T  00000022 3F3CC60D                     move    #$c60d,-(a7)            ;end - flush cache
+   44 T  00000026 4E4E                         trap    #14
+   45 T  00000028 544F                         addq    #2,a7
+   46 T  0000002A                      exit:
+   47 T  0000002A 245F                         movea.l (a7)+,a2                ;restore work reg
+   48 T  0000002C 4E75                         rts
+   49 T  0000002E                              end
+
+

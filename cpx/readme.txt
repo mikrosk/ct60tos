@@ -1,51 +1,50 @@
 Note about CT60CONF.CPX:
 ------------------------
-Selection TOS in RAM :
-When this option is set, the TOS is copied in SDRAM $E00000 to 
-$EEFFFF (the last sector of the flash $EE0000 to $EFFFFF is used for 
-save 16 parameters), and the TOS variables are copied to SDRAM $0 to 
-$1FFF (the PMMU tree use 8K size page).
-- If only the TOS is used you can set this option for increase speed.
-- If you're programmer, don't set this option because you can create 
- bugged programs. For exemple writing to 0 not create a bus error.
-- If the memory protection is used under MiNT, don't set this option.
- The PMMU tree is always created, but the cookie 'PMMU' not exists 
- when this option is removed.
+Selection "TOS in RAM" :
+When this option is set, TOS is copied to SDRAM locations $E00000 to 
+$EEFFFF (the last sector of the flash, $EE0000 to $EFFFFF, is used to 
+save 16 parameters).
+- If only TOS is used you can set this option to increase speed.
+- If memory protection is used under MiNT, don't set this option.
+The PMMU tree is always created, but the cookie 'PMMU' does not
+exist when this option isn't set.
 
 Note about GENERAL6.CPX:
 ------------------------
-This CPX is a patched version of the Falcon GENERAL.CPX for the 
-68060. The cache on/off selection now uses XBIOS calls, there are no 
-problems under TOS because this XBIOS is inside the FLASH but under 
-MagiC if you use this CPX you need to install CT60XBIO.PRG inside the 
-AUTO folder. This program install the XBIOS for the CT60 if the cookie 
+This CPX is a version of the Falcon GENERAL.CPX, patched for the 
+68060. The cache on/off selection now uses XBIOS calls.  There are no 
+problems under TOS because this XBIOS call is inside the FLASH, but
+to use this CPX under MagiC you must put CT60XBIO.PRG in the AUTO
+folder. This program installs the XBIOS for the CT60 if the cookie 
 'CT60' isn't found.
 
 Note about XCONTROL, ZCONTROL, COPS, and SDRAM in copyback:
 -----------------------------------------------------------
-- COPS only flush caches after load the CPX and works fine.
+- Only COPS flushes caches after loading the CPX and therefore works
+  fine.
 - ZCONTROL works under MiNT 1.16/Xaaes.
 - XCONTROL crashes.
-- The patched XCONTROL.ACC inside this folder fix this problem by a 
-new XBIOS call but under MagiC if you use this ACC you need to install 
-CT60XBIO.PRG inside the AUTO folder.
+- The patched XCONTROL.ACC inside this folder fixes this problem by 
+  using a new XBIOS call; if you use this ACC under MagiC, you must 
+  put CT60XBIO.PRG in the AUTO folder.
 
-Note about PARX.SYS modules and the copyback:
----------------------------------------------
-- If a program who use PARX.SYS crashes at start, you can try to 
-remove cache with GENERAL6.CPX, load the program and set to on after. 
-For example PICCOLO works with this method.
+Note about PARX.SYS modules and copyback:
+-----------------------------------------
+- If a program that uses PARX.SYS crashes at startup, you could try 
+  disabling cache with GENERAL6.CPX, loading the program, and enabling
+  the cache afterwards. PICCOLO (for example) works with this method.
 
-Note about TSR programs who crashes in the AUTO folder:
--------------------------------------------------------
-- Like CPX, the programs who not uses the Pexec function for load 
-modules crashes with the SDRAM in copyback, so the best way is to load 
-the program in STRAM (cache in writethrough). You can use FILEINFO.CPX 
-inside this folder.
-For example you must remove TT-ram flags of METAXBS.PRG (Metados) 
-because when the OVL modules are loaded there are no flush after 
-relocation, it's not compatible with the SDRAM and the CPU cache in 
-copyback.  
+Note about TSR programs that crash in the AUTO folder:
+------------------------------------------------------
+- As with CPX loading, programs that do not use the Pexec function to
+  load modules crash with SDRAM in copyback mode.  The best way to
+  circumvent this is to load the program in STRAM (which uses cache in
+  writethrough mode). You can use FILEINFO.CPX in this folder to set
+  the program load flags correctly.
+  For example, you must remove the TT-RAM flags of METAXBS.PRG (Metados)
+  because, when the OVL modules are loaded, there is no cache flush after
+  relocation, which is incompatible with SDRAM and the CPU cache in 
+  copyback mode.
 
-For more informations:
+For more information:
 didier-mequignon@wanadoo.fr

@@ -30,7 +30,8 @@
 #define save_hz_200 -44
 
 #define etv_critic 0x404
-#define phystop    0x42E	
+#define phystop    0x42E
+#define _frclock   0x466	
 #define _hz_200    0x4BA
 	
 flush_cache_pexec:
@@ -123,6 +124,13 @@ det_gemdos:
 det_vbl:
  
  	movem.l D0/A0,-(SP)
+	tst.b _frclock+3
+	bne.s .no_test_vectors
+	lea _init_emulation_vectors,A0
+	add.l #0xE80000,A0
+	sub.l #_ct60tos_half_flash,A0
+	jsr (A0)
+.no_test_vectors:	
  	move.l etv_critic,A0                                // AES valid ?
  	cmp.l #0xE00000,A0
  	bcs.s .vb2
@@ -159,7 +167,7 @@ det_vbl:
 	rts
 
 alert_copyback_en:
-	.asciz "[1][WARNING !|This program seems|not like copyback cache| |Try without cache ?][Yes 5 S|No|Ignore]" 
+	.asciz "[1][WARNING!|This program does not seem|to like copyback cache| |Try without cache?][Yes 5 S|No|Ignore]" 
 
 alert_copyback_fr:
 	.asciz "[1][ATTENTION !|Ce programme semble ne pas|aimer le cache en copyback| |Essayer sans le cache ?][Oui 5 S|Non|Ignore]" 

@@ -1,14 +1,14 @@
 Note about MAGXBOOT.PRG
 -----------------------
-This MAGXBOOT.PRG a rewrited for the normal mode (68030) and the turbo 
-mode (68060), and in turbo MAGIC.RAM is patched for not overwrite some 
-parts of the TOS like FPU emulation, etc... You must install this 
-program in the AUTO folder. Tested with MagiC 6.10 and 6.20.
-You must use the Centek MAGIC.RAM patch (with MAGIC_P.PRG) before use 
+This MAGXBOOT.PRG has been rewritten to support normal mode (68030) and
+turbo mode (68060), and in turbo mode MAGIC.RAM has been patched to not
+overwrite some parts of TOS such as FPU emulation, etc... You must install
+this program in the AUTO folder. Tested with MagiC 6.10 and 6.20.
+You must use the Centek MAGIC.RAM patch (with MAGIC_P.PRG) before using
 MagiC. 
 
-You need to install CT60XBIO.PRG and DSPXBIOS.PRG inside the AUTO 
+You also need to install CT60XBIO.PRG and DSPXBIOS.PRG in the AUTO 
 folder. 
 
-For more informations:
+For more information:
 didier-mequignon@wanadoo.fr

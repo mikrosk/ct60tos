@@ -1,5 +1,5 @@
 /* CT60 CONFiguration - Pure C */
-/* Didier MEQUIGNON - v0.99b - August 2003 */
+/* Didier MEQUIGNON - v0.99c - August 2003 */
 
 #include <portab.h>
 #include <tos.h>
@@ -387,7 +387,7 @@ char *rs_strings[] = {
 	"OK",
 	"Annule",
 	
-	"CT60 Configuration V0.99b Aout 2003","","",
+	"CT60 Configuration V0.99c Aout 2003","","",
 	"Ce CPX et systŠme:","","",
 	"Didier MEQUIGNON","","",
 	"didier-mequignon@wanadoo.fr","","",
@@ -428,13 +428,13 @@ char *rs_strings_en[] = {
 	"40","","",
 	"0ø","","",
 	" Memory / æP ","","",
-	"Total ST-Ram:",
+	"Total ST RAM:",
 	"uuuuuuuuu bytes",
-	"Total Fast-Ram:",
+	"Total Fast RAM:",
 	"vvvvvvvvv bytes",	
-	"ST-Ram free:",
+	"ST RAM free:",
 	"yyyyyyyyy bytes","","",
-	"Fast-Ram free:",
+	"Fast RAM free:",
 	"zzzzzzzzz bytes","","",
 	"æP:   0.00 Mips","","",
 	" Language ","","",
@@ -483,7 +483,7 @@ char *rs_strings_en[] = {
 	"OK",
 	"Cancel",
 
-	"CT60 Configuration V0.99b August 2003","","",
+	"CT60 Configuration V0.99c August 2003","","",
 	"This CPX and system:","","",
 	"Didier MEQUIGNON","","",
 	"didier-mequignon@wanadoo.fr","","",
@@ -904,17 +904,17 @@ char *cache_delay[2][2]={"  Cache normal       ","  Cache delais 5 sec ","  Norm
 char *spec_boot_order[2][2]={"SCSI->IDE","IDE->SCSI","SCSI->IDE","IDE->SCSI"};
 char *boot_order[2][2]={"  SCSI->IDE ","  IDE->SCSI ","  SCSI->IDE ","  IDE->SCSI "};
 char *spec_day_stop[2][11]={"Sans","Lundi","Mardi","Mercredi","Jeudi","Vendredi","Samedi","Dimanche","Jours ouvr‚s","Fin de semaine","Chaque jour",
-                            "Without","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday","Workday","Week-end","Every day"};
+                            "Without","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday","Mon-Fri","Weekend","Every day"};
 char *day_stop[2][11]={"  Sans           ","  Lundi          ","  Mardi          ","  Mercredi       ","  Jeudi          ","  Vendredi       ",
                        "  Samedi         ","  Dimanche       ","  Jours ouvr‚s   ","  Fin de semaine ","  Chaque jour    ",
                        "  Without   ","  Monday    ","  Tuesday   ","  Wednesday ","  Thursday  ","  Friday    ",
-                       "  Saturday  ","  Sunday    ","  Workday   ","  Week-end  ","  Every day "};
+                       "  Saturday  ","  Sunday    ","  Mon-Fri   ","  Weekend   ","  Every day "};
 
 /* BubbleGEM */
 
 struct bubblegem
 {
-    int	object;
+	int	object;
 	char *french[1];
 	char *english[1];
 };
@@ -922,7 +922,7 @@ struct bubblegem
 struct bubblegem bubbletab[NB_BUB] = {
 	{MENUBSELECT,
 	"S‚lection de la fonction",
-	"Selection of the function"},
+	"Select function"},
 	{MENUTEMP,
 	"Valeur courante de la charge|moyenne du microprocesseur",
 	"Current value of|CPU average load"},
@@ -940,106 +940,106 @@ struct bubblegem bubbletab[NB_BUB] = {
 	"Trigger level for|the temperature alarm"},
 	{MENUTRACE,
 	"Courbe d'‚volution de la|charge moyenne du microprocesseur|durant la derniŠre heure|Sans MiNT 1.11 ou plus, cette|courbe est trŠs approximative",
-	"Curve of CPU average load|during the last hour|Without MiNT 1.11 or more, this|curve is very approximate"},
+	"CPU average load curve|during previous hour.|Prior to MiNT v1.11, this|curve is very approximate"},
 	{MENUTRACE,
 	"Courbe d'‚volution de la|temp‚rature du 68060 durant|la derniŠre heure",
-	"Curve of 68060's temperature|during the last hour"},
+	"68060 temperature curve|during previous hour"},
 	{MENUSTRAMTOT,
 	"Capacit‚ totale|de la ST-Ram",
-	"Total capacity of the ST-Ram"},
+	"Total ST RAM capacity"},
 	{MENUFASTRAMTOT,
 	"Capacit‚ totale|de la Fast-Ram",
-	"Total capacity of the Fast-Ram"},
+	"Total Fast RAM capacity"},
 	{MENUSTRAM,
 	"Nombre d'octets de|la ST-Ram libres",
-	"Number of free bytes|for the ST-Ram"},
+	"Number of free bytes|in ST RAM"},
 	{MENUFASTRAM,
 	"Nombre d'octets de|la Fast-Ram libres",
-	"Number of free bytes|for the Fast-Ram"},
+	"Number of free bytes|in Fast RAM"},
 	{MENUMIPS,
 	"Nombre de millions d'instructions par|seconde effectu‚s par le microprocesseur",
-	"Number of millions instructions by|second worked out by the microprocessor"},
+	"Number of millions of instructions per|second executed by the microprocessor"},
 #ifndef LIGHT
 	{MENUBLANG,
 	"S‚lectionne au d‚marrage|la langue par d‚faut",
-	"Select at boot|the language by default"},
+	"Select default language|at startup"},
 	{MENUBKEY,
 	"S‚lectionne au d‚marrage|le type de clavier",
-	"Select at boot|the keyboard type"},
+	"Select keyboard type|at startup"},
 	{MENUBDATE,
 	"S‚lectionne au d‚marrage|le format de la date",
-	"Select at boot|the date format"},
+	"Select date format|at startup"},
 	{MENUBTIME,
 	"S‚lectionne au d‚marrage|le format de l'heure|12 ou 24 heures",
-	"Select at boot|the time format|12 or 24 hours"},
+	"Select 12-/24-hour time|format at startup"},
 	{MENUSEP,
 	"S‚lectionne au d‚marrage|le s‚parateur de date",
-	"Select at boot|the date separator"},
+	"Select date separator|at startup"},
 	{MENUBVIDEO,
 	"S‚lectionne au d‚marrage|le type de moniteur",
-	"Select at boot|the monitor type"},
+	"Select monitor type|at startup"},
 	{MENUBMODE,
 	"S‚lectionne au d‚marrage|le mode d'affichage|NTSC = 60 Hz, PAL = 50 Hz",
-	"Select at boot|the display's mode|NTSC = 60 Hz, PAL = 50 Hz"},
+	"Select display mode|at startup|NTSC = 60 Hz, PAL = 50 Hz"},
 	{MENUBCOUL,
 	"S‚lectionne au d‚marrage|le nombre de couleurs",
-	"Select at boot|the numbers of colors"},
+	"Select number of colours|at startup"},
 	{MENUBRES,
 	"S‚lectionne au d‚marrage|la r‚solution de l'‚cran",
-	"Select at boot|the screen resolution"},
+	"Select screen resolution|at startup"},
 	{MENUSTMODES,
 	"S‚lectionne au d‚marrage|le mode de compatibilit‚ ST",
-	"Select at boot the|ST compatibility mode"},
+	"Select ST compatibility mode|at startup"},
 	{MENUOVERSCAN,
 	"S‚lectionne au d‚marrage|le mode overscan sur TV",
-	"Select at boot the|overscan mode on TV"},
+	"Select TV overscan mode|at startup"},
 #endif
 	{MENUBBOOTORDER,
 	"S‚lectionne l'ordre de boot|sur les disques IDE et SCSI",
-	"Select the boot order on|the IDE and SCSI drives"},
+	"Select boot order for|IDE and SCSI drives"},
 	{MENUBOS,
 	"S‚lectionne au d‚marrage le|systŠme d'exploitation par d‚faut",
-	"Select at boot the|operating system by default"},
+	"Select default|operating system at startup"},
 	{MENUBARBIT,
 	"S‚lectionne au d‚marrage|l'arbitration SCSI",
-	"Select at boot|the SCSI arbitration"},
+	"Select SCSI arbitration|at startup"},
 	{MENUBIDSCSI,
 	"S‚lectionne au d‚marrage|l'identificateur SCSI (0 to 7)",
-	"Select at boot the|SCSI identificator (0 to 7)"},
+	"Select system SCSI identifier (0 to 7)|at startup"},
 	{MENUDELAY,
 	"D‚lais de la pause au|d‚marrage en secondes",
-	"Delay at boot in secondes"},
+	"Boot delay in seconds"},
 	{MENUBBLITTER,
 	"Change la vitesse|du blitter",
 	"Change the speed|of the blitter"},
 	{MENUBTOSRAM,
 	"Transfert du TOS 4.0x en RAM|avec utilisation de la PMMU",
-	"Transfer of TOS 4.0x in RAM|with using of the PMMU"},
+	"Copy TOS 4.0x to RAM|using the PMMU"},
 	{MENUBCACHE,
 	"Coupe les caches pendant 5 secondes|lors du lancement d'un programme|sous TOS",
-	"Remove the caches during 5 seconds|when a program is started|under TOS"},
+	"Disable the caches for 5 seconds|when a program is started|under TOS"},
 	{MENUBDAY,
 	"S‚l‚ctionne le mode|d'extinction programm‚e|aprŠs une proc‚dure shutdown",
-	"Select the mode of|the stop programmed|after a shutdown procedure"},
+	"Select the stop mode programmed|after a shutdown procedure"},
 	{MENUTIME,
 	"Si le mode d'arrˆt est|activ‚, l'heure d'arrˆt|se r‚gle ici",
-	"If the mode of stop is|actived, the time|must be enter here"},
+	"If stop mode is active,|the time must be entered here"},
 	
 	{MENUBSAVE,
 	"Bouton pour sauver les|r‚glages sur le disque",
-	"Button for save adjustments|on the disk"},
+	"Button to save parameters|to disk"},
 	{MENUBLOAD,
 	"Bouton pour charger les|r‚glages sauv‚s sur le disque",
-	"Button for load adjustments|saved on the disk"},
+	"Button to load saved parameters|from disk"},
 	{MENUBOK,
 	"Bouton pour valider les changements|dans la m‚moire non volatile",
-	"Button for validate the values|changed into the non volatile ram"},
+	"Button to load changed values|into non-volatile RAM"},
 	{MENUBCANCEL,
 	"Bouton pour ne rien changer|… la configuration",
-	"Button for not change values|to the configuration"},
+	"Button to cancel changes|to the configuration"},
 	{MENUBINFO,
 	"Bouton pour afficher|des informations",
-	"Button for display informations"}
+	"Button to display|program information"}
 };
 
 CPXINFO* CDECL cpx_init(XCPB *xcpb)
@@ -1213,16 +1213,16 @@ int CDECL cpx_call(GRECT *work)
 				if(!start_lang)
 					form_alert(1,"[1][Pas de CT60 !][OK]");
 				else
-					form_alert(1,"[1][CT60 not found !][OK]");
+					form_alert(1,"[1][CT60 not found!][OK]");
 			}
 		}
 	}
 	if((ap_id<0 || temp_id<0) && test_060())
 	{
 		if(!start_lang)
-			form_alert(1,"[1][ATTENTION !|Il n'est pas possible de|surveiller la temp‚rature quand|ce CPX sera ferm‚ !|S.V.P. installez CT60TEMP.ACC/APP][OK]");
+			form_alert(1,"[1][ATTENTION !|Il n'est pas possible de|surveiller la temp‚rature quand|ce CPX sera ferm‚ !|S.V.P.installez CT60TEMP.ACC/APP][OK]");
 		else
-			form_alert(1,"[1][WARNING !|It's not possible to overlook|the temperature when|this CPX will be closed !|Please install CT60TEMP.ACC/APP][OK]");
+			form_alert(1,"[1][WARNING!|It is not possible to monitor|the temperature when this CPX|is closed!  Please install|CT60TEMP.ACC/APP][OK]");
 	}
 	selection=PAGE_TEMP;
 	flag_bubble=0;
@@ -1437,7 +1437,7 @@ int CDECL cpx_hook(int event,WORD *msg,MRETS *mrets,int *key,int *nclicks)
 	 		if(!start_lang)
 				form_alert(1,"[1][La tƒche pour surveiller la|temp‚rature est termin‚e !][OK]");
 			else
-				form_alert(1,"[1][The thread for overlook the|temperature is terminated !][OK]");
+				form_alert(1,"[1][The thread for monitoring the|temperature has terminated!][OK]");
 			if(ret);
 			break;		
 		case BUBBLEGEM_ACK:
@@ -1510,7 +1510,7 @@ void CDECL cpx_timer(int *event)
 			 		if(!start_lang)
 						form_alert(1,"[1][Il n'est pas possible de lire|la temp‚rature car le capteur|donne de mauvaises valeurs][OK]");
 					else
-						form_alert(1,"[1][It's not possible to read|temperature because the captor|returns bad values][OK]");
+						form_alert(1,"[1][Cannot determine temperature|because the monitor has|returned bad values][OK]");
 					error_flag=1;
 				}
 			}
@@ -1612,7 +1612,7 @@ void CDECL cpx_timer(int *event)
 			if(!start_lang)
 				form_alert(1,"[1][Pas de r‚ponse de|CT60TEMP.APP/ACC ou Thread !| |Il n'est pas possible|d'afficher la derniŠre heure][Annuler]");
 			else
-				form_alert(1,"[1][No answer from|CT60TEMP.APP/ACC or Thread !| |It's not possible|to display the last hour][Cancel]");
+				form_alert(1,"[1][No response from|CT60TEMP.APP/ACC or thread!| |Cannot display previous hour][Cancel]");
 			time_out_thread=-1;
 		}
 	}
@@ -2142,7 +2142,7 @@ void CDECL cpx_button(MRETS *mrets,int nclicks,int *event)
 		 		if(!start_lang)
 					ret=form_alert(1,"[2][Charger les|r‚glages sauv‚s ?][Charger|Annuler]");
 				else
-					ret=form_alert(1,"[2][Load the|adjustments saved ?][Load|Cancel]");
+					ret=form_alert(1,"[2][Load saved parameters?][Load|Cancel]");
 				if(ret==1)
 				{
 					if(test_060())
@@ -2296,14 +2296,14 @@ void CDECL cpx_button(MRETS *mrets,int nclicks,int *event)
 						if(!start_lang)
 							form_alert(1,"[1][Type de flash|inconnu !][OK]");
 						else
-							form_alert(1,"[1][Unknow flash|device !][OK]");
+							form_alert(1,"[1][Unknow flash|device!][OK]");
 					}
 					else
 					{
 						if(!start_lang)
 							form_alert(1,"[1][Erreur ‚criture|paramŠtre en flash !][OK]");
 						else
-							form_alert(1,"[1][Writing parameter|in flash error !][OK]");
+							form_alert(1,"[1][Error writing parameters|to flash!][OK]");
 					}
 				}
 				rs_object[MENUBOK].ob_state &= ~SELECTED;
@@ -3382,7 +3382,7 @@ void bubble_help(void)
 			if(!start_lang)
 				form_alert(1,"[1][Pas de r‚ponse de|BubbleGEM !][Annuler]");
 			else
-				form_alert(1,"[1][No answer from|BubbleGEM !][Cancel]");
+				form_alert(1,"[1][No response from|BubbleGEM!][Cancel]");
 			time_out_bubble=-1;
 		}
 	}
@@ -3454,14 +3454,14 @@ long cdecl temp_thread(unsigned int *param)				/* used with MagiC > 4.5 */
 			if(!start_lang)
 				ret=MT_form_xalert(1,"[2][ATTENTION !|Arrˆt programm‚ de votre|ordinateur dans 30 secondes ?][OK|Annuler]",ITIME*30L,0L,myglobal);
 			else
-				ret=MT_form_xalert(1,"[2][WARNING !|Stop programmed of your|computer in 30 seconds ?][OK|Cancel]",ITIME*30L,0L,myglobal);
+				ret=MT_form_xalert(1,"[2][WARNING!|Stop programmed for your|computer in 30 seconds?][OK|Cancel]",ITIME*30L,0L,myglobal);
 			if(ret==1)
 			{
 				for(i=0;i<10;bip(),evnt_timer(ITIME),i++);
 				if(!start_lang)
 					MT_form_xalert(1,"[1][Arrˆt de votre ordinateur...][]",ITIME*5L,stop_60,myglobal);
 				else
-					MT_form_xalert(1,"[1][Stop of your computer...][]",ITIME*5L,stop_60,myglobal);
+					MT_form_xalert(1,"[1][Stopping your computer...][]",ITIME*5L,stop_60,myglobal);
 			}
 		}
 		old_stop=stop;
@@ -3474,7 +3474,7 @@ long cdecl temp_thread(unsigned int *param)				/* used with MagiC > 4.5 */
 		 		if(!start_lang)
 					MT_form_xalert(1,"[1][Il n'est pas possible de lire|la temp‚rature car le capteur|donne de mauvaises valeurs][OK]",0L,0L,myglobal);
 				else
-					MT_form_xalert(1,"[1][It's not possible to read|temperature because the captor|returns bad values][OK]",0L,0L,myglobal);
+					MT_form_xalert(1,"[1][Cannot determine temperature|because the monitor has|returned bad values][OK]",0L,0L,myglobal);
 				error_flag=1;
 			}
 		}
@@ -3484,13 +3484,13 @@ long cdecl temp_thread(unsigned int *param)				/* used with MagiC > 4.5 */
 			if(!start_lang)
 				sprintf(mess_alert,"[3][ATTENTION !|Votre 060 est trop chaud: %d øC|La destruction est … %d øC|Arrˆt du microprocesseur dans 10 S|aprŠs ce message !][OK]",temp,MAX_TEMP);
 			else
-				sprintf(mess_alert,"[3][WARNING !|Your 060 is too hot: %d øC|The destruction is at %d øC|Stop of your microprocessor in 10 S|after this message !][OK]",temp,MAX_TEMP);
+				sprintf(mess_alert,"[3][WARNING!|Your 68060 is too hot: %d øC|Destruction begins at %d øC|Your system will be stopped|10 secs after this message!][OK]",temp,MAX_TEMP);
 			MT_form_xalert(1,mess_alert,ITIME*5L,0L,myglobal);
 			for(i=0;i<10;bip(),evnt_timer(ITIME),i++);
 			if(!start_lang)
 				sprintf(mess_alert,"[3][ATTENTION !|Votre 060 est trop chaud: %d øC|La destruction est … %d øC| |SystŠme Arrˆt‚ ! ][]",temp,MAX_TEMP);
 			else
-				sprintf(mess_alert,"[3][WARNING !|Your 060 is too hot: %d øC|The destruction is at %d øC| |System halted !][]",temp,MAX_TEMP);
+				sprintf(mess_alert,"[3][WARNING!|Your 68060 is too hot: %d øC|Destruction begins at %d øC| |System halted!][]",temp,MAX_TEMP);
 			MT_form_xalert(1,mess_alert,ITIME*2L,stop_60,myglobal);
 		}
 		if(time!=old_time)
@@ -3549,7 +3549,7 @@ long cdecl temp_thread(unsigned int *param)				/* used with MagiC > 4.5 */
 			 	if(!start_lang)
 					sprintf(mess_alert,"[3][ATTENTION !|Votre 060 est trop chaud: %d øC|La destruction est … %d øC|Arrˆtez votre ordinateur !][OK]",temp,MAX_TEMP);
 				else
-					sprintf(mess_alert,"[3][WARNING !|Your 060 is too hot: %d øC|The destruction is at %d øC|Stop your computer !][OK]",temp,MAX_TEMP);
+					sprintf(mess_alert,"[3][WARNING!|Your 68060 is too hot: %d øC|Destruction begins at %d øC|Shut down your computer NOW!][OK]",temp,MAX_TEMP);
 				MT_form_xalert(1,mess_alert,ITIME*10L,0L,myglobal);
 			}
 		}
@@ -3679,7 +3679,7 @@ int start_temp(unsigned int *param1,unsigned int *param2,unsigned int *param3)
 		if(!start_lang)
 			ret=form_alert(1,"[2][Il faut installer CT60TEMP|pour surveiller la temp‚rature][Installer|Annuler]");
 		else
-			ret=form_alert(1,"[2][You must install CT60TEMP|for control the temperature][Install|Cancel]");
+			ret=form_alert(1,"[2][You must install CT60TEMP|to monitor the temperature][Install|Cancel]");
 		if(ret==1)
 #endif
 		{
@@ -3691,7 +3691,7 @@ int start_temp(unsigned int *param1,unsigned int *param2,unsigned int *param3)
 				if(!start_lang)
 					ret=form_alert(1,"[1][Erreur durant la cr‚ation|du fichier CT60TEMP.ACC][Annuler]");
 				else
-					ret=form_alert(1,"[1][Error during creation|of the file CT60TEMP.ACC][Cancel]");	
+					ret=form_alert(1,"[1][Error occurred while|creating CT60TEMP.ACC][Cancel]");	
 			}		
 			else
 			{
@@ -3703,7 +3703,7 @@ int start_temp(unsigned int *param1,unsigned int *param2,unsigned int *param3)
 					if(!start_lang)
 						ret=form_alert(1,"[1][Erreur durant l'‚criture|du fichier CT60TEMP.ACC][Annuler]");
 					else
-						ret=form_alert(1,"[1][Error during writing|of the file CT60TEMP.ACC][Cancel]");	
+						ret=form_alert(1,"[1][Error occurred while|writing CT60TEMP.ACC][Cancel]");	
 				}
 				else
 				{
@@ -3717,7 +3717,7 @@ int start_temp(unsigned int *param1,unsigned int *param2,unsigned int *param3)
 						if(!start_lang)
 							ret=form_alert(1,"[2][Vous devez red‚marrer|votre ordinateur pour que la|surveillance de temp‚rature|fonctionne][Reboot|Annuler]");
 						else
-							ret=form_alert(1,"[2][You must restart your|computer for the control|of the temperature runs][Reboot|Cancel]");	
+							ret=form_alert(1,"[2][You must reboot your|computer in order to start|the temperature monitor][Reboot|Cancel]");	
 						if(ret==1)
 							reboot();
 					}

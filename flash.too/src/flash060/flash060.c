@@ -29,9 +29,9 @@
 #define HARD 1
 
 #define	NORESOURCE	form_alert(1,"[1][File FLASH060.RSC not found][Cancel]")
-#define	NOWINDOW	form_alert(1,"[1][No window free !][Cancel]")
-#define	NOALERT		form_alert(1,"[1][Error message not found |inside the file FLASH060.RSC][OK]")
-#define	NOMEMORY	form_alert(1,"[1][No enough memory ! |This program need 1MB][Cancel]")
+#define	NOWINDOW	form_alert(1,"[1][No window available!][Cancel]")
+#define	NOALERT		form_alert(1,"[1][Error message not found |inside file FLASH060.RSC][OK]")
+#define	NOMEMORY	form_alert(1,"[1][Not enough memory! |This program needs 1MB][Cancel]")
 
 #define FLASH_SIZE 0x100000
 #define PARAM_SIZE 0x10000

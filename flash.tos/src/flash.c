@@ -58,7 +58,7 @@ write_flash(Bit8u *buffer, Bit32u size)
   Bit32u device;
   t_sector *sectors = NULL;
   int i;
-  char *retry="Retry. You may need to get a new flash if it still fails after some tries.";
+  char *retry="Retry. You may need to get a new flash if it still fails after several tries.";
 
   if(detect_flash(&device, (Bit8u *)FLASH_ADR, (Bit8u *)FLASH_UNLOCK1, (Bit8u *)FLASH_UNLOCK2))
     flash_error("No CT60 board detected.", "Check your system.");
@@ -88,7 +88,7 @@ write_flash(Bit8u *buffer, Bit32u size)
   printf("OK\n");
   Cconout(0xD);
 
-  printf("Programing flash...");
+  printf("Programming flash...");
   if(program_flash(sectors, buffer, size))
   {
     printf("\n");
@@ -98,7 +98,7 @@ write_flash(Bit8u *buffer, Bit32u size)
   printf("OK\n");
   Cconout(0xD);
   
-  printf("Verify flash...");
+  printf("Verifying flash...");
   if(verify_flash(buffer, size))
   {
     printf("\n");

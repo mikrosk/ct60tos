@@ -7,6 +7,8 @@ The internal DSP functions are modified (hansdhake).
 You must install EXCEP060.PRG inside the AUTO folder for fix the 
 format error.
 
+This patch works only on an umpacked CAF_20x.PRG (1MB).
+
 For more informations:
 didier-mequignon@wanadoo.fr
 

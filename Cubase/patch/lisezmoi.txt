@@ -7,5 +7,7 @@ Les fonctions DSP internes sont mofifi‚s (hansdhake).
 Vous devez installer EXCEP060.PRG dans le dossier AUTO pour corriger 
 l'erreur de format.
 
+Ce patch fonctionne seulement avec un CAF_20x.PRG non compress‚ (1Mo).
+
 Pour plus d'informations:
 didier-mequignon@wanadoo.fr

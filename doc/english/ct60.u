@@ -4,7 +4,7 @@
 !title   Documentation of the
 !programimage ..\img\ct60.img
 !program CT60
-!version Version 0.99a
+!version Version 0.99c
 !date    (!today)
 !author  Didier MEQUIGNON
 !street  25, rue de l'Ascenseur
@@ -897,8 +897,9 @@ folder.
 Cartrige port    !! Not works         !! Remove the caches.
 and 68060 EC     !!                   !! 
 !hline
-HD Driver and    !! Crashes with      !! Buy the latest version.
-SCSI drives      !! files > 65 KB     !!
+HD Driver 8 and  !! Crashes with      !! Update the ABE060 chip 
+SCSI drive or    !! "SCSI Processor   !! to v5K or more.
+the floppy disk  !!  Device"          !!
 !hline
 MagiC            !! Not works         !! Patch MAGIC.RAM and use the
                  !!                   !! new MAGXBOOT.PRG.

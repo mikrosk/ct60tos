@@ -64,3 +64,15 @@ value of the internal clock (F030 BOOST) and '_FRE' with the value of
 the external clock (file sdram.S and videl2.S).
 - Now the CT60 cookie value is a pointer of 256 bytes cleared during 
 the boot (used by the CPX).
+
+2003-08-15 0.99c
+----------------
+- Add texts in french (file sdram.S).
+- Fix resvector (0x42A) patch (files sdram.S and pmmu.S).
+- Add resvector XBRA display (sdram.S).
+- Add test vectors overwrited for fpsp and isp emulation inside the 
+VBL (files gemdos2.S and vectors2.S).
+- Fix the "Unable to alloc AES blt buffer" error message with a new 
+screen of NVDI in 2 colors. work_out[4] (number of planes) from 
+vq_extnd() was to 0. Caches are removed during v_opnwk() (files 
+sdram.S and aes.S). Strange NVDI bug...

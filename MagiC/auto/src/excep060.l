@@ -24,8 +24,9 @@ DEBUT:
  BSR GET_COOKIE
  BMI \1;pas de cookie-jar
  MOVE.L D0,A0
- CMP.L #60,(A0)
- BNE \1
+ MOVE 2(A0),TYPE_CPU
+; CMP.L #60,(A0)
+; BNE \1
  SUPEXEC INIT_EXC
  PRINTLINE MESS1
  KEEPPROC #0,#FIN-DEBUT+TAILLE_PILE;programme r‚sidant
@@ -54,12 +55,15 @@ INIT_EXC:
 ; MOVE.L A1,(A0)+
 ; LEA LINEA(PC),A1
 ; MOVE.L A1,(A0)+
+; ADD.L #24,A0
 ; LEA LINEF(PC),A1
 ; MOVE.L A1,(A0)+
 ; LEA EMULATOR_INT(PC),A1
 ; MOVE.L A1,(A0)+
 ; LEA SAUT_INTER(PC),A1
 ; MOVE.L A1,(A0)+
+ CMP #30,TYPE_CPU
+ BLS.S \1
  ADD.L #36,A0
  LEA ERREUR_FORMAT(PC),A1
  MOVE.L A1,(A0)+
@@ -124,9 +128,9 @@ INIT_EXC:
 ; MOVE.L A1,(A0)+  
 ; MOVE #255-48,D0
 ; LEA SAUT_INTER(PC),A1
-;\1:MOVE.L A1,(A0)+
-; DBRA D0,\1
- MOVEM.L (SP)+,D0/A0/A1
+;\2:MOVE.L A1,(A0)+
+; DBRA D0,\2
+\1:MOVEM.L (SP)+,D0/A0/A1
  RTS
 
 ERREUR_BUS:
@@ -332,13 +336,19 @@ PROC_EXC:
  MOVE.L USP,A6
  MOVE.L A6,SAUVE_USP
  MOVE.L SP,SAUVE_SSP
+ CMP #30,TYPE_CPU
+ BLS.S \3
  DC.L $4E7A0002;MOVEC.L CACR,D0
  MOVE.L D0,SAUVE_CACR
- MOVE.L SP,D0
+\3:MOVE.L SP,D0
 ; AND.B #$FE,D0
  LEA PILE_CRASH,SP
  MOVE.L D0,A6
- BSR INFOS_CRASH
+ CMP #30,TYPE_CPU
+ BLS.S \2
+ BSR INFOS_CRASH_060
+ BRA.S \1
+\2:BSR INFO_CRASH
 \1:;BRA.S \1
  MOVE #$2500,SR
  CONIN_WE
@@ -348,7 +358,7 @@ PROC_EXC:
  ILLEGAL
  RTS 
  
-INFOS_CRASH:
+INFOS_CRASH_060:
 
  PRINTLINE MESS3
  MOVE VECT_EXC,D7;no de vecteur
@@ -401,7 +411,7 @@ INFOS_CRASH:
   BSR AFF_HEX_LONG_D0
   CONOUT #" "
  DBRA D1,\17
- PRINTLINE MESS5;format
+ PRINTLINE MESS6;format
  MOVE (A6)+,D0;format + vecteur offset
  CMP #14,VECT_EXC;format error
  BNE.S \4
@@ -413,9 +423,9 @@ INFOS_CRASH:
  MOVE.L SAUVE_CACR,D0
  BSR AFF_HEX_LONG_D0
  CMP #2,D7
- BEQ.S \3;Acces Fault
+ BEQ.S \3;Access Fault
  CMP #3,D7
- BEQ.S \3;Adress Error
+ BEQ.S \3;Address Error
  CMP #5,D7
  BEQ.S \3;Zero Divide
  CMP #9,D7
@@ -424,7 +434,7 @@ INFOS_CRASH:
  MOVE.L (A6)+,D0
  BSR AFF_HEX_LONG_D0
  CMP #2,D7
- BNE \2;<> Acces Fault
+ BNE \2;<> Access Fault
  PRINTLINE MESS4;FSLW
  MOVE.L (A6),D0;FSLW
  BSR AFF_HEX_LONG_D0
@@ -505,6 +515,166 @@ INFOS_CRASH:
   ADDQ.L #4,A2
  DBRA D1,\8
  RTS
+ 
+INFO_CRASH:
+
+ PRINTLINE MESS3
+ MOVE VECT_EXC,D7;no de vecteur
+ MOVEQ #0,D0
+ MOVE D7,D0
+ LINK A5,#-4
+ CLR -2(A5)
+ LEA -4(A5),A0
+ MOVEQ #3,D1
+ BSR CONV_DECI
+ PRINTLINE -4(A5)
+ UNLK A5
+ CONOUT #":"
+ CONOUT #" "
+ LEA TAB_MESS_EXC,A0
+ MOVE D7,D0
+ BSR PRINTLINE_TAB
+ CONOUT #13
+ CONOUT #10
+ TST TYPE_CPU
+ BNE \1;>68000
+ CMP #4,D7
+ BCC \1;si groupe 1-2 sur 68000
+;groupe 0 Bus Error ou Adress Error sur 68000
+ PRINTLINE MESS2;lect/‚crit
+ MOVE (A6)+,D6
+ LEA MESS2A,A5
+ BTST #4,D6
+ BNE.S \3
+ LEA MESS2B,A5
+\3:PRINTLINE (A5)
+ PRINTLINE MESS5;instruction ou non
+ LEA MESS5A,A5
+ BTST #3,D6
+ BEQ.S \4
+ LEA MESS5B,A5
+\4:PRINTLINE (A5)
+ PRINTLINE MESS12;fonction
+ LEA TAB_FONCTION,A0
+ MOVE D6,D0
+ AND #7,D0
+ BSR PRINTLINE_TAB
+ PRINTLINE MESS7;adresse acc‚d‚e
+ MOVE.L (A6)+,D0
+ BSR AFF_HEX_LONG_D0
+ PRINTLINE MESS13;instruction code
+ MOVE (A6)+,D0
+ MOVE.L 2(A6),A0
+ CMP.L #$400000,A0;zone programme
+ BCC.S \13
+ MOVEQ #4,D1
+ ADDQ.L #2,A0
+\7:CMP -(A0),D0;corrige PC d‚cal‚ au d‚clenchement de l'exception de 5
+ DBEQ D1,\7; mots maximum
+ MOVE.L A0,2(A6)
+\13:BSR AFF_HEX_WORD_D0
+\1:PRINTLINE MESS9;registre d'‚tat
+ MOVE (A6),D0
+ BSR AFF_HEX_WORD_D0
+ PRINTLINE MESS10
+ MOVE (A6)+,D2
+ AND #%1010011100011111,D2
+ LEA TAB_STATUS,A1
+ MOVEQ #15,D1
+\5:BTST D1,D2
+  BEQ.S \6
+  MOVE.B (A1,D1),D0
+  MOVE D0,D3
+  AND #$F8,D3
+  CMP #$30,D3
+  BNE.S \11
+  MOVE D0,-(SP)
+  CONOUT #"I"
+  MOVE (SP)+,D0
+\11:CONOUT D0
+  CONOUT #" "
+\6:DBRA D1,\5
+ PRINTLINE MESS11;PC
+ MOVE.L (A6)+,D0
+ BSR AFF_HEX_LONG_D0
+ TST TYPE_CPU
+ BEQ \2;68000
+ CMP #4,D7
+ BCC \2;si groupe 1-2
+;groupe 0 Bus Error ou Adress Error 68020-30
+ ADDQ #4,A6
+ PRINTLINE MESS2;lect/‚crit
+ MOVE (A6)+,D6;mot sp‚cial d'‚tat
+ LEA MESS2A,A5
+ BTST #6,D6
+ BNE.S \14
+ LEA MESS2B,A5
+\14:PRINTLINE (A5)
+ PRINTLINE MESS5X;taille des donn‚es
+ MOVEQ #0,D0
+ MOVE D6,D1
+ LSR #4,D1
+ BCHG #0,D1
+ AND #3,D1
+ CMP #3,D1
+ BNE.S \15
+ MOVEQ #1,D1
+\15:ADDQ #3,D1
+ BSET D1,D0
+ LINK A5,#-4
+ CLR -2(A5)
+ LEA -4(A5),A0
+ MOVEQ #2,D1
+ BSR CONV_DECI;8-16-32
+ PRINTLINE -4(A5)
+ UNLK A5
+ PRINTLINE MESS5XB
+ PRINTLINE MESS12;fonction
+ LEA TAB_FONCTION,A0
+ MOVE D6,D0
+ AND #7,D0
+ BSR PRINTLINE_TAB
+ ADDQ #4,A6
+ PRINTLINE MESS7;adresse acc‚d‚e
+ MOVE.L (A6)+,D0
+ BSR AFF_HEX_LONG_D0
+ PRINTLINE MESS13;instruction code
+ MOVE.L -18(A6),A0;PC
+ MOVE (A0),D0
+ BSR AFF_HEX_WORD_D0
+\2:PRINTLINE MESS14;SSP
+ MOVE.L SAUVE_SSP,D0
+ BSR AFF_HEX_LONG_D0
+ PRINTLINE MESS15;USP
+ MOVE.L SAUVE_USP,D0
+ BSR AFF_HEX_LONG_D0
+ LEA SAUVE_REG,A1
+ LEA 32(A1),A2
+ MOVEQ #7,D1
+\8:CONOUT #13
+  CONOUT #10
+  CONOUT #"D"
+  MOVEQ #7,D0
+  SUB D1,D0
+  OR #$30,D0
+  MOVE D0,-(SP)
+  BSR AFF_NO
+  MOVE.L (A1),D0
+  BSR AFF_HEX_LONG_D0;registres de donn‚es
+  CONOUT #" "
+  TST D1
+  BEQ.S \9
+  CONOUT #"A"
+  MOVE (SP),D0
+  BSR AFF_NO
+  MOVE.L (A2),D0
+  BSR AFF_HEX_LONG_D0;registres d'adresses
+  CONOUT #" "
+\9:ADDQ.L #2,SP
+  ADDQ.L #4,A1
+  ADDQ.L #4,A2
+ DBRA D1,\8
+\12:RTS
 
 AFF_NO:
 
@@ -638,22 +808,32 @@ GET_COOKIE:;nom dans D0.L, au retour si < 0 pas de cookie
  DATA
  
 MESS1:DC.B 13,10,10,27,"p Exception Fault ",27,"q  installed",0
+MESS2:DC.B 13,10,"Cycle: ",0
+MESS2A:DC.B "Read",0
+MESS2B:DC.B "Write",0
 MESS3:DC.B 13,10,"EXCEPTION PROCESSING ",0
 MESS4:DC.B 13,10,"Fault Status Word (FSLW): ",0
-MESS5:DC.B 13,10,"Format: $",0
-MESS7:DC.B 13,10,"Adress Fault: $",0
+MESS5:DC.B ", Instruction: ",0
+MESS5A:DC.B "Yes",0
+MESS5B:DC.B "No",0
+MESS5X:DC.B ", Size of datas: ",0
+MESS5XB:DC.B " bits",0
+MESS6:DC.B 13,10,"Format: $",0
+MESS7:DC.B 13,10,"Address Fault: $",0
 MESS8:DC.B " Cache Register (CACR): $",0
 MESS9:DC.B 13,10,"Status Register (SR): $",0
 MESS10:DC.B ", bits to 1: ",0
 MESS11:DC.B 13,10,"Program Counter (PC): $",0
+MESS12:DC.B 13,10,"Fonction: ",0
+MESS13:DC.B 13,10,"Code instruction: $",0
 MESS14:DC.B 13,10,"Supervisor Stack (SSP): $",0
 MESS15:DC.B 13,10,"User Stack (USP): $",0
  
 TAB_MESS_EXC:
  DC.B 0
  DC.B 0
- DC.B "Acces Fault",0
- DC.B "Adress Error",0
+ DC.B "Access Fault",0
+ DC.B "Address Error",0
  DC.B "Illegal Instruction",0
  DC.B "Integer Zero Divide",0
  DC.B 0
@@ -699,6 +879,13 @@ TAB_MESS_EXC:
  DC.B "Trap #14",0
  DC.B "Trap #15",0
  DC.B -1
+ 
+TAB_FONCTION:
+ DC.B 0,"User datas",0
+ DC.B "User program",0
+ DC.B 0,0,"Supervisor datas",0
+ DC.B "Supervisor program",0
+ DC.B "Interrupt/CPU space",0,-1
 
 TAB_STATUS:DC.B "CVZNX   012 MS T"
 ;               76543210765432107654321076543210
@@ -716,6 +903,7 @@ SAUVE_REG:DS.L 16
 SAUVE_SSP:DS.L 1
 SAUVE_USP:DS.L 1
 SAUVE_CACR:DS.L 1
+TYPE_CPU:DS.W 1
  
 FIN:
 

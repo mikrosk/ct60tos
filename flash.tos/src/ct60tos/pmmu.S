@@ -26,7 +26,7 @@
 	.globl	init_060
 	
 	.align	2
-	.long	0x5A
+	.long	0x30
 	.long	end1-begin1+0x80000000
 begin1:
 	jmp	init_060

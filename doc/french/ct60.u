@@ -4,7 +4,7 @@
 !title   Documentation de la
 !programimage ..\img\ct60.img
 !program CT60
-!version Version 0.99a
+!version Version 0.99c
 !date    (!today)
 !author  Didier MEQUIGNON
 !street  25, rue de l'Ascenseur
@@ -919,8 +919,10 @@ AUTO.
 Port cartouche   !! Ne fonctionne pas !! Couper les caches.
 et 68060 EC      !!                   !!
 !hline
-HD Driver et les !! Plante avec les   !! Acheter la derniŠre version.
-disques SCSI     !! fichiers > 65 Ko  !!
+HD Driver 8 et   !! Plante avec choix !! Mettre … jour ABE060 
+disques SCSI ou  !! "SCSI Processeur  !! vers v5K ou plus.
+le lecteur de    !!  Device"          !!
+disquettes       !!                   !!
 !hline
 MagiC            !! Ne fonctionne pas !! Patcher MAGIC.RAM et utiliser
                  !!                   !! le nouveau MAGXBOOT.PRG.

@@ -1,0 +1,9 @@
+PATCH_XC.PRG
+.C	[-b4 -r6 -cf -cu -d0 -m0 -rs -fm]
+.S	[-m0]
+.L	[NODEBUG]
+=
+C.O
+PATCH_XC.C
+LCG.LIB
+LC.LIB
