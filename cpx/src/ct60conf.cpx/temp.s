@@ -1,7 +1,7 @@
 ; Read on the CT60, the 68060 temperature on the TLV0831 DC from Texas I.
 ; 2,8 deg celcius / step 
 ;
-; Didier Mequignon 2001 December, e-mail: aniplay@wanadoo.fr
+; Didier Mequignon 2001-2005, e-mail: aniplay@wanadoo.fr
 ;
 ;  This library is free software; you can redistribute it and/or
 ;  modify it under the terms of the GNU Lesser General Public
@@ -19,6 +19,7 @@
 
 	.export ct60_read_temp
 	.export ct60_stop
+	.export ct60_cpu_revision
 	.export mes_delay
 	.export value_supexec
 	.import ct60_rw_param
@@ -60,7 +61,7 @@ ct60_read_temp:
 
 	movem.l D1-D3/A0-A2,-(SP)
 	move.w SR,-(SP)
-	or.w #$700,SR								;no interrupts
+	or.w #$700,SR							;no interrupts
 	lea.l ct1(PC),A0
 	move.l 8,A1								;bus error
 	move.l A0,8
@@ -160,6 +161,13 @@ ct60_stop:
 	or.w #$700,SR
 	clr.b _slp_ct60							;power off
 	dc.w $f800,$01c0,$2700					;fpstop #$2700
+	rts
+	
+ct60_cpu_revision:
+
+	dc.l $4E7A0808							;movec.l PCR,D0
+	lsr.w #8,D0								;revision
+	ext.l D0
 	rts
 
 mes_delay:

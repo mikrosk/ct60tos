@@ -1,6 +1,6 @@
 	
 /* CT60 TEMPerature - Pure C */
-/* Didier MEQUIGNON - v1.02b - October 2004 */
+/* Didier MEQUIGNON - v1.03 - February 2005 */
 
 #include <portab.h>
 #include <tos.h>
@@ -84,6 +84,7 @@ void (*function)(void);
 int test_stop(unsigned long daytime,unsigned int daystop,unsigned int timestop);
 int dayofweek(int year,int mon,int mday);
 void bip(void);
+void SendIkbd(int count, char *buffer);
 void stop_60(void);
 int read_temp(void);
 COOKIE *fcookie(void);
@@ -438,11 +439,11 @@ int main(int argc,const char *argv[])
 				tab_temp[60]=MAX_TEMP;
 			if(eiffel_temp!=NULL)
 			{
-				Ikbdws(3,load_ikbd);
+				SendIkbd(3,load_ikbd);
 				sprintf(message_lcd," 60 %02d\337C",temp);
-				Ikbdws(7,message_lcd);
+				SendIkbd(7,message_lcd);
 				buffer[0]=3;			/* get temp */
-				Ikbdws(0,buffer);
+				SendIkbd(0,buffer);
 				for(i=61;i<121;i++)
 					tab_temp[i]=tab_temp[i+1];
 				tab_temp[121]=((unsigned short)(eiffel_temp[0]&0x3F))
@@ -507,11 +508,11 @@ int main(int argc,const char *argv[])
 					}
 				 	if(!start_lang)
 						sprintf(mess_alert,
-						"[0][      CT60 TEMPERATURE       |V1.02b MEQUIGNON Didier 10/2004| |Temp.: %d øC     Seuil: %d øC |Lien avec processus %d %s][OK]",
+						"[0][      CT60 TEMPERATURE       |V1.03 MEQUIGNON Didier 02/2005| |Temp.: %d øC     Seuil: %d øC |Lien avec processus %d %s][OK]",
 						temp,trigger_temp,app_id,app_name);
 					else
 						sprintf(mess_alert,
-						"[0][      CT60 TEMPERATURE       |V1.02b MEQUIGNON Didier 10/2004| |Temp.: %d øC Threshold: %d øC |Link with process %d %s][OK]",
+						"[0][      CT60 TEMPERATURE       |V1.03 MEQUIGNON Didier 02/2005| |Temp.: %d øC Threshold: %d øC |Link with process %d %s][OK]",
 						temp,trigger_temp,app_id,app_name);
 					MT_form_xalert(1,mess_alert,ITIME*10L,0L,myglobal);
 					break;
@@ -899,6 +900,16 @@ void bip(void)
 	0,0xA0,1,0,2,0,3,0,4,0,5,0,6,0,7,0xFE,8,13,9,0,10,0,0xFF,10,
 	0,0,1,0,2,0,3,0,4,0,5,0,6,0,7,0xFF,8,0,9,0,10,0,0xFF,0 };
 	Dosound(tab_bip);
+}
+
+void SendIkbd(int count, char *buffer)
+{
+	while(count>=0)
+	{
+		/* IKBD interrupt buffered by a TSR program inside the AUTO folder */
+		Bconout(4,*buffer++);
+		count--;
+	}
 }
 
 void stop_60(void)

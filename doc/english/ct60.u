@@ -4,7 +4,7 @@
 !title   Documentation of the
 !programimage ..\img\ct60.img
 !program CT60
-!version Version 1.02b
+!version Version 1.03
 !date    (!today)
 !author  Didier MEQUIGNON
 !street  25, rue de l'Ascenseur
@@ -328,9 +328,172 @@ not consumer PC).
  
 !node Fitting
 
+!subnode CT60
+
 The CT60 is PLUG'N PLAY !
 
 Look at http://www.czuba-tech.com for informations.
+
+
+!subnode CT60-100 clock
+
+For get a better clock and remove crash at 100 MHz, you need this 
+modification : 
+
+At the left of the 100 MHz oscillator, there are IC3, a CY2309.
+
+Inside this chip there are a PLL (Phase Locked Loop), it's possible to use 
+a part of this chip for obtain a better clock.
+ 
+The pin 9 is connect to the ground, cut this pin.
+
+!begin_verbatim
+
+  | | | | | | | | |        +------+
+ +-----------------+       |      |
+ |8               1|       |100MHz|
+ |   CY2309       (        |      |
+ |9              16|       | OSC  |
+ +------------------       |      |
+  X | | | | | | | |        +------+
+
+  ^
+  |
+  
+ here
+!end_verbatim
+
+
+!subnode Programmable clock generator
+
+It's possible to add a programmable clock generator by step of 125 KHz on 
+the CT60. The module use a CY27EE16 connected on the CT60 oscillator socket 
+and two SDRAM module I2C signals SDA (82) and SLC (83) found on R11 / R12.
+
+Because the module need a DIL24 socket and the CT60 clock has a DIL14 socket, you 
+can use some wires for connect the module to the CT60 like this :
+
+!image ..\img\pclock.img
+!begin_verbatim
+
+!end_verbatim
+
+(!U)
+ATTENTION !
+(!u)
+
+If you think you're not ready to solder two very fine wires on R11 et R12, 
+return the CT60 and put the 2 wires on the pins 82 and 83 of the SDRAM socket 
+(front right). Rodolphe suggest to use the DIL14 socket by the pins 2 (SCL 
+to the pin 83 of the SDRAM socket) et 3 (SDA of the pin 83 of the SDRAM 
+socket) in order to remove easily the clock module.
+
+!image ..\img\dimm168p.img
+
+!image ..\img\ct60_clk.img
+!begin_verbatim
+
+!end_verbatim
+
+Reduce the wire CLK at the minimum size, the best is to put the top of the 
+module (pins 18 to 24) on the CT60 clock socket (pins 8 to 14) with an
+extension connector.
+You must at minimum to cut the pin 21 on the module, otherwise there are a 
+short circuit with the CT60 CLK. 
+
+!begin_verbatim
+
+  +------------------------------------------+
+  |                                         +5V      CLK      CLK
+  |                                        14o__o__o__o__o__o__o
+  |                 +------------------------------------------'8
+ +5V   CLK6  CLK5  CLK4  GND   GND           |                 |
+  o__o__o__o__o__o__o__o__o__o__o__o_____     )   CT60 clock   |
+24| GND   GND   GND   GND   GND   GND    |   |      socket     |
+  |                                 |o  o|  1|                 |7
+  |                                 |o  o|   o--o--o--o--o--o--o
+   )            Module              |o  o|           GND      GND
+  |         with a CY27EE16         |o  o|                     |
+  |                                 |o  o|                     |
+ 1| GND   GND   GND   GND   GND   GND    |                     |
+  o--o--o--o--o--o--o--o--o--o--o--o-----                      |
++3V3   CLK1  CLK2  CLK3  SCL   SDA +---------------------------+
+                         |     |
+                         |     |
+                         v     v
+                        R12   R11 (or pin 82 of the SDRAM socket)
+            (or pin 83 of the SDRAM socket)
+!end_verbatim
+
+!begin_itemize
+
+!item Programmable CT60 clock output is CLK1 or CLK4.
+
+!item CLK2 and CLK 3 are disabled.
+ 
+!item CLK5 and CLK6 can be used for DSP or VIDEL clock, but there are 
+always a link with the CT60 clock like this : 
+
+!end_itemize
+
+!begin_table [|c|c|c|] !hline
+CT60 clock (MHz) !! CLK5/6 (MHz) !! Factor
+!hline
+     50.000      !!   50.000     !!  2/2
+     51.000      !!   51.000     !!  2/2
+!hline         
+     51.125      !!   34.083     !!  2/3
+     60.000      !!   40.000     !!  2/3
+     66.625      !!   44.416     !!  2/3
+     75.000      !!   50.000     !!  2/3
+     77.000      !!   51.333     !!  2/3
+!hline
+     77.125      !!   38.562     !!  2/4
+     80.000      !!   40.000     !!  2/4
+     90.000      !!   45.000     !!  2/4
+    100.000      !!   50.000     !!  2/4
+    110.000      !!   55.000     !!  2/4
+!hline
+!end_table
+
+The TOS check if the module exist and can change the clock between 50 and 
+110 MHz (see also the part 'Change the CT60 frequency').
+
+Look at http://www.ak-modul-bus.de for more informations about this module.
+
+(!B)
+Schematic
+(!b)
+!image ..\img\sc_clock.img
+!begin_verbatim
+
+!end_verbatim
+
+(!B)
+List of components :
+(!b)
+
+!begin_verbatim
+1 x CY27EE16FZEC.
+1 x LM317LZ.
+2 x Zener 4V7/500mW.
+1 x Quartz 10 MHz.
+1 x 180 ohms.
+1 x 110 ohms.
+2 x 4.7 Kohms.
+3 x 100 nF.
+1 x male connector HE10 (or HE14) 2x5.
+
+1 x female connector HE10 2x5.
+1 x flat cable 10 wires.
+1 x female SUBD 9 pins.
+!end_verbatim
+
+(!B)
+Remark :
+(!b)
+For the frequency to 100 MHz, you must fix the CT60 clock (look at 
+'CT60-100 clock'). 
 
 
 !node TOS in Flash
@@ -360,6 +523,7 @@ logo copied at the top of the ST-RAM (needed if the TOS in ROM is a 4.02).
 !item The replacement of the XBIOS Bconout routine (display texts).
 !item The picture in 65K colors displayed during 2 seconds.
 !item Check and fix the modecode get from NVM.
+!item Check and set the serial programmable clock with a CY27EE16 (I2C port).
 !item The display of the 68060's type (revision, mask and frequency).
 !item The modification of PCR for the bugged types revision 1.
 !item The reading and the display of the SDRAM's type from his EEPROM. 
@@ -374,7 +538,7 @@ displayed.
 !item The extended fastram buffer created and his cookie 'XFRB'.
 !item Lot of infos displayed about the SDRAM module.
 !item The patch for the boot order of the drives IDE and SCSI (4 choices).
-!item Extra boot features:
+!item Extra boot features :
 !begin_itemize
 !item Add identify device procedure for SCSI and IDE drives, the boot wait
  if a removable drive is not ready.
@@ -423,7 +587,7 @@ folder.
 
 !subsubnode Bootargs extension (Linux)
 
-There are a new option for Linux and the bootargs file:
+There are a new option for Linux and the bootargs file :
 
 -V <value>: Extended video modecode.
 
@@ -471,7 +635,7 @@ Bit !! Name       !!  Value !! Comment                  !! Examples
 !end_table
 
 (!U)
-SVGA list in 16 colors:
+SVGA list in 16 colors :
 (!u)
 
 (modecode 16 colors, width x high, vert. freq., horiz. freq., clock)
@@ -520,7 +684,7 @@ SVGA list in 16 colors:
 0x191A,1024 x 384, 78Hz, 31KHz, 38/40MHz (int/ext clock, interlaced)
 0x181A,1024 x 768, 78Hz, 31KHz, 38/40MHz (int/ext clock, interlaced)
 Experimental because limitations with ST-RAM bandwidth,
- 256 colors not works, but 16 colors normally:
+ 256 colors not works, but 16 colors normally :
 0x1912, 512 x 384, 56Hz, 46KHz, 60MHz (not interlaced, int. clock 50 MHz)
 0x1812, 512 x 768, 56Hz, 46KHz, 60MHz (not interlaced, int. clock 50 MHz)
 0x191A,1024 x 384, 56Hz, 46KHz, 60MHz (not interlaced, int. clock 50 MHz)
@@ -1274,7 +1438,7 @@ There are five common buttons on this CPX :
 !item Save : Button for save adjustments on the disk.
 !item Load : Button for load adjustments saved on the disk.
 !item OK : Button for validate the values changed into the non volatile 
-ram. 
+ram and the flash parameters. 
 !item Cancel : Button for not change values to the configuration.
 !item i : Button for display informations (authors and SDRAM).
 !end_itemize
@@ -1344,22 +1508,63 @@ double-click on the level (offset TLV).
 At this page you can :
 
 !begin_itemize
+
 !item See the total capacity of the ST-Ram.
+
 !item See the total capacity of the Fast-Ram.
+
 !item See the number of free bytes for the ST-Ram.
+
 !item See the number of free bytes for the Fast-Ram.
+
 !item See the number of millions instructions by second worked out by the 
 microprocessor (BogoMips).
+
 !item Select with/without FPU.
+
+!item If necessary change the CT60 frequency.
+
 !item If necessary see the speed of the fan or the pump (if watercooling) 
 with a 3 wires connector :
+
 !end_itemize
+
 !begin_verbatim
                             1N4148
      * Yellow ---<47 ohms>---|<|---> IO3 MFP pin 28
      * Red    ---------------------> +12V CT60 FAN connector
      * Black  --------------------->  GND CT60 FAN connector    
 !end_verbatim
+
+
+!subsubnode Change the CT60 frequency
+
+With the slider inside the page 'Memory / uP' of the CPX, if necessary it's 
+possible to change the CT60 frequency.
+
+For do this task, a programmable clock generator module using a CY27EE16 
+must be connected on the CT60's I2C port with some wires (see also the 
+part 'Programmable clock generator'). 
+
+The adjustment works by step of 125 KHz between 50 and 110 MHz, the value 
+is writed in RAM for a test after 'OK'. The TOS during the boot when the 
+Atari logo arrive send equally this value to the clock, but in case of a 
+problem it's possible to bypass this feature and use the original 
+frequency by press CTRL or ALT.
+
+The original frequency saved in EEPROM is also modifiable after a 
+confirmation with a double click on 'Save' but it's very dangerous ! 
+
+Yet, when it's impossible to restart the computer, the last solution is 
+to connect the module on the MODEM 2 port with a link HE10 SUBD and 
+reprogram in 030 mode the EEPROM of the module with the 'Save' button. 
+This operation is essential for load a new module. The module must be 
+powered by the CT60.
+
+!image ..\img\subd.img
+!begin_verbatim
+
+!end_verbatim 
 
 
 !subnode Boot
@@ -1709,21 +1914,6 @@ Blitter      !! Bad pixels      !! Try blitter slow inside CT60CONF.CPX.
              !!                 !! Decrease the F030 clock to 20/40 MHz
              !!                 !! or 16/32 MHz.
              !!                 !! Use NVDI.
-!hline
-68060        !! System locked   !! Install a clock divider :
-rev. 6       !! sometimes       !!
-100MHz       !! when the SDMA   !! 14,13,10:+5V, 7:GND  _______
-             !! runs and also   !! 5V                  | 74F74 |  
-             !! Videl sync      !! o o o o o o o_______|H     Q|_____ o   o
-             !! lost.           !! CT60      100MHz  11|       |9   | 50MHz
-             !! Sometimes the   !! OSC                 |      _|    |  OSC
-             !! 68060 runs      !! o o o o o o o     __|D     Q|___ |_o   o
-             !! again when you  !! 1          GND   |12|_______|8 |  removed
-             !! go to the 32MHz !! Put little card  |_____________|
-             !! clock (without  !! between osc/socket
-             !! reset !)        !!
-             !! Arbitration bug !! (At 16/32 MHz the problem isn't fixed)
-             !! ???             !! ... or contact Rodolphe.
 !hline
 Ethernec     !! Slow and/or     !! Install CT60 drivers (without movep).
              !! errors          !! Use only at 16/32 MHz.

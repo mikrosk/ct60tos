@@ -476,7 +476,7 @@ fix_gettime:
 	bpl.s .year_before_2000_gettime
 	add.b #100,D0
 .year_before_2000_gettime:
-	moveb D0,D2
+	move.b D0,D2
 	rts
 
 ct60_read_temp:

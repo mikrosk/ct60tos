@@ -39,14 +39,39 @@
 #define XFRB_SIZE 0x10000
 #define SPEED_BUFFER_SIZE 0x10000 // mini 512 bytes
 #define CT60_COOKIE_SIZE 256
-#define DEFAULT_BOOT_DELAY 800 // 4 seconds
-#define TIME_OUT_CMD 200       // 1 second
+#define DEFAULT_BOOT_DELAY 800    // 4 seconds
+#define TIME_OUT_CMD 200          // 1 second
 #define TIME_OUT_4S 800
 #define TIME_OUT_10S 2000
 
 #define rw_parameter 0xc60b
-	
-#define SLAVE_ADRESS            0xA0 // 7 bits 1010xxx + r/w
+
+#define SLAVE_SDRAM_ADRESS            0x50 // 7 bits 1010xxx + r/w
+#define SLAVE_CY_EEPROM_ADRESS        0x68
+#define SLAVE_CY_SRAM_ADRESS          0x69
+
+// CY27EE16ZE serial programmable clock registers
+#define CLKOE     0x09
+#define DIV1N     0x0C
+#define PINCTRL   0x10
+#define WPREG     0x11
+#define OSCDRV    0x12
+#define INLOAD    0x13
+#define ADCREG    0x14
+#define CHARGEP   0x40
+#define PBCOUNTER 0x41
+#define QCOUNTER  0x42
+#define MATRIX1   0x44
+#define MATRIX2   0x45
+#define MATRIX3   0x46
+#define DIV2N     0x47
+#define CT60_CLOCK_READ 0
+#define CT60_CLOCK_WRITE_RAM 1
+#define CT60_CLOCK_WRITE_EEPROM 2
+#define REF       10000           // KHz
+#define MIN_FREQ  50000           // KHz
+#define MAX_FREQ 110000           // KHz
+#define CT60_CALC_CLOCK_ERROR -2
 
 #define CT60_READ_ERROR         -1
 #define CT60_CHIP_DENSITY_ERROR -2
@@ -67,12 +92,12 @@
 #define _tbcr_mfp 0xfffffa1b
 #define _tbdr_mfp 0xfffffa21      // timer B
 #define _tcdr_mfp 0xfffffa23      // timer C
-#define _scl_low 0xf0000000       // write 0 to SCL line (clock)
+#define _scl_low  0xf0000000      // write 0 to SCL line (clock)
 #define _scl_high 0xf0400000      // write 1 to SCL line (clock)
-#define _sda_low 0xf0800000       // write 0 to SDA line (data)
+#define _sda_low  0xf0800000      // write 0 to SDA line (data)
 #define _sda_high 0xf0c00000      // write 1 to SDA line (data) 
-#define _sda 0xf0000000           // read from SDA line on the D0 CPU data bus
-#define _sdcnf 0xf2000000         // SDRAM configuration 0xf2xx0000 
+#define _sda      0xf0000000      // read from SDA line on the D0 CPU data bus
+#define _sdcnf    0xf2000000      // SDRAM configuration 0xf2xx0000 
 
 #define  WAIT_US bsr wait_26us  
 
@@ -212,7 +237,7 @@ init_sdram:
 	or.w #0x30,D0
 	bsr display_char
 .rev_less_10:
-	swap d0
+	swap D0
 	or.w #0x30,D0
 	bsr display_char
 	movec.l PCR,D0
@@ -235,6 +260,29 @@ init_sdram:
 	bne.s .mask_060_ok       // mask info only for 060 full
 	bsr display_string
 .mask_060_ok:
+	link A6,#-128
+	move.l _sysbase,A0       // header ROM
+	move.l 0x24(A0),A0       // kbshift
+	moveq #0xC,D0            // ALT or CTRL
+	and.b (A0),D0
+	bne.s .measure_mhz
+	lea -128(A6),A0          // buffer
+	bsr ct60_read_info_clock
+	bmi.s .measure_mhz       // no clock generator
+	clr.l -(SP)
+	move.l #CT60_CLOCK,-(SP)
+	move.w #CT60_MODE_READ,-(SP)
+	move.w #rw_parameter,-(SP)
+	trap #14
+	lea 12(SP),SP
+	cmp.l #MIN_FREQ,D0
+	bcs.s .measure_mhz
+	cmp.l #MAX_FREQ,D0
+	bhi.s .measure_mhz
+	moveq #CT60_CLOCK_WRITE_RAM,D1
+	bsr ct60_configure_clock
+.measure_mhz:
+	unlk A6
 	move.w SR,-(SP)
 	move.w #0x2500,SR
 	moveq #0,D0
@@ -402,7 +450,7 @@ init_sdram:
 	cmp.l #RESERVE_MEM,D0
 	beq .init_mmu            // pmmu tree in STRAM & no SDRAM
 	bsr ct60_configure_sdram
-	tst.l d0
+	tst.l D0
 	bpl .ok_sdram
 	move.w D0,D1
 	lea error9(PC),A0
@@ -440,12 +488,30 @@ init_sdram:
 	move.w #7,-(SP)          // Crawcin
 	trap #1
 	addq.w #2,SP
+.display_values_sdram:
 	moveq #13,D0
 	bsr display_char
 	moveq #10,D0
 	bsr display_char
 	bsr display_char
 	bsr display_infos_sdram
+	move.w #7,-(SP)          // Crawcin
+	trap #1
+	addq.w #2,SP
+	cmp.b #0x77,D0           // w
+	bne.s .halt_no_sdram
+.write_eeprom_sdram:
+	lea message97(PC),A0     // write register
+	bsr display_string	
+	bsr get_value
+	move.w D0,D4             // address
+	lea message98(PC),A0     // value
+	bsr display_string
+	bsr get_value
+	move.w D0,D1             // data
+	move.w D4,D0             // address
+	bsr write_i2c_sdram
+	bra.s .display_values_sdram
 .halt_no_sdram:
 	bra.s .halt_no_sdram
 .ok_sdram:
@@ -1015,13 +1081,13 @@ message15:	.byte 27
 	.ascii "."
 	.byte ((VERSION/16) & 0xF) + 0x30
 	.byte (VERSION & 0xF) + 0x30
-	.asciz "b "
+	.asciz " "
 message15b:	
-	.ascii "2004 October "
+	.ascii "2005 February "
 	.byte 27
 	.ascii "q"
 	.byte 13,10,0
-	.ascii "Octobre 2004 "
+	.ascii "F‚vrier 2005 "
 	.byte 27
 	.ascii "q"
 	.byte 13,10,0
@@ -1276,6 +1342,14 @@ message96:	.byte 13,10,27
 	.byte 27
 	.ascii "q"
 	.byte 13,10,0
+message97:	.byte 13,10	
+	.asciz "Write byte EEPROM (dec) ? "
+	.byte 13,10	
+	.asciz "Ecriture octet EEPROM (dec) ? "
+message98:	.byte 13,10	
+	.asciz "Value (dec) ? "
+	.byte 13,10	
+	.asciz "Valeur (dec) ? "
 	
 blue:	.byte 0x1B,0x62,0x34,0
 black:	.byte 0x1B,0x62,0x3F,0
@@ -1313,6 +1387,8 @@ debug15:	.byte 13,10
 	.asciz "MSDOS partition found: "
 debug16:	.byte 13,10
 	.asciz "Error code: "
+debug17:	.byte 13,10	
+	.asciz "Initialize Device Parameters: "
 #endif
 
 boot_scsi:	.byte 8,9,10,11,12,13,14,15,16,17,255
@@ -1638,10 +1714,83 @@ boot_drive:
 			move.w (SP)+,D0
 			bsr display_device_type
 			tst.b 1(A0)
-			bpl.s .read_root     // RMB
+			bpl.s .check_total_sectors // RMB
 			bset #31,D7          // removable media flags
 			lea message83(PC),A0 // removable
 			bsr display_string
+.check_total_sectors:			
+			move.l _dskbufp,A0   // IDE buffer
+			move.l 120(A0),D1    // total number of user addressable sectors
+			swap D1
+			cmp.l #16515072,D1   // 8 GB
+			bhi .read_root
+			move.w D0,-(SP)
+			move.w 2(A0),D0      // cyl
+			beq.s .bad_params_chs
+			move.w 6(A0),D2      // heads
+			beq.s .bad_params_chs
+			cmp.w #16,D2
+			bhi.s .bad_params_chs
+			move.w 12(A0),D1     // logical sectors / track
+			beq.s .bad_params_chs
+			cmp.w #63,D1
+			bls.s .init_chs
+.bad_params_chs:
+			moveq #16,D2
+			move.l 120(A0),D1    // total number of user addressable sectors
+			swap D1
+			cmp.l #1032192,D1    // 528 MB
+			bcc.s .chs_extended
+			moveq #63,D1         // logical sectors / track
+			bra.s .init_chs
+.chs_extended:
+			lsr.l #4,D1          // / 16 heads
+			divu #16383,D1       // cyl max for 16 heads
+			swap D1			
+			tst.w D1
+			beq.s .chs_sectors
+			add.l #0x10000,D1
+.chs_sectors:
+			swap D1              // logical sectors / track
+.init_chs:
+			subq.w #1,D2
+#ifdef DEBUG
+			lea debug17(PC),A0
+			bsr display_string_single
+			move.w D2,D0
+			bsr hex_byte
+			moveq #0x20,D0
+			bsr display_char
+			move.w D1,D0
+			bsr hex_byte
+			moveq #0x20,D0
+			bsr display_char
+#endif	
+			lea -8(A6),A1        // cmd buffer
+			move.b #0x91,(A1)    // initialize device parameters
+			moveq #7,D0
+			and.w D4,D0          // drive
+			asl.w #4,D0
+			or.b D2,D0           // max head
+			or.b #0xA0,D0
+			move.b D0,1(A1)      // drive (C/D/H)
+			clr.w 2(A1)          // cyl high & low
+			clr.b 4(A1)          // sec num
+			move.b D1,5(A1)      // sector count, logical sectors / track
+			clr.b 6(A1)          // features
+			moveq #0,D0          // bytes
+			bsr ide_read
+#ifdef DEBUG
+			btst #0,D0           // state, ERR
+			beq .no_error_init_dev
+			moveq #0,D0
+			move.b 0xFFF00005,D0 // error register
+			bsr hex_byte
+			moveq #0x20,D0
+			bsr display_char
+.no_error_init_dev:
+#endif		
+			move.w (SP)+,D0			
 .read_root:
 			lea message43(PC),A0 // ...
 			bsr display_string_single
@@ -1783,7 +1932,6 @@ boot_drive:
 			move.b #0x95,6(A1)   // features, enable media status notification
 			moveq #0,D0          // bytes
 			bsr ide_read
-//			bmi .no_answer_3
 #ifdef DEBUG
 			bsr hex_byte
 #endif			
@@ -1875,7 +2023,7 @@ boot_drive:
 				clr.b 6(A1)          // features
 				move.l #SPEED_BUFFER_SIZE,D0 // bytes
 				bsr ide_read
-				bne.s .drive_not_ok_2
+				bne.s .drive_not_ok_ide // error
 			dbf D3,.loop_speed_ide 	
 			move.l D1,D0
 			bsr display_mb_by_sec_disk
@@ -1886,14 +2034,14 @@ boot_drive:
 .copy_buffer_ide:
 				move.l (A0)+,(A1)+
 			dbf D1,.copy_buffer_ide
-.drive_not_ok_2:
+.drive_not_ok_ide:
 			move.w (SP)+,D1
 			tst.l D0
 			beq .drive_ok
-			bgt.s .read_error
+			bgt.s .read_ide_error
 			lea message44(PC),A0 // time-out
 			bra .no_read_error
-.read_error:
+.read_ide_error:
 			lea message46(PC),A0 // read error
 #ifdef DEBUG
 			btst #16,D7          // flag PACKET
@@ -1906,7 +2054,7 @@ boot_drive:
 			moveq #0x20,D0
 			bsr display_char
 			moveq #0,D0
-#endif		
+#endif
 			bra .no_read_error
 .scsi_drive_2:
 			tst.l -12(A6)        // SCSI buffer
@@ -1929,13 +2077,13 @@ boot_drive:
 				move.w (SP),D1       // logical unit
 				asl.w #5,D1
 				move.b D1,1(A1)      // logical unit
-				clr.w 2(A1)          // logical block adress
+				clr.w 2(A1)          // logical block address
 				move.b #SPEED_BUFFER_SIZE/512,4(A1) // num blocks
 				clr.b 5(A1)          // control
 				move.l #SPEED_BUFFER_SIZE,D1 // DMA bytes length
 				moveq #6,D2          // cmd bytes length
 				bsr scsi_read
-				bne .drive_not_ok    // error
+				bne .drive_not_ok_scsi // error
 			dbf D3,.loop_speed_scsi
 			move.l D1,D0
 			bsr display_mb_by_sec_disk
@@ -1946,7 +2094,7 @@ boot_drive:
 .copy_buffer_scsi:
 				move.l (A0)+,(A1)+
 			dbf D1,.copy_buffer_scsi
-.drive_not_ok:
+.drive_not_ok_scsi:
 #ifdef DEBUG
 			move.l D0,-(SP)
 			move.l -12(A6),A1
@@ -2336,7 +2484,7 @@ exec_boot:  		// D0 drive, D0.H: flag swap bytes, D1.L: start of partition
 	move.b 0x11(A0),D2       // NDIRS
 	move.w 0xE(A0),D3        // RES
 	ror.w #8,D3
-	mulu d1,D3               // * (BPS / 512)
+	mulu D1,D3               // * (BPS / 512)
 	add.l D6,D3
 	move.l D3,-8(A6)
 	move.w 0x16(A0),D6       // SPF
@@ -2684,7 +2832,7 @@ get_status_scsi:
 	move.l D0,-(SP)
 	bsr attention_scsi
 	move.w #0x8C,0xFFFF8606           // ID Select/SCSI Control Register
-	move.l _hz_200,d1
+	move.l _hz_200,D1
 .gs3:
 		move.w 0xFFFF8604,D0 // DMA state
 		btst #5,D0
@@ -2884,7 +3032,7 @@ wait_end_cmd_scsi: // return D0 < 0 => time-out
 ide_read: 	// D0.L: bytes, A0: IDE buffer, A1: cmd buffer
 	// return error code inside D0, and time speed test inside D1.L
 
-	movem.l D2-D3/A0-A1,-(SP)
+	movem.l D2-D4/A0-A1,-(SP)
 	st.b flock
 	move.l D0,D2             // 0: non-data
 	move.b 1(A1),0xFFF00019  // C/D/H
@@ -2892,11 +3040,14 @@ ide_read: 	// D0.L: bytes, A0: IDE buffer, A1: cmd buffer
 	move.b 2(A1),0xFFF00015  // cyl high
 	move.b 3(A1),0xFFF00011  // cyl low
 	move.b 4(A1),0xFFF0000D  // sector num
-	move.b 5(A1),0xFFF00009  // sector count
+	move.b 5(A1),D4
+	move.b D4,0xFFF00009     // sector count
 	beq.s .ir7	
-	move.w D0,D1             // bytes
+	tst.l D2
+	beq.s .ir7               // non-data
+	move.w D0,D1
 	and.w #0x1FF,D1
-	lsr.l #8,D0
+	lsr.l #8,D0              // bytes
 	lsr.l #1,D0              // /512
 	tst.w D1
 	beq.s .ir6
@@ -2914,7 +3065,7 @@ ide_read: 	// D0.L: bytes, A0: IDE buffer, A1: cmd buffer
 	move.l D0,D3             // speed test
 .ir4:
 		move.l #TIME_OUT_CMD,D0
-		tst.b 5(A1)       // sector count
+		tst.b D4         // sector count
 		beq.s .ir8
 		move.l #TIME_OUT_10S,D0
 .ir8:
@@ -2959,7 +3110,7 @@ ide_read: 	// D0.L: bytes, A0: IDE buffer, A1: cmd buffer
 	clr.w flock
 	move.l D3,D1              // time speed test
 	tst.l D0
-	movem.l (SP)+,D2-D3/A0-A1
+	movem.l (SP)+,D2-D4/A0-A1
 	rts
 	
 wait_end_cmd_ide:	// time-out inside D0.L, return D0 < 0 => time-out
@@ -3073,7 +3224,7 @@ menu_boot:
 			or.w #0x30,D0
 			bsr display_char
 .delay_less_10:
-			swap d0
+			swap D0
 			or.w #0x30,D0
 			bsr display_char
 			lea message79(PC),A0
@@ -3217,7 +3368,7 @@ error_tos:
 	trap #1
 	addq.w #6,SP
 	move.l (SP)+,D0
-	neg.l d0
+	neg.l D0
 	link A6,#-4
 	clr -2(A6)
 	lea -4(A6),A0
@@ -3276,7 +3427,7 @@ auto_exec:
 	bpl.s .end_auto_exec_2
 	bsr error_tos
 .end_auto_exec_2:
-	move.l 0xAE4,-(SP)       // return adress
+	move.l 0xAE4,-(SP)       // return address
 .end_auto_exec:
 	rts
 	
@@ -3371,7 +3522,7 @@ auto_exec_prg:
 	bra .loop_auto_folder
 .end_auto_prg:
 	lea 0x8870,SP            // stack
-	move.l 0xAE4,-(SP)       // return adress
+	move.l 0xAE4,-(SP)       // return address
 	rts	
 
 init_flash_parameters:
@@ -3715,6 +3866,46 @@ display_char:
 	movem.l (SP)+,D0-D2/A0-A2
 	rts
 	
+get_value:
+
+	movem.l D1-A5,-(SP)
+	link A6,#-4
+	moveq #0,D7
+.loop_get_value:
+		move.w #7,-(SP)          // Crawcin
+		trap #1
+		addq.w #2,SP
+		cmp.b #13,D0
+		beq.s .conv_get_value
+		cmp.b #0x30,D0
+		bcs.s .loop_get_value
+		cmp.b #0x39,D0
+		bhi.s .loop_get_value
+		bsr display_char
+		and.b #0x0F,D0
+		move.b D0,-4(A6,D7)
+		addq.w #1,D7
+	cmp.w #3,D7
+	bcs.s .loop_get_value
+.conv_get_value:
+	moveq #0,D0
+	tst.w D7
+	beq.s .end_get_value
+	move.b -4(a6),D0
+	cmp.w #1,D7
+	beq.s .end_get_value
+	mulu #10,D0
+	add.b -3(A6),D0
+	cmp.w #2,D7
+	beq.s .end_get_value		
+	mulu #10,D0
+	add.b -2(A6),D0
+.end_get_value:	
+	tst.l D0
+	unlk A6
+	movem.l (SP)+,D1-A5
+	rts
+	
 //conv_bcd:
 
 //	and.l #0xFFFF,D0
@@ -3970,6 +4161,8 @@ add_sdram:
 	move.w #7,-(SP)          // Crawcin
 	trap #1
 	addq.w #2,SP
+	cmp.b #0x77,D0           // w
+	beq .write_eeprom_sdram
 	moveq #13,D0
 	bsr display_char
 	moveq #10,D0
@@ -4093,12 +4286,161 @@ add_sdram:
 .no_boot:
 	movem.l (SP)+,D1-D7/A1-A5
 	rts
+
+ct60_configure_clock:	// D0.L: frequency, D1: mode
+
+	movem.l D1-A0,-(SP)
+	// frequency (KHz) = (REF (KHz) * p) / q) / post divider
+	// => p/q = (frequency * post divider) / REF (KHz)
+	// p = (2 * (PB  + 4)) + P0   q = Q + 2
+	// 8 <= p <= 2055             2 <= q <= 129
+	move.w D1,D7 // mode
+	move.l #REF,D2
+	move.l D0,D3 // frequency
+	mulu.l #2000,D3
+	divu.l D2,D3 // p
+	move.l #(REF/250),D4 // q
+.ccc2:		// 250 KHz mini => max value for q
+		move.l D3,D5
+		mulu.l D4,D5 // p * q
+		cmp.l #2055000,D5
+		bls.s .ccc3
+		cmp.l #2,D4
+		bcs.s .ccc3
+		subq.l #1,D4
+	bra.s .ccc2
+.ccc3:
+	cmp.l #2,D4  // q
+	bcs .ccc1    // error
+	cmp.l #129,D4
+	bhi .ccc1    // error
+	move.l D3,D5 // p
+	divu.l #1000,D5
+	mulu.l D2,D5  // * REF => pll
+	cmp.l #100000,D5
+	bcs .ccc1
+	cmp.l #400000,D5
+	bhi .ccc1	
+	mulu.l D4,D3  // p = (p * q) / 1000
+	divu.l #1000,D3
+	cmp.l #8,D3
+	bcs .ccc1
+	cmp.l #2055,D3
+	bhi .ccc1
+	move.w #0x97,D2 // clocks 5 & 6 DIV1CLK/2
+	cmp.l #51000,D1 // frequency
+	bls.s .ccc9
+	move.w #0xDF,D2 // clocks 5 & 6 DIV1CLK/3
+	cmp.l #77000,D1
+	bls.s .ccc9
+	move.w #0x4F,D2 // clocks 5 & 6 DIV1CLK/DIV1N /4
+.ccc9:
+	moveq #MATRIX3,D1
+	move.w D7,D0
+	bsr ct60_rw_clock 
+	bmi .ccc10
+	move.l D3,D2  // p
+	lsr.l #1,D2
+	subq.l #4,D2
+	lsr.w #8,D2
+	or.w #0xC0,D2 // chargep
+	cmp.l #45,D3  // p
+	bcs.s .ccc6
+	cmp.l #480,D3
+	bcc.s .ccc5
+	or.w #0x04,D2
+	bra.s .ccc6
+.ccc5:
+	cmp.l #640,D3
+	bcc.s .ccc7
+	or.w #0x08,D2
+	bra.s .ccc6
+.ccc7:
+	cmp.l #800,D3
+	bcc.s .ccc8
+	or.w #0x0C,D2
+	bra.s .ccc6
+.ccc8:
+	or.w #0x10,D2 // chargep
+.ccc6:
+	moveq #CHARGEP,D1
+	move.w D7,D0
+	bsr ct60_rw_clock
+	bmi .ccc10
+	move.l D3,D2 // p
+	lsr.l #1,D2
+	subq.l #4,D2
+	and.w #0xFF,D2	
+	moveq #PBCOUNTER,D1
+	move.w D7,D0
+	bsr ct60_rw_clock
+	bmi .ccc10
+	moveq #1,D2
+	and.l D3,D2 // p
+	asl.l #7,D2
+	add.l D4,D2 // q
+	subq.l #2,D2
+	moveq #QCOUNTER,D1
+	move.w D7,D0
+	bsr ct60_rw_clock
+	bmi.s .ccc10
+	lea clock_registers(PC),A0
+.ccc4:
+		moveq #0,D0
+		tst.w (A0)
+		beq.s .ccc10
+ 		moveq #0,D1
+ 		move.b (A0)+,D1 // address
+ 		moveq #0,D2
+		move.b (A0)+,D2 // data 		
+		move.w D7,D0    // mode
+		bsr ct60_rw_clock
+		bmi.s .ccc10
+		addq.w #2,A0
+	bra.s .ccc4
+.ccc1:
+	moveq #CT60_CALC_CLOCK_ERROR,D0
+.ccc10:
+	movem.l (SP)+,D1-A0
+	rts
+ 
+ct60_rw_clock:               // D0.W: mode (0: read, 1:write ram, 2: write eeprom)
+                             // D1.W: address, D2:.W data, D0 return data or error
+	tst.w D0                 // mode: read ram
+	bne.s .rwc2
+	move.w D1,D0             // address
+	bra read_i2c_cy_sram
+.rwc2:
+	cmp.w #1,D0              // mode write ram
+	bne.s .rwc3
+	move.w D1,D0             // address
+	move.w D2,D1             // data
+	bra write_i2c_cy_sram
+.rwc3:
+	cmp.w #2,D0              // mode read eeprom
+	bne.s .rwc1
+	move.w D1,D0             // address
+	move.w D2,D1             // data
+	bra write_i2c_cy_eeprom
+.rwc1:
+	moveq #CT60_READ_ERROR,D0
+	rts
  
 ct60_read_info_sdram:        // A0: 128 bytes buffer, D0 return error
 
-	movem.l D1-D3/A0-A3,-(SP) 
+	move.w #SLAVE_SDRAM_ADRESS,D0
+	bra.s read_seq_device_i2c
+
+ct60_read_info_clock:        // A0: 128 bytes buffer, D0 return error
+
+	move.w #SLAVE_CY_SRAM_ADRESS,D0
+		 
+read_seq_device_i2c:         // D0: device, A0: 128 bytes buffer, D0 return error
+
+	movem.l D1-D4/A0-A3,-(SP) 
+	move.w D0,D4             // device
 	move.l A0,A3
-	move.w SR,-(SP)
+	move SR,-(SP)
 	or #0x700,SR             // no interrupts
 	lea .i1(PC),A0
 	move.l 8,A1              // bus error
@@ -4118,21 +4460,23 @@ ct60_read_info_sdram:        // A0: 128 bytes buffer, D0 return error
 	bsr start_bit_i2c
 	move.l A1,8
 	move.l A2,SP
+	move.w D4,D0             // device
 	bsr write_device_i2c
-	moveq #0,D0              // write adress
+	moveq #0,D0              // write address
 	bsr write_bit_i2c        // r/w
 	bsr read_bit_i2c         // ack
 	btst #0,D0 
 	bne .i3                  // no acknoledge
 	moveq #0,D0
-	bsr write_bit_wait_slave_i2c // adress 1st bit
+	bsr write_bit_wait_slave_i2c // address 1st bit
 	moveq #6,D2              // 8 bits
-.i4:         	moveq #0,D0          // adress
+.i4:         	moveq #0,D0          // address
 		bsr write_bit_i2c
 	dbf D2,.i4
 	bsr read_bit_i2c         // ack
 	bne.s .i3                // no acknoledge
 	bsr start_bit_wait_slave_i2c
+	move.w D4,D0             // device
 	bsr write_device_i2c
 	moveq #1,D0              // read data
 	bsr write_bit_i2c        // r/w
@@ -4176,7 +4520,7 @@ ct60_read_info_sdram:        // A0: 128 bytes buffer, D0 return error
 .i7:
 	move.w (SP)+,SR
 	tst.l D0
-	movem.l (SP)+,D1-D3/A0-A3
+	movem.l (SP)+,D1-D4/A0-A3
 	rts
 
 ct60_configure_sdram:
@@ -4191,20 +4535,20 @@ ct60_configure_sdram:
 	moveq #CT60_SDRAM_TYPE_ERROR,D0
 	bra .c1 
 .c13:
-	moveq #3,D0              // number of row adresses
+	moveq #3,D0              // number of row addresses
 	bsr read_i2c_sdram
 	bmi .c1                  // error
 	move.w D0,D1
-	moveq #4,D0              // number of column adresses
+	moveq #4,D0              // number of column addresses
 	bsr read_i2c_sdram
 	bmi .c1                  // error
 	lea chip_density(PC),A1
 .c3:
 		tst.w (a1)
 		ble.s .c2                // not found => chip density error
-		cmp.w (A1),D1            // number of raw adresses
+		cmp.w (A1),D1            // number of raw addresses
 		bne.s .c4
-		cmp.w 2(A1),D0           // number of column adresses
+		cmp.w 2(A1),D0           // number of column addresses
 		beq.s .c5                // found
 .c4:
 		addq.w #8,A1
@@ -4243,7 +4587,7 @@ ct60_configure_sdram:
 	moveq #CT60_NUM_BANK_ERROR,D0
 	bra .c1
 .c6:
-	move.w d0,d1             // number of DIMM banks
+	move.w D0,D1             // number of DIMM banks
 	moveq #6,D0              // module data width
 	bsr read_i2c_sdram
 	bmi .c1                  // error
@@ -4301,8 +4645,8 @@ ct60_configure_sdram:
 	moveq #CT60_MOD_DENSITY_ERROR,D0
 	bra.s .c1
 .c9:
-	lsr.w #7,d0
-	cmp.w #3,d0
+	lsr.w #7,D0
+	cmp.w #3,D0
 	bcs.s .c15
 	moveq #3,D0
 .c15:
@@ -4319,10 +4663,25 @@ ct60_configure_sdram:
 	movem.l (SP)+,D1-D2/A0-A1
 	rts
  
-read_i2c_sdram:              // D0: adress, D0 return data or error
+read_i2c_sdram:              // D0: address, D0 return data or error
 
-	movem.l D1-D2/A0-A2,-(SP)
-	move.w SR,-(SP)
+	swap D0
+	move.w #SLAVE_SDRAM_ADRESS,D0
+	swap D0
+	bra.s read_i2c
+	
+read_i2c_cy_sram:            // D0: address, D0 return data or error
+
+	swap D0
+	move.w #SLAVE_CY_SRAM_ADRESS,D0
+	swap D0
+
+read_i2c:                    // D0.L: address, D0.H: device, D0 return data or error
+
+	movem.l D1-D3/A0-A2,-(SP)
+	move.l D0,D3             // device
+	swap D3
+	move SR,-(SP)
 	or #0x700,SR             // no interrupts
 	lea .r1(PC),A0
 	move.l 8,A1              // bus error
@@ -4339,30 +4698,32 @@ read_i2c_sdram:              // D0: adress, D0 return data or error
 	move.b #2,(A0)           // clock = 78,125 KHz (value changed at each 6,4 uS)
 	move.b #3,_tbcr_mfp      // 2,4576MHz/16
 .r6:
-	move.w D0,D1             // adress
+	move.w D0,D1             // address
 	bsr start_bit_i2c
 	move.l A1,8
 	move.l A2,SP
+	move.w D3,D0             // device
 	bsr write_device_i2c
-	moveq #0,D0              // write adress
+	moveq #0,D0              // write address
 	bsr write_bit_i2c        // r/w
 	bsr read_bit_i2c         // ack
 	btst #0,D0 
 	bne .r3                  // no acknoledge
 	moveq #0,D0
 	add.b D1,D1  
-	addx.b D0,D0             // adress 1st bit
+	addx.b D0,D0             // address 1st bit
 	bsr write_bit_wait_slave_i2c
 	moveq #6,D2              // 8 bits
 .r4:
 		moveq #0,D0
 		add.b D1,D1  
-		addx.b D0,D0         // adress
+		addx.b D0,D0         // address
 		bsr write_bit_i2c
 	dbf D2,.r4
 	bsr read_bit_i2c         // ack
 	bne.s .r3                // no acknoledge
 	bsr start_bit_wait_slave_i2c
+	move.w D3,D0             // device
 	bsr write_device_i2c
 	moveq #1,D0              // read data
 	bsr write_bit_i2c        // r/w
@@ -4401,14 +4762,119 @@ read_i2c_sdram:              // D0: adress, D0 return data or error
 .r7:
 	move.w (SP)+,SR
 	tst.l D0
-	movem.l (SP)+,D1-D2/A0-A2
+	movem.l (SP)+,D1-D3/A0-A2
 	rts
+	
+write_i2c_sdram:             // D0: address, D1:data, D0 return data or error
+
+	swap D0
+	move.w #SLAVE_SDRAM_ADRESS,D0
+	swap D0
+	bra.s write_i2c
+
+write_i2c_cy_eeprom:         // D0: address, D1:data, D0 return data or error
+
+	swap D0
+	move.w #SLAVE_CY_EEPROM_ADRESS,D0
+	swap D0
+	bra.s write_i2c
+	
+write_i2c_cy_sram:           // D0: address, D1:data, D0 return data or error
+
+	swap D0
+	move.w #SLAVE_CY_SRAM_ADRESS,D0
+	swap D0
  
-write_device_i2c:
+write_i2c:                   // D0.L: address, D0.H: device, D1:data, D0 return error
+
+	movem.l D1-D4/A0-A2,-(SP)
+	move.l D0,D3             // device
+	swap D3
+	move.w D1,D4             // data
+	move SR,-(SP)
+	or #0x700,SR             // no interrupts
+	lea .w1(PC),A0
+	move.l 8,A1              // bus error
+	move.l A0,8
+	move.l SP,A2
+	lea _tcdr_mfp,A0         // timer C value changed at each 26 uS (clock 19,2 KHz)
+	tst.b _tbcr_mfp
+	bne.s .w6                // timer B used
+	bclr #0,_imra_mfp
+	bclr #0,_iera_mfp
+	bclr #0,_ipra_mfp
+	bclr #0,_isra_mfp    
+	lea _tbdr_mfp,A0 
+	move.b #2,(A0)           // clock = 78,125 KHz (value changed at each 6,4 uS)
+	move.b #3,_tbcr_mfp      // 2,4576MHz/16
+.w6:
+	move.w D0,D1             // address
+	bsr start_bit_i2c
+	move.l A1,8
+	move.l A2,SP
+	move.w D3,D0             // device
+	bsr write_device_i2c
+	moveq #0,D0              // write address
+	bsr write_bit_i2c        // r/w
+	bsr read_bit_i2c         // ack
+	btst #0,D0 
+	bne .w3                  // no acknoledge
+	moveq #0,D0
+	add.b D1,D1  
+	addx.b D0,D0             // address 1st bit
+	bsr write_bit_wait_slave_i2c
+	moveq #6,D2              // 8 bits
+.w4:
+		moveq #0,D0
+		add.b D1,D1  
+		addx.b D0,D0         // address
+		bsr write_bit_i2c
+	dbf D2,.w4
+	bsr read_bit_i2c         // ack
+	bne.s .w3                // no acknoledge
+	move.w D4,D1             // data
+	moveq #0,D0
+	add.b D1,D1  
+	addx.b D0,D0             // data 1st bit
+	bsr write_bit_wait_slave_i2c
+	moveq #6,D2              // 8 bits
+.w5:
+		moveq #0,D0
+		add.b D1,D1  
+		addx.b D0,D0         // data
+		bsr write_bit_i2c
+	dbf D2,.w5
+	bsr read_bit_i2c         // ack
+	bne.s .w3                // no acknoledge
+	bsr stop_bit_i2c
+	moveq #0,D0
+	move.w D1,D0              // 8 bits data
+	bra.s .w2
+.w3:
+	bsr stop_bit_i2c
+	moveq #CT60_READ_ERROR,D0    // error
+	bra.s .w2
+.w1:
+	moveq #CT60_READ_ERROR,D0    // bus error
+	move.l A1,8
+	move.l A2,SP
+.w2:
+	lea _tbdr_mfp,A1
+	cmp.l A0,A1
+	bne.s .w7
+	clr.b _tbcr_mfp          // timer B stopped
+.w7:
+	move (SP)+,SR
+	tst.l D0
+	movem.l (SP)+,D1-D4/A0-A2
+	rts
+
+write_device_i2c:            // D0: device
 
 	movem.l D0-D2,-(SP)
-	move.w #SLAVE_ADRESS,D1
-	moveq #6,D2              // 7 bits 0xA0    7 bits 1010xxx
+	move.w D0,D1
+	add.b D1,D1
+	moveq #6,D2              // 7 bits 1010xxx (SDRAM)
 .wd1:
 		moveq #0,D0
 		add.b D1,D1  
@@ -4424,7 +4890,7 @@ read_bit_i2c:
 	WAIT_US                  // 100 KHz max !  
 	clr.l _scl_high          // clk=1  
 	WAIT_US
-	move.l _sda,d0           // data on D0  
+	move.l _sda,D0           // data on D0  
 	clr.l _scl_low           // clk=0
 	btst #0,D0
 	rts 
@@ -4438,10 +4904,10 @@ read_bit_wait_slave_i2c:
 	moveq #31,D1             // time-out slave busy
 .rs1:
 		WAIT_US              // 100 KHz max !
-		move.l _sda,d0       // SCL slave on B1
+		move.l _sda,D0       // SCL slave on B1
 		btst #1,D0
 	dbne D1,.rs1
-	move.l _sda,d0           // data on B0  
+	move.l _sda,D0           // data on B0  
 	clr.l _scl_low           // clk=0  
 	move.l (SP)+,D1   
 	btst #0,D0
@@ -4450,12 +4916,12 @@ read_bit_wait_slave_i2c:
 write_bit_i2c:
 
 	tst.w D0
-	bne.s .w1
+	bne.s .wb1
 	clr.l _sda_low           // data=0  
-	bra.s .w2
-.w1:
+	bra.s .wb2
+.wb1:
 	clr.l _sda_high          // data=1  
-.w2:
+.wb2:
 	WAIT_US                  // 100 KHz max !  
 	clr.l _scl_high          // clk=1
 	WAIT_US
@@ -4477,7 +4943,7 @@ write_bit_wait_slave_i2c:
 	moveq #31,D1             // time-out slave busy
 .ws3:
 		WAIT_US              // 100 KHz max !  
-		move.l _sda,d0       // SCL slave on B1
+		move.l _sda,D0       // SCL slave on B1
 		btst #1,D0
 	dbne D1,.ws3 
 	clr.l _scl_low           // clk=0
@@ -4529,6 +4995,20 @@ wait_26us:                            // 26uS (timer C) or 6,5uS (timer B)
 	cmp.b (A0),D0       
 	beq.s .wu1
 	rts
+
+clock_registers:
+
+	dc.b CLKOE,  0xC9        // clocks 1, 4, 5, 6
+	dc.b DIV1N,  0x04        // post divider /4
+	dc.b PINCTRL,0x50        // output enable pin
+	dc.b WPREG,  0x08        // write protect pin
+	dc.b OSCDRV, 0x28        // clock REF
+	dc.b INLOAD, 0x6B        // capacity load
+	dc.b ADCREG, 0x00
+	dc.b MATRIX1,0x49        // clocks 1 to 4 DIV1CLK/2
+	dc.b MATRIX2,0x2E
+	dc.b DIV2N,  0x05        // post divider /5
+	dc.b 0,0
 
 chip_density:                         // A23-A22 cdy2-1
 

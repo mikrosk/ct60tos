@@ -16,6 +16,7 @@
 #define CT60_PARAM_OFFSET_TLV 10L
 #define CT60_ABE_CODE 11L
 #define CT60_SDR_CODE 12L
+#define CT60_CLOCK 13L
 
 typedef struct
 {

@@ -7,7 +7,7 @@
 
 2003-06-22 0.98a
 ----------------
-- Add XBIOS(160) CacheCtrl MilanTOS (file xbios2.S).
+- Add XBIOS(160) CacheCtrl() MilanTOS (file xbios2.S).
 
 2003-06-27 0.98b
 ----------------
@@ -67,7 +67,7 @@ the boot (used by the CPX).
 
 2003-08-15 0.99c
 ----------------
-- Add texts in french (file sdram.S).
+- Add tests in french (file sdram.S).
 - Fix resvector (0x42A) patch (files sdram.S and pmmu.S).
 - Add resvector XBRA display (sdram.S).
 - Add test vectors overwrited for fpsp and isp emulation inside the 
@@ -94,13 +94,13 @@ watercooling) :
  
 2003-10-22 0.99e
 ----------------
-- SDRAM module data width 64 & 72 bits supported but there a message
-about data width error if there are a failure during the short memory 
-test of the SDRAM 72 bits.
+- SDRAM module data width 64 & 72 bits supported but there are a 
+message about data width error if there are a failure during the short 
+memory test of the SDRAM 72 bits.
 
 2003-11-08 0.99f
 ----------------
-- More infos displaed about the SDRAM module.
+- More infos displayed about the SDRAM module.
 
 2003-11-23 0.99g
 ----------------
@@ -116,14 +116,14 @@ you can see the version (files xbios.S, xbios2.S and sdram.S).
 - PAGE UP/DOWN, END, PRINT SCREEN, POWER, and VOLUME UP/DOWN keys
 tested for Eiffel card (files xbios.S, xbios2.S, aes.S and aes2.S). 
 
-2001-05-07 1.01
+2004-05-07 1.01
 ---------------
 - Add a choice of the operating system if the favourite OS entry is
 not to zero inside the CPX (TOS, MagiC, and Linux).
 - Add MagXBoot (files magxboot.S and sdram.S).
 - Add Ataboot (files ataboot.S and sdram.S).
 
-2001-05-13 1.01a
+2004-05-13 1.01a
 ----------------
 - Add a new option for Linux and bootargs file, -V: Extended video modecode.
 Because the kernel command line has a video=atafb:keep feature, during 
@@ -142,12 +142,12 @@ boot_delay.
 - Fix illegal instruction with MagiC 6.20 during boot with the SDRAM
 (file magxboot.S).
 
-2001-05-17 1.01b
+2004-05-17 1.01b
 ----------------
 - Fix keyboard test with the IKBD commands settime and gettime 
 because TOS calls had year 2000 bug (file sdram.S).
 
-2001-05-22 1.01c
+2004-05-22 1.01c
 ----------------
 - Fix monitor test, if SVGA monitor and external clock 32MHz (file 
 sdram.S).
@@ -155,7 +155,7 @@ sdram.S).
 - Malloc in STRAM for ataboot (file ataboot.S), kernel 2.2.25 works 
 now without -s option (2.4.25 need -s).
 
-2001-09-21 1.02
+2004-09-21 1.02
 ---------------
 - New boot features (files sdram.S and boot.S):
  * Add identify device procedure for SCSI and IDE drives, the boot wait 
@@ -173,7 +173,7 @@ on SCSI drives before IDE drives or slave before master (file sdram.S).
 and add status Eiffel POWER key 0xF6 0x05 0x00 0x00 0x00 0x73 because 
 it's already used by the TOS (CTRL <-) (files xbios2.S).
 
-2001-10-02 1.02a
+2004-10-02 1.02a
 ----------------
 - Add Atari Diagnostics Cartridge (CT60 version) moved to 
 0x00ED0000-0x00EEFFFF. This diagnosics are called with 
@@ -185,18 +185,25 @@ the Atari Diagnostics.
 - Add a picture/demo code 'XIMG' at 0x00ED0000 for call a picture/demo 
 at 0x00ED0004 for replace the boot picture (file videl2.S).
 
-2001-10-26 1.02b
+2004-10-26 1.02b
 ----------------
 - Add NVRAM TOS parameters inside the Flash who can replace the XBIOS 
-NVMAccess() read call, and the Gettime()/Settime from the IKBD (files 
+NVMAccess() read call, and the Gettime()/Settime() from the IKBD (files 
 sdram.S, xbios.S, xbios2.S). This feature is for fix NVM problems 
 caused by a battery failure. 
-- Add 4 normal choices with the CT60_BOOT_ORDER parameter in flash for boot
-on SCSI drives and IDE drives who not support new I/O functions (file 
-sdram.S). The old boot also bypass the keyboard test.
+- Add 4 normal choices with the CT60_BOOT_ORDER parameter in flash for 
+boot on SCSI drives and IDE drives who not support new I/O functions 
+(file sdram.S). The old boot also bypass the keyboard test.
 - Fix short Farenheit temperature value returned by the XBIOS to long 
 value (file xbios2.S).
 - Add display CPU frequency during boot on the Eiffel LCD (need 
 v1.0.9).
 
- 
+2005-02-05 1.03
+---------------
+- Add Initialize Device Parameters IDE command for old Caviar drives 
+where the original TOS can't boot without floppy disk rescue (file 
+sdram.S).
+- Add test and setting of a programmable clock generator module (with 
+a CY27EE16) connected on the I2C port (file sdram.S).
+

@@ -4,7 +4,7 @@
 !title   Documentation de la
 !programimage ..\img\ct60.img
 !program CT60
-!version Version 1.02b
+!version Version 1.03
 !date    (!today)
 !author  Didier MEQUIGNON
 !street  25, rue de l'Ascenseur
@@ -71,7 +71,7 @@ Externe (ou dans un tower ATX).
 
 !item Bus d'Extension 060 pour cartes filles (PCI/AGP, PowerPC, etc...).
 
-!item OPTION de boost du Falcon avec 6 fils … souder: DSP & VIDEL … 40 MHz, 
+!item OPTION de boost du Falcon avec 6 fils … souder : DSP & VIDEL … 40 MHz, 
 Bus … 20 MHz. 
 
 !end_itemize 
@@ -335,9 +335,178 @@ Stations et Serveurs, pas pour PC grand public).
  
 !node Montage
 
+!subnode CT60
+
 La CT60 est PLUG'N PLAY !
 
 Regardez sur http://www.czuba-tech.com pour les informations.
+
+
+!subnode Horloge CT60-100
+
+Pour obtenir une meilleure horloge et supprimer les plantages … 100 MHz, 
+vous avez besoin de cette modification :
+
+A la gauche de l'oscillateur 100 MHz, se trouve IC3, un CY2309.
+
+Ce circuit int‚gr‚ possŠde une PLL (boucle … verrouillage de phase), iil 
+est possible d'utiliser cette partie du circuit pour obtenir une 
+meilleure horloge.
+
+La pin 9 est connect‚e … la masse, couper cette pin.
+
+!begin_verbatim
+
+  | | | | | | | | |        +------+
+ +-----------------+       |      |
+ |8               1|       |100MHz|
+ |   CY2309       (        |      |
+ |9              16|       | OSC  |
+ +------------------       |      |
+  X | | | | | | | |        +------+
+
+  ^
+  |
+  
+ ici
+!end_verbatim
+
+
+
+!subnode G‚n‚rateur d'horloge programmable
+
+Il est possible d'ajouter un g‚n‚rateur d'horloge programmable par pas de 
+125 KHz sur la CT60. Le module utilise un CY27EE16 connect‚ sur le support 
+de l'oscillateur et deux signaux I2C du module SDRAM SDA (82) et SLC (83) 
+trouv‚s sur R11 / R12. 
+
+Parce que le module a besoin d'un support DIL24 et l'horloge CT60 a un 
+support DIL14, vous pouvez utiliser quelques fils pour connecter le module 
+… la CT60 comme ceci : 
+
+!image ..\img\pclock.img
+!begin_verbatim
+
+!end_verbatim
+
+(!U)
+ATTENTION !
+(!u)
+
+Si vous ne vous sentez pas capable de souder deux fils trŠs fins sur R11 
+et R12, retournez la CT60 et soudez les deux fils sur les pins 82 et 83 du 
+support SDRAM (face avant … droite). Rodolphe suggŠre de passer par les 
+pins du support DIL14 soit 2 (SCL vers la pin 83 du support SDRAM) et 3 
+(SDA vers la pin 82 du support SDRAM) afin de pouvoir d‚monter l'ensemble 
+facilement.
+
+!image ..\img\dimm168p.img
+
+!image ..\img\ct60_clk.img
+!begin_verbatim
+
+!end_verbatim
+
+Reduisez la liaison CLK au minimum, le mieux est de mettre le sommet du 
+module (pins 18 … 24) sur le support horloge de la CT60 (pins 8 … 14) via 
+un prolongateur. 
+Vous devez au minimum couper la pin 21 sur le sommet du module, autrement 
+il y a un court circuit avec le signal CLK CT60. 
+
+!begin_verbatim
+
+  +------------------------------------------+
+  |                                         +5V      CLK      CLK
+  |                                        14o__o__o__o__o__o__o
+  |                 +------------------------------------------'8
+ +5V   CLK6  CLK5  CLK4  GND   GND           |                 |
+  o__o__o__o__o__o__o__o__o__o__o__o_____     )  Horloge CT60  |
+24| GND   GND   GND   GND   GND   GND    |   |      support    |
+  |                                 |o  o|  1|                 |7
+  |                                 |o  o|   o--o--o--o--o--o--o
+   )            Module              |o  o|           GND      GND
+  |        avec un CY27EE16         |o  o|                     |
+  |                                 |o  o|                     |
+ 1| GND   GND   GND   GND   GND   GND    |                     |
+  o--o--o--o--o--o--o--o--o--o--o--o-----                      |
++3V3   CLK1  CLK2  CLK3  SCL   SDA +---------------------------+
+                         |     |
+                         |     |
+                         v     v
+                        R12   R11 (ou pin 82 du support SDRAM)
+            (ou pin 83 du support SDRAM)
+!end_verbatim
+
+!begin_itemize
+
+!item La sortie horloge CT60 programmable est CLK1 ou CLK4.
+
+!item CLK2 et CLK 3 sont inhib‚s.
+ 
+!item CLK5 et CLK6 peuvent ˆtre utilis‚s pour l'horloge DSP ou le VIDEL, 
+mais il y a toujours un lien avec l'horloge CT60 comme ceci :
+
+!end_itemize
+
+!begin_table [|c|c|c|] !hline
+Horloge CT60 (MHz) !! CLK5/6 (MHz) !! Facteur
+!hline
+      50.000       !!   50.000     !!  2/2
+      51.000       !!   51.000     !!  2/2
+!hline         
+      51.125       !!   34.083     !!  2/3
+      60.000       !!   40.000     !!  2/3
+      66.625       !!   44.416     !!  2/3
+      75.000       !!   50.000     !!  2/3
+      77.000       !!   51.333     !!  2/3
+!hline
+      77.125       !!   38.562     !!  2/4
+      80.000       !!   40.000     !!  2/4
+      90.000       !!   45.000     !!  2/4
+     100.000       !!   50.000     !!  2/4
+     110.000       !!   55.000     !!  2/4
+!hline
+!end_table
+
+Le TOS contr“le si le module existe et peut changer l'horloge entre 50 et 
+110 MHz (voir la partie 'Changer la fr‚quence de la CT60').
+
+Regardez sur http://www.ak-modul-bus.de pour plus d'informations au sujet 
+du module. 
+
+(!B)
+Sch‚ma
+(!b)
+!image ..\img\sc_clock.img
+!begin_verbatim
+
+!end_verbatim
+
+(!B)
+Liste des composants :
+(!b)
+
+!begin_verbatim
+1 x CY27EE16FZEC.
+1 x LM317LZ.
+2 x Zener 4V7/500mW.
+1 x Quartz 10 MHz.
+1 x 180 ohms.
+1 x 110 ohms.
+2 x 4.7 Kohms.
+3 x 100 nF.
+1 x connecteur mƒle HE10 (ou HE14) 2x5.
+
+1 x connecteur femelle HE10 2x5.
+1 x cable plat 10 fils.
+1 x female SUBD 9 contacts femelle.
+!end_verbatim
+
+(!B)
+Note :
+(!b)
+Pour des fr‚quences vers 100 MHz, il faut modifier pour am‚liorer 
+l'horloge de la CT60 (voir la partie 'Horloge CT60-100').
 
 
 !node Le TOS en Flash
@@ -369,6 +538,8 @@ en ROM est un 4.02).
 !item Le remplacement de la routine d'affichage de texte du BIOS.
 !item Une image en 65K couleurs affich‚e pendant 2 secondes.
 !item Contr“le et correction du modecode obtenu de la NVM.
+!item Contr“le et initialisation d'une horloge programmable s‚rielle avec 
+un CY27EE16 (port I2C).
 !item L'affichage du type de 68060 (r‚vision, masque et fr‚quence).
 !item La modification du PCR pour les modŠles bugg‚s r‚vision 1.
 !item La lecture et l'affichage du type de SDRAM via sa EEPROM. 
@@ -1296,7 +1467,7 @@ Il y a 5 boutons communs sur ce CPX :
 !item Sauve : Bouton pour sauver les r‚glages sur le disque.
 !item Charge : Bouton pour charger les r‚glages sauv‚s sur le disque.
 !item OK : Bouton pour valider les changements dans la m‚moire non 
-volatile. 
+volatile et les paramŠtres en flash. 
 !item Annule: Bouton pour ne rien changer … la configuration.
 !item i : Bouton pour afficher des informations (auteurs et SDRAM).
 !end_itemize
@@ -1367,22 +1538,63 @@ double-cliquant sur ce seuil (offset TLV).
 Sur cette page vous pouvez :
                                        
 !begin_itemize
+
 !item Voir la capacit‚ totale de la ST-Ram.
+
 !item Voir la capacit‚ totale de la Fast-Ram.
+
 !item Voir le Nombre d'octets de la ST-Ram libres.
+
 !item Voir le Nombre d'octets de la Fast-Ram libres.
+
 !item Voir le Nombre de millions d'instructions par seconde effectu‚s par 
 le microprocesseur.
+
 !item S‚lectionner avec/sans FPU.
+
+!item Eventuellement changer la fr‚quence de la CT60.
+
 !item Eventuellement voir la vitesse du ventilateur ou de la pompe (si 
 watercooling) avec de la connectique 3 fils :
+
 !end_itemize
+
 !begin_verbatim
                            1N4148
      * Jaune ---<47 ohms>---|<|---> IO3 MFP pin 28
      * Rouge ---------------------> +12V CT60 connecteur ventilateur
      * Noir  --------------------->  GND CT60 connecteur ventilateur
 !end_verbatim
+
+
+!subsubnode Changer la fr‚quence de la CT60
+
+Avec le curseur de la page 'M‚moire / uP' du CPX de configuration, il est 
+‚ventuellement possible de changer la fr‚quence de la CT60.
+
+Pour cela un module g‚n‚rateur d'horloge programmable utilisant un 
+CY27EE16 doit ˆtre connect‚ sur le port I2C de la CT60 via quelques fils 
+(voir ‚galement la partie 'G‚n‚rateur d'horloge programmable'). 
+
+Le r‚glage se fait par pas de 125 KHz de 50 … 110 MHz, il est pris en 
+compte en RAM pour essai aprŠs 'OK'. Le TOS lors du boot pendant 
+l'apparition du logo Atari envoi ‚galement cette valeur … l'horloge mais 
+en en cas de problŠme il est possible de rester sur la fr‚quence d'origine 
+en appuyant CTRL ou ALT.
+
+La fr‚quence d'origine sauv‚e en EEPROM est aussi modifiable aprŠs 
+confirmation via un double clic sur 'Sauve' mais ceci est trŠs dangereux !
+
+Toutefois en cas d'impossibilit‚e de red‚marrer la machine, il reste 
+possible de raccorder le module sur le port MODEM 2 via un cable de 
+liaison HE10 SUBD et de reprogrammer en mode 030 la EEPROM du module avec 
+le bouton 'Sauve'. Cette manipulation est par ailleurs indispensable pour 
+un module neuf. Le module doit ˆtre aliment‚ par la CT60.
+
+!image ..\img\subd.img
+!begin_verbatim
+
+!end_verbatim 
 
 
 !subnode Boot
@@ -1740,21 +1952,6 @@ Blitter      !! Pixels           !! Essayer blitter lent dans CT60CONF.CPX.
              !! mauvais          !! Baisser l'hologe F030 … 20/40 MHz ou
              !!                  !! 16/32 MHz.
              !!                  !! Utiliser NVDI.
-!hline
-68060        !! SystŠme bloqu‚   !! Installer un diviseur d'horloge :
-rev. 6       !! parfois quand le !!
-100MHz       !! SDMA fonctionne  !! 14,13,10:+5V, 7:GND  _______
-             !! et aussi perte   !! 5V                  | 74F74 |  
-             !! de synchro du    !! o o o o o o o_______|H     Q|_____ o   o
-             !! Videl.           !! CT60      100MHz  11|       |9   | 50MHz
-             !! Parfois le 68060 !! OSC                 |      _|    |  OSC
-             !! fonctionne …     !! o o o o o o o     __|D     Q|___ |_o   o
-             !! nouveau en       !! 1          GND   |12|_______|8 |  enlev‚
-             !! basculant sur    !! Mettre une petite|_____________|
-             !! l'horloge 32 MHz !! carte entre oscillateur et support
-             !! (sans reset !)   !!
-             !! Bug arbitration  !! (A 16/32 MHz le problŠme n'est pas corrig‚)
-             !! ???              !! ... ou contactez Rodolphe.
 !hline
 Ethernec     !! Lent et/ou       !! Installer les drivers CT60 (sans movep).
              !! erreurs          !! Utiliser seulement … 16/32 MHz.
