@@ -466,6 +466,7 @@ displayed.
 relocation).
 !item The blitter patchs of the VDI functions, vro_cpyfm, vr_trnfm, and
 vrt_cpyfm for work in SDRAM (an intermediate buffer inside STRAM is used).
+!item The AES patchs for change the Newdesk buffer of 4 KB to 32 KB.
 !end_itemize
 
 
@@ -695,7 +696,7 @@ At this page you can change :
 
 !begin_itemize
 !item The trigger level for the temperature alarm.
-!Item If necessary the offset of the analog converter on the CT60 with a 
+!item If necessary the offset of the analog converter on the CT60 with a 
 double-click on the level (offset TLV).
 !end_itemize
 

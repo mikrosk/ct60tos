@@ -476,6 +476,7 @@ relocation).
 !item Les patchs blitter des fonctions VDI, vro_cpyfm, vr_trnfm, et 
 vrt_cpyfm pour fonctionner en SDRAM (un buffer interm‚diaire en STRAM est  
 utilis‚).
+!item Les patchs AES pour changer le buffer de Newdesk de 4 Ko … 32 Ko.
 !end_itemize 
 
 
@@ -747,7 +748,7 @@ Sur cette page vour pouvez :
 !begin_itemize
 !item S‚lectionner au d‚marrage le systŠme d'exploitation par d‚faut.
 !item S‚lectionner au d‚marrage l'arbitration SCSI.
-!item S‚lectionne au d‚marrage|l'identificateur SCSI (0 to 7).
+!item S‚lectionne au d‚marrage l'identificateur SCSI (0 to 7).
 !item Changer le d‚lais de la pause au d‚marrage en secondes (vous avez 
 besoin de beaucoup de temps si vous voulez tester la STRAM et la SDRAM).
 !item Changer la vitesse du blitter.

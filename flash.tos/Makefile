@@ -69,6 +69,7 @@ GENTOS_OBJS=	\
 		$(OBJDIR)/ct60tos/bios.o \
 		$(OBJDIR)/ct60tos/xbios.o \
 		$(OBJDIR)/ct60tos/gemdos.o \
+		$(OBJDIR)/ct60tos/aes.o \
 		$(OBJDIR)/ct60tos/vectors.o \
 		$(OBJDIR)/ct60tos/videl.o \
 		$(OBJDIR)/ct60tos/debug.o \
