@@ -56,7 +56,7 @@ PMMU) at 66 MHz or more...
 
 !item SDRAM PC100/133 at 66 MHz or more with READ & WRITE BURST accesses.
 
-!item 1 SDRAM PC-100/133 socket for 32 MB to 256 MB.
+!item 1 SDRAM PC-100/133 socket for 64 MB to 512 MB.
 
 !item FLASH of 1MB with BOOT, SETUP, 060 INIT and patchs for TOS. Can be 
 easely updated ! 
@@ -334,9 +334,6 @@ not consumer PC).
 
 !subnode SDMA clock modification
 
-With the CT60, the SDMA clock modification must be reduced to a minimum 
-(on R221), for example with an 74F08 :
-
 !image ..\img\buffer.img
 
 
@@ -356,20 +353,6 @@ prises MIDI) et de l'ACIA clavier U52 (… gauche du connecteur clavier).
 !begin_verbatim
 
 !end_verbatim
-
-Localisez le SDMA (U36) sous l'emplacement du lecteur de disquettes. 
-Coupez la piste qui arrive sur la deuxiŠme broche du circuit (voir figure 
-ci-dessous).  
-
-!image ..\img\sdma.img
-!begin_verbatim
-
-!end_verbatim
-
-Grattez le vernis de la piste … droite de la coupure sur 2 mm et ‚tamez. 
-Prenez la r‚sistance fournie dans le paquet et coupez ses broches … 5 mm 
-de son corps. Soudez la sur la broche de l'AJAX et sur la piste ‚tam‚e 
-comme indiqu‚ sur la figure.
 
 Localisez le DSP (U38) sous l'emplacement du lecteur de disquettes. Coupez 
 la piste allant du (gros) trou avant droit de l'emplacement U37 de 
@@ -468,7 +451,7 @@ flash, cache...), and the DSP (functions with handshake).
 logo copied at the top of the STRAM (needed if the TOS in ROM is a 4.02).
 !item The replacement of the XBIOS Bconout routine (display texts).
 !item The picture in 65K colors displayed during 2 seconds.
-!item The display of the 68060's type (revision and mask).
+!item The display of the 68060's type (revision, mask and frequency).
 !item The modification of PCR for the bugged types revision 1.
 !item The reading and the display of the SDRAM's type from his EEPROM. 
 !item The initialization of the PMMU tree (excepted for 68060 EC or LC), 
@@ -699,13 +682,21 @@ At this page you can see :
 !begin_itemize
 !item The current value of the 68060's temperature.
 !item The level of the 68060's temperature, Red = Danger.
-!item Curve of 68060's temperature during the last hour.
+!item The curve of 68060's temperature during the last hour. This curve is 
+normally in green or yellow and change to red when the 68060's temperature 
+is dangerous.
+!item On occasion the tower's temperature during the last hour if you have 
+an Eiffel card (with the cookie 'Temp'). This curve is normally in blue 
+and change to magenta if the fan of the tower works (set to on by the 
+Effeil card).
 !end_itemize
 
 At this page you can change :
 
 !begin_itemize
 !item The trigger level for the temperature alarm.
+!Item If necessary the offset of the analog converter on the CT60 with a 
+double-click on the level (offset TLV).
 !end_itemize
 
 
@@ -743,6 +734,7 @@ At this page you can :
 !item Select at boot the SCSI identificator (0 to 7).
 !item Set the delay at boot in secondes (you need lot of time if you want test the 
 STRAM and the SDRAM).
+!item Change the speed of the blitter.
 !item Set the transfer of TOS 4.0x in RAM with using of the PMMU.
 !end_itemize
 
@@ -995,7 +987,7 @@ Xcontrol         !! Crashes           !! Use the patched version.
 !node CT60 HARDWARE GUIDE
 
 (!B)
-Rev 3.0  October 2000 / May 2003
+Rev 4.0  October 2000 / May 2003
 (c) Rodolphe Czuba
 (!b)
 
@@ -2186,7 +2178,7 @@ Pin Card !! Signal !! Comment
    7     !! GND3   !! Ground (0V)
    8     !! DCLK   !! DSP Clock (output)
    9     !! GND4   !! Ground (0V)
-   10    !! SCLK   !! SDMA Clock (output)
+   10    !! DTKCMB !! Dtack Combel (input)
 !hline
 !end_table
 

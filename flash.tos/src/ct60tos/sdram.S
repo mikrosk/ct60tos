@@ -25,6 +25,9 @@
 	.globl ct60_configure_sdram
 
 #include "main.h"
+#include "ct60.h"
+
+#define rw_parameter 0xc60b
 	
 #define memctrl   0x424
 #define resvalid  0x426
@@ -89,7 +92,7 @@ init_060:
 	movec.l D0,ITT0
 	move.w #0x20,0xFFFF828C
 	move.w #0x10,0xFFFF8282
-	or.b #0x25,0xFFFF8007
+	or.b #0x21,0xFFFF8007
 	btst #6,0xFFFF8007
 	beq .end_init_060
 	lea .ret1(PC),A6
@@ -168,6 +171,22 @@ init_sdram:
 
 	movem.l D1-A6,-(SP)
 	bclr #5,0xFFFFFA07
+	move.w SR,-(SP)
+	or.w #0x700,SR
+	cpusha BC
+	move.l #0xA0808000,D0    // caches on
+	movec.l D0,CACR
+	move.w (SP)+,SR
+	clr.l -(SP)
+	move.l #CT60_BLITTER_SPEED,-(SP)
+	move.w #CT60_MODE_READ,-(SP)
+	move.w #rw_parameter,-(SP)
+	trap #14
+	lea 12(SP),SP
+	btst #0,D0
+             beq.s .blitter_slow
+             bset #2,0xFFFF8007       // blitter 16 MHz
+.blitter_slow:
 	lea message0(PC),A0
 	cmp.w #2,0x3E86          // number of planes
 	bhi.s .title_colors
@@ -176,7 +195,7 @@ init_sdram:
 	bsr display_string
 	movec.l PCR,D0
 	swap D0
-	lea message8(PC),A0
+	lea message8(PC),A0      // 68060
 	cmp.w #0x0430,D0
 	beq.s .full_060
 	lea message9(PC),A0
@@ -218,7 +237,45 @@ init_sdram:
 	bne.s .mask_060_ok       // mask info only for 060 full
 	bsr display_string
 .mask_060_ok:
-	lea crlf(PC),A0
+	move.w SR,-(SP)
+	move.w #0x2500,SR
+	moveq #0,D0
+	move.l _hz_200,D1
+.sync_timer:
+	cmp.l _hz_200,D1
+	beq.s .sync_timer
+	moveq #9,D2
+.next_mes:
+		move.l _hz_200,D1
+		moveq #0,D3
+.loop_mes:
+		addq.l #1,D3
+		cmp.l _hz_200,D1
+		beq.s .loop_mes
+		cmp.l D0,D3
+		bcs.s .not_maxi
+		move.l D3,D0
+.not_maxi:
+	dbf D2,.next_mes
+	move.w (SP)+,SR
+	divu #250,D0             // MHz * 10
+	swap D0
+	tst.w D0
+	beq.s .end_mes
+	add.l #0x10000,D0
+.end_mes:
+	clr.w D0
+	swap D0
+	link A6,#-6
+	clr.w -2(A6)
+	lea -6(A6),A0
+	moveq #4,D1
+	bsr conv_ascii_value
+	move.b -3(A6),-2(A6)
+	move.b #0x2E,-3(A6)
+	bsr display_string
+	unlk A6
+	lea message18(PC),A0     // MHz
 	bsr display_string
 	clr.l ramtop
 	clr.l ramvalid
@@ -487,8 +544,8 @@ message3:	.asciz "128MB"
 message4:	.asciz "256MB"
 message5:	.asciz "512MB"
 message6:	.asciz " detected" 
-message8:	.asciz "            68060 Revision "
-message9:	.asciz "            68EC060 / 68LC060 Revision "
+message8:	.asciz "            68060 Rev."
+message9:	.asciz "            68EC060 / 68LC060 Rev."
 message10:	.asciz "            unknow CPU "
 message11:	.asciz " Mask D00W/D11W" // revision 0
 message12:	.asciz " Mask F43G/G65V" // revision 1
@@ -510,7 +567,8 @@ message16:	.byte 13,10
 	.asciz "            TOS copied in SDRAM"
 message17:   .ascii "MB/S"
 	.byte 13,10,0
-
+message18:	.ascii "MHz"
+	.byte 13,10,0
 message19:	.byte 13,10,27 
 	.ascii "p SDRAM EEPROM DATA "
 	.byte 27

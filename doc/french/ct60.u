@@ -57,7 +57,7 @@ Ne mettez pas votre Falcon … la retraite !
 
 !item SDRAM … 66 MHz (de base) avec acces BURST en LECTURE & ECRITURE.
 
-!item 1 support SDRAM PC-100/133 pour 32 Mo … 256 Mo.
+!item 1 support SDRAM PC-100/133 pour 64 Mo … 512 Mo.
 
 !item FLASH 1Mo avec BOOT, SET UP, 060 INIT et patchs du TOS.
 
@@ -341,9 +341,6 @@ Stations et Serveurs, pas pour PC grand public).
 
 !subnode Modification horloge SDMA
 
-Avec la CT60, la modification de l'horloge SDMA doit ˆtre r‚duite au 
-minimum (sur R221), par exemple avec un 74F08 :
-
 !image ..\img\buffer.img
 
 
@@ -363,20 +360,6 @@ prises MIDI) et de l'ACIA clavier U52 (… gauche du connecteur clavier).
 !begin_verbatim
 
 !end_verbatim
-
-Localisez le SDMA (U36) sous l'emplacement du lecteur de disquettes. 
-Coupez la piste qui arrive sur la deuxiŠme broche du circuit (voir figure 
-ci-dessous).  
-
-!image ..\img\sdma.img
-!begin_verbatim
-
-!end_verbatim
-
-Grattez le vernis de la piste … droite de la coupure sur 2 mm et ‚tamez. 
-Prenez la r‚sistance fournie dans le paquet et coupez ses broches … 5 mm 
-de son corps. Soudez la sur la broche de l'AJAX et sur la piste ‚tam‚e 
-comme indiqu‚ sur la figure.
 
 Localisez le DSP (U38) sous l'emplacement du lecteur de disquettes. Coupez 
 la piste allant du (gros) trou avant droit de l'emplacement U37 de 
@@ -477,7 +460,7 @@ logo du boot sont copi‚s au sommet de la STRAM (indispensable si le TOS
 en ROM est un 4.02).
 !item Le remplacement de la routine d'affichage de texte du BIOS.
 !item Une image en 65K couleurs affich‚e pendant 2 secondes.
-!item L'affichage du type de 68060 (r‚vision et masque).
+!item L'affichage du type de 68060 (r‚vision, masque et fr‚quence).
 !item La modification du PCR pour les modŠles bugg‚s r‚vision 1.
 !item La lecture et l'affichage du type de SDRAM via sa EEPROM. 
 !item L'initialisation de l'arbre PMMU (sauf 68060 EC ou LC), et la 
@@ -714,15 +697,22 @@ Sur cette page vous pouver voir :
 
 !begin_itemize
 !item La valeur courante de la temp‚rature du 68060.
-!item Le niveau de temp‚rature du 68060, Rouge = Danger.
+!item Le niveau de temp‚rature du 68060, Rouge = Danger. 
 !item La courbe d'‚volution de la temp‚rature du 68060 durant la derniŠre 
-heure. 
+heure. Cette courbe est verte ou jaune en temps normal et passe au rouge 
+en cas de danger.
+!item Eventuellement la courbe de temp‚rature de la tour durant la derniŠre 
+heure si vous avez une carte Eiffel (avec le cookie 'Temp'). Cette courbe 
+est normalement en bleu et passe en violet si le ventilateur de la tour 
+est command‚ par la carte Eiffel. 
 !end_itemize
 
 Sur cette page vous pouvez changer :
 
 !begin_itemize
 !item Le seuil de d‚clenchement de l'alarme de temp‚rature.
+!item Eventuellement le d‚calage du convertisseur analogique de la CT60 en 
+double-cliquant sur ce seuil (offset TLV). 
 !end_itemize
 
 
@@ -760,6 +750,7 @@ Sur cette page vour pouvez :
 !item S‚lectionne au d‚marrage|l'identificateur SCSI (0 to 7).
 !item Changer le d‚lais de la pause au d‚marrage en secondes (vous avez 
 besoin de beaucoup de temps si vous voulez tester la STRAM et la SDRAM).
+!item Changer la vitesse du blitter.
 !item S‚lectionner le transfert du TOS 4.0x en RAM avec utilisation de la 
 PMMU.
 !end_itemize
@@ -1018,7 +1009,7 @@ Xcontrol         !! Plante            !! Utiliser la version patch‚e.
 !node CT60 HARDWARE GUIDE (Anglais)
 
 (!B)
-Rev 3.0  October 2000 / May 2003
+Rev 4.0  October 2000 / May 2003
 (c) Rodolphe Czuba
 (!b)
 
@@ -2209,7 +2200,7 @@ Pin Carte !! Signal !! Commentaire
    7      !! GND3   !! Ground (masse 0V)
    8      !! DCLK   !! DSP Clock (sortie)
    9      !! GND4   !! Ground (masse 0V)
-   10     !! SCLK   !! SDMA Clock (sortie)
+   10     !! DTKCMB !! Dtack Combel (entr‚e)
 !hline
 !end_table
 

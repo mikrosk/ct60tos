@@ -408,7 +408,7 @@ int Button(int code)
 							}
 							else
 							{
-								repeat=5;
+								repeat=10;
 								do
 								{
 									error=jtag_isp_enable(&tap_state);

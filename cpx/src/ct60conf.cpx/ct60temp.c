@@ -890,14 +890,18 @@ int read_temp(void)
 		temp=(int)ct60_read_core_temperature(CT60_CELCIUS);
 	else
 		temp=(int)Supexec(ct60_read_temp);
-	if(old_temp[0]==0)
-		for(i=0;i<8;old_temp[i++]=temp);
-	temperature=0;		/* filter on the last 8 values */
-	for(i=0;i<7;old_temp[i]=old_temp[i+1],temperature+=old_temp[i],i++);	
-	old_temp[7]=temp;
-	temperature+=temp;
-	temperature>>=3;
-	return(temperature);
+	if(temp>=0)
+	{
+		if(old_temp[0]==0)
+			for(i=0;i<8;old_temp[i++]=temp);
+		temperature=0;		/* filter on the last 8 values */
+		for(i=0;i<7;old_temp[i]=old_temp[i+1],temperature+=old_temp[i],i++);	
+		old_temp[7]=temp;
+		temperature+=temp;
+		temperature>>=3;
+		return(temperature);
+	}
+	return(temp);
 }
 
 COOKIE *fcookie(void)

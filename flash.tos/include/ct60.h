@@ -26,11 +26,11 @@
 #define CT60_MODE_READ 0
 #define CT60_MODE_WRITE 1
 #define CT60_PARAM_TOSRAM 0
+#define CT60_BLITTER_SPEED 1
 #define CT60_PARAM_OFFSET_TLV 10
 
 #define ct60_read_core_temperature(type_deg) (long)trap_14_ww((short)(0xc60a),(short)(type_deg))
-#define	ct60_rw_parameter(mode,type_param,value) 			       \
-       (long)trap_14_wwll((short)(0xc60b),(short)(mode),(long)(type_param),(long)(value))
+#define	ct60_rw_parameter(mode,type_param,value) (long)trap_14_wwll((short)(0xc60b),(short)(mode),(long)(type_param),(long)(value))
 #define ct60_cache(cache_mode) (long)trap_14_ww((short)(0xc60c),(short)(cache_mode))
 #define ct60_flush_cache() (long)trap_14_ww((short)(0xc60d))
 

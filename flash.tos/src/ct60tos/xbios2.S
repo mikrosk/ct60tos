@@ -214,7 +214,7 @@ wait7:
 	beq.s ct3
 	moveq #0,D2                                         // value
 	moveq #CT60_PARAM_OFFSET_TLV,D1                     // type_param
-	moveq #0,D0                                         // read
+	moveq #CT60_MODE_READ,D0                                         // read
 	bsr ct60_rw_param
 	add.l D3,D0                                         // offset
 	cmp.w #MES_TEMP_0,D0
