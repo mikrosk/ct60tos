@@ -1,5 +1,5 @@
 ;  Flashing CT60
-;  Didier Mequignon 2003 July, e-mail: aniplay@wanadoo.fr
+;  Didier Mequignon 2003 July / 2004 May, e-mail: aniplay@wanadoo.fr
 ;  Based on the flash tool Copyright (C) 2000 Xavier Joubert
 ;
 ;  This program is free software; you can redistribute it and/or modify
@@ -328,6 +328,7 @@ program_flash: ; D0.L: offset, D1.L: total size, A0: source, D2: lock_interrupts
 devices:
 	dc.l 0x000422AB, fujitsu_mbm29f400bc-devices
 	dc.l 0x00042258, fujitsu_mbm29f800ba-devices
+	dc.l 0x00012258, amd_am29f800bb-devices
 	dc.l 0
 	
 fujitsu_mbm29f400bc:
@@ -356,6 +357,7 @@ fujitsu_mbm29f400bc:
 	dc.l FLASH_ADR+0x100000, 0, 0
 
 fujitsu_mbm29f800ba:
+amd_am29f800bb:
 	dc.l FLASH_ADR+0x00000, FLASH_UNLOCK1, FLASH_UNLOCK2
 	dc.l FLASH_ADR+0x04000, FLASH_UNLOCK1, FLASH_UNLOCK2
 	dc.l FLASH_ADR+0x06000, FLASH_UNLOCK1, FLASH_UNLOCK2
@@ -376,5 +378,5 @@ fujitsu_mbm29f800ba:
 	dc.l FLASH_ADR+0xE0000, FLASH_UNLOCK1, FLASH_UNLOCK2
 	dc.l FLASH_ADR+0xF0000, FLASH_UNLOCK1, FLASH_UNLOCK2
 	dc.l FLASH_ADR+0x100000, 0, 0
-
+	
 	end

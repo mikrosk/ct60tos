@@ -23,7 +23,7 @@ exception:
 
 	lea.l mess1(PC),A0
 	bsr display_string
-             addq.w #1,D1
+	addq.w #1,D1
 	move.w D1,D7       // vector number
 	moveq #0,D0
 	move.w D7,D0

@@ -36,7 +36,7 @@
 // #define RESET // removed because not works with some motherboards/SDR60 versions
 #define XFRB_SIZE 0x10000
 #define CT60_COOKIE_SIZE 256
-#define BOOT_DELAY 800 // 4 secondes
+#define DEFAULT_BOOT_DELAY 800 // 4 seconds
 
 #define rw_parameter 0xc60b
 	
@@ -152,8 +152,8 @@ init_sdram:
 	move.w (SP)+,SR
 	move.l #0x00E00FB6,8     // set access fault vector
 	move.b 0xFFFF8006,D0
-	lsr.w #6,D0              // 0:ST nomo, 1:ST col, 2:VGA, 3:TV
-	cmp.w #2,D0              // VGA
+	lsr.b #6,D0              // 0:ST nomo, 1:ST col, 2:VGA, 3:TV
+	cmp.b #2,D0              // VGA
 	beq.s .ok_screen
 	move.l #0x5F465251,D0    // _FRQ cookie, internal clock
 	bsr get_cookie
@@ -954,7 +954,7 @@ message15:	.byte 27
 	.ascii "."
 	.byte ((VERSION/16) & 0xF) + 0x30
 	.byte (VERSION & 0xF) + 0x30
-	.asciz " "
+	.asciz "c "
 message15b:	
 	.ascii "2004 May "
 	.byte 27
@@ -1263,12 +1263,18 @@ boot_drive:
 .boot_ok:
 		lea message48(PC),A0
 		bsr display_string
+		move.l _sysbase,A0       // header ROM
+		move.l 0x24(A0),A0       // kbshift
+		move.b (A0),D0
 		move.l _dskbufp,A0
-		move.l #0x444D4172,D3 // DMAr
+		move.l #0x444D4172,D3    // DMAr
 		move.w D4,D7
 		asl.w #5,D7
-		move.w 0xA80,D5 // bootpref NVM
-		and.w #0x67,D5  // remove TOS, Linux, MagiC flags for menu_boot
+		move.w 0xA80,D5          // bootpref NVM
+		btst #2,D0               // CTRL
+		bne .normal_bootpref
+		and.w #0x67,D5           // remove TOS, Linux, MagiC flags for menu_boot
+.normal_bootpref:
 		move.l A5,-(SP)
 		move.l hdv_rw,-(SP)
 		jsr (A0)
@@ -1312,26 +1318,30 @@ boot_drive:
 menu_boot:
 
 	movem.l D0-D7/A0-A2,-(SP)
-	link A6,#-2
+	link A6,#-12
 	move.l _sysbase,A0       // header ROM
 	move.l 0x24(A0),A0       // kbshift
-	btst #2,(A0)             // CTRL
+	moveq #0xC,D0            // ALT or CTRL
+	and.b (A0),D0
 	bne .normal_boot
-	pea -2(A6)               // buffer
-	move.w #2,-(SP)          // size
+	pea -12(A6)              // buffer
+	move.w #12,-(SP)         // size
 	clr.w -(SP)              // start
 	clr.w -(SP)              // read
 	move.w #46,-(SP)         // NVMaccess
 	trap #14
 	lea 12(SP),SP
-	move.w -2(A6),D5
+	move.w -12(A6),D5        // bootpref
 	beq .normal_boot
-//	cmp.w #0x80,D5           // TOS
-//	beq.s .display_menu
-//	cmp.w #8,D5              // MagiC
-//	beq.s .display_menu
-//	cmp.w #0x10,D5           // Linux
-//	bne .normal_boot
+	moveq #0,D4
+	move.b -2(A6),D4         // bootdelay in seconds
+	cmp.w #99,D4
+	bcs.s .delay_ok
+	moveq #99,D4             // bootdelay maxi
+.delay_ok:
+	mulu #200,D4             // timer 200 Hz
+	bne.s .display_menu
+	move.w #DEFAULT_BOOT_DELAY,D4
 .display_menu:
 	lea message77(PC),A0     // boot menu
 	bsr display_string
@@ -1346,7 +1356,7 @@ menu_boot:
 			moveq #0x20,D0
 			bsr display_char			
 			move.b (A1),D0
-			cmp.b -1(A6),D0
+			cmp.b -11(A6),D0     // bootpref
 			bne.s .no_display_inv
 			moveq #27,D0
 			bsr display_char
@@ -1363,7 +1373,7 @@ menu_boot:
 .display_line_os:
 			bsr display_string_single
 			move.b (A1)+,D0
-			cmp.b -1(A6),D0
+			cmp.b -11(A6),D0     // bootpref
 			bne.s .no_display_inv2
 			moveq #27,D0
 			bsr display_char
@@ -1380,18 +1390,26 @@ menu_boot:
 .wait_menu:
 			move.l _hz_200,D0
 			sub.l D7,D0
-			cmp.l #BOOT_DELAY,D0
+			cmp.l D4,D0
 			bcc .end_boot_delay
 			neg.l D0
-			add.l #BOOT_DELAY,D0
+			add.l D4,D0
 			divu #200,D0
 			cmp.w D0,D6
 			beq.s .no_display_second
 			move.w D0,D6
 			lea message78(PC),A0
 			bsr display_string
+			moveq #0,D0
 			move.w D6,D0
-			add.w #0x31,D0
+			divu #10,D0
+			tst.w D0
+			beq.s .delay_less_10
+			or.w #0x30,D0
+			bsr display_char
+.delay_less_10:
+			swap d0
+			or.w #0x30,D0
 			bsr display_char
 			lea message79(PC),A0
 			bsr display_string
@@ -1435,12 +1453,12 @@ menu_boot:
 		moveq #13,D0
 		bsr display_char
 		lea tab_os(PC),A0
-		move.b (A0,D3),-1(A6)
+		move.b (A0,D3),-11(A6) // bootpref
 	bra .display_menu_again
 .end_boot_delay:
-	cmp.w -2(A6),D5
+	cmp.w -12(A6),D5         // bootpref
 	beq.s .unchanged
-	pea -2(A6)               // buffer
+	pea -12(A6)              // buffer
 	move.w #2,-(SP)          // size
 	clr.w -(SP)              // start
 	move.w #1,-(SP)          // write
@@ -1448,16 +1466,16 @@ menu_boot:
 	trap #14
 	lea 12(SP),SP
 .unchanged:
-	move.w -2(A6),D0
+	move.w -12(A6),D0        // bootpref
 	cmp.w #0x80,D0           // TOS
 	beq.s .normal_boot
+	lea magxboot,A1	
 	cmp.w #8,D0              // MagiC
-	beq.s .boot_magic_2
+	beq.s .call_boot
 	cmp.w #0x10,D0           // Linux
 	bne.s .normal_boot
-	lea ataboot,A0
-	bra.s .call_boot	
-.boot_magic_2:
+	lea ataboot,A1
+.call_boot:
 	move.l #0x5F465245,D0    // _FRE cookie, external clock
 	bsr get_cookie
 	move.l D0,D2
@@ -1466,11 +1484,9 @@ menu_boot:
 	move.l D0,D1
 	move.l #0x5F465055,D0    // _FPU cookie
 	bsr get_cookie
-	lea magxboot,A0
-.call_boot:
-	add.l #0xE80000,A0
-	sub.l #_ct60tos_half_flash,A0
-	jsr (A0)
+	add.l #0xE80000,A1
+	sub.l #_ct60tos_half_flash,A1
+	jsr (A1)
 .normal_boot:
 	unlk A6
 	movem.l (SP)+,D0-D7/A0-A2
@@ -1743,15 +1759,82 @@ display_char:
 	addq.w #6,SP
 	movem.l (SP)+,D0-D2/A0-A2
 	rts
+	
+conv_bcd:
 
-add_sdram:
-
-	movem.l D1-D7/A1-A5,-(SP)
-	lea message15(PC),A0     // boot version
-	bsr display_string_single
-	lea message15b(PC),A0
+	and.l #0xFFFF,D0
+	divu #10,D0
+	move.w D0,D1
+	swap D0
+	asl.w #4,D1
+	or.w D1,D0
+	move.b D0,(A0)
+	rts
+	
+test_keyboard:
+	
+	movem.l D0-A5,-(SP)
+	link A6,#-8
+	move.w #0x17,-(SP)       // Gettime
+	trap #14
+	addq.w #2,SP
+	move.l D0,D7
+	move.l D7,D5
+	move.b #0x1B,-8(A6)      // Settime IKBD
+	move.w D5,D0
+	and.w #0x1F,D0
+	add.w D0,D0
+	lea -2(A6),A0
+	bsr conv_bcd             // seconds
+	lsr.l #5,D5
+	move.w D5,D0
+	and.w #0x3F,D0
+	lea -3(A6),A0
+	bsr conv_bcd             // mn
+	lsr.l #6,D5
+	move.w D5,D0
+	and.w #0x1F,D0
+	lea -4(A6),A0
+	bsr conv_bcd             // hours
+	lsr.l #5,D5
+	move.w D5,D0
+	and.w #0x1F,D0
+	lea -5(A6),A0
+	bsr conv_bcd             // day
+	lsr.l #5,D5
+	move.w D5,D0
+	and.w #0xF,D0
+	lea -6(A6),A0
+	bsr conv_bcd             // month
+	lsr.l #4,D5
+	move.w D5,D0
+	and.w #0x3F,D0
+	add.w #80,D0
+	cmp.w #100,D0
+	bcs.s .year_ikbd
+	sub.w #100,D0
+.year_ikbd:
+	lea -7(A6),A0
+	bsr conv_bcd             // year
+	pea -8(A6)	
+	move.w #6,-(SP)
+	move.w #0x19,-(SP)       // Ikbdws
+	trap #14 
+	addq.w #8,SP
+	jsr 0xE022A0             // Gettime IKBD
+	and.l #0x01FFFFFF,D0     // remove year because this call has a year 2000 bug 
+	tst.b 0x11C4
+	bpl.s .keyboard_answer
+.keyboard_error_2:
+	lea message76(PC),A0     // keyboard failure
 	bsr display_string
-	link A6,#-4
+	bra .no_buffer
+.keyboard_answer:
+	and.l #0x01FFFFFF,D7
+	sub.l D7,D0
+	bmi.s .keyboard_error_2
+	cmp.l #1,D0
+	bhi.s .keyboard_error_2
 	clr.w -(SP)              // stram
 	move.l #0x2000,-(SP)     // 8K
 	move.w #0x44,-(SP)       // Mxalloc
@@ -1841,7 +1924,6 @@ add_sdram:
 	move.w #0x19,-(SP)       // Ikbdws
 	trap #14 
 	addq.w #8,SP
-	unlk A6
 	clr.l flag_statvec(A4)   //  not use internal statvec
 	move.l A5,D0
 	beq.s .no_buffer
@@ -1850,6 +1932,18 @@ add_sdram:
 	trap #1 
 	addq.w #6,SP
 .no_buffer:
+	unlk A6
+	movem.l (SP)+,D0-A5
+	rts
+
+add_sdram:
+
+	movem.l D1-D7/A1-A5,-(SP)
+	lea message15(PC),A0     // boot version
+	bsr display_string_single
+	lea message15b(PC),A0
+	bsr display_string
+	bsr test_keyboard
 	cmp.l #0x1357BD13,ramvalid
 	bne .not_sdram
 	move.l _sysbase,A0       // header ROM
@@ -1975,49 +2069,7 @@ add_sdram:
 	move.l A2,(A0)+
 	clr.l (A0)
 .not_sdram:
-	move.w #3,-(SP)          // TT ram if possible
-	move.l #CT60_COOKIE_SIZE,-(SP)
-	move.w #0x44,-(SP)       // Mxalloc
-	trap #1 
-	addq.w #8,SP
-	tst.l D0
-	ble.s .error_cookie_ct60
-	move.l D0,A1
-	move.l #0x43543630,D0    // CT60
-	bsr get_cookie
-	move.l A0,D0
-	beq.s .error_cookie_ct60
-	move.l A1,4(A0)
-	moveq #(CT60_COOKIE_SIZE/4)-1,D0
-.clear_data_ct60_cookie:
-		clr.l (A1)+
-	dbf D0,.clear_data_ct60_cookie
-	move.l phystop,A0
-	clr.w count_io3_mfp(A0)
-	move.l _hz_200,start_hz_200(A0)
-	pea inter_io3_mfp(PC)
-	move.w #67,-(SP)         // IO3 MFP
-	move.w #5,-(SP)          // Setexec
-	trap #13
-	addq.w #8,SP
-	move.w #3,-(SP)          // IO3 MFP
-	move.w #27,-(SP)         // Jenabint
-	trap #14
-	addq.w #4,SP
-	move.l _hz_200,D0
-	add.l #100,D0            // tempo 0.5 S
-.tempo_test_fan:
-		move.l _hz_200,D1
-		cmp.l D0,D1
-	blt.s .tempo_test_fan
-	move.l phystop,A0
-	cmp.w #5,count_io3_mfp(A0)
-	bcc.s .error_cookie_ct60
-	move.w #3,-(SP)          // IO3 MFP
-	move.w #26,-(SP)         // Jdisint
-	trap #14
-	addq.w #4,SP
-.error_cookie_ct60:	
+	bsr init_cookie_ct60
 	moveq #3,D0
 	jsr 0x00E00BD2
 	move.l hdv_boot,A0
@@ -2474,6 +2526,55 @@ chip_density:                         // A23-A22 cdy2-1
 	dc.w 0xD,0xA,0xC0,0      // 32Mx8b / 32Mx16b
 	dc.w 0,0,0,0             // end
 	
+init_cookie_ct60:	
+
+	movem.l D0-D2/A0-A2,-(SP)
+	move.w #3,-(SP)          // TT ram if possible
+	move.l #CT60_COOKIE_SIZE,-(SP)
+	move.w #0x44,-(SP)       // Mxalloc
+	trap #1 
+	addq.w #8,SP
+	tst.l D0
+	ble.s .error_cookie_ct60
+	move.l D0,A1
+	move.l #0x43543630,D0    // CT60
+	bsr get_cookie
+	move.l A0,D0
+	beq.s .error_cookie_ct60
+	move.l A1,4(A0)
+	moveq #(CT60_COOKIE_SIZE/4)-1,D0
+.clear_data_ct60_cookie:
+		clr.l (A1)+
+	dbf D0,.clear_data_ct60_cookie
+	move.l phystop,A0
+	clr.w count_io3_mfp(A0)
+	move.l _hz_200,start_hz_200(A0)
+	pea inter_io3_mfp(PC)
+	move.w #67,-(SP)         // IO3 MFP
+	move.w #5,-(SP)          // Setexec
+	trap #13
+	addq.w #8,SP
+	move.w #3,-(SP)          // IO3 MFP
+	move.w #27,-(SP)         // Jenabint
+	trap #14
+	addq.w #4,SP
+	move.l _hz_200,D0
+	add.l #100,D0            // tempo 0.5 S
+.tempo_test_fan:
+		move.l _hz_200,D1
+		cmp.l D0,D1
+	blt.s .tempo_test_fan
+	move.l phystop,A0
+	cmp.w #5,count_io3_mfp(A0)
+	bcc.s .error_cookie_ct60
+	move.w #3,-(SP)          // IO3 MFP
+	move.w #26,-(SP)         // Jdisint
+	trap #14
+	addq.w #4,SP
+.error_cookie_ct60:	
+	movem.l (SP)+,D0-D2/A0-A2
+	RTS	
+
 	dc.l 0x58425241          // XBRA
 	dc.l 0x43543630          // CT60
 	dc.l 0

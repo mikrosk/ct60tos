@@ -122,3 +122,35 @@ tested for Eiffel card (files xbios.S, xbios2.S, aes.S and aes2.S).
 not to zero inside the CPX (TOS, MagiC, and Linux).
 - Add MagXBoot (files magxboot.S and sdram.S).
 - Add Ataboot (files ataboot.S and sdram.S).
+
+2001-05-13 1.01a
+----------------
+- Add a new option for Linux and bootargs file, -V: Extended video modecode.
+Because the kernel command line has a video=atafb:keep feature, during 
+boot it's better to get extended video modes. Bits are:
+ HORFLAG   9  : double width
+ HORFLAG2  10 : width increased
+ VESA      11 : SVGA 608 lines
+ ULTRA_VGA 12 : SVGA 768 lines
+ Cookies _FRQ (internal frequency) and _FRE (external frequency) 
+exists always because ataboot need this values (files ataboot.S, 
+extvidel.S, sdram.S, and videl2.S).
+- Add another keyboard test with the IKBD commands settime and 
+gettime (file sdram.S).
+- If the NVM bootdelay value is <> 0, the boot menu use the NVM 
+boot_delay.
+- Fix illegal instruction with MagiC 6.20 during boot with the SDRAM
+(file magxboot.S).
+
+2001-05-17 1.01b
+----------------
+- Fix keyboard test with the IKBD commands settime and gettime 
+because TOS calls had year 2000 bug (file sdram.S).
+
+2001-05-22 1.01c
+----------------
+- Fix monitor test, if SVGA monitor and external clock 32MHz (file 
+sdram.S).
+- Add flash AMD AM29F800BB support for new CT60 (file xbios2.S).
+- Malloc in STRAM for ataboot (file ataboot.S), kernel 2.2.25 works 
+now without -s option (2.4.25 need -s).

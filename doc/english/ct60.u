@@ -4,7 +4,7 @@
 !title   Documentation of the
 !programimage ..\img\ct60.img
 !program CT60
-!version Version 1.00
+!version Version 1.01
 !date    (!today)
 !author  Didier MEQUIGNON
 !street  25, rue de l'Ascenseur
@@ -356,14 +356,14 @@ instructions movep replaced.
 !item The XBIOS CT60 function $C60A to $C60D (temperature, parameters in 
 flash, cache...), and the DSP (functions with handshake). 
 !item The needful patchs for the blitter, the system fonts and the Atari 
-logo copied at the top of the STRAM (needed if the TOS in ROM is a 4.02).
+logo copied at the top of the ST-RAM (needed if the TOS in ROM is a 4.02).
 !item The replacement of the XBIOS Bconout routine (display texts).
 !item The picture in 65K colors displayed during 2 seconds.
 !item The display of the 68060's type (revision, mask and frequency).
 !item The modification of PCR for the bugged types revision 1.
 !item The reading and the display of the SDRAM's type from his EEPROM. 
 !item The initialization of the PMMU tree (excepted for 68060 EC or LC), 
-and the possible creation of the 'PMMU' cookie. All the STRAM is in 
+and the possible creation of the 'PMMU' cookie. All the ST-RAM is in 
 writethrough and the SDRAM declaration in copyback.
 !item The possible copy of the TOS in SDRAM (excepted for 68060 EC or LC). 
 !item The declaration of the SDRAM to the TOS.
@@ -373,10 +373,11 @@ displayed.
 !item The extended fastram buffer created and his cookie 'XFRB'.
 !item Lot of infos displayed about the SDRAM module.
 !item The patch for the boot order of the drives IDE and SCSI.
+!item The patch for the boot menu.
 !item The patch for the Pexec function for the copyback (cpush after the 
 relocation).
 !item The blitter patchs of the VDI functions, vro_cpyfm, vr_trnfm, and
-vrt_cpyfm for work in SDRAM (an intermediate buffer inside STRAM is used).
+vrt_cpyfm for work in SDRAM (an intermediate buffer inside ST-RAM is used).
 !item The AES patchs for change the Newdesk buffer of 4 KB to 32 KB.
 !item Scan-codes used with the Eiffel card :
 !begin_itemize
@@ -389,6 +390,150 @@ vrt_cpyfm for work in SDRAM (an intermediate buffer inside STRAM is used).
 !end_itemize
 
 
+!subnode Boot menu
+
+The TOS can replace magxboot (MagiC) or ataboot (Linux) in the AUTO 
+folder for a fast boot (no programs inside the AUTO folder to start). You  
+can enable a boot menu with the configuration CPX. This menu arrives if 
+the entry of the favourite OS inside is <> '-'. 
+
+You can select TOS, MagiC or Linux, value is stored inside the NVM.
+
+!begin_itemize
+!item With MagiC, the TOS try to found MAGIC.RAM inside the main directory 
+of the boot folder. 
+!item With Linux, the TOS try to found BOOTARGS inside the main directory 
+of the boot folder. Tested with the kernel 2.4.25. 
+!end_itemize
+
+Sure you can always use MAGXBOOT.PRG or ATABOOT.PRG inside the AUTO 
+folder.
+
+
+!subsubnode Bootargs extension (Linux)
+
+There are a new option for Linux and the bootargs file:
+
+-V <value>: Extended video modecode.
+
+Value is in decimal or hexadecimal C format (0x).
+
+Because the kernel command line has a video=atafb:keep feature, during 
+boot it's better to get extended video modes.
+
+This is the detail of this extended (!B) modecode: (!b)
+
+!begin_table [|c|l|r|l|l|] !hline
+Bit !! Name       !!  Value !! Comment                  !! Examples
+!hline
+    !!            !!    0x0 !! 1 plane, 2 colors        !!  
+ 0  !! BPS        !!    0x1 !! 2 planes, 4 colors       !!
+ 1  !!            !!    0x2 !! 4 planes, 16 colors      !!
+    !!            !!    0x3 !! 8 planes, 256 colors     !!
+ 2  !!            !!    0x4 !! Near True Color 65K col. !!
+!hline
+ 3  !! COL80      !!    0x8 !! double width             !!
+!hline
+ 4  !! VGA_FALCON !!   0x10 !! VGA flag                 !!
+!hline
+ 5  !! PAL        !!   0x20 !! 50/60 Hz                 !!
+!hline           
+ 6  !! OVERSCAN   !!   0x40 !! TV                       !! MONO: 768 x 560
+!hline   
+    !!            !!        !! 320 x 200 16 colors      !!
+ 7  !! STMODES    !!   0x80 !! 640 x 200 4 colors       !! 640 x 400 65K c 50MHz
+    !!            !!        !! 640 x 400 2 colors       !! (BPS = 4)
+!hline              
+ 8  !! VERTFLAG   !!  0x100 !! double line / interlaced !! MONO: int. 896 x 1120
+!hline
+ 9  !! HORFLAG    !!  0x200 !! double width             !! TV: 1280 x 640 or
+    !!            !!        !!                          !! 1536 x 560 OVERSCAN
+!hline
+    !!            !!        !!                          !! TV: 960 x 640 (x1.5)
+ 10 !! HORFLAG2   !!  0x400 !! width increased          !! VGA: 896x480/608/768
+    !!            !!        !!                          !! MONO: 896 x 560 
+!hline
+ 11 !!  VESA      !!  0x800 !! SVGA 608 lines           !! \ 1024 x 768
+!hline            
+ 12 !! ULTRA_VGA  !! 0x1000 !! SVGA 768 lines           !! / VESA & ULTRA_VGA
+!hline
+!end_table
+
+(!U)
+SVGA list in 16 colors:
+(!u)
+
+(modecode 16 colors, width x high, vert. freq., horiz. freq., clock)
+
+!begin_verbatim
+0x0112, 320 x 240, 60Hz, 31KHz, 25MHz (internal clock)
+0x0012, 320 x 480, 60Hz, 31KHz, 25MHz (internal clock)
+0x011A, 640 x 240, 60Hz, 31KHz, 25MHz (internal clock)
+0x001A, 640 x 480, 60Hz, 31KHz, 25MHz (internal clock)
+ 
+0x0512, 448 x 240, 60Hz, 31KHz, 32/36/38/40MHz (internal/external clock)
+0x0412, 448 x 480, 60Hz, 31KHz, 32/36/38/40MHz (internal/external clock)
+0x051A, 896 x 240, 60Hz, 31KHz, 32/36/38/40MHz (internal/external clock)
+0x041A, 896 x 480, 60Hz, 31KHz, 32/36/38/40MHz (internal/external clock)
+
+0x0912, 384 x 304, 57Hz, 35KHz, 32/36/38/40MHz (internal/external clock)
+0x0812, 384 x 608, 57Hz, 35KHz, 32/36/38/40MHz (internal/external clock)
+0x091A, 768 x 304, 57Hz, 35KHz, 32/36/38/40MHz (internal/external clock)
+0x081A, 768 x 608, 57Hz, 35KHz, 32/36/38/40MHz (internal/external clock)
+
+0x0D12, 448 x 304, 56Hz, 34KHz, 38/40MHz (internal/external clock)
+0x0C12, 448 x 608, 56Hz, 34KHz, 38/40MHz (internal/external clock)
+0x0D1A, 896 x 304, 56Hz, 34KHz, 38/40MHz (internal/external clock)
+0x0C1A, 896 x 608, 56Hz, 34KHz, 38/40MHz (internal/external clock)
+ 
+0x1112, 384 x 384, 86Hz, 34KHz, 32/36/38/40MHz (int/ext clock, interlaced)
+0x1012, 384 x 768, 86Hz, 34KHz, 32/36/38/40MHz (int/ext clock, interlaced)
+0x111A, 768 x 384, 86Hz, 34KHz, 32/36/38/40MHz (int/ext clock, interlaced)
+0x101A, 768 x 768, 86Hz, 34KHz, 32/36/38/40MHz (int/ext clock, interlaced)     
+0x1112, 384 x 384, 60Hz, 49KHz, 50MHz (internal clock, not interlaced)
+0x1012, 384 x 768, 60Hz, 49KHz, 50MHz (internal clock, not interlaced)
+0x111A, 768 x 384, 60Hz, 49KHz, 50MHz (internal clock, not interlaced)
+0x101A, 768 x 768, 60Hz, 49KHz, 50MHz (internal clock, not interlaced) 
+ 
+0x1512, 448 x 384, 87Hz, 34KHz, 38/40MHz (int/ext clock, interlaced)
+0x1412, 448 x 768, 87Hz, 34KHz, 38/40MHz (int/ext clock, interlaced)
+0x151A, 896 x 384, 87Hz, 34KHz, 38/40MHz (int/ext clock, interlaced)
+0x141A, 896 x 768, 87Hz, 34KHz, 38/40MHz (int/ext clock, interlaced)
+0x1512, 448 x 384, 54Hz, 44KHz, 50MHz (internal clock, not interlaced)
+0x1412, 448 x 768, 54Hz, 44KHz, 50MHz (internal clock, not interlaced)
+0x151A, 896 x 384, 54Hz, 44KHz, 50MHz (internal clock, not interlaced)
+0x141A, 896 x 768, 54Hz, 44KHz, 50MHz (internal clock, not interlaced)
+ 
+0x1912, 512 x 384, 78Hz, 31KHz, 38/40MHz (int/ext clock, interlaced)
+0x1812, 512 x 768, 78Hz, 31KHz, 38/40MHz (int/ext clock, interlaced)
+0x191A,1024 x 384, 78Hz, 31KHz, 38/40MHz (int/ext clock, interlaced)
+0x181A,1024 x 768, 78Hz, 31KHz, 38/40MHz (int/ext clock, interlaced)
+Experimental because limitations with ST-RAM bandwidth,
+ 256 colors not works, but 16 colors normally:
+0x1912, 512 x 384, 56Hz, 46KHz, 60MHz (not interlaced, int. clock 50 MHz)
+0x1812, 512 x 768, 56Hz, 46KHz, 60MHz (not interlaced, int. clock 50 MHz)
+0x191A,1024 x 384, 56Hz, 46KHz, 60MHz (not interlaced, int. clock 50 MHz)
+0x181A,1024 x 768, 56Hz, 46KHz, 60MHz (not interlaced, int. clock 50 MHz)
+!end_verbatim
+
+For example, with -V 0x141A (hex format), you get 896 x 768 16 colors:
+BPS=2, COL80, VGA_FALCON, HORFLAG2, ULTRA_VGA
+
+You must use COL80 with 2 colors.
+It's not possible to use 65K colors with COL80.
+
+(!U)
+Disclaimer 
+(!u)
+
+!begin_verbatim
+THIS FEATURE COMES WITH ABSOLUTELY NO WARRANTY!
+IT MIGHT EASILY DAMAGE YOUR SVGA MONITOR!
+IF YOU RUN IT, YOU DO SO AT YOUR OWN RISK!
+ELSE NOT USE -V.
+!end_verbatim
+
+
 !subnode 68060 EC
 
 In spite of the PMMU (Memory Management Unit) removed, the performances 
@@ -396,7 +541,7 @@ are equal, this is the differences from the TOS :
 
 !begin_itemize
 !item The memory zone of the FLACON's motherboard is declared with a 
-cache in writethrough (0 to $FFFFFF, bus on 24 bits), therefore the STRAM.
+cache in writethrough (0 to $FFFFFF, bus on 24 bits), therefore the ST-RAM.
 !item The memory zone at $80000000 to $FFFFFFFF is without cache, therefore 
 the input/output, excepted the cartrige port (in $00FAxxxx - $00FBxxxx) !
 !item The memory zone at $01000000 to $7FFFFFFF is declared with a cache 
@@ -438,7 +583,7 @@ delay at boot to 60 seconds.
 !item When you see the picture during the boot, press in the same time on 
 CTRL and left SHIFT keys, this is for effect to start the machine without 
 PMMU tree in SDRAM (like a 68060 EC).
-!item After the SDRAM initialization (to 0), begin the STRAM test and 
+!item After the SDRAM initialization (to 0), begin the ST-RAM test and 
 after the TT-RAM test (the SDRAM here), if the 'X' characters replaces 
 the '-' characters, the SDRAM is defective.  
 !end_itemize
@@ -673,7 +818,7 @@ At this page you can :
 !item Select at boot the SCSI arbitration.
 !item Select at boot the SCSI identificator (0 to 7).
 !item Set the delay at boot in secondes (you need lot of time if you want test the 
-STRAM and the SDRAM).
+ST-RAM and the SDRAM).
 !item Change the speed of the blitter.
 !item Set the transfer of TOS 4.0x in RAM with using of the PMMU.
 !item Under TOS, remove the caches during 5 seconds when a program is 
@@ -822,7 +967,7 @@ The author of BubbleGEM is Thomas Much; his email address is:
 
 There are two caches of 8KB inside the 68060, data and instruction.
 
-The STRAM is in writethrough, at each time than the 68060 write to the 
+The ST-RAM is in writethrough, at each time than the 68060 write to the 
 RAM, he write in the same time than the data cache. 
 
 The SDRAM is in copyback, the 68060 write always inside his data cache, 
@@ -882,7 +1027,7 @@ this method penalize all programs.
 
 Like CPX, the programs who not uses the Pexec function for load 
 modules crashes with the SDRAM in copyback, so the best way is to load 
-the program in STRAM (cache in writethrough). You can use FILEINFO.CPX 
+the program in ST-RAM (cache in writethrough). You can use FILEINFO.CPX 
 for change the flags.
 
 For example you must remove TT-ram flags of METAXBS.PRG (Metados) 
@@ -911,7 +1056,7 @@ You can try to remove the caches with GENERAL6.CPX, start the program who
 causes crashes, load the program and set to on the caches after.
 
 You can use FILEINFO.CPX for change the flags and force the program to 
-use STRAM.
+use ST-RAM.
 
 For more informations, you can read the part 'Cache'.
 
@@ -2239,7 +2384,7 @@ CTRL-ALT-UNDO: CTRL-ALT-UNDO: NVM and Flash Parameters init if pressed
 !begin_verbatim
 Hardware :
 Rodolphe CZUBA
-rczuba@free.fr
+rodolphe.czuba@free.fr
 http://www.czuba-tech.com
 
 Flash ttp, system :

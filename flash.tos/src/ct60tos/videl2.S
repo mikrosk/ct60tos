@@ -38,8 +38,13 @@
 picture_boot:
 
 	move.w #0x2300,SR
-	movem.l D1-D4/A0-A3,-(SP)
-	lea 0x10000,A0
+	bsr screen_ntc_boot
+	moveq #0,D0
+	rts
+	
+picture_build:                                         // target A0
+
+	movem.l D0-D4/A0-A3,-(SP)
 	lea pic_boot+18(PC),A1                    // source TGA uncompressed 320 x 240
 	move.l A0,A3
 	move.w #HEIGHT-1,D1
@@ -108,18 +113,21 @@ pb10:				addq.w #2,A2
 		dbf D2,pb8
 		add.w #WIDTH*2,A3
 	dbf D1,pb7	
-	bsr screen_ntc_boot
-	movem.l (SP)+,D1-D4/A0-A3
-	moveq #0,D0
+	movem.l (SP)+,D0-D4/A0-A3
 	rts
 
 screen_ntc_boot:                     // 320 * 240 * 65K colors */
 
 	movem.l D0-A1,-(SP)
+	lea 0x10000,A0
 	moveq #0,D7
 	move.b 0xFFFF8006,D7
 	lsr.w #6,D7             // 0:ST nomo, 1:ST col, 2:VGA, 3:TV
 	beq v7                  // monochrome
+	move.l A0,A1
+	move.w #38399,D0        // 154KB for test videl clock
+v9:		clr.l (A1)+
+	dbf D0,v9
 	move.w SR,-(SP)
 	or.w #0x700,SR          // no IRQ
 	move.l A0,-(SP)         // adress screen
@@ -173,6 +181,14 @@ v4:
 	clr.l 0xFFFF9800        // black border
 	move.w (SP)+,SR
 	bsr set_external_clock
+	lea 0x40000,A0
+	bsr picture_build
+	move.l A0,-(SP)         // adress screen
+	lea.l 0xFFFF8200,A0     // VIDEL
+	move.b 1(SP),1(A0)      // adress high
+	move.b 2(SP),3(A0)      // middle
+	move.b 3(SP),0xD(A0)    // low
+	addq.w #4,SP
 	move.l _hz_200,D0
 	add.l #400,D0           // tempo 2 S
 v6:
@@ -216,12 +232,16 @@ v1:
 	
 set_external_clock:
 
-	movem.l D0-D1/A0-A1,-(SP)
+	movem.l D0-D2/A0-A1,-(SP)
 	lea.l 0xFFFF8200,A0     // VIDEL
+	move.w 0xC0(A0),D0      // vco_hi
+	move.w D0,D2
+	bclr #2,D0              // 32 MHz
+	move.w D0,0xC0(A0)
 	bclr #0,0xA(A0)         // internal clock
              bsr measure_clock_videl
 	move.l cookie,D1
-	beq.s .clock_ok
+	beq .external_clock_ok
 	move.l D1,A1
 .find_cookie:
 		tst.l (A1)
@@ -229,11 +249,10 @@ set_external_clock:
 		addq.w #8,A1
 	bra.s .find_cookie
 .cookie_free:
-             cmp.w #32,D0            // 32 MHz
-             bls.s .clock_ok
 	move.l 4(A1),12(A1)     // copy size
 	move.l #0x5F465251,(A1)+// _FRQ
 	move.l D0,(A1)+
+	move.w D0,D1            // internal clock
 	clr.l (A1)
 	bset #0,0xA(A0)         // external clock
              bsr measure_clock_videl
@@ -241,11 +260,17 @@ set_external_clock:
 	move.l #0x5F465245,(A1)+// _FRE
 	move.l D0,(A1)+
 	clr.l (A1)
+	cmp.w #2,D7             // VGA
+	beq.s .internal_clock_ok
+             cmp.w #32,D1            // 32 MHz internal clock
+             bls.s .internal_clock_ok
              cmp.w #32,D0            // 32 MHz
-             beq.s .clock_ok
+             beq.s .external_clock_ok
+.internal_clock_ok:
 	bclr #0,0xA(A0)         // internal clock
-.clock_ok:
-	movem.l (SP)+,D0-D1/A0-A1
+.external_clock_ok:
+	move.w D2,0xC0(A0)      // restore vco_hi
+	movem.l (SP)+,D0-D2/A0-A1
 	rts
 	
 measure_clock_videl:                 // return value in MHz

@@ -34,11 +34,11 @@ MAX_MALLOC	=	256
 	
 ataboot:
 	
-	move.l	4(SP),A6 ; base page
+	move.l	4(SP),A6  ; base page
 	move.l	12(A6),D0 ; text segment size
 	add.l	20(A6),D0 ; data segment size
 	lea	ataboot(PC),A5
-	add.l	D0,A5 ; bss segment
+	add.l	D0,A5     ; bss segment
 	add.l	28(A6),D0 ; bss segment size
 	add.l	#32768+256,D0 ; stack size + base page size
 	andi.b	#$FE,D0
@@ -46,20 +46,22 @@ ataboot:
 	move.l	D0,-(SP)
 	pea	(A6)
 	clr	-(SP)
-	move	#$4A,-(SP)	; Mshrink
-	trap	#1		; Gemdos
+	move	#$4A,-(SP)  ; Mshrink
+	trap	#1          ; Gemdos
 	lea	12(SP),SP
+	clr	-(SP)       ; ST-RAM
 	move.l	#-1,-(SP)
-	move	#$48,-(SP)	; Malloc
-	trap	#1		; Gemdos
-	addq	#6,SP
+	move	#$44,-(SP)  ; Mxalloc
+	trap	#1          ; Gemdos 
+	addq	#8,SP
 	lsr.l	#1,D0
 	move.l	D0,malloc_size-_bss(A5)
 	beq	err_ataboot
+	clr	-(SP)       ; ST-RAM
 	move.l	D0,-(SP)
-	move	#$48,-(SP)	; Malloc
-	trap	#1		; Gemdos
-	addq	#6,SP
+	move	#$44,-(SP)  ; Mxalloc
+	trap	#1          ; Gemdos 
+	addq	#8,SP
 	tst.l	D0
 	beq	err_ataboot
 	move.l	D0,malloc_ptr-_bss(A5)
@@ -473,7 +475,6 @@ pe1:
 	bsr.s	parse_size
 	move.l	D0,extramem_size-_bss(A5)
 	addq	#4,SP
-	move.l	-8(A6),D2
 	unlk	A6
 	rts
 

@@ -22,9 +22,12 @@
 
 #include "vars.h"
 
+//#define MALLOC_STRAM
+
 magxboot:
 
 	movem.l D0-A6,-(SP)
+	tst.l D0
 	sne.b D4
 	ext.w D4
 	swap D4                  // flag _FPU cookie
@@ -32,7 +35,7 @@ magxboot:
 	tst.l D1                 // _FRQ cookie, internal clock
 	beq.s mb2
 	cmp.l #32,D1
-	bls mb1
+	bls mb2
 	tst.l D2                 // _FRE cookie, external clock
              beq.s mb2
 	cmp.l #32,D2
@@ -48,7 +51,7 @@ mb2:
 	cmp.w #3,D0 
 	beq mb1
 	clr.w -(SP)
- 	pea magx_name(PC)
+ 	pea magx_name+1(PC)
 	move.w #0x3D,-(SP)       // Fopen
 	trap #1
 	addq.w #8,SP
@@ -56,8 +59,8 @@ mb2:
 	bpl.s mb3
 	lea error(PC),A0
 	bsr printline
-	move.w #7,-(SP) // Crawcin
-	trap #1         // Gemdos
+	move.w #7,-(SP)          // Crawcin
+	trap #1                  // Gemdos
 	addq.w #2,SP
 	bra mb1	
 mb3:
@@ -77,10 +80,15 @@ mb3:
 	lea 10(SP),SP
 	tst.l D0
 	bmi mb1 
+#ifdef MALLOC_STRAM
+	clr -(SP)                // ST-RAM
+#else
+	move.w #3,-(SP)          // TT-RAM if possible
+#endif
 	move.l D6,-(SP)
-	move #0x48,-(SP)         // Malloc
-	trap #1                  // Gemdos
-	addq.w #2,SP
+	move.w #0x44,-(SP)       // Mxalloc
+	trap #1                  // Gemdos 
+	addq.w #8,SP
 	tst.l D0
 	ble mb1
 	move.l D0,A6
@@ -92,8 +100,8 @@ mb3:
 	lea 12(SP),SP
 	move.l D0,-(SP)
 	move.w D7,-(SP)// handle
-	move.w #0x3E,-(SP)	// Fclose
-	trap #1		// Gemdos
+	move.w #0x3E,-(SP)       // Fclose
+	trap #1                  // Gemdos
 	addq.w #4,SP
 	cmp.l (SP)+,D6
 	bne mb1
@@ -107,16 +115,16 @@ mb3:
 	bne mb1
 	move.l (A0)+,A5
 	addq.l #4,A0
-	cmp.l #0x4D414758,(A0) // MAGX
+	cmp.l #0x4D414758,(A0)   // MAGX
 	bne mb1
 	move.l #0x1000000,__md
 	cmp.l #0x1357BD13,ramvalid
 	bne.s mb4
 	cmp.l #0x1080000,ramtop
-	bcs mb4
+	bcs.s mb4
 	move.l #0x1000000,A5
 mb4:
-	move.w #0x400,0x1E(A6)   // machine
+	move.w #0x400,0x1E(A6)   // machine FALCON
 mb5:
 	move.w #0x19,-(SP)       // Dgetdrv
 	trap #1                  // Gemdos
@@ -129,7 +137,7 @@ mb5:
 	add.b #0x41,D0
 	move.b D0,(A0)+
 	move.b #0x3A,(A0)+
-	move.l A4,A1
+	lea magx_name(PC),A1
 mb7:
 	move.b (A1)+,(A0)+
 	bne.s mb7
@@ -163,7 +171,7 @@ mb9:
 	lea (A0,D5.L),A1
 	moveq #0,D0
 mb12:
-	add.l (A0)+,D0
+		add.l (A0)+,D0
 	cmp.l A0,A1
 	bcs.s mb12
 	move.l D0,trp14ret
@@ -172,8 +180,8 @@ mb12:
 	lsr.l #1,D1
 	moveq #0,D2
 mb22:
-		move.l (A1),D0 // caches
-		cmp.l #0x203C0000,D0 // move.l #0x808,D0
+		move.l (A1),D0          // caches
+		cmp.l #0x203C0000,D0    // MOVE.L #0x808,D0
 		bne.s mb26
 		cmp.l #0x08084E7B,4(A1) // MOVEC.L D0,CACR
 		beq.s mb27
@@ -188,13 +196,13 @@ mb22:
 mb27:
 		move.l #0x70004E7B,(A1)
 		move.l #0x00024E71,4(A1)
-		move.w #0xF4F8,8(A1) // CPUSHA BC
+		move.w #0xF4F8,8(A1)    // CPUSHA BC
 		lea mess2(PC),A0
 		bsr printline
 		addq.w #1,D2
 		bra mb23
 mb26:
-		cmp.l #0x4E7A0002,D0 // move.l CACR,D0
+		cmp.l #0x4E7A0002,D0    // MOVE.L CACR,D0
 		bne.s mb37
 		cmp.l #0x08C00003,4(A1) // BSET #3,D0
 		bne.s mb37
@@ -211,7 +219,7 @@ mb26:
 		addq.w #1,D2
 		bra mb23
 mb37:
-		cmp.l #0x03C80000,D0 // move.l D1,(A0)
+		cmp.l #0x03C80000,D0    // MOVE.L D1,(A0)
 		bne.s mb24
 		cmp.l #0x03C80008,4(A1) // MOVEP.L D1,8(A0)
 		bne.s mb24
@@ -225,7 +233,7 @@ mb37:
 		addq.w #1,D2
 		bra mb23
 mb24:
-		cmp.l #0x203C0088,D0 // move.l #0x00880105,D0
+		cmp.l #0x203C0088,D0    // MOVE.L #0x00880105,D0
 		bne.s mb25
 		cmp.l #0x010501C8,4(A1) // MOVEP.L D0,0x26(A0)
 		bne.s mb25
@@ -262,7 +270,7 @@ mb28:
 		addq.w #1,D2
 		bra mb23
 mb31:
-		cmp.l #0x703D20C9,D0 // vecteurs
+		cmp.l #0x703D20C9,D0 // vectors
 		bne.s mb32
 		cmp.l #0xD3C151C8,4(A1)
 		bne.s mb32
@@ -310,7 +318,7 @@ mb35:
 		bne.s mb38
 		cmp.w #0x6100,12(A1)
 		bne.s mb38
-		move.l #0x4E714E71,12(A1)
+		move.l #0x4E714E71,12(A1) // Init DSP removed
 		lea mess12(PC),A0
 		bsr printline
 		addq.w #1,D2
@@ -354,7 +362,7 @@ mb40:
 		addq.w #1,D2
 		bra mb23
 mb45:
-		tst.l D4 // flag FPU
+		tst.l D4             // flag FPU
 		bmi.s mb46
 		cmp.l #0xF3790100,D0 // FPU FRESTORE
 		bne.s mb46
@@ -372,7 +380,7 @@ mb46:
 		addq.w #1,D2
 		bra.s mb23
 mb43:
-		tst.w D4 // flag external clock
+		tst.w D4             // flag external clock
 		bpl.s mb23
 		cmp.l #0x720211C1,D0 // external clock
 		bne.s mb44
@@ -398,7 +406,7 @@ mb23:
 	subq.l #1,D1
 	bgt mb22
 	moveq #18,D3
-	tst.w D4 // flag external clock
+	tst.w D4        // flag external clock
 	bpl.s mb42
 	addq.w #3,D3
 mb42:
@@ -421,7 +429,7 @@ mb21:
 	or #0x700,SR    // lock interrupts
 	lea mb14(PC),A1
 	lea 0x600,A0
-	lea mb1-mb14,A2
+	lea (mb1-mb14).w,A2
 	move.l A2,D0
 	lsr.l #2,D0
 	subq.w #1,D0
@@ -429,9 +437,11 @@ mb13:
 		move.l (A1)+,(A0)+
 	dbf D0,mb13
 	move.l _memtop,phystop
+	cpusha DC      // flush and disable caches
 	moveq #0,D0
 	movec.l D0,CACR
-	cpusha BC       // flush caches
+	cinva BC
+	nop
 	jmp 0x600
 mb14:
 	move.l A5,A0
@@ -439,7 +449,7 @@ mb14:
 	move.l D5,D0
 	lsr.l #3,D0
 	subq.l #1,D0
-	cmp.l A0,A1 // MagiC mover
+	cmp.l A0,A1    // MagiC mover
 	bhi.s mb16
 	beq.s mb18
 	add.l D5,A1
@@ -626,6 +636,7 @@ mess18:
 	.byte	13,10
 	.asciz	"Patch context FPU"
 magx_name:
+	.byte	0x5C
 	.asciz	"magic.ram"
 warning:
 	.byte	13,10,10

@@ -1,5 +1,5 @@
 /* Ataboot 3.3 for the CT60, assembly version without MiNT library (TOS calls),
- * PC adressing, A5 used as bss segment pointer
+ * PC adressing, A5 used as bss segment pointer, extended video modes, 
  * and memory sizes alignment (ST-RAM/fast-ram inside get_mem_infos)
  *
  *  Didier Mequignon 2004, e-mail: aniplay@wanadoo.fr
@@ -26,11 +26,13 @@
 #define ev_f_line 0x2c
 
 #define MAX_MALLOC 256
-//#define MALLOC_STRAM
+#define MALLOC_STRAM
 #define ONE_MALLOC
 	
 ataboot:
 	movem.l	D0-A6,-(SP)
+	move.l	D1,D6       // internal video/bus clock frequency
+	move.l	D2,D7       // external video clock frequency
 #ifdef MALLOC_STRAM
 	clr	-(SP)       // ST-RAM
 #else
@@ -73,6 +75,8 @@ ataboot:
 	bsr	_bzero
 	addq	#8,SP
 #endif	                         // ONE_MALLOC
+	move.l	D6,(internal_clock_frequency-_bss).w(A5)
+	move.l	D7,(external_clock_frequency-_bss).w(A5)
 	moveq	#1,D0
 	move.l	D0,(optind-_bss).w(A5)
 	move.l	D0,(suboptionpos-_bss).w(A5)
@@ -130,6 +134,7 @@ init3:
 	move.l	D0,(force_tt_size-_bss).w(A5)
 	clr.l	(extramem_start-_bss).w(A5)
 	clr.l	(extramem_size-_bss).w(A5)
+	clr.l	(video_modecode-_bss).w(A5)
 	lea 	_kernel_name(PC),A0
 	move.l	A0,(kernel_name-_bss).w(A5)
 	clr.l	(ramdisk_name-_bss).w(A5)
@@ -139,9 +144,6 @@ init3:
 	move.l	(argc-_bss).w(A5),-(SP)
 	bsr	_main
 	addq	#8,SP
-	move	#7,-(SP)     // Crawcin
-	trap	#1           // Gemdos
-	addq	#2,SP
 err_ataboot:
 	move.l	A5,D0
 	beq.s	end_ataboot
@@ -164,23 +166,17 @@ end_ataboot:
 
 help:
 
-	move.l	A2,-(SP)
 	pea	menu_help(PC)
 	bsr	_printline
 	addq	#4,SP
-	clr.l	-(SP)
-	bsr	_exit
-	nop
+	rts	
 
 usage:
 
-	move.l	A2,-(SP)
 	pea	menu_usage(PC)
 	bsr	_printline
 	addq	#4,SP
-	pea	1.w
-	bsr	_exit
-	nop
+	rts
 	
 _main:
 
@@ -191,18 +187,18 @@ _main:
 	bsr	_printline
 	addq	#8,SP
 	pea	12(A6) // argv
-	pea	8(A6) // argc
+	pea	8(A6)  // argc
 	bsr	get_default_args
 	addq	#8,SP
 	tst.l	12(A6)
-	beq	end_main
+	beq	error_args
 	pea	options(PC)
 	bsr	_printline
 	addq	#4,SP
 main_getopt_loop:
-	pea	options_list(PC)// opts: dntsS:T:k:r:m:
+	pea	options_list(PC)// opts: dntsS:T:k:r:m:V:
 	move.l	12(A6),-(SP) // argv
-	move.l	8(A6),-(SP) // argc
+	move.l	8(A6),-(SP)  // argc
 	bsr	_getopt
 	movea.l	D0,A0
 	addq	#8,SP
@@ -240,7 +236,7 @@ tab_jmp_opt:
 	.short	force_st_size_opt-tab_jmp_opt // S
 	.short	force_tt_size_opt-tab_jmp_opt // T
 	.short	usage_opt-tab_jmp_opt
-	.short	usage_opt-tab_jmp_opt
+	.short	video_opt-tab_jmp_opt // V
 	.short	usage_opt-tab_jmp_opt
 	.short	usage_opt-tab_jmp_opt
 	.short	usage_opt-tab_jmp_opt
@@ -288,8 +284,10 @@ ignore_ttram_opt:
 force_tt_size_opt:
 	move.l	(optarg-_bss).w(A5),-(SP) // T
 	bsr	parse_size
-	move.l	D0,(force_tt_size-_bss).w(A5)
 	addq	#4,SP
+	cmp.l	#-1,D0 // error
+	beq	usage_opt
+	move.l	D0,(force_tt_size-_bss).w(A5)
 	pea	_force_tt_size(PC)
 	bsr	_printline
 	move.l	(force_tt_size-_bss).w(A5),D0
@@ -308,8 +306,10 @@ load_stram_opt:
 force_st_size_opt:
 	move.l	(optarg-_bss).w(A5),-(SP) // S
 	bsr	parse_size
-	move.l	D0,(force_st_size-_bss).w(A5)
 	addq	#4,SP
+	cmp.l	#-1,D0 // error
+	beq	usage_opt
+	move.l	D0,(force_st_size-_bss).w(A5)
 	pea	_force_st_size(PC)
 	bsr	_printline
 	move.l	(force_st_size-_bss).w(A5),D0
@@ -344,6 +344,8 @@ extramem_opt:
 	move.l	(optarg-_bss).w(A5),-(SP) // m
 	bsr	parse_extramem
 	addq	#4,SP
+	tst.l	D0
+	bmi	usage_opt
 	pea	_extramem_start(PC)
 	bsr	_printline
 	move.l	(extramem_start-_bss).w(A5),D0
@@ -357,11 +359,56 @@ extramem_opt:
 	addq	#8,SP	
 	addq	#4,SP	
 	bra	main_getopt_loop
+video_opt:
+	move.l	(optarg-_bss).w(A5),-(SP) // V
+	bsr	parse_size
+	addq	#4,SP
+	cmp.l	#-1,D0 // error
+	beq	usage_opt
+	move.l	D0,(video_modecode-_bss).w(A5)	
+	pea	_video_modecode(PC)
+	bsr	_printline
+	move.l	(video_modecode-_bss).w(A5),D0
+	bsr	hex_word
+	pea	_internal_frequency(PC)
+	bsr	_printline
+             move.l	(internal_clock_frequency-_bss).w(A5),D0
+             bsr	display_deci
+	pea	_external_frequency(PC)
+	bsr	_printline
+	move.l	(external_clock_frequency-_bss).w(A5),D0
+	bsr	display_deci
+	pea	_mhz(PC)
+	bsr	_printline
+	addq	#8,SP
+	addq	#8,SP	
+	bra	main_getopt_loop
 help_opt:
 	bsr	help // h
+	tst.l	(video_modecode-_bss).w(A5)
+	bne	change_screen	
+	move	#7,-(SP)     // Crawcin
+	trap	#1           // Gemdos
+	addq	#2,SP
+	moveq	#0,D0
+	bra	end_main
+change_screen:
+	bsr	check_video_screen
+	moveq	#0,D0
+	bra	end_main
 usage_opt:
 	bsr	usage
-	bra	main_getopt_loop
+	bra	error_main
+error_args:
+	pea	error_57(PC)
+	bsr	_printline
+	addq	#4,SP
+error_main:
+	move	#7,-(SP)     // Crawcin
+	trap	#1           // Gemdos
+	addq	#2,SP
+	moveq	#1,D0
+	bra	end_main
 end_opt:
 	move.l	(optind-_bss).w(A5),D0
 	movea.l	8(A6),A1
@@ -434,11 +481,8 @@ main_argc_next:
 	bne	main_argc_loop
 main_argc_end:
 	bsr	_linux_boot
-end_main:
-	pea	error_57(PC)
-	bsr	_printline
-	addq	#4,SP
 	moveq	#1,D0
+end_main:
 	unlk	A6
 	rts
 
@@ -456,7 +500,7 @@ parse_extramem:
 	addq	#8,SP
 	addq	#4,SP
 	cmp.l	D0,D2
-	bne.s	pe2
+	bne.s	pe3
 	move.l	D0,-(SP)
 	pea	error_1(PC)
 	bsr	_printline
@@ -464,24 +508,29 @@ parse_extramem:
 	bsr	_printline
 	pea	crlf(PC)
 	bsr	_printline
-	bsr	usage
 	addq	#8,SP
-pe2:
+	bra.s	pe4	
+pe3:
 	movea.l	-4(A6),A0
 	cmpi.b	#0x3A,(A0)
-	beq.s	pe1
+	beq.s	pe2
 	pea	error_2(PC)
 	bsr	_printline
-	bsr	usage
 	addq	#4,SP
-pe1:
+pe4:	moveq	#-1,D0 // error
+	bra.s	pe1
+pe2:
 	move.l	-4(A6),D1
 	addq.l	#1,D1
 	move.l	D1,-(SP)
 	bsr.s	parse_size
-	move.l	D0,(extramem_size-_bss).w(A5)
 	addq	#4,SP
-	move.l	-8(A6),D2
+	cmp.l	#-1,D0
+	bmi.s	pe4 // error
+	move.l	D0,(extramem_size-_bss).w(A5)
+	moveq	#0,D0 // OK
+	
+pe1:
 	unlk	A6
 	rts
 
@@ -507,8 +556,9 @@ parse_size:
 	bsr	_printline
 	pea	crlf(PC)
 	bsr	_printline
-	bsr	usage
 	addq	#8,SP
+	moveq	#-1,D3 // error
+	bra.s	ps1
 ps4:
 	movea.l	-4(A6),A0
 	clr.l	D0
@@ -1176,6 +1226,7 @@ lb14:
 	bgt	lb16
 lb13:
 	bsr	_sclose
+	bsr	check_video_screen
 	move.l	D5,-(SP)
 	bsr	check_bootinfo_version
 	addq	#4,SP
@@ -1320,7 +1371,7 @@ lb5:
 	cpusha	DC
 	moveq	#0,D0
 	movec	D0,CACR
-	cinva	DC
+	cinva	BC
 	pflusha	
 	bra.s	lb3
 lb4:
@@ -2131,6 +2182,98 @@ gc2:
 	moveq	#-1,D0
 gc1:
 	movea.l	(SP)+,A2
+	rts
+
+check_video_screen:
+
+	movem.l	D0-D2/A0-A2,-(SP)
+	tst.l	(video_modecode-_bss).w(A5)
+	beq	screen_end
+	move	#-1,-(SP)
+	move	#0x58,-(SP) // Vsetmode
+	trap	#14
+	addq	#4,SP
+	move	D0,-(SP)
+	move.l	(video_modecode-_bss).w(A5),D0
+	or.l	#0xFFFF0000,D0
+try_again:
+		move.l	(internal_clock_frequency-_bss).w(A5),D1
+		move.l	(external_clock_frequency-_bss).w(A5),D2
+		lea	init_screen,A0
+		add.l	#0xE80000,A0
+		sub.l	#_ct60tos_half_flash,A0
+		jsr	(A0)
+		move	(SP)+,D1 // old modecode
+		tst	D0
+		bpl.s	screen_ok
+		cmp	#-2,D0
+		bne.s	screen_error
+		cmp.l	#40,(internal_clock_frequency-_bss).w(A5) // MHz
+		bcs.s	screen_error
+		move.l	(video_modecode-_bss).w(A5),D0
+		or.l	#0xFFFF8000,D0 // CLOCK_FORCED 
+	bra.s	try_again
+screen_error:
+	move	D0,-(SP)
+	move	D1,-(SP)
+	move	#3,-(SP)
+	clr.l	-(SP)
+	clr.l	-(SP)	                                  
+	move	#5,-(SP) // Setscreen
+	trap	#14
+	lea	14(SP),SP
+	move	(SP)+,D0
+	cmp	#-1,D0
+	beq.s	memory_error
+	cmp	#-2,D0
+	bne.s	screen_ok
+	pea	error_58(PC)
+	bsr	_printline
+	addq	#4,SP
+	bra.s	screen_end
+memory_error:
+	pea	error_59(PC)
+	bsr	_printline
+	addq	#4,SP
+	bra.s	screen_end
+screen_ok:
+	move	D0,-(SP)         // clock selected
+	pea	screen_ptr(PC)
+	bsr	_printline
+	move.l	_v_bas_ad,D0
+	bsr	hex_long
+	pea	screen_info(PC)
+	bsr	_printline
+	.short	0xA000           // lineA
+	moveq	#0,D2
+	move	(A0),D0          // number of planes
+	bset	D0,D2            // number of colors
+	moveq	#0,D0
+	move	dev_tab(A0),D0   // width pixels workstation info
+	addq.l	#1,D0
+	moveq	#0,D1
+	move	dev_tab+2(A0),D1 // high pixels workstation info
+	addq.l	#1,D1
+	bsr	display_deci
+	pea	screen_info_2(PC)
+	bsr	_printline
+	move.l	D1,D0
+	bsr	display_deci
+	pea	screen_info_3(PC)
+	bsr	_printline
+	move.l	D2,D0
+	bsr	display_deci
+	pea	screen_info_4(PC)
+	bsr	_printline
+	lea	20(SP),SP
+	moveq	#0,D0
+	move	(SP)+,D0
+	bsr	display_deci
+	pea	screen_info_5(PC)
+	bsr	_printline
+	addq	#4,SP
+screen_end:
+	movem.l	(SP)+,D0-D2/A0-A2
 	rts
 
 check_bootinfo_version:
@@ -6770,6 +6913,17 @@ error_56:
 error_57:
 	.ascii	"No bootargs file found !"
 	.byte	13,10,0
+error_58:
+	.ascii	"No external video clock found !"
+	.byte	13,10
+	.ascii	"Use the default screen..."
+	.byte	13,10,0
+error_59:
+	.ascii	"Not enough memory for change the screen !"
+	.byte	13,10
+	.ascii	"Use the default screen..."
+	.byte	13,10,0
+	
 menu_help:
 	.ascii	"Linux/68k Atari Bootstrap version 3.3 (CT60)"
 	.byte	13,10
@@ -6789,6 +6943,8 @@ menu_help:
 	.byte	13,10
 	.ascii	"  -m<start>:<size>: pass extra memory block to kernel"
 	.byte	13,10
+	.ascii	"  -V<value>: force extended video modecode <value>"
+	.byte	13,10
 	.ascii	"  -d: print debug infos, wait for key before booting"
 	.byte	13,10
 	.ascii	"  -h, -?: print this help message"
@@ -6796,7 +6952,7 @@ menu_help:
 menu_usage:
 	.ascii	"Usage:"
 	.byte	13,10
-	.ascii	"[-dnstST] [-k kernel_executable] "
+	.ascii	"[-dnstSTV] [-k kernel_executable] "
 	.ascii	"[-r ramdisk_file] [-m start:size] [kernel options...]"
 	.byte	13,10,0
 menu_info:
@@ -6809,7 +6965,7 @@ menu_authors:
 	.ascii	"Copyright 1993-98 by Arjan Knor, Robert de Vries, Roman Hodek, Andreas Schwab"
 	.byte	13,10,10,0
 options_list:
-	.asciz	"dntsS:T:k:r:m:"
+	.asciz	"?hdntsS:T:k:r:m:V:"
 space:
 	.asciz	" "
 bootargs_name:
@@ -6836,7 +6992,7 @@ cookie_ab40:
 cookie_magn:
 	.asciz	"MAGN"
 cookie_bpfx:
-	.asciz	"BPFX0
+	.asciz	"BPFX"
 elf_header:
 	.byte	0x7F
 	.asciz	"ELF"
@@ -6980,7 +7136,30 @@ _extramem_size:
 __kernel_name:
 	.asciz	"- Kernel name: "
 _ramdisk_name:
-	.asciz	"- Ramdisk name: "	
+	.asciz	"- Ramdisk name: "
+_video_modecode:
+	.asciz	"- Extended video modecode: 0x"	
+_internal_frequency:
+	.byte	13,10
+	.asciz	"  (internal frequency: "
+_external_frequency:
+	.asciz	" MHz, external frequency: "
+_mhz:
+	.ascii	" MHz)"
+	.byte	13,10,0
+screen_ptr:
+	.asciz	"Screen at 0x"
+screen_info:
+	.asciz	", "
+screen_info_2:
+	.asciz	" x "
+screen_info_3:
+	.asciz	" in "
+screen_info_4:
+	.asciz	" colors, "
+screen_info_5:
+	.ascii	" MHz"
+	.byte	13,10,0
 
 	.align	2
 	
@@ -7074,6 +7253,8 @@ kernel_name:
 	ds.l	1
 ramdisk_name:
 	ds.l	1
+video_modecode:
+	ds.l	1
 bi_machtype:
 	ds.l	1
 bi_cputype:
@@ -7161,6 +7342,10 @@ currmod:
 	ds.l	2
 command_line:
 	ds.b	256
+internal_clock_frequency:
+	ds.l	1
+external_clock_frequency:
+	ds.l	1
 #ifdef ONE_MALLOC
 malloc_size:
 	ds.l	1

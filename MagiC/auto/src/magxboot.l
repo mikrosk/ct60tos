@@ -92,7 +92,7 @@ DEBUT:
  CMP.L #32,D0
  BNE.S \41
  ST.B EXT_CLOCK
-\41:OPEN #0,NOM_MAGIC
+\41:OPEN #0,NOM_MAGIC+1
  MOVE D0,D7
  BMI \1
  LSEEK #2,D7,#0
@@ -145,7 +145,7 @@ DEBUT:
  ADD.B #"A",D0
  MOVE.B D0,(A0)+
  MOVE.B #":",(A0)+
- MOVE.L A4,A1
+ LEA NOM_MAGIC,A1
 \7:MOVE.B (A1)+,(A0)+
  BNE.S \7
 \8:MOVE.L 2(A6),D0
@@ -402,9 +402,10 @@ DEBUT:
  MOVE.L _MEMTOP,PHYSTOP
  CMP.L #40,CPU
  BCS.S \15
+ DC.W $F478;CPUSHA DC
  MOVEQ #0,D0;inhibe & vide caches
  DC.L $4E7B0002;MOVEC.L D0,CACR
- DC.W $F4F8;CPUSHA BC
+ DC.W $F4D8;CINVA BC
  BRA.S \29
 \15:CMP.L #20,CPU
  BCS.S \29
@@ -547,7 +548,7 @@ MESS18:DC.B 13,10,"Patch context FPU",0
 MESS20:DC.B 13,10,"Internal clock : ",0
 MESS21:DC.B ", External clock : ",0
 MESS22:DC.B " Mhz",0 
-NOM_MAGIC:DC.B "MAGIC.RAM",0
+NOM_MAGIC:DC.B "\magic.ram",0
 ERR:DC.B 13,10,10,"WARNING ! A part is not patched ! (",0
 
  BSS

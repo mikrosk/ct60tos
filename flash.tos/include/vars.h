@@ -25,6 +25,8 @@
 #define resvector  0x42A
 #define phystop    0x42E
 #define _memtop    0x436
+#define sshiftmd   0x44C
+#define _v_bas_ad  0x44E
 #define _frclock   0x466	
 #define hdv_rw     0x476
 #define hdv_boot   0x47A
@@ -38,6 +40,17 @@
 #define cookie     0x5A0
 #define ramtop     0x5A4
 #define ramvalid   0x5A8
+
+// line A offset vars
+#define dev_tab -692
+#define v_cel_ht -46
+#define v_cel_mx -44
+#define v_cel_my -42
+#define v_cel_wr -40
+#define v_rez_hz -12
+#define v_cel_vt -4
+#define bytes_ln -2
+#define v_lin_wr  2
 
 #define power_flag    -68
 #define flag_statvec  -64

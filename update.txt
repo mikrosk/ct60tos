@@ -1,0 +1,114 @@
+New feature of the boot 1.01a :
+-------------------------------
+Inside ct60tos.bin, there are a boot menu if the entry of the 
+favourite OS inside CT60CONF.CPX is <> '-'.
+You can select TOS, MagiC or Linux, value is stored inside the NVM.
+- With MagiC the ct60tos try to found magic.ram inside the main 
+directory of the boot folder.
+- With Linux the ct60tos try to found bootargs inside the main 
+directory of the boot folder. Tested with the kernel 2.4.25.
+Sure you can always use magxboot.prg or ataboot.prg inside the AUTO 
+folder (this programs are in this archive).
+- New option for Linux and bootargs file, -V: Extended video modecode.
+Because the kernel command line has a video=atafb:keep feature, during 
+boot it's better to get extended video modes.
+This is the detail of this extended modecode:
+
+Bit| Define      Value | Comment                  | Examples                             |
+---+-------------------+--------------------------+--------------------------------------+
+ 0 | BPS           0x1 | 0 : 1 plane, 2 colors    |                                      |
+---+-------------------+ 1 : 2 planes, 4 colors   |                                      |
+ 1 | BPS           0x2 | 2 : 4 planes, 16 colors  |                                      |
+---+-------------------+ 3 : 8 planes, 256 colors |                                      |
+ 2 | BPS           0x4 | 4 : Near True Color      |                                      |
+---+-------------------+--------------------------+--------------------------------------+
+ 3 | COL80         0x8 | double width             |                                      |
+---+-------------------+--------------------------+--------------------------------------+
+ 4 | VGA_FALCON   0x10 | VGA flag                 |                                      |
+---+-------------------+--------------------------+--------------------------------------+
+ 5 | PAL          0x20 | 50/60 Hz                 |                                      |
+---+-------------------+--------------------------+--------------------------------------+
+ 6 | OVERSCAN     0x40 | TV                       | MONO: 768 x 560                      |
+---+-------------------+--------------------------+--------------------------------------+
+   |                   | 320 x 200 16 colors      |                                      |
+ 7 | STMODES      0x80 | 640 x 200 4 colors       | 640 x 400 65K colors 50 MHz          |
+   |                   | 640 x 400 2 colors       | (BPS = 4)                            |
+---+-------------------+--------------------------+--------------------------------------+
+ 8 | VERTFLAG    0x100 | double line / interlaced | MONO: interlaced 896 x 1120          |
+===+===================+==========================+--------------------------------------+
+ 9 | HORFLAG     0x200 | double width               TV: 1280 x 640 or 1536 x 560 OVERSCAN|
+---+-------------------+-----------------------------------------------------------------+ 
+   |                   |                            TV: 960 x 640 (x1.5)                 |
+10 | HORFLAG2    0x400 | width increased            VGA: 896 x 480, 896 x 608, 896 x 768 |
+   |                   |                            MONO: 896 x 560                      |
+---+-------------------+--------------------------+--------------------------------------+
+11 | VESA        0x800 | SVGA 608 lines           |                                      |
+---+-------------------+--------------------------+ 1024 x 768                           |
+12 | ULTRA_VGA  0x1000 | SVGA 768 lines           | VESA & ULTRA_VGA                     |
+---+-------------------+--------------------------+--------------------------------------+ 
+
+SVGA list (modecode 16 colors, width x high, vertical freq., horizontal freq., clock) :
+---------------------------------------------------------------------------------------
+0x0112, 320 x 240, 60Hz, 31KHz, 25MHz (internal clock)
+0x0012, 320 x 480, 60Hz, 31KHz, 25MHz (internal clock)
+0x011A, 640 x 240, 60Hz, 31KHz, 25MHz (internal clock)
+0x001A, 640 x 480, 60Hz, 31KHz, 25MHz (internal clock)
+ 
+0x0512, 448 x 240, 60Hz, 31KHz, 32/36/38/40MHz (internal/external clock)
+0x0412, 448 x 480, 60Hz, 31KHz, 32/36/38/40MHz (internal/external clock)
+0x051A, 896 x 240, 60Hz, 31KHz, 32/36/38/40MHz (internal/external clock)
+0x041A, 896 x 480, 60Hz, 31KHz, 32/36/38/40MHz (internal/external clock)
+
+0x0912, 384 x 304, 57Hz, 35KHz, 32/36/38/40MHz (internal/external clock)
+0x0812, 384 x 608, 57Hz, 35KHz, 32/36/38/40MHz (internal/external clock)
+0x091A, 768 x 304, 57Hz, 35KHz, 32/36/38/40MHz (internal/external clock)
+0x081A, 768 x 608, 57Hz, 35KHz, 32/36/38/40MHz (internal/external clock)
+
+0x0D12, 448 x 304, 56Hz, 34KHz, 38/40MHz (internal/external clock)
+0x0C12, 448 x 608, 56Hz, 34KHz, 38/40MHz (internal/external clock)
+0x0D1A, 896 x 304, 56Hz, 34KHz, 38/40MHz (internal/external clock)
+0x0C1A, 896 x 608, 56Hz, 34KHz, 38/40MHz (internal/external clock)
+ 
+0x1112, 384 x 384, 86Hz, 34KHz, 32/36/38/40MHz (internal/external clock, interlaced)
+0x1012, 384 x 768, 86Hz, 34KHz, 32/36/38/40MHz (internal/external clock, interlaced)
+0x111A, 768 x 384, 86Hz, 34KHz, 32/36/38/40MHz (internal/external clock, interlaced)
+0x101A, 768 x 768, 86Hz, 34KHz, 32/36/38/40MHz (internal/external clock, interlaced)     
+0x1112, 384 x 384, 60Hz, 49KHz, 50MHz (internal clock, not interlaced)
+0x1012, 384 x 768, 60Hz, 49KHz, 50MHz (internal clock, not interlaced)
+0x111A, 768 x 384, 60Hz, 49KHz, 50MHz (internal clock, not interlaced)
+0x101A, 768 x 768, 60Hz, 49KHz, 50MHz (internal clock, not interlaced) 
+ 
+0x1512, 448 x 384, 87Hz, 34KHz, 38/40MHz (internal/external clock, interlaced)
+0x1412, 448 x 768, 87Hz, 34KHz, 38/40MHz (internal/external clock, interlaced)
+0x151A, 896 x 384, 87Hz, 34KHz, 38/40MHz (internal/external clock, interlaced)
+0x141A, 896 x 768, 87Hz, 34KHz, 38/40MHz (internal/external clock, interlaced)
+0x1512, 448 x 384, 54Hz, 44KHz, 50MHz (internal clock, not interlaced)
+0x1412, 448 x 768, 54Hz, 44KHz, 50MHz (internal clock, not interlaced)
+0x151A, 896 x 384, 54Hz, 44KHz, 50MHz (internal clock, not interlaced)
+0x141A, 896 x 768, 54Hz, 44KHz, 50MHz (internal clock, not interlaced)
+ 
+0x1912, 512 x 384, 78Hz, 31KHz, 38/40MHz (internal/external clock, interlaced)
+0x1812, 512 x 768, 78Hz, 31KHz, 38/40MHz (internal/external clock, interlaced)
+0x191A,1024 x 384, 78Hz, 31KHz, 38/40MHz (internal/external clock, interlaced)
+0x181A,1024 x 768, 78Hz, 31KHz, 38/40MHz (internal/external clock, interlaced)
+Experimental because limitations with ST-RAM bandwidth, 256 colors not works, 16 colors normally:
+0x1912, 512 x 384, 56Hz, 46KHz, 60MHz (external clock, not interlaced, internal clock 50 MHz)
+0x1812, 512 x 768, 56Hz, 46KHz, 60MHz (external clock, not interlaced, internal clock 50 MHz)
+0x191A,1024 x 384, 56Hz, 46KHz, 60MHz (external clock, not interlaced, internal clock 50 MHz)
+0x181A,1024 x 768, 56Hz, 46KHz, 60MHz (external clock, not interlaced, internal clock 50 MHz)
+
+For example, with -V 0x141A (hex format), you get 896 x 768 16 colors:
+BPS=2, COL80, VGA_FALCON, HORFLAG2, ULTRA_VGA
+
+-s -d -r root.bin -V 0x141A -k vmlinux root=/dev/hda9 video=atafb:keep devfs=nomount
+
+You must use COL80 with 2 colors.
+It's not possible to use 65K colors with COL80.
+
+Disclaimer 
+----------
+THIS FEATURE COMES WITH ABSOLUTELY NO WARRANTY!
+IT MIGHT EASILY DAMAGE YOUR SVGA MONITOR!
+IF YOU RUN IT, YOU DO SO AT YOUR OWN RISK!
+ELSE NOT USE -V.
+

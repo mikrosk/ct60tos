@@ -99,6 +99,7 @@ GENTOS_OBJS=	\
 		$(OBJDIR)/ct60tos/debug2.o \
 		\
 		$(OBJDIR)/ct60tos/ataboot.o \
+		$(OBJDIR)/ct60tos/extvidel.o \
 		\
 		$(OBJDIR)/ct60tos/magxboot.o \
 		\
