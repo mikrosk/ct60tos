@@ -14,3 +14,11 @@
 - Add test inside Pexec for start programs packed by Ice without 
 crashes (file gemdos2.S).
 
+2003-07-01 0.98c
+----------------
+- Value of the '_FPU' cookie changed to 0x00100000 like MiNT (file 
+cookie.S).
+- Flash parameters in 0xFFEF0000 (was 0x00EF0000 before, file 
+xbios.S).
+ 
+

@@ -1,5 +1,5 @@
 /* Flashing CT60 soft & hard
-*  Didier Mequignon 2003 March, e-mail: didier-mequignon@wanadoo.fr
+*  Didier Mequignon 2003 July, e-mail: didier-mequignon@wanadoo.fr
 *
 *  This program is free software; you can redistribute it and/or modify
 *  it under the terms of the GNU General Public License as published by

@@ -46,7 +46,8 @@ begin2:
 	clr.l	(a0)+
 	bra.s	begin2-0x46A+0x4C2
 full:
-	moveq.l	#10,d0
+	moveq.l	#0x10,d0
+	swap	d0
 	move.l	d0,(a0)+
 	bra.s	begin2-0x46A+0x4C2
 end2:

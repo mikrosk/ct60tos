@@ -1,5 +1,5 @@
 /* CT60 CONFiguration - Pure C */
-/* Didier MEQUIGNON - v0.98 - D‚cember 2002 */
+/* Didier MEQUIGNON - v0.98c - June 2003 */
 
 #include <portab.h>
 #include <tos.h>
@@ -69,7 +69,8 @@ typedef struct
 	unsigned int trigger_temp;
 	unsigned int daystop;
 	unsigned int timestop;
-	unsigned char blitterspeed;	
+	unsigned char blitterspeed;
+	unsigned char idedelay;
 } HEAD;
 
 typedef struct
@@ -235,7 +236,7 @@ USERBLK spec_trace={0,0};
 USERBLK spec_cpuload={0,0};
 int ed_objc,new_objc,ed_pos,new_pos;
 int start_lang,flag_bubble,selection;
-int language,keyboard,datetime,vmode,bootpref,bootdelay,scsi,tosram,blitterspeed;
+int language,keyboard,datetime,vmode,bootpref,bootdelay,scsi,tosram,blitterspeed,idedelay;
 unsigned int trigger_temp,daystop,timestop;
 char *buffer_bubble=0;
 char *buffer_path=0;
@@ -280,17 +281,18 @@ unsigned short tab_temp[61],tab_temp_eiffel[61],tab_cpuload[61];
 #define MENUDELAY 60
 #define MENUBBLITTER 62
 #define MENUBTOSRAM 64 
-#define MENUBOOT 65
-#define MENUBOXSTOP 66
-#define MENUBDAY 68
-#define MENUTIME 69
-#define MENUSTOP 70
+#define MENUBIDE 66
+#define MENUBOOT 67
+#define MENUBOXSTOP 68
+#define MENUBDAY 70
+#define MENUTIME 71
+#define MENUSTOP 72
 
-#define MENUBSAVE 71
-#define MENUBLOAD 72
-#define MENUBOK 73
-#define MENUBCANCEL 74
-#define MENUBINFO 75
+#define MENUBSAVE 73
+#define MENUBLOAD 74
+#define MENUBOK 75
+#define MENUBCANCEL 76
+#define MENUBINFO 77
 
 #define INFOBOX 0
 #define INFOLOGO 1
@@ -368,8 +370,10 @@ char *rs_strings[] = {
 	"10","D‚lais: __ S","99",
 	"Blitter:",
 	"Lent","","",
-	"Transfert TOS en RAM:",
+	"TOS en RAM:",
 	"Non","","",
+	"IDE:",
+	"Lent","","",
 	" Arrˆt ","","",
 	"Arrˆt programm‚:",
 	"Sans","","",
@@ -380,7 +384,7 @@ char *rs_strings[] = {
 	"OK",
 	"Annule",
 	
-	"CT60 Configuration V0.98 D‚cembre 2002","","",
+	"CT60 Configuration V0.98c Juin 2003","","",
 	"Ce CPX et systŠme:","","",
 	"Didier MEQUIGNON","","",
 	"didier-mequignon@wanadoo.fr","","",
@@ -461,8 +465,10 @@ char *rs_strings_en[] = {
 	"10","Delay: __ S","99",
 	"Blitter:",
 	"Slow","","",
-	"Transfer TOS in RAM:",
+	"TOS in RAM:",
 	"No","","",
+	"IDE:",
+	"Slow","","",
 	" Stop ","","",
 	"Stop programmed:",
 	"Without","","",
@@ -473,7 +479,7 @@ char *rs_strings_en[] = {
 	"OK",
 	"Cancel",
 
-	"CT60 Configuration V0.98 December 2002","","",
+	"CT60 Configuration V0.98c June 2003","","",
 	"This CPX and system:","","",
 	"Didier MEQUIGNON","","",
 	"didier-mequignon@wanadoo.fr","","",
@@ -544,28 +550,29 @@ TEDINFO rs_tedinfo[] = {
 	(char *)105L,(char *)106L,(char *)107L,IBM,0,0,0x1180,0,0,3,13,
 	(char *)109L,(char *)110L,(char *)111L,IBM,0,2,0x1180,0,-1,7,1,
 	(char *)113L,(char *)114L,(char *)115L,IBM,0,2,0x1180,0,-1,4,1,
-	(char *)116L,(char *)117L,(char *)118L,IBM,0,2,0x1180,0,0,14,1,
-	(char *)120L,(char *)121L,(char *)122L,IBM,0,2,0x1180,0,-1,16,1,
-	(char *)123L,(char *)124L,(char *)125L,IBM,0,0,0x1180,0,0,5,10,
+	(char *)117L,(char *)118L,(char *)119L,IBM,0,2,0x1180,0,-1,7,1,
+	(char *)120L,(char *)121L,(char *)122L,IBM,0,2,0x1180,0,0,14,1,
+	(char *)124L,(char *)125L,(char *)126L,IBM,0,2,0x1180,0,-1,16,1,
+	(char *)127L,(char *)128L,(char *)129L,IBM,0,0,0x1180,0,0,5,10,
 
-	(char *)130L,(char *)131L,(char *)132L,IBM,0,2,0x1480,0,0,38,1,
-	(char *)133L,(char *)134L,(char *)135L,IBM,0,2,0x1180,0,0,38,1,
-	(char *)136L,(char *)137L,(char *)138L,IBM,0,2,0x1180,0,0,38,1,
-	(char *)139L,(char *)140L,(char *)141L,IBM,0,2,0x1180,0,0,38,1,
-	(char *)142L,(char *)143L,(char *)144L,IBM,0,2,0x1180,0,0,38,1,
-	(char *)145L,(char *)146L,(char *)147L,IBM,0,2,0x1180,0,0,38,1,
-	(char *)148L,(char *)149L,(char *)150L,IBM,0,2,0x1180,0,0,38,1,
-	(char *)151L,(char *)152L,(char *)153L,IBM,0,2,0x1180,0,0,38,1,
-	(char *)154L,(char *)155L,(char *)156L,IBM,0,2,0x1180,0,0,38,1,
-	(char *)157L,(char *)158L,(char *)159L,IBM,0,2,0x1180,0,0,38,1,
-	(char *)160L,(char *)161L,(char *)162L,IBM,0,2,0x1180,0,0,38,1,
+	(char *)134L,(char *)135L,(char *)136L,IBM,0,2,0x1480,0,0,38,1,
+	(char *)137L,(char *)138L,(char *)139L,IBM,0,2,0x1180,0,0,38,1,
+	(char *)140L,(char *)141L,(char *)142L,IBM,0,2,0x1180,0,0,38,1,
+	(char *)143L,(char *)144L,(char *)145L,IBM,0,2,0x1180,0,0,38,1,
+	(char *)146L,(char *)147L,(char *)148L,IBM,0,2,0x1180,0,0,38,1,
+	(char *)149L,(char *)150L,(char *)151L,IBM,0,2,0x1180,0,0,38,1,
+	(char *)152L,(char *)153L,(char *)154L,IBM,0,2,0x1180,0,0,38,1,
+	(char *)155L,(char *)156L,(char *)157L,IBM,0,2,0x1180,0,0,38,1,
+	(char *)158L,(char *)159L,(char *)160L,IBM,0,2,0x1180,0,0,38,1,
+	(char *)161L,(char *)162L,(char *)163L,IBM,0,2,0x1180,0,0,38,1,
+	(char *)164L,(char *)165L,(char *)166L,IBM,0,2,0x1180,0,0,38,1,
 
-	(char *)165L,(char *)166L,(char *)167L,IBM,0,2,0x1480,0,-1,17,1,
+	(char *)169L,(char *)170L,(char *)171L,IBM,0,2,0x1480,0,-1,17,1,
 	
-	(char *)176L,(char *)177L,(char *)178L,IBM,0,0,0x1180,0,0,4,32 };
+	(char *)180L,(char *)181L,(char *)182L,IBM,0,0,0x1180,0,0,4,32 };
 	
 OBJECT rs_object[] = {
-	-1,1,75,G_BOX,FL3DBAK,NORMAL,0x1100L,0,0,32,11,
+	-1,1,77,G_BOX,FL3DBAK,NORMAL,0x1100L,0,0,32,11,
 	2,-1,-1,G_TEXT,FL3DBAK,SELECTED,0L,0,0,32,1,
 	3,-1,-1,G_STRING,NONE,NORMAL,3L,1,1,14,1,
 	4,-1,-1,G_BOXTEXT,TOUCHEXIT,SHADOWED,1L,16,1,15,1,								/* popup selection */
@@ -618,7 +625,7 @@ OBJECT rs_object[] = {
 	51,-1,-1,G_BUTTON,SELECTABLE|TOUCHEXIT|FL3DIND,NORMAL,88L,1,5,14,1,
 	41,-1,-1,G_BUTTON,SELECTABLE|TOUCHEXIT|FL3DIND,NORMAL,89L,16,5,15,1,
 	53,-1,-1,G_TEXT,FL3DBAK,NORMAL,19L,1,2,14,1,
-	65,54,64,G_BOX,FL3DIND,NORMAL,0xff1100L,0,2,32,6,								/* boot box */
+	67,54,66,G_BOX,FL3DIND,NORMAL,0xff1100L,0,2,32,6,								/* boot box */
 	55,-1,-1,G_STRING,NONE,NORMAL,93L,1,1,15,1,
 	56,-1,-1,G_BOXTEXT,TOUCHEXIT,SHADOWED,25L,16,1,15,1,							/* popup favouritee OS */
 	57,-1,-1,G_STRING,NONE,NORMAL,97L,1,2,17,1,
@@ -628,60 +635,62 @@ OBJECT rs_object[] = {
 	61,-1,-1,G_FTEXT,EDITABLE|FL3DBAK,NORMAL,28L,1,3,13,1,
 	62,-1,-1,G_STRING,NONE,NORMAL,108L,15,3,8,1,
 	63,-1,-1,G_BOXTEXT,TOUCHEXIT,SHADOWED,29L,24,3,6,1,								/* popup speed blitter */
-	64,-1,-1,G_STRING,NONE,NORMAL,112L,1,5,23,1,
-	53,-1,-1,G_BOXTEXT,TOUCHEXIT,SHADOWED,30L,24,5,4,1,								/* popup transfer TOS in RAM */
-	66,-1,-1,G_TEXT,FL3DBAK,NORMAL,24L,1,2,6,1,
-	70,67,69,G_BOX,FL3DIND,NORMAL,0xff1100L,0,2,32,6,								/* stop box */
-	68,-1,-1,G_STRING,NONE,NORMAL,119L,1,1,15,1,
-	69,-1,-1,G_BOXTEXT,TOUCHEXIT,SHADOWED,32L,16,1,15,1,							/* popup stop */
-	66,-1,-1,G_FTEXT,EDITABLE|FL3DBAK,NORMAL,33L,1,3,13,1,							/* time */
-	71,-1,-1,G_TEXT,FL3DBAK,NORMAL,31L,1,2,6,1,
+	64,-1,-1,G_STRING,NONE,NORMAL,112L,1,5,11,1,
+	65,-1,-1,G_BOXTEXT,TOUCHEXIT,SHADOWED,30L,12,5,4,1,								/* popup transfer TOS in RAM */
+	66,-1,-1,G_STRING,HIDETREE,NORMAL,116L,19,5,4,1,
+	53,-1,-1,G_BOXTEXT,HIDETREE,SHADOWED,31L,24,5,6,1,								/* popup IDE delay */
+	68,-1,-1,G_TEXT,FL3DBAK,NORMAL,24L,1,2,6,1,
+	72,69,71,G_BOX,FL3DIND,NORMAL,0xff1100L,0,2,32,6,								/* stop box */
+	70,-1,-1,G_STRING,NONE,NORMAL,123L,1,1,15,1,
+	71,-1,-1,G_BOXTEXT,TOUCHEXIT,SHADOWED,33L,16,1,15,1,							/* popup stop */
+	68,-1,-1,G_FTEXT,EDITABLE|FL3DBAK,NORMAL,34L,1,3,13,1,							/* time */
+	73,-1,-1,G_TEXT,FL3DBAK,NORMAL,32L,1,2,6,1,
 
-	72,-1,-1,G_BUTTON,SELECTABLE|EXIT|FL3DIND|FL3DBAK,NORMAL,126L,1,9,5,1,			/* Save */
-	73,-1,-1,G_BUTTON,SELECTABLE|EXIT|FL3DIND|FL3DBAK,NORMAL,127L,8,9,6,1,			/* Load */
-	74,-1,-1,G_BUTTON,SELECTABLE|EXIT|FL3DIND|FL3DBAK,NORMAL,128L,16,9,3,1,			/* OK */
-	75,-1,-1,G_BUTTON,SELECTABLE|DEFAULT|EXIT|FL3DIND|FL3DBAK,NORMAL,129L,21,9,6,1,	/* Cancel */
+	74,-1,-1,G_BUTTON,SELECTABLE|EXIT|FL3DIND|FL3DBAK,NORMAL,130L,1,9,5,1,			/* Save */
+	75,-1,-1,G_BUTTON,SELECTABLE|EXIT|FL3DIND|FL3DBAK,NORMAL,131L,8,9,6,1,			/* Load */
+	76,-1,-1,G_BUTTON,SELECTABLE|EXIT|FL3DIND|FL3DBAK,NORMAL,132L,16,9,3,1,			/* OK */
+	77,-1,-1,G_BUTTON,SELECTABLE|DEFAULT|EXIT|FL3DIND|FL3DBAK,NORMAL,133L,21,9,6,1,	/* Cancel */
 	0,-1,-1,G_BOXCHAR,SELECTABLE|EXIT|LASTOB|FL3DIND|FL3DBAK,NORMAL,0x69ff1100L,29,9,2,1,	/* i */
 
 	/* info box */
 	-1,1,14,G_BOX,FL3DBAK,OUTLINED,0x21100L,0,0,40,24,
 	2,-1,-1,G_IMAGE,NONE,NORMAL,0L,2,1,36,5,
-	3,-1,-1,G_TEXT,FL3DBAK,NORMAL,34L,1,7,38,1,
-	4,-1,-1,G_TEXT,FL3DBAK,NORMAL,35L,1,9,38,1,
-	5,-1,-1,G_TEXT,FL3DBAK,NORMAL,36L,1,10,38,1,
-	6,-1,-1,G_TEXT,FL3DBAK,NORMAL,37L,1,11,38,1,
-	7,-1,-1,G_TEXT,FL3DBAK,NORMAL,38L,1,13,38,1,
-	8,-1,-1,G_TEXT,FL3DBAK,NORMAL,39L,1,14,38,1,
-	9,-1,-1,G_TEXT,FL3DBAK,NORMAL,40L,1,15,38,1,
-	10,-1,-1,G_TEXT,FL3DBAK,NORMAL,41L,1,17,38,1,
-	11,-1,-1,G_TEXT,FL3DBAK,NORMAL,42L,1,18,38,1,
-	12,-1,-1,G_TEXT,FL3DBAK,NORMAL,43L,1,19,38,1,
-	13,-1,-1,G_TEXT,FL3DBAK,NORMAL,44L,1,20,38,1,
-	14,-1,-1,G_BUTTON,SELECTABLE|DEFAULT|EXIT|FL3DIND|FL3DBAK,NORMAL,163L,8,22,8,1,	/* OK */		
-	0,-1,-1,G_BUTTON,SELECTABLE|EXIT|LASTOB|FL3DIND|FL3DBAK,NORMAL,164L,24,22,8,1,	/* Help */	
+	3,-1,-1,G_TEXT,FL3DBAK,NORMAL,35L,1,7,38,1,
+	4,-1,-1,G_TEXT,FL3DBAK,NORMAL,36L,1,9,38,1,
+	5,-1,-1,G_TEXT,FL3DBAK,NORMAL,37L,1,10,38,1,
+	6,-1,-1,G_TEXT,FL3DBAK,NORMAL,38L,1,11,38,1,
+	7,-1,-1,G_TEXT,FL3DBAK,NORMAL,39L,1,13,38,1,
+	8,-1,-1,G_TEXT,FL3DBAK,NORMAL,40L,1,14,38,1,
+	9,-1,-1,G_TEXT,FL3DBAK,NORMAL,41L,1,15,38,1,
+	10,-1,-1,G_TEXT,FL3DBAK,NORMAL,42L,1,17,38,1,
+	11,-1,-1,G_TEXT,FL3DBAK,NORMAL,43L,1,18,38,1,
+	12,-1,-1,G_TEXT,FL3DBAK,NORMAL,44L,1,19,38,1,
+	13,-1,-1,G_TEXT,FL3DBAK,NORMAL,45L,1,20,38,1,
+	14,-1,-1,G_BUTTON,SELECTABLE|DEFAULT|EXIT|FL3DIND|FL3DBAK,NORMAL,167L,8,22,8,1,	/* OK */		
+	0,-1,-1,G_BUTTON,SELECTABLE|EXIT|LASTOB|FL3DIND|FL3DBAK,NORMAL,168L,24,22,8,1,	/* Help */	
 
 	/* alert box */
 	-1,1,12,G_BOX,FL3DBAK,OUTLINED,0x21100L,0,0,42,10,
-	2,-1,-1,G_BOXTEXT,FL3DIND,NORMAL,45L,0,0,42,1,
+	2,-1,-1,G_BOXTEXT,FL3DIND,NORMAL,46L,0,0,42,1,
 	3,-1,-1,G_IMAGE,NONE,NORMAL,1L,1,2,4,2,
 	4,-1,-1,G_IMAGE,NONE,NORMAL,2L,1,2,4,2,
 	5,-1,-1,G_IMAGE,NONE,NORMAL,3L,1,2,4,2,
-	6,-1,-1,G_STRING,NONE,NORMAL,168L,1,2,40,1,
-	7,-1,-1,G_STRING,NONE,NORMAL,169L,1,3,40,1,
-	8,-1,-1,G_STRING,NONE,NORMAL,170L,1,4,40,1,
-	9,-1,-1,G_STRING,NONE,NORMAL,171L,1,5,40,1,
-	10,-1,-1,G_STRING,NONE,NORMAL,172L,1,6,40,1,
-	11,-1,-1,G_BUTTON,SELECTABLE|DEFAULT|EXIT|FL3DIND|FL3DBAK,NORMAL,173L,1,8,10,1,
-	12,-1,-1,G_BUTTON,SELECTABLE|EXIT|FL3DIND|FL3DBAK,NORMAL,174L,12,8,10,1,
-	0,-1,-1,G_BUTTON,SELECTABLE|EXIT|LASTOB|FL3DIND|FL3DBAK,NORMAL,175L,23,8,10,1,
+	6,-1,-1,G_STRING,NONE,NORMAL,172L,1,2,40,1,
+	7,-1,-1,G_STRING,NONE,NORMAL,173L,1,3,40,1,
+	8,-1,-1,G_STRING,NONE,NORMAL,174L,1,4,40,1,
+	9,-1,-1,G_STRING,NONE,NORMAL,175L,1,5,40,1,
+	10,-1,-1,G_STRING,NONE,NORMAL,176L,1,6,40,1,
+	11,-1,-1,G_BUTTON,SELECTABLE|DEFAULT|EXIT|FL3DIND|FL3DBAK,NORMAL,177L,1,8,10,1,
+	12,-1,-1,G_BUTTON,SELECTABLE|EXIT|FL3DIND|FL3DBAK,NORMAL,178L,12,8,10,1,
+	0,-1,-1,G_BUTTON,SELECTABLE|EXIT|LASTOB|FL3DIND|FL3DBAK,NORMAL,179L,23,8,10,1,
 
 	/* TLV offset */
 	-1,1,3,G_BOX,FL3DBAK,OUTLINED,0x21100L,0,0,33,5,
-	2,-1,-1,G_FTEXT,EDITABLE|FL3DBAK,NORMAL,46L,1,1,31,1,
-	3,-1,-1,G_BUTTON,SELECTABLE|EXIT|FL3DIND|FL3DBAK,NORMAL,179L,7,3,6,1,					/* OK */
-	0,-1,-1,G_BUTTON,SELECTABLE|DEFAULT|EXIT|LASTOB|FL3DIND|FL3DBAK,NORMAL,180L,20,3,6,1 };	/* Cancel */
+	2,-1,-1,G_FTEXT,EDITABLE|FL3DBAK,NORMAL,47L,1,1,31,1,
+	3,-1,-1,G_BUTTON,SELECTABLE|EXIT|FL3DIND|FL3DBAK,NORMAL,183L,7,3,6,1,					/* OK */
+	0,-1,-1,G_BUTTON,SELECTABLE|DEFAULT|EXIT|LASTOB|FL3DIND|FL3DBAK,NORMAL,184L,20,3,6,1 };	/* Cancel */
 
-long rs_trindex[] = {0L,76L,91L,104L};
+long rs_trindex[] = {0L,78L,93L,106L};
 struct foobar {
 	int dummy;
 	int *image;
@@ -800,14 +809,14 @@ UWORD pic_stop[]={
 	0x37FF,0xFFEC,0x1BFF,0xFFD8,0x0DFF,0xFFB0,0x06FF,0xFF60,
 	0x037F,0xFEC0,0x01BF,0xFD80,0x00C0,0x0300,0x007F,0xFE00 };
 
-#define NUM_STRINGS 181	/* number of strings */
+#define NUM_STRINGS 185	/* number of strings */
 #define NUM_FRSTR 0		/* strings form_alert */
 #define NUM_IMAGES 0
 #define NUM_BB 4		/* number of BITBLK */
 #define NUM_FRIMG 0
 #define NUM_IB 0		/* number of ICONBLK */
-#define NUM_TI 47		/* number of TEDINFO */
-#define NUM_OBS 108		/* number of objects */
+#define NUM_TI 48		/* number of TEDINFO */
+#define NUM_OBS 110		/* number of objects */
 #define NUM_TREE 4		/* number of trees */ 
 
 #define TREE1 0
@@ -817,10 +826,10 @@ UWORD pic_stop[]={
 
 #ifndef LIGHT
 #define MAX_SELECT 7
-#define NB_BUB 37
+#define NB_BUB 38
 #else
 #define MAX_SELECT 5
-#define NB_BUB 37-11
+#define NB_BUB 38-11
 #endif
 
 #define USA 0
@@ -882,6 +891,8 @@ char *spec_blitter_speed[2][2]={"Lent","Rapide","Slow","Fast"};
 char *blitter_speed[2][2]={"  Lent   ","  Rapide ","  Slow ","  Fast "};
 char *spec_tos_ram[2][2]={"Non","Oui","No","Yes"};
 char *tos_ram[2][2]={"  Non ","  Oui ","  No  ","  Yes "};
+char *spec_ide_delay[2][2]={"Rapide","Lent","Fast","Slow"};
+char *ide_delay[2][2]={"  Rapide ","  Lent   ","  Fast ","  Slow "};
 char *spec_day_stop[2][11]={"Sans","Lundi","Mardi","Mercredi","Jeudi","Vendredi","Samedi","Dimanche","Jours ouvr‚s","Fin de semaine","Chaque jour",
                             "Without","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday","Workday","Week-end","Every day"};
 char *day_stop[2][11]={"  Sans           ","  Lundi          ","  Mardi          ","  Mercredi       ","  Jeudi          ","  Vendredi       ",
@@ -991,6 +1002,9 @@ struct bubblegem bubbletab[NB_BUB] = {
 	{MENUBTOSRAM,
 	"Transfert du TOS 4.0x en RAM|avec utilisation de la PMMU",
 	"Transfer of TOS 4.0x in RAM|with using of the PMMU"},
+	{MENUBIDE,
+	"Change la vitesse des|accŠs aux disques IDE",
+	"Change the speed of|the IDE drives access"},
 	{MENUBDAY,
 	"S‚l‚ctionne le mode|d'extinction programm‚e|aprŠs une proc‚dure shutdown",
 	"Select the mode of|the stop programmed|after a shutdown procedure"},
@@ -1310,18 +1324,22 @@ int CDECL cpx_call(GRECT *work)
 	{
 		tosram=(int)ct60_rw_parameter(CT60_MODE_READ,CT60_PARAM_TOSRAM,0L)&1;
 		blitterspeed=(int)ct60_rw_parameter(CT60_MODE_READ,CT60_BLITTER_SPEED,0L)&1;
+/*		idedelay=(int)ct60_rw_parameter(CT60_MODE_READ,CT60_IDE_DELAY,0L)&1; */
 	}
 	else
 	{
 		stack=Super(0L);
 		tosram=(int)ct60_rw_param(CT60_MODE_READ,CT60_PARAM_TOSRAM,0L)&1;
 		blitterspeed=(int)ct60_rw_param(CT60_MODE_READ,CT60_BLITTER_SPEED,0L)&1;
+/*		idedelay=(int)ct60_rw_param(CT60_MODE_READ,CT60_IDE_DELAY,0L)&1; */
 		Super((void *)stack);
 	}
 	t_edinfo=rs_object[MENUBBLITTER].ob_spec.tedinfo;
 	t_edinfo->te_ptext=spec_blitter_speed[start_lang][blitterspeed];
 	t_edinfo=rs_object[MENUBTOSRAM].ob_spec.tedinfo;
 	t_edinfo->te_ptext=spec_tos_ram[start_lang][tosram];
+	t_edinfo=rs_object[MENUBIDE].ob_spec.tedinfo;
+	t_edinfo->te_ptext=spec_ide_delay[start_lang][idedelay];
     ed_pos=ed_objc=0;
 	Work=work;
 	t_edinfo=rs_object[MENUBSELECT].ob_spec.tedinfo;
@@ -2032,6 +2050,19 @@ void CDECL cpx_button(MRETS *mrets,int nclicks,int *event)
 					tosram=ret;
 				}
 				break;
+			case MENUBIDE:
+				objc_offset(rs_object,MENUBIDE,&menu.g_x,&menu.g_y);
+				menu.g_w=rs_object[MENUBIDE].ob_width;
+				menu.g_h=rs_object[MENUBIDE].ob_height;
+				ret=(*Xcpb->Popup)(ide_delay[start_lang],2,idedelay,IBM,&menu,Work);
+				if(ret>=0 && ret!=idedelay)
+				{
+					t_edinfo=rs_object[MENUBIDE].ob_spec.tedinfo;
+					t_edinfo->te_ptext=spec_ide_delay[start_lang][ret];
+					display_objc(MENUBIDE,Work);				
+					idedelay=ret;
+				}
+				break;
 			case MENUBDAY:
 				objc_offset(rs_object,MENUBDAY,&menu.g_x,&menu.g_y);
 				menu.g_w=rs_object[MENUBDAY].ob_width;
@@ -2059,6 +2090,7 @@ void CDECL cpx_button(MRETS *mrets,int nclicks,int *event)
 				header->bootdelay=(unsigned char)atoi(t_edinfo->te_ptext);
 				header->blitterspeed=(unsigned char)blitterspeed;
 				header->tosram=(unsigned char)tosram;
+				header->idedelay=(unsigned char)idedelay;
 				t_edinfo=rs_object[MENUTRIGGER].ob_spec.tedinfo;
 				header->trigger_temp=(unsigned int)atoi(t_edinfo->te_ptext);
 				header->daystop=daystop;
@@ -2160,6 +2192,9 @@ void CDECL cpx_button(MRETS *mrets,int nclicks,int *event)
 					tosram=(int)header->tosram;
 					t_edinfo=rs_object[MENUBTOSRAM].ob_spec.tedinfo;
 					t_edinfo->te_ptext=spec_tos_ram[start_lang][tosram];
+					idedelay=(int)header->idedelay;
+					t_edinfo=rs_object[MENUBIDE].ob_spec.tedinfo;
+					t_edinfo->te_ptext=spec_ide_delay[start_lang][idedelay];
 					trigger_temp=header->trigger_temp;
 					if(trigger_temp==0)
 						trigger_temp=(MAX_TEMP*3)/4;
@@ -2201,17 +2236,19 @@ void CDECL cpx_button(MRETS *mrets,int nclicks,int *event)
 				{
 					tosram=ct60_rw_parameter(CT60_MODE_WRITE,CT60_PARAM_TOSRAM,(long)tosram);
 					blitterspeed=ct60_rw_parameter(CT60_MODE_WRITE,CT60_BLITTER_SPEED,(long)blitterspeed);
+/*					idedelay=ct60_rw_parameter(CT60_MODE_WRITE,CT60_IDE_DELAY,(long)idedelay); */
 				}
 				else
 				{
 					stack=Super(0L);
 					tosram=ct60_rw_param(CT60_MODE_WRITE,CT60_PARAM_TOSRAM,(long)tosram);
 					blitterspeed=ct60_rw_param(CT60_MODE_WRITE,CT60_BLITTER_SPEED,(long)blitterspeed);
+/*					idedelay=ct60_rw_param(CT60_MODE_WRITE,CT60_IDE_DELAY,(long)idedelay); */
 					Super((void *)stack);
 				}
-				if(tosram<0 || blitterspeed<0)
+				if(tosram<0 || blitterspeed<0 || idedelay<0)
 				{
-					if(tosram==-15 || blitterspeed==-15)   /* error device */
+					if(tosram==-15 || blitterspeed==-15 || idedelay==-15)   /* error device */
 					{
 						if(!start_lang)
 							form_alert(1,"[1][Type de flash|inconnu !][OK]");
@@ -2606,7 +2643,7 @@ HEAD *fix_header(void)
 	 && header->datetime==0 && header->separator==0 && header->bootdelay==0
 	 && header->vmode==0 && header->scsi==0 && header->tosram==0
 	 && header->trigger_temp==0 && header->daystop==0 && header->timestop==0
-	 && header->blitterspeed==0)
+	 && header->blitterspeed==0 && header->idedelay==0)
 		*header=config;	/* buffer of header is always to 0 with ZCONTROL */
 	return(header);
 }

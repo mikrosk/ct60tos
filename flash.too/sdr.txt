@@ -1,0 +1,3 @@
+SDR60V4D.JED works at 72 MHz not SDR60V4F.JED (good at 66,66 MHz 
+only), but SDR60V4F.JED is faster.
+

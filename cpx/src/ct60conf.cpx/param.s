@@ -19,7 +19,7 @@
 ;  To contact author write to Xavier Joubert, 5 Cour aux Chais, 44 100 Nantes,
 ;  FRANCE or by e-mail to xavier.joubert@free.fr.
 
-FLASH_ADR equ $E00000
+FLASH_ADR equ $FFE00000; under 060 write moves.w in ALT3 cpu space works only at $FFExxxxx 
 FLASH_SIZE equ $100000
 PARAM_SIZE equ (64*1024)
 
@@ -74,6 +74,9 @@ ct60_rw_param: ; D0.W: mode, D1.L: type_param, D2.L: value
 	moveq #0,D6
 	cmp.w #60,0x59E
 	beq.s .find_last_block_060
+	move.l A2,D7
+	and.l #$FFFFFF,D7
+	move.l D7,A2
 .find_last_block:
 		moves.l (A2),D7
 		cmp.l D7,D3

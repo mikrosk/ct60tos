@@ -4,7 +4,7 @@
 !title   Documentation de la
 !programimage ..\img\ct60.img
 !program CT60
-!version Version 0.98b
+!version Version 0.98c
 !date    (!today)
 !author  Didier MEQUIGNON
 !street  25, rue de l'Ascenseur
@@ -473,9 +473,7 @@ CPLD).
 !begin_itemize
 
 !item Vous avez besoin de fabriquer un cable pour le connecteur JTAG CT60 
-en liaison avec le port //, regardez 'Cable JTAG/parallŠle'. Vous devez 
-remplacer le signal SELECT/ pin 13 sur le port // par le signal ACK/ pin 
-10.
+en liaison avec le port //, regardez 'Cable JTAG/parallŠle'. 
 
 !item Normallement le cable doit ˆtre attach‚ et mis sous tension (par la 
 CT60) pour une propre verification. Seulement le composant SDR60 peut  
@@ -531,10 +529,6 @@ Pin Carte !! Signal   !! Commentaire
 
 
 !subnode Cable JTAG/parallŠle
-
-Vous devez remplacer le signal SELECT/ pin 13 sur le port // par le 
-signal ACK/ pin 10. Sur le port // du Falcon, les pins 12, 13, 15 ne 
-sont pas connect‚s. 
 
 !image ..\img\schema.img
 !begin_verbatim
@@ -937,7 +931,7 @@ Xcontrol         !! Plante            !! Utiliser la version patch‚e.
 !node CT60 HARDWARE GUIDE (Anglais)
 
 (!B)
-Rev 4.0  October 2000 / May 2003
+Rev 5.0  October 2000 / June 2003
 (c) Rodolphe Czuba
 (!b)
 
@@ -1007,15 +1001,6 @@ TH THCS   $F1000000 THermal sensor of the 060
 SDCNF     $F2000000 SDram CoNFiguration
 
 IVR       $F3000000 Int Vector Register
-
-RES       $F4000000 Reserved
-
-RES       $F5000000 Reserved
-
-RES       $F6000000 Reserved
-
-SVDL SVDL $F7000000 Super ViDeL ON / F030 Videl Unvisible.
-     SBLT $F7800000 Super BLiTter ON / F030 Blitter Unvisible.
 !end_verbatim
 
 (!B)
@@ -1028,8 +1013,6 @@ ULAR      $F8000000 UNlocked ARbiter
 FWEN      $F9000000 Flash Write ENable  (only from the 060/PPC)
 
 SLP       $FA000000 Sleep = Turn OFF the ATX power supply.
-
-RES       $FB000000 Reserved.
 !end_verbatim
 
 
@@ -1075,20 +1058,6 @@ INTERRUPT REGISTER :
 !begin_verbatim
 IVR (Interrupt Vector Register)
  Read at $F3000000
-!end_verbatim
-
-(!U)
-060 SUPER VIDEL :
-(!u)
- 
-!begin_verbatim
-SVDL (Super ViDeL)
- Write at $F7000000 : F030 VIDEL Visible.
- Write at $F7400000 : F030 VIDEL Unvisible.
-  
-SBLT (Super BLiTter) 
- Write at $F7800000 : F030 BLITTER Visible.
- Write at $F7C00000 : F030 BLITTER Unvisible.
 !end_verbatim
 
 (!U)
@@ -1151,72 +1120,136 @@ SLP (SleeP)
 !end_verbatim
 
 
-!subnode CRITICAL TIMINGS
+!subnode 060 BUS SLOT
 
-When boosting the CT60, some critical timings must be considered !
+A 060 bus Slot is present on the CT60 for some future daughter cards like 
+the PCI adaptor or a PPC developers system. 
 
-The standard CT60 uses 7ns delay logic chips.
-
-Here are the time delay margins of ADD (ADDress) signals and TS (Transfer 
-Start) signal for -7 chips : 
-
-CLK to ADD
-
-!begin_verbatim
-060 at 66 MHz : Signal predriven :    3 (min) to  9.9 (max) ns
-                Signal from 3-state : 3 (min) to 10.4 (max) ns
-!end_verbatim
-
-ADD signals Marge  
-
-!begin_table [|l|l|] !hline
-Chip Speed !! -7ns
-!hline
-Input to clock Set Up time          !! 4.8 
-66 MHz margin (signal predriven)    !! 0.45 
-66 MHz margin (signal from 3-state) !! -0.05 
-!hline
-!end_table
-
-CLK to TS active
-
-!begin_verbatim
-060 at 66 MHz : 3 (min) to 9.5 (max) ns
-!end_verbatim
-
-TS signal Marge
-
-!begin_table [|l|l|] !hline
-Chip Speed !! -7ns
-!hline
-Input to clock Set Up time  !! 4.8
-66 MHz margin               !! 0.85 
-!hline
-!end_table
-
-
-!subsubnode CHIPS FUNCTIONNAL DIAGRAM
-
-!begin_verbatim
-      +-----------+   +-----------+    +-------+
-IN ---+    2.3    +-+-+    1.4    +----+ D   Q +---->
-      +-----------+ | +-----------+    |       |
-                    |                  |       |
-      +-----------+ |                  |       |
-CLK --+    1.5    +-----------------+--+ CLK   |
-      +-----------+ | +-----------+ |  |       |
-                    +-+    2.4    +-+  |       |
-                      +-----------+    +-------+
-Global CLK to Comb.CLK delay : 3.2 ns  Set Up time : 2.6 ns
-!end_verbatim   
-        
-Legend : First value is for -7 chip, second for -5.
+A minimal and usefull connector was choosen. It has only 100 pins (2 
+connectors of 2x25 pins) and furnishes the following signals and power 
+lines.  
 
 (!B)
-Conclusion
+Signals Groups
 (!b)
 
-There are no security margin for the CLK to ADD time at 66 MHz !
+(!U)
+ADDRESS & DATA
+(!u)
+!begin_verbatim
+A31-A0    Address Bus
+D31-D0    Data Bus
+!end_verbatim
+
+(!U)
+TRANFER CONTROL
+(!u)
+!begin_verbatim
+/TS                      Transfer Start
+R/W                      Read Write
+/BS0, BS1/, /BS2, /BS3   Byte Select
+SIZ1, SIZ0               SIZe
+TT1, TT0, TM2, TM1, TM0  Transfer Type & Transfer Modifier
+/TA                      Transfer Acknowledge
+!end_verbatim
+
+(!U)
+ARBITRATION
+(!u)
+!begin_verbatim
+/BR     Bus Request
+/BG     Bus Grant
+/BB     Bus Busy
+!end_verbatim
+
+(!U)
+INTERRUPTS
+(!u)
+!begin_verbatim
+/TEA    Transfer Error Acknowledge
+/RST    ReSeT
+/I6     Interrupt 6 : Sent by the daughter card to the CT60
+/INT    INTerrupt : Sent by CT60 to the daughter card for a PPC
+!end_verbatim
+
+(!U)
+CLOCK
+(!u)
+!begin_verbatim
+CLK     CLocK (CT60 clock : 66MHz or more)
+!end_verbatim
+
+(!U)
+POWER
+(!u)
+!begin_verbatim
+-12V, +12V   Power supplies : used by some PCI cards and the fans (+12).
++3.3V, +5V   Power supplies : used by components and processors.
+             Each pin can drive up to 6 Amperes.
+GND (9)      GrouND pins.
+!end_verbatim
+   
+(!B)
+Pinout
+(!b)
+
+(!U)
+Add Connector Data Connector
+(!u)
+!begin_verbatim
+#A1  #A2      #D1  #D2
+GND  GND      GND  GND 
++5V  /BR      TM0  +12V
+/TS  /BG      TM1  -12V
+R/W  /BB      TM2  +3.3V
+SIZ0 SIZ1     TT0  TT1
+/TA  /TEA     /BS0 /BS1
+     CLK      /BS2 /BS3
+/RST GND      /I6  /INT
+A30  A31      D0   D1
+..   ..       ..   ..
+A0   A1       D30  D31
+GND  GND      GND  GND
+#A49 #A50     #D49 #D50
+!end_verbatim 
+
+
+!subnode HARDWARE EMULATION
+
+The CT60 allows a Falcon hardware emulation.
+
+This is a time window from the start of the 060 access to the Falcon 
+addresses ($00xxxxxx and $FFxxxxxx) up to the 8 th cycle of the CLK (bus 
+and 060 clock).
+
+When the 060 inserts its addresses and TS, a counter into ABE start if the 
+address is somewhere in the Falcon address space.
+Until the counter reaches the end of the 8 th cycle, a card on the 060 
+slot bus of the CT60 can answer to terminate the access (with TA/ or TEA/ 
+or both TA/ & TEA/ for a RETRY).
+
+The time limit for the answer is the 7 th cycle because it is what is 
+needed for a SDRAM reading by a BURST of 4-1-1-1 cycles.
+This SDRAM could replace a part of the ST-RAM at the same addresses...
+
+For registers accesses, 2 or 3 cycles are needed...
+So, it's easy to implement a new chip replacing the old one of the Falcon 
+motherboard and this at the same addresses!
+
+(!U)
+Examples:
+(!u)
+!begin_verbatim
+SUPER-VIDEL chip in a FPGA with DDR memory.
+ACIA for new PS/2 ports with a CPLD/FPGA.
+ACIA MIDI with a CPLD/FPGA.
+DSP56301 replacing 56001 at same addresses !
+FPGA emulating serial & parallel port of the Falcon (Zilog 85C30 and Yamaha).
+New SDMA for Audio.
+!end_verbatim
+
+At the begining of the 8 th cycle the Falcon access continue and cannot be 
+stoped.
 
 
 !subnode THERMAL SENSOR
@@ -1624,7 +1657,7 @@ with only :
 !begin_itemize
 !item 2,1,1,1 = 5 cycles for Burst Writes. Rate is 16Bytes/6cycles = 213 
 MBytes/s (Each access in the same page). 
-!item 4,1,1,1 = 7 cycles for Burst Reads. Rate is 16Bytes/8cycles  = 166 
+!item 4,1,1,1 = 7 cycles for Burst Reads. Rate is 16Bytes/8cycles  = 152 
 MBytes/s (Each access in the same page).
 !end_itemize
 
@@ -1787,107 +1820,6 @@ INT  !! None  !! Low     !! Auto !! F030 IPLx and CT60 I6
 This interrupt is compatible with the PowerPC INT...
 
 
-!subnode 060 BUS SLOT
-
-A 060 bus Slot is present on the CT60 for some future daughter cards like 
-the PCI adaptor or a PPC developers system. 
-
-A minimal and usefull connector was choosen. It has only 100 pins (2 
-connectors of 2x25 pins) and furnishes the following signals and power 
-lines.  
-
-(!B)
-Signals Groups
-(!b)
-
-(!U)
-ADDRESS & DATA
-(!u)
-!begin_verbatim
-A31-A0    Address Bus
-D31-D0    Data Bus
-!end_verbatim
-
-(!U)
-TRANFER CONTROL
-(!u)
-!begin_verbatim
-/TS                      Transfer Start
-R/W                      Read Write
-/BS0, BS1/, /BS2, /BS3   Byte Select
-SIZ1, SIZ0               SIZe
-TT1, TT0, TM2, TM1, TM0  Transfer Type & Transfer Modifier
-/TA                      Transfer Acknowledge
-!end_verbatim
-
-(!U)
-ARBITRATION
-(!u)
-!begin_verbatim
-/BR     Bus Request
-/BG     Bus Grant
-/BB     Bus Busy
-!end_verbatim
-
-(!U)
-INTERRUPTS
-(!u)
-!begin_verbatim
-/TEA    Transfer Error Acknowledge
-/RST    ReSeT
-/I6     Interrupt 6 : Sent by the daughter card to the CT60
-/INT    INTerrupt : Sent by CT60 to the daughter card for a PPC
-!end_verbatim
-
-(!U)
-CLOCK
-(!u)
-!begin_verbatim
-CLK     CLocK (CT60 clock : 66MHz or more)
-!end_verbatim
-
-(!U)
-POWER
-(!u)
-!begin_verbatim
--12V, +12V   Power supplies : used by some PCI cards and the fans (+12).
-+3.3V, +5V   Power supplies : used by components and processors.
-             Each pin can drive up to 6 Amperes.
-GND (9)      GrouND pins.
-!end_verbatim
-
-(!U)
-MISCELANEOUS
-(!u)
-!begin_verbatim
-/PPC    PowerPC is present.
-!end_verbatim
-   
-(!B)
-Pinout
-(!b)
-
-(!U)
-Add Connector Data Connector
-(!u)
-!begin_verbatim
-#A1  #A2      #D1  #D2
-GND  GND      GND  GND 
-+5V  /BR      TM0  +12V
-/TS  /BG      TM1  -12V
-R/W  /BB      TM2  +3.3V
-SIZ0 SIZ1     TT0  TT1
-/TA  /TEA     /BS0 /BS1
-/PPC CLK      /BS2 /BS3
-/RST GND      /I6  /INT
-A30  A31      D0   D1
-..   ..       ..   ..
-A0   A1       D30  D31
-GND  GND      GND  GND
-#A49 #A50     #D49 #D50
-!end_verbatim 
-
-
 !subnode CHIPSETS pinouts
 
 !subsubnode SDR-60      
@@ -1920,8 +1852,8 @@ GND  GND      GND  GND
  25 dm3                            97 tbi                           
  26 dm1                            98 PGND                          
  27 dm2                            99 GND                           
- 28 dm0                            100 Reserved                          
- 29 GND                            101 f30fil                          
+ 28 dm0                            100 TEST SDR                          
+ 29 GND                            101 TEST SDR                          
  30 clk500                         102 tci                           
  31 cs3                            103 rst60                          
  32 clk                            104 PGND                          
@@ -1936,7 +1868,7 @@ GND  GND      GND  GND
  41 d1                             113 i6                            
  42 VCC                            114 GND                           
  43 d0                             115 ipl2                          
- 44 Reserved                       116 bs1                           
+ 44 PGND                           116 bs1                           
  45 PGND                           117 ts                            
  46 ma12                           118 tt1                           
  47 GND                            119 PGND                           
@@ -1982,7 +1914,7 @@ GND  GND      GND  GND
   9 bs0                            81 d21                           
  10 flhoe                          82 d20                           
  11 flhwe                          83 d19                           
- 12 ppc                            84 VCC                           
+ 12 dtkcmb                         84 VCC                           
  13 halt                           85 d18                           
  14 a2                             86 d17                           
  15 a3                             87 d16                           
@@ -1995,8 +1927,8 @@ GND  GND      GND  GND
  22 ts                             94 d11                           
  23 bg0                            95 d10                           
  24 tt1                            96 d9                            
- 25 f30fil                         97 d8                            
- 26 Reserved                       98 d7                            
+ 25 exp/                           97 d8                            
+ 26 TEST ABE                       98 d7
  27 tm2                            99 GND                           
  28 as                             100 d6                            
  29 GND                            101 d5                            

@@ -1,0 +1,5 @@
+ABE60V4H.JED not works on all machines but flash and STRAM are 
+faster.
+ABE60V5B.JED works normally on all machines but flash and STRAM are 
+slower, but you can overclock the 060 to 70 Mhz and maybe more... 
+

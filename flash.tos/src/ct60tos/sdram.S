@@ -184,8 +184,8 @@ init_sdram:
 	trap #14
 	lea 12(SP),SP
 	btst #0,D0
-             beq.s .blitter_slow
-             bset #2,0xFFFF8007       // blitter 16 MHz
+	beq.s .blitter_slow
+	bset #2,0xFFFF8007       // blitter 16 MHz
 .blitter_slow:
 	lea message0(PC),A0
 	cmp.w #2,0x3E86          // number of planes
@@ -557,7 +557,7 @@ message15:	.byte 27
 	.ascii "."
 	.byte ((VERSION/16) & 0xF) + 0x30
 	.byte (VERSION & 0xF) + 0x30
-	.ascii "b 2003 June "
+	.ascii "c 2003 July "
 	.byte 27
 	.ascii "q"
 	.byte 13,10,10

@@ -327,7 +327,7 @@ ct60_rw_param: // D0.W: mode, D1.L: type_param, D2.L: value
 	bcc out_param
 	addq.l #1,D1
 	asl.l #2,D1                                         // param * 4
-	lea.l FLASH_ADR+FLASH_SIZE-PARAM_SIZE,A2
+	lea.l FLASH_ADR+FLASH_SIZE-PARAM_SIZE+0xFF000000,A2
 	moveq #-1,D3
 	move.l #NB_BLOCK_PARAM-1,D4
 	moveq #0,D6
@@ -412,9 +412,9 @@ ct60_write_param:
 	movec.l D3,SFC                                      // CPU space 3
 	movec.l D3,DFC
 	move.l D2,-(SP)                                     // save value
-	lea.l FLASH_UNLOCK1,A0
-	lea.l FLASH_UNLOCK2,A1
-	lea.l FLASH_ADR+FLASH_SIZE-PARAM_SIZE,A2
+	lea.l FLASH_UNLOCK1+0xFF000000,A0
+	lea.l FLASH_UNLOCK2+0xFF000000,A1
+	lea.l FLASH_ADR+FLASH_SIZE-PARAM_SIZE+0xFF000000,A2
 	move.w #CMD_UNLOCK1,D3
 	move.w #CMD_UNLOCK2,D4
 	move.w #CMD_AUTOSELECT,D5
@@ -512,10 +512,10 @@ devices:
 	.long 0
 	
 fujitsu_mbm29f400bc:
-	.long FLASH_ADR+0xF0000, FLASH_UNLOCK1, FLASH_UNLOCK2
+	.long FLASH_ADR+0xFF0F0000, FLASH_UNLOCK1+0xFF000000, FLASH_UNLOCK2+0xFF000000
 
 fujitsu_mbm29f800ba:
-	.long FLASH_ADR+0xF0000, FLASH_UNLOCK1, FLASH_UNLOCK2
+	.long FLASH_ADR+0xFF0F0000, FLASH_UNLOCK1+0xFF000000, FLASH_UNLOCK2+0xFF000000
 
 end_ct60_write_param:
 	

@@ -261,18 +261,28 @@ DEBUT:
   ADDQ #1,D2
   BRA.S \23
 \38:CMP.L #$610008A6,D0;floppy
-  BNE.S \23
+  BNE.S \39
   CMP.L #$61000AF2,4(A1)
-  BNE.S \23
+  BNE.S \39
   CMP.L #$3CBC0180,8(A1)
-  BNE.S \23
+  BNE.S \39
   MOVE.L #$610008BA,4(A1)
   PRINTLINE MESS13
+  ADDQ #1,D2
+  BRA.S \23
+\39:CMP.L #$54415441,D0;FPU cookie
+  BNE.S \23
+  CMP.L #$54415441,4(A1)
+  BNE.S \23
+  CMP.L #$50F80C83,8(A1)
+  BNE.S \23
+  MOVE #$7210,6(A1)
+  PRINTLINE MESS14
   ADDQ #1,D2
 \23:ADDQ #2,A1
  SUBQ.L #1,D1
  BGT \22
- MOVEQ #16,D3
+ MOVEQ #17,D3
  CMP D3,D2
  BEQ \21
  PRINTLINE ERR
@@ -431,7 +441,7 @@ MESS2:DC.B 13,10,"Patch cache 2",0
 MESS3:DC.B 13,10,"Patch cache 3",0
 MESS4:DC.B 13,10,"Patch movep 1",0
 MESS5:DC.B 13,10,"Patch movep 2",0
-MESS6:DC.B 13,10,"Patch type 68060",0
+MESS6:DC.B 13,10,"Patch CPU type",0
 MESS7:DC.B 13,10,"Patch vectors 1",0
 MESS8:DC.B 13,10,"Patch vectors 2",0
 MESS9:DC.B 13,10,"Patch vectors 3",0
@@ -439,6 +449,7 @@ MESS10:DC.B 13,10,"Patch reset 1",0
 MESS11:DC.B 13,10,"Patch reset 2",0
 MESS12:DC.B 13,10,"Patch DSP",0
 MESS13:DC.B 13,10,"Patch floppy",0
+MESS14:DC.B 13,10,"Patch FPU cookie",0
 NOM_MAGIC:DC.B "MAGIC.RAM",0
 ERR:DC.B 13,10,10,"WARNING ! A part is not patched ! (",0
 

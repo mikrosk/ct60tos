@@ -1,5 +1,5 @@
 ;  Flashing CT60
-;  Didier Mequignon 2003 January, e-mail: didier-mequignon@wanadoo.fr
+;  Didier Mequignon 2003 July, e-mail: didier-mequignon@wanadoo.fr
 ;  Based on the flash tool Copyright (C) 2000 Xavier Joubert
 ;
 ;  This program is free software; you can redistribute it and/or modify
@@ -19,7 +19,7 @@
 ;  To contact author write to Xavier Joubert, 5 Cour aux Chais, 44 100 Nantes,
 ;  FRANCE or by e-mail to xavier.joubert@free.fr.
 
-FLASH_ADR equ $E00000
+FLASH_ADR equ $FFE00000; under 060 write moves.w in ALT3 cpu space works only at $FFExxxxx 
 
 FLASH_UNLOCK1 equ (FLASH_ADR+0xAAA)
 FLASH_UNLOCK2 equ (FLASH_ADR+0x554)
@@ -54,12 +54,12 @@ get_date_flash:
 	moveq #3,D1
 	movec.l D1,SFC                                      ; CPU space 3
 	movec.l D1,DFC
-	moves.l FLASH_ADR+$18,D0                            ; TOS date
+	move.l FLASH_ADR+$18,D1                             ; TOS date
 	cmp.w #60,0x59E
-	bne.s .end_read_date
-	move.l FLASH_ADR+$FF000018,D0                       ; TOS date
+	beq.s .end_read_date
+	moves.l $E00018,D1                                  ; TOS date	
 .end_read_date:
-	tst.l D0
+	move.l D1,D0
 	bne.s .no_flash
 	moveq #-1,D0
 .no_flash:
@@ -80,12 +80,13 @@ get_version_flash:
 	moveq #3,D1
 	movec.l D1,SFC                                      ; CPU space 3
 	movec.l D1,DFC
-	moves.w FLASH_ADR+$80000,D0                         ; Boot version
+	moveq #0,D1
+	move.w FLASH_ADR+$80000,D1                          ; Boot version
 	cmp.w #60,0x59E
-	bne.s .end_read_version
-	move.w FLASH_ADR+$FF080000,D0                       ; Boot version
+	beq.s .end_read_version
+	moves.w $E80000,D1                                  ; Boot version
 .end_read_version:
-	tst.l D0
+	move.l D1,D0
 	bne.s .no_flash
 	moveq #-1,D0
 .no_flash:
@@ -133,12 +134,6 @@ program_flash: ; D0.L: offset, D1.L: total size, A0: source, D2: lock_interrupts
 	lea.l FLASH_UNLOCK1,A3
 	lea.l FLASH_UNLOCK2,A1
 	lea.l FLASH_ADR,A2
-	cmp.w #60,0x59E
-	bne.s .not_060
-	add.l #$FF000000,A3                                 ; zone mirror
-	add.l #$FF000000,A1
-	add.l #$FF000000,A2
-.not_060:
 	move.w #CMD_UNLOCK1,D3
 	move.w #CMD_UNLOCK2,D4
 	move.w #CMD_AUTOSELECT,D5
@@ -196,12 +191,6 @@ program_flash: ; D0.L: offset, D1.L: total size, A0: source, D2: lock_interrupts
 	ble.s .size_inf
 	move.l D0,D7                                        ; sector size
 .size_inf:	
-	cmp.w #60,0x59E
-	bne.s .not060
-	add.l #$FF000000,A2                                 ; zone mirror
-	add.l #$FF000000,A3
-	add.l #$FF000000,A4
-.not060:
 	move.l A2,A5
 	moveq #-1,D2
 	lsr.l #2,D0                                         ; /4
@@ -302,14 +291,12 @@ program_flash: ; D0.L: offset, D1.L: total size, A0: source, D2: lock_interrupts
 	subq.l #1,D6
 	bmi.s .program_loop_end
 	cmp.w #60,0x59E
-	beq.s .verify_sector_060
+	beq.s .verify_sector_loop_060
 .verify_sector_loop:
 		moves.w (A2)+,D2
 		cmp.w (A5)+,D2                                  ; verify sector
 	dbne D6,.verify_sector_loop  
 	bra.s .end_verify_sector
-.verify_sector_060:
-	add.l #$FF000000,A2                                 ; zone mirror
 .verify_sector_loop_060:
 		move.w (A2)+,D2
 		cmp.w (A5)+,D2                                  ; verify sector
