@@ -1,0 +1,1 @@
+-s -k vmlinux root=/dev/hda9 video=atafb:vga16 devfs=nomount

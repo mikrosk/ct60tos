@@ -115,3 +115,10 @@ FPU is disabled (files cookies.S and vector2.S).
 you can see the version (files xbios.S, xbios2.S and sdram.S).
 - PAGE UP/DOWN, END, PRINT SCREEN, POWER, and VOLUME UP/DOWN keys
 tested for Eiffel card (files xbios.S, xbios2.S, aes.S and aes2.S). 
+
+2001-05-07 1.01
+---------------
+- Add a choice of the operating system if the favourite OS entry is
+not to zero inside the CPX (TOS, MagiC, and Linux).
+- Add MagXBoot (files magxboot.S and sdram.S).
+- Add Ataboot (files ataboot.S and sdram.S).

@@ -22,6 +22,7 @@
 	.globl init_sdram
 	.globl add_sdram
 	.globl boot_drive
+	.globl menu_boot
 	.globl init_flash_parameters
 	.globl fix_bug_nvdi
 	.globl display_ram_test
@@ -35,6 +36,7 @@
 // #define RESET // removed because not works with some motherboards/SDR60 versions
 #define XFRB_SIZE 0x10000
 #define CT60_COOKIE_SIZE 256
+#define BOOT_DELAY 800 // 4 secondes
 
 #define rw_parameter 0xc60b
 	
@@ -271,7 +273,7 @@ init_sdram:
 	lea message18(PC),A0     // MHz
 	bsr display_string_single
 	link A6,#-48
-	pea.l -48(A6)            // buffer
+	pea -48(A6)              // buffer
 	move.w #48,-(SP)         // size
 	clr.w -(SP)              // start
 	clr.w -(SP)              // read
@@ -911,8 +913,8 @@ error10:	.byte 13,10
 	.asciz "            SDRAM erreur v‚rification en $"
 name1:	.asciz "Eiffel"
 message0:	.ascii "            "
-	.byte 0x1B,0x62,0x32,0x41
-	.byte 0x1B,0x62,0x34,0x54
+	.byte 0x1B,0x62,0x34,0x41
+	.byte 0x1B,0x62,0x32,0x54
 	.byte 0x1B,0x62,0x33,0x41
 	.byte 0x1B,0x62,0x31,0x52
 	.byte 0x1B,0x62,0x35,0x49,0x20
@@ -954,11 +956,11 @@ message15:	.byte 27
 	.byte (VERSION & 0xF) + 0x30
 	.asciz " "
 message15b:	
-	.ascii "2004 February "
+	.ascii "2004 May "
 	.byte 27
 	.ascii "q"
 	.byte 13,10,0
-	.ascii "F‚vrier 2004 "
+	.ascii "Mai 2004 "
 	.byte 27
 	.ascii "q"
 	.byte 13,10,0
@@ -1138,9 +1140,35 @@ message76:	.byte 13,10
 	.asciz "Keyboard failure"
 	.byte 13,10 
 	.asciz "Pas de r‚ponse du clavier" 
+message77:	.byte 13,10,27
+	.ascii "p Choice of the system : "
+	.byte 27
+	.ascii "q"
+	.byte 13,10,0
+	.byte 13,10,27 
+	.ascii "p Choix du systŠme : "
+	.byte 27
+	.ascii "q"
+	.byte 13,10,0
+message78:
+	.byte 13
+	.asciz "Starting in "
+	.byte 13
+	.asciz "D‚marrage dans "
+message79:
+	.asciz " seconds  "
+	.asciz " secondes  "
+message80:
+	.asciz " TOS   "
+message81:
+	.asciz " MagiC "
+message82:
+	.asciz " Linux "
 
 boot_ide:	.byte 16,8,9,10,11,12,13,14,15,255
 boot_scsi:	.byte 8,9,10,11,12,13,14,15,16,255
+
+tab_os:	.byte 0x80,8,0x10
 
 list_manufacturers:
 	.byte 0x1C
@@ -1236,10 +1264,11 @@ boot_drive:
 		lea message48(PC),A0
 		bsr display_string
 		move.l _dskbufp,A0
-		move.l #0x444D4172,D3
+		move.l #0x444D4172,D3 // DMAr
 		move.w D4,D7
 		asl.w #5,D7
-		move.w 0xA80,D5
+		move.w 0xA80,D5 // bootpref NVM
+		and.w #0x67,D5  // remove TOS, Linux, MagiC flags for menu_boot
 		move.l A5,-(SP)
 		move.l hdv_rw,-(SP)
 		jsr (A0)
@@ -1278,6 +1307,174 @@ boot_drive:
 //	bsr display_string_single
 //.no_resvector:
 	movem.l (SP)+,D0-D2/A0-A2/A5
+	rts
+	
+menu_boot:
+
+	movem.l D0-D7/A0-A2,-(SP)
+	link A6,#-2
+	move.l _sysbase,A0       // header ROM
+	move.l 0x24(A0),A0       // kbshift
+	btst #2,(A0)             // CTRL
+	bne .normal_boot
+	pea -2(A6)               // buffer
+	move.w #2,-(SP)          // size
+	clr.w -(SP)              // start
+	clr.w -(SP)              // read
+	move.w #46,-(SP)         // NVMaccess
+	trap #14
+	lea 12(SP),SP
+	move.w -2(A6),D5
+	beq .normal_boot
+//	cmp.w #0x80,D5           // TOS
+//	beq.s .display_menu
+//	cmp.w #8,D5              // MagiC
+//	beq.s .display_menu
+//	cmp.w #0x10,D5           // Linux
+//	bne .normal_boot
+.display_menu:
+	lea message77(PC),A0     // boot menu
+	bsr display_string
+.display_menu_again:
+		lea tab_os(PC),A1
+		moveq #2,D1
+		moveq #0,D2
+		moveq #0,D3
+.display_menu_loop:	
+			moveq #0x20,D0
+			bsr display_char
+			moveq #0x20,D0
+			bsr display_char			
+			move.b (A1),D0
+			cmp.b -1(A6),D0
+			bne.s .no_display_inv
+			moveq #27,D0
+			bsr display_char
+			moveq #0x70,D0
+			bsr display_char
+.no_display_inv:
+			lea message80(PC),A0 // TOS
+			cmp.w #2,D1
+			beq.s .display_line_os
+			lea message81(PC),A0 // MagiC
+			cmp.w #1,D1
+			beq.s .display_line_os
+			lea message82(PC),A0 // Linux
+.display_line_os:
+			bsr display_string_single
+			move.b (A1)+,D0
+			cmp.b -1(A6),D0
+			bne.s .no_display_inv2
+			moveq #27,D0
+			bsr display_char
+			moveq #0x71,D0
+			bsr display_char
+			move.w D2,D3
+.no_display_inv2:
+			lea crlf(PC),A0
+			bsr display_string_single
+			addq.w #1,D2
+		dbf D1,.display_menu_loop
+		move.l _hz_200,D7
+		moveq #-1,D6
+.wait_menu:
+			move.l _hz_200,D0
+			sub.l D7,D0
+			cmp.l #BOOT_DELAY,D0
+			bcc .end_boot_delay
+			neg.l D0
+			add.l #BOOT_DELAY,D0
+			divu #200,D0
+			cmp.w D0,D6
+			beq.s .no_display_second
+			move.w D0,D6
+			lea message78(PC),A0
+			bsr display_string
+			move.w D6,D0
+			add.w #0x31,D0
+			bsr display_char
+			lea message79(PC),A0
+			bsr display_string
+.no_display_second:
+			move.w #0xB,-(SP) //  Cconis
+			trap #1
+			addq.w #2,SP
+			tst.w D0
+			beq.s .wait_menu
+			move.w #7,-(SP)   // Crawcin
+			trap #1
+			addq.w #2,SP
+			cmp.w #0x20,D0    // SPACE
+			beq .end_boot_delay
+			cmp.w #13,D0      // ENTER
+			beq .end_boot_delay
+			swap D0           // scan-code
+			cmp.w #0x48,D0    // UP
+			beq.s .key_up
+			cmp.w #0x50,D0    // DOWN
+			beq.s .key_down
+		bra.s .wait_menu
+.key_up:
+		moveq #2,D1
+		subq.w #1,D3
+		bpl.s .cursor_up_loop
+		moveq #2,D3
+		bra.s .cursor_up_loop
+.key_down:	
+		moveq #2,D1
+		addq.w #1,D3
+		cmp.w #3,D3
+		bcs.s .cursor_up_loop
+		moveq #0,D3
+.cursor_up_loop:
+			moveq #27,D0
+			bsr display_char
+			moveq #0x41,D0
+			bsr display_char
+		dbf D1,.cursor_up_loop
+		moveq #13,D0
+		bsr display_char
+		lea tab_os(PC),A0
+		move.b (A0,D3),-1(A6)
+	bra .display_menu_again
+.end_boot_delay:
+	cmp.w -2(A6),D5
+	beq.s .unchanged
+	pea -2(A6)               // buffer
+	move.w #2,-(SP)          // size
+	clr.w -(SP)              // start
+	move.w #1,-(SP)          // write
+	move.w #46,-(SP)         // NVMaccess
+	trap #14
+	lea 12(SP),SP
+.unchanged:
+	move.w -2(A6),D0
+	cmp.w #0x80,D0           // TOS
+	beq.s .normal_boot
+	cmp.w #8,D0              // MagiC
+	beq.s .boot_magic_2
+	cmp.w #0x10,D0           // Linux
+	bne.s .normal_boot
+	lea ataboot,A0
+	bra.s .call_boot	
+.boot_magic_2:
+	move.l #0x5F465245,D0    // _FRE cookie, external clock
+	bsr get_cookie
+	move.l D0,D2
+	move.l #0x5F465251,D0    // _FRQ cookie, internal clock
+	bsr get_cookie
+	move.l D0,D1
+	move.l #0x5F465055,D0    // _FPU cookie
+	bsr get_cookie
+	lea magxboot,A0
+.call_boot:
+	add.l #0xE80000,A0
+	sub.l #_ct60tos_half_flash,A0
+	jsr (A0)
+.normal_boot:
+	unlk A6
+	movem.l (SP)+,D0-D7/A0-A2
+	tst.w _cmdload
 	rts
 
 init_flash_parameters:
@@ -1570,7 +1767,7 @@ add_sdram:
 	move.b #0x21,-3(A6)      // IKBD read memory
 	move.b #0x8F,-2(A6)      // Eiffel 0x0FFF flash memory
 	move.b #0xFF,-1(A6)
-	pea.l -4(A6)
+	pea -4(A6)
 	move.w #3,-(SP)
 	move.w #0x19,-(SP)       // Ikbdws
 	trap #14 
@@ -1598,7 +1795,7 @@ add_sdram:
 	move.l A5,A3
 	move.w #(256/6),D7
 .loop_read_eiffel:
-		pea.l -4(A6)
+		pea -4(A6)
 		move.w #2,-(SP)
 		move.w #0x19,-(SP)    // Ikbdws
 		trap #14 
@@ -1639,7 +1836,7 @@ add_sdram:
 	bsr display_string
 .end_test_keyboard:
 	move.b #0x08,-4(A6)      // IKBD mouse on
-	pea.l -4(A6)
+	pea -4(A6)
 	clr.w -(SP)
 	move.w #0x19,-(SP)       // Ikbdws
 	trap #14 
@@ -1728,7 +1925,7 @@ add_sdram:
 	bsr display_string
 	move.w #0x14,-(SP)       // Maddalt
 	trap #1 
-	lea.l 10(SP),SP	
+	lea 10(SP),SP	
              tst.l D0
              bmi .not_sdram
 	clr.w -(SP)              // stram
@@ -1750,7 +1947,7 @@ add_sdram:
 	tst.l D0
 	ble.s .not_sdram
 	move.l D0,A2             // XFRB struct
-	lea.l 18(A2),A0
+	lea 18(A2),A0
 	move.w #0x101,(A2)       // version
 	move.l A0,2(A2)          // xflock
 	clr.w (A0)+
@@ -1798,7 +1995,7 @@ add_sdram:
 	move.l phystop,A0
 	clr.w count_io3_mfp(A0)
 	move.l _hz_200,start_hz_200(A0)
-	pea.l inter_io3_mfp(PC)
+	pea inter_io3_mfp(PC)
 	move.w #67,-(SP)         // IO3 MFP
 	move.w #5,-(SP)          // Setexec
 	trap #13

@@ -98,6 +98,10 @@ GENTOS_OBJS=	\
 		\
 		$(OBJDIR)/ct60tos/debug2.o \
 		\
+		$(OBJDIR)/ct60tos/ataboot.o \
+		\
+		$(OBJDIR)/ct60tos/magxboot.o \
+		\
 		$(OBJDIR)/ct60tos/sdram.o \
 		$(OBJDIR)/ct60tos/pmmu2.o \
 		\

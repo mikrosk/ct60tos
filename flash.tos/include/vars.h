@@ -1,5 +1,5 @@
 /* TOS 4.04 Xbios vars for the CT60 board
-*  Didier Mequignon 2002 December, e-mail: aniplay@wanadoo.fr
+*  Didier Mequignon 2002-2004, e-mail: aniplay@wanadoo.fr
 *
 *  This library is free software; you can redistribute it and/or
 *  modify it under the terms of the GNU Lesser General Public
@@ -28,9 +28,13 @@
 #define _frclock   0x466	
 #define hdv_rw     0x476
 #define hdv_boot   0x47A
+#define _cmdload   0x482
+#define trp14ret   0x486
+#define __md       0x49E
 #define _hz_200    0x4BA
 #define _dskbufp   0x4C6
 #define _sysbase   0x4F2
+#define memval3    0x51A
 #define cookie     0x5A0
 #define ramtop     0x5A4
 #define ramvalid   0x5A8

@@ -17,14 +17,23 @@
 */
 
 	.text
+	
+	.globl	menu_boot
+
+	.align	2
+	.long	0x798
+	.long	end1-begin1+0x80000000
+begin1:
+	jsr	menu_boot
+end1:
 
 	.globl	boot_drive
 
 	.align	2
 	.long	0xB42
-	.long	end1-begin1+0x80000000
-begin1:
+	.long	end2-begin2+0x80000000
+begin2:
 	jmp	boot_drive
-end1:
+end2:
 
 
