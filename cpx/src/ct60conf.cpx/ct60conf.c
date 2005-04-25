@@ -1,5 +1,5 @@
 /* CT60 CONFiguration - Pure C */
-/* Didier MEQUIGNON - v1.03a - March 2005 */
+/* Didier MEQUIGNON - v1.03b - April 2005 */
 
 #include <portab.h>
 #include <tos.h>
@@ -438,7 +438,7 @@ char *rs_strings[] = {
 	"OK",
 	"Annule",
 	
-	"CT60 Configuration V1.03a Mars 2005","","",
+	"CT60 Configuration V1.03b Avril 2005","","",
 	"Ce CPX et systäme:","","",
 	"Didier MEQUIGNON","","",
 	"aniplay@wanadoo.fr","","",
@@ -559,7 +559,7 @@ char *rs_strings_en[] = {
 	"OK",
 	"Cancel",
 
-	"CT60 Configuration V1.03a March 2005","","",
+	"CT60 Configuration V1.03b April 2005","","",
 	"This CPX and system:","","",
 	"Didier MEQUIGNON","","",
 	"aniplay@wanadoo.fr","","",

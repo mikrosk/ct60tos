@@ -4,7 +4,7 @@
 !title   Documentation of the
 !programimage ..\img\ct60.img
 !program CT60
-!version Version 1.03a
+!version Version 1.03b
 !date    (!today)
 !author  Didier MEQUIGNON
 !street  25, rue de l'Ascenseur
@@ -414,13 +414,13 @@ socket) in order to remove easily the clock module.
 Reduce the wire CLK at the minimum size, the best is to put the top of the 
 module (pins 18 to 24) on the CT60 clock socket (pins 8 to 14) with an
 extension connector.
-You must at minimum to cut the pin 21 on the module, otherwise there are a 
-short circuit with the CT60 CLK. 
+You must at minimum to cut the pins 21/23 on the module, otherwise there are a 
+short circuit with the CT60 CLK and the 3V3. 
 
 !begin_verbatim
 
   +------------------------------------------+
-  |                                         +5V      CLK      CLK
+  |                                        +5V 3V3   CLK      CLK
   |                                        14o__o__o__o__o__o__o
   |                 +------------------------------------------'8
  +5V   CLK6  CLK5  CLK4  GND   GND           |                 |

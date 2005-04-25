@@ -1,6 +1,6 @@
 /*  MagXBoot for the CT60
  * 
- * Didier Mequignon 2004, e-mail: aniplay@wanadoo.fr
+ * Didier Mequignon 2004-2005, e-mail: aniplay@wanadoo.fr
  *
  *  This library is free software; you can redistribute it and/or
  *  modify it under the terms of the GNU Lesser General Public
@@ -37,7 +37,7 @@ magxboot:
 	cmp.l #32,D1
 	bls mb2
 	tst.l D2                 // _FRE cookie, external clock
-             beq.s mb2
+	beq.s mb2
 	cmp.l #32,D2
 	seq.b D4
 	ext.w D4                 // flag clock external patch
@@ -378,10 +378,10 @@ mb46:
 		lea mess15(PC),A0
 		bsr printline
 		addq.w #1,D2
-		bra.s mb23
+		bra mb23
 mb43:
 		tst.w D4             // flag external clock
-		bpl.s mb23
+		bpl mb47
 		cmp.l #0x720211C1,D0 // external clock
 		bne.s mb44
 		cmp.w #0x820A,4(A1)
@@ -391,21 +391,71 @@ mb43:
   		lea mess16(PC),A0
 		bsr printline
 		addq.w #1,D2
-		bra.s mb23 
+		bra mb23 
 mb44:
 		cmp.l #0x31D8820A,D0 // external clock
-		bne.s mb23
+		bne.s mb47
 		cmp.w #0x4E75,4(A1)
-		bne.s mb23 
+		bne.s mb47 
 		move.l #0x4E714E71,(A1)
 		lea mess17(PC),A0
+		bsr printline
+		addq.w #1,D2
+		bra mb43
+mb47:
+		cmp.l #0x40C1007C,D0 // PSG imprimante
+		bne mb23
+		cmp.l #0x070043F8,4(A1)
+		bne mb23
+		cmp.l #0x880045E9,8(A1)
+		bne mb23
+		cmp.l #0x000212BC,12(A1)
+		bne mb23
+		cmp.l #0x00071011,16(A1)
+		bne mb23
+		cmp.l #0x000000C0,20(A1)
+		bne mb23
+		cmp.l #0x148012BC,24(A1)
+		bne mb23
+		cmp.l #0x000F1498,28(A1)
+		bne mb23
+		cmp.l #0x12BC000E,32(A1)
+		bne mb23
+		cmp.l #0x10110200,36(A1)
+		bne mb23
+		cmp.l #0x00DF1480,40(A1)
+		bne mb23
+		cmp.l #0x14800000,44(A1)
+		bne mb23
+		cmp.l #0x00201480,48(A1)
+		bne mb23
+		cmp.l #0x46C170FF,52(A1)
+		bne mb23 
+		cmp.w #0x4E75,56(A1)
+		bne mb23
+		move.l #0x40E7007C,(A1)
+		move.l #0x070043F8,4(A1)
+		move.l #0x880045E9,8(A1)
+		move.l #0x0002720F,12(A1)
+		move.l #0x1018611C,16(A1)
+		move.l #0x720E6112,20(A1)
+		move.l #0x08800005,24(A1)
+		move.l #0x611208C0,28(A1)
+		move.l #0x0005610C,32(A1)
+		move.l #0x46DF70FF,36(A1)
+		move.l #0x4E751281,40(A1)
+		move.l #0x10114E75,44(A1)
+		move.l #0x12811480,48(A1)
+		move.l #0x4E754E71,52(A1)
+		move.w #0x4E71,56(A1)    
+		lea mess19(PC),A0
 		bsr printline
 		addq.w #1,D2
 mb23:
 		addq.w #2,A1
 	subq.l #1,D1
 	bgt mb22
-	moveq #18,D3
+	moveq #19,D3
 	tst.w D4        // flag external clock
 	bpl.s mb42
 	addq.w #3,D3
@@ -417,7 +467,7 @@ mb42:
 	move.l D2,D0
 	bsr display_deci
 	moveq #0x2F,D0
-             bsr display_char
+	bsr display_char
 	move.l D3,D0
 	bsr display_deci
 	moveq #0x29,D0
@@ -635,6 +685,9 @@ mess17:
 mess18:
 	.byte	13,10
 	.asciz	"Patch context FPU"
+mess19:
+	.byte	13,10
+	.asciz	"Patch PSG printer"
 magx_name:
 	.byte	0x5C
 	.asciz	"magic.ram"

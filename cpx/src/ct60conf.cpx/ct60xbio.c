@@ -53,7 +53,7 @@ int main(void)
 	}
 	Cconws("\r\n\n");
 	Cconout(27);
-	Cconws("p XBIOS CT60 v1.03a ");
+	Cconws("p XBIOS CT60 v1.03b ");
 	Cconout(27);
 	Cconws("q March 2005\r\n");
 	if(((p=get_cookie('_MCH'))==0) || (p->v.l!=0x30000)		/* Falcon */

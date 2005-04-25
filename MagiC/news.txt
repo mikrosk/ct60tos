@@ -1,9 +1,0 @@
-Note about MAGXBOOT.PRG
------------------------
-MAGXBOOT is updated in this archive 0.99e for RGB monitors (external 
-clock used at 32 MHz) and a new FPU patch (FPU context bug with the 
-68060 and the preemptive mode). Patches are also updated for MagiC 
-5.13 but this version is not tested. 
-
-For more information:
-aniplay@wanadoo.fr

@@ -34,8 +34,8 @@ begin1:
 	moveq.l	#60,d0
 	move.l	d0,(a0)+
 	move.w	d0,0x59E
-             move.l	#0x43543630,(a0)+  // CT60 
-             clr.l	(a0)+
+	move.l	#0x43543630,(a0)+  // CT60 
+	clr.l	(a0)+
 	bra.s	begin1-0x3C4+0x402
 end1:
 

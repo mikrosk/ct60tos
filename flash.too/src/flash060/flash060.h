@@ -78,6 +78,8 @@
 
 #define ALERT_JTAG_CODE 21  /* Chaine d'alerte */
 
-#define TITLE_BIN_JED 22  /* Chaine libre */
+#define ALERT_SREC 22  /* Chaine d'alerte */
 
-#define TITLE_JED 23  /* Chaine libre */
+#define TITLE_BIN_JED 23  /* Chaine libre */
+
+#define TITLE_JED 24  /* Chaine libre */

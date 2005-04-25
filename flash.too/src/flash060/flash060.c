@@ -1,5 +1,5 @@
 /* Flashing CT60 soft & hard
-*  Didier Mequignon 2003 July, e-mail: aniplay@wanadoo.fr
+*  Didier Mequignon 2003 July, 2005 April, e-mail: aniplay@wanadoo.fr
 *
 *  This program is free software; you can redistribute it and/or modify
 *  it under the terms of the GNU General Public License as published by
@@ -22,19 +22,18 @@
 #include <string.h>
 #include <stdio.h>
 #include "flash060.h"
+#include "flash.h"
 #include "jedec.h"
 #include "jtag.h"
 
-#define SOFT 0
-#define HARD 1
+#define SOFT_BIN 0
+#define SOFT_HEX 1
+#define HARD_JED 2
 
 #define	NORESOURCE	form_alert(1,"[1][File FLASH060.RSC not found][Cancel]")
 #define	NOWINDOW	form_alert(1,"[1][No window available!][Cancel]")
 #define	NOALERT		form_alert(1,"[1][Error message not found |inside file FLASH060.RSC][OK]")
 #define	NOMEMORY	form_alert(1,"[1][Not enough memory! |This program needs 1MB][Cancel]")
-
-#define FLASH_SIZE 0x100000
-#define PARAM_SIZE 0x10000
 
 #define ERR_DEVICE  -1
 #define ERR_ERASE   -2
@@ -130,6 +129,7 @@ long dd_open(short pipe_num,unsigned char *extlist);
 void dd_close(long fd);
 int dd_getheader(long fd,unsigned char *obname,unsigned char *fname,unsigned char *datatype,long *size);
 int dd_reply(long fd,unsigned char ack);
+extern int srec_read(const char *path);
 extern long get_date_flash(void);
 extern long get_version_flash(void);
 extern long program_flash(long offset,long size,void *source,int lock_interrupts);
@@ -141,7 +141,7 @@ int ap_id,wh,w_icon,file_loaded=0;
 void *buffer_flash=0;
 long size_tos=0;
 int jedec_only=0;
-int soft_hard=SOFT;
+int soft_hard=SOFT_BIN;
 int device=NO_DEVICE;
 unsigned long usercode_jed=0,flash_device=0;
 OBJECT *Resource;
@@ -149,6 +149,7 @@ OBJECT *Icone;
 GRECT shrink;
 jedec_data_t jed=0;
 __Sigfunc oldsig;
+extern unsigned long start_adr,end_adr;
 
 void main(int argc, char **argv)
 {	
@@ -384,13 +385,13 @@ int Button(int code)
 		{
 			if(get_cookie('CT60'))
 				tosram=ct60_rw_parameter(CT60_MODE_READ,CT60_PARAM_TOSRAM,0L)&1;
-			if(!tosram && soft_hard!=HARD)
+			if(!tosram && soft_hard!=HARD_JED)
 			{
 				b=Alert(ALERT_060);
 				if(b && get_cookie('MagX')==0)
 					lock_interrupts=1;
 			}
-			else if(soft_hard==HARD)
+			else if(soft_hard==HARD_JED)
 			{
 				Alert(ALERT_HARD_060);
 				b=0;			
@@ -400,7 +401,7 @@ int Button(int code)
 		{
 			graf_mouse(BUSYBEE,0L);
 			aff_leds(-1);  /* init */
-			if(soft_hard==HARD && jed)
+			if(soft_hard==HARD_JED && jed)
 			{
 				if(Supexec(test_cable)==0)
 					Alert(ALERT_CABLE);
@@ -538,6 +539,8 @@ int Button(int code)
 				if(!jedec_only && buffer_flash!=0)
 				{
 					offset=0;
+					if(soft_hard==SOFT_HEX)
+						offset=(start_adr-FLASH_ADR) & 0xFF0000;
 					while(offset<(FLASH_SIZE-PARAM_SIZE))
 					{
 						if(lock_interrupts)
@@ -570,7 +573,14 @@ int Button(int code)
 								Alert(i);	
 							break;
 						}
-						aff_leds((int)((offset*16L)/(long)(FLASH_SIZE-PARAM_SIZE)));
+						if(soft_hard==SOFT_HEX)
+						{
+							aff_leds((int)((offset-((start_adr-FLASH_ADR) & 0xFF0000)*16L)/size_tos));
+							if(offset>=size_tos)
+								break;
+						}
+						else
+							aff_leds((int)((offset*16L)/(long)(FLASH_SIZE-PARAM_SIZE)));
 					}
 				}
 			}
@@ -1107,8 +1117,12 @@ int test_file(char *path)
 	if(i>3 && path[i-4]=='.'
 	 && ((path[i-3]=='J' && path[i-2]=='E' && path[i-1]=='D')
 	 || (path[i-3]=='j' && path[i-2]=='e' && path[i-1]=='d')))
-		return(HARD);
-	return(SOFT);
+		return(HARD_JED);
+	if(i>3 && path[i-4]=='.'
+	 && ((path[i-3]=='H' && path[i-2]=='E' && path[i-1]=='X')
+	 || (path[i-3]=='h' && path[i-2]=='e' && path[i-1]=='x')))
+		return(SOFT_HEX);
+	return(SOFT_BIN);
 }
 
 void load_file(char *path_argv)
@@ -1193,7 +1207,7 @@ void load_file(char *path_argv)
 		file_loaded=0;
 		size_tos=0;
 	    graf_mouse(BUSYBEE,0L);
-		if((soft_hard=test_file(path))==HARD)
+		if((soft_hard=test_file(path))==HARD_JED)
 		{
 			if((jed=jedec_read(path,device_name))==NULL)
 			{
@@ -1290,6 +1304,27 @@ void load_file(char *path_argv)
 		}
 		if(jedec_only || buffer_flash==0)
 			Alert(ALERT_JEDEC);
+		else if(soft_hard==SOFT_HEX)
+		{
+			memset(buffer_flash,-1,FLASH_SIZE-PARAM_SIZE);		
+			switch(srec_read(path))
+			{
+				case 0:
+					if(start_adr>end_adr)
+					{
+						Alert(ALERT_SREC);
+						size_tos=0;	
+					}
+					else
+					{
+						file_loaded=1;
+						size_tos = end_adr - (FLASH_ADR & 0xFFFFFF);
+					}
+					break;
+				case -1: Alert(ALERT_SREC); size_tos=0; break;
+				default: Alert(ALERT_OPEN); size_tos=0; break;
+			}
+		}
 		else
 		{		
 			memset(buffer_flash,-1,FLASH_SIZE-PARAM_SIZE);
@@ -1319,7 +1354,7 @@ void load_file(char *path_argv)
 		graf_mouse(ARROW,0L);
 		rsrc_gaddr(R_OBJECT,FILE,&op);
 		tp=op->ob_spec.tedinfo;
-		if(file_loaded & jed==NULL)
+		if(file_loaded && soft_hard==SOFT_BIN)
 		{
 			tp->te_ptext=path;
 			rsrc_gaddr(R_OBJECT,DATE_FILE,&op);
@@ -1328,6 +1363,22 @@ void load_file(char *path_argv)
 			rsrc_gaddr(R_OBJECT,VERSION_FILE,&op);
 			tp=op->ob_spec.tedinfo;
 			get_version_boot((unsigned char *)buffer_flash+0x80000,tp->te_ptext);
+		}
+		else if(file_loaded && soft_hard==SOFT_HEX)
+		{
+			tp->te_ptext=path;
+			rsrc_gaddr(R_OBJECT,DATE_FILE,&op);
+			save_dta=Fgetdta();
+			Fsetdta(&tp_dta);
+			date=0;				
+			if(Fsfirst(path,1)==0)
+				date=(unsigned short)tp_dta.d_date;
+			Fsetdta(save_dta);
+			tp=op->ob_spec.tedinfo;
+			get_date_file(date,tp->te_ptext);
+			rsrc_gaddr(R_OBJECT,VERSION_FILE,&op);
+			tp=op->ob_spec.tedinfo;
+			strcpy(tp->te_ptext,"X.XX");
 		}
 		else
 		{

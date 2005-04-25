@@ -1,0 +1,14 @@
+;NEW_PIC.PRJ for Pure C
+
+NEW_PIC.TTP
+.C [ -2 ]
+.S [ -4 -S]
+=
+
+PCSTART.O          ; startup code
+NEW_PIC.C
+SREC.C
+BINTOHEX.C
+
+PCSTDLIB.LIB
+PCTOSLIB.LIB

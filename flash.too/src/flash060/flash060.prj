@@ -8,7 +8,8 @@ FLASH060.PRG
 PCSTART.O          ; startup code
 
 FLASH060.C
-FLASH.S            
+FLASH.S
+SREC.C           
 JEDEC.C
 J_FUSE.S           
 JTAG.C

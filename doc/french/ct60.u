@@ -4,7 +4,7 @@
 !title   Documentation de la
 !programimage ..\img\ct60.img
 !program CT60
-!version Version 1.03a
+!version Version 1.03b
 !date    (!today)
 !author  Didier MEQUIGNON
 !street  25, rue de l'Ascenseur
@@ -427,13 +427,13 @@ facilement.
 Reduisez la liaison CLK au minimum, le mieux est de mettre le sommet du 
 module (pins 18 … 24) sur le support horloge de la CT60 (pins 8 … 14) via 
 un prolongateur. 
-Vous devez au minimum couper la pin 21 sur le sommet du module, autrement 
-il y a un court circuit avec le signal CLK CT60. 
+Vous devez au minimum couper les pins 21/23 sur le sommet du module, autrement 
+il y a un court circuit avec le signal CLK et le 3V3 de la CT60. 
 
 !begin_verbatim
 
   +------------------------------------------+
-  |                                         +5V      CLK      CLK
+  |                                        +5V 3V3   CLK      CLK
   |                                        14o__o__o__o__o__o__o
   |                 +------------------------------------------'8
  +5V   CLK6  CLK5  CLK4  GND   GND           |                 |

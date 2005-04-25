@@ -38,6 +38,7 @@
 // #define RESET // removed because not works with some motherboards/SDR60 versions
 #define XFRB_SIZE 0x10000
 #define SPEED_BUFFER_SIZE 0x10000 // mini 512 bytes
+#define NB_COOKIES 128
 #define CT60_COOKIE_SIZE 256
 #define DEFAULT_BOOT_DELAY 800    // 4 seconds
 #define TIME_OUT_CMD 200          // 1 second
@@ -290,9 +291,9 @@ init_sdram:
 	cmp.w #2,D1              // revision 2, mask F84W
 	beq.s .display_mask
 	lea message14(PC),A0	
-	cmp.w #1,D1              // revision 1, mask F43G/G65V 
-	bhi.s .display_mask      // revision 3 and more, mask E41J ?
-	bset #5,D0               // disable store/load bypass
+	cmp.w #6,D1              // revision 1,5 mask F43G/G65V 
+	bcc.s .display_mask      // revision 6 and more mask E41J ?
+	bset #5,D0               // disable store/load bypass (masks 1,3,4,5)
 	movec.l D0,PCR
 	lea message12(PC),A0
 .display_mask:
@@ -340,12 +341,12 @@ init_sdram:
 .no_cookie_ct60:
 	move.l -4(A6),D0
 	clr.w -2(A6)
-             cmp.w #1000,D0
-             bcs.s .low_100
-             move.l D0,-(SP)
-             moveq #0x20,D0
-             bsr display_char
-             move.l (SP)+,D0
+	cmp.w #1000,D0
+	bcs.s .low_100
+	move.l D0,-(SP)
+	moveq #0x20,D0
+	bsr display_char
+	move.l (SP)+,D0
 .low_100:     
 	lea -6(A6),A0
 	moveq #4,D1
@@ -478,8 +479,8 @@ init_sdram:
 .no_display_hard:
 	tst.l D7                 // error code programmable clock generator
 	bpl.s .pclock_ok
-             moveq #0x20,D0
-             bsr display_char
+	moveq #0x20,D0
+	bsr display_char
 	lea error12(PC),A0
 	cmp.w #CT60_CALC_CLOCK_ERROR,D7
 	beq.s .pclock_error
@@ -490,15 +491,15 @@ init_sdram:
 .pclock_ok:
 	lea message99(PC),A0
 	bsr display_string_single
-             cmp.l #100000,D0         // KHz
-             bcs.s .low_100000
-             move.l D0,-(SP)
-             moveq #0x20,D0
-             bsr display_char
-             move.l (SP)+,D0
+	cmp.l #100000,D0         // KHz
+	bcs.s .low_100000
+	move.l D0,-(SP)
+	moveq #0x20,D0
+	bsr display_char
+	move.l (SP)+,D0
 .low_100000:	
-             link A6,#-8
-             clr.w -2(A6)
+	link A6,#-8
+	clr.w -2(A6)
 	lea -8(A6),A0
 	moveq #6,D1
 	bsr conv_ascii_value
@@ -713,8 +714,8 @@ init_sdram:
 	cmp.w #0x4E56,D0         // NV magic code
 	bne .no_nvm_read_saved
 	lea crlf_spaces(PC),A0
-             tst.w d7
-             beq .no_tos_in_ram
+	tst.w d7
+	beq .no_tos_in_ram
 	lea separator(PC),A0
 .no_tos_in_ram:
 	bsr display_string_single
@@ -740,7 +741,7 @@ display_infos_sdram:
 	moveq #0,D0
 	move.b 2(A1),D0
 	lea -133(A6),A0
-             moveq #3,D1
+	moveq #3,D1
 	bsr conv_ascii_value_optimized
 	lea -133(A6),A0
 	bsr display_string_single
@@ -754,7 +755,7 @@ display_infos_sdram:
 	moveq #0,D0
 	move.b 3(A1),D0
 	lea -133(A6),A0
-             moveq #3,D1
+	moveq #3,D1
 	bsr conv_ascii_value_optimized
 	lea -133(A6),A0
 	bsr display_string_single
@@ -763,7 +764,7 @@ display_infos_sdram:
 	moveq #0,D0
 	move.b 4(A1),D0
 	lea -133(A6),A0
-             moveq #3,D1
+	moveq #3,D1
 	bsr conv_ascii_value_optimized
 	lea -133(A6),A0
 	bsr display_string_single
@@ -772,7 +773,7 @@ display_infos_sdram:
 	moveq #0,D0
 	move.b 5(A1),D0
 	lea -133(A6),A0
-             moveq #3,D1
+	moveq #3,D1
 	bsr conv_ascii_value_optimized
 	lea -133(A6),A0
 	bsr display_string_single
@@ -782,7 +783,7 @@ display_infos_sdram:
 	move.w 6(A1),D0
 	ror.w #8,D0
 	lea -134(A6),A0
-             moveq #4,D1
+	moveq #4,D1
 	bsr conv_ascii_value_optimized
 	lea -134(A6),A0
 	bsr display_string_single
@@ -793,7 +794,7 @@ display_infos_sdram:
 	moveq #0,D0
 	move.b 8(A1),D0
 	lea -133(A6),A0
-             moveq #3,D1
+	moveq #3,D1
 	bsr conv_ascii_value_optimized
 	lea -133(A6),A0
 	bsr display_string_single
@@ -821,7 +822,7 @@ display_infos_sdram:
 	moveq #0,D0
 	move.b 11(A1),D0
 	lea -133(A6),A0
-             moveq #3,D1
+	moveq #3,D1
 	bsr conv_ascii_value_optimized
 	lea -133(A6),A0
 	bsr display_string_single
@@ -876,7 +877,7 @@ display_infos_sdram:
 	moveq #0,D0
 	move.b 17(A1),D0
 	lea -133(A6),A0
-             moveq #3,D1
+	moveq #3,D1
 	bsr conv_ascii_value_optimized
 	lea -133(A6),A0
 	bsr display_string_single
@@ -924,7 +925,7 @@ display_infos_sdram:
 	move.b 31(A1),D0
 	asl.w #2,D0
 	lea -134(A6),A0
-             moveq #4,D1
+	moveq #4,D1
 	bsr conv_ascii_value_optimized
 	lea -134(A6),A0
 	bsr display_string_single
@@ -980,20 +981,20 @@ display_infos_sdram:
 	cmp.b #0x52,94(A1)       // week 52
 	bls.s .date_jedec_format
 	lea -132(A6),A0          // IBM format
-             moveq #2,D1
+	moveq #2,D1
 	bsr conv_ascii_value_optimized
 	lea -132(A6),A0          // date
 	bsr display_string_single
 	moveq #0x2F,D0
 	bsr display_char
-             moveq #2,D1
+	moveq #2,D1
 	bsr conv_ascii_value_optimized
 	bsr display_string_single
 	moveq #0,D0
 	move.b 94(A1),D0         // year
 	add.w #1900,D0
 	lea -134(A6),A0
-             moveq #4,D1
+	moveq #4,D1
 	bsr conv_ascii_value_optimized
 	lea -134(A6),A0	
 	bsr display_string_single
@@ -1178,11 +1179,11 @@ message10:	.asciz "unknown CPU "
 	.asciz "CPU inconnu"
 message11:	.asciz " Mask D00W/D11W" // revision 0
 	.asciz " Masque D00W/D11W"
-message12:	.asciz " Mask F43G/G65V" // revision 1
+message12:	.asciz " Mask F43G/G65V" // revision 1 & 5
 	.asciz " Masque F43G/G65V"
 message13:	.asciz " Mask F84W"      // revision 2
 	.asciz " Masque F84W"
-message14:	.asciz " Mask E41J"      // revision 6 (3 -> 5 ?)
+message14:	.asciz " Mask E41J"      // revision 6
 	.asciz " Masque E41J" 
 message15:	.byte 27 
 	.ascii "p Boot v"
@@ -1190,13 +1191,13 @@ message15:	.byte 27
 	.ascii "."
 	.byte ((VERSION/16) & 0xF) + 0x30
 	.byte (VERSION & 0xF) + 0x30
-	.asciz "a "
+	.asciz "b "
 message15b:	
-	.ascii "2005 March "
+	.ascii "2005 April "
 	.byte 27
 	.ascii "q"
 	.byte 13,10,0
-	.ascii "Mars 2005 "
+	.ascii "Avril 2005 "
 	.byte 27
 	.ascii "q"
 	.byte 13,10,0
@@ -2665,7 +2666,7 @@ exec_boot:  		// D0 drive, D0.H: flag swap bytes, D1.L: start of partition
 		moveq #0x2E,D0
 		bsr display_char
 .not_point:
-	             move.b (A0,D2),D0
+		move.b (A0,D2),D0
 		bsr display_char
 		addq.w #1,D2
 	dbf D1,.loop_name_driver
@@ -2692,8 +2693,8 @@ exec_boot:  		// D0 drive, D0.H: flag swap bytes, D1.L: start of partition
 		subq.w #2,D2
 		mulu D1,D2               // * sec count * SPC
 		add.l -20(A6),D2         // + end directory = start sector
-                          move.l A2,A0             // buffer file
-                          move.l D4,D0             // drive & flag swap bytes
+		move.l A2,A0             // buffer file
+		move.l D4,D0             // drive & flag swap bytes
 		bsr read_sectors
 		bmi.s .mfree_boot
 		asl.l #8,D1              // * 512
@@ -2706,9 +2707,9 @@ exec_boot:  		// D0 drive, D0.H: flag swap bytes, D1.L: start of partition
 		cmp.l D3,D2              // start sector
 		beq.s .not_reload_fat
 		move.l D2,D3
-                          move.l A4,A0             // buffer FAT
+		move.l A4,A0             // buffer FAT
 		moveq #1,D1              // sec count
-                          move.l D4,D0             // drive & flag swap bytes
+		move.l D4,D0             // drive & flag swap bytes
 		bsr read_sectors
 		bmi.s .mfree_boot
 .not_reload_fat:
@@ -3482,7 +3483,7 @@ error_tos:
 	link A6,#-4
 	clr -2(A6)
 	lea -4(A6),A0
-             moveq #3,D1
+	moveq #3,D1
 	bsr conv_ascii_value_optimized
 	pea -4(A6)
 	move.w #9,-(SP)          // Cconws
@@ -3646,7 +3647,7 @@ init_flash_parameters:
 		trap #14
 		lea 12(SP),SP
 		cmp.l #-1,D0
-             dblt D7,.loop_init_params
+	dblt D7,.loop_init_params
 	jmp 0xE0398C             // reset
 	
 fix_bug_nvdi:
@@ -3694,7 +3695,7 @@ display_device_type:	// type inside D0
 		bsr display_char
 	tst.b (A0)+
 	bne.s .device_type_found
-             movem.l (SP)+,D0-D3/A0
+	movem.l (SP)+,D0-D3/A0
 	rts
 	
 display_ram_test:
@@ -3850,7 +3851,7 @@ display_value_ns_10:
 	and.l #0xFF,D0
 	lsr.w #4,D0
 	lea -4(A6),A0
-             moveq #2,D1
+	moveq #2,D1
 	bsr conv_ascii_value_optimized
 	lea -4(A6),A0
 	bsr display_string_single
@@ -3859,7 +3860,7 @@ display_value_ns_10:
 	moveq #0x0F,D0
 	and.w (SP)+,D0
 	lea -3(A6),A0
-             moveq #1,D1
+	moveq #1,D1
 	bsr conv_ascii_value_optimized
 	lea -3(A6),A0
 	bsr display_string_single
@@ -3876,7 +3877,7 @@ display_value_ns:
 	clr -2(A6)
 	and.l #0xFF,D0
 	lea -4(A6),A0
-             moveq #3,D1
+	moveq #3,D1
 	bsr conv_ascii_value_optimized
 	lea -4(A6),A0
 	bsr display_string_single
@@ -3901,7 +3902,7 @@ display_latency:
 		moveq #0x2F,D0
 		bsr display_char
 .first_latency:
-	             moveq #-1,D2
+		moveq #-1,D2
 		moveq #0x30,D0
 		add.w D1,D0
 		bsr display_char
@@ -4335,8 +4336,8 @@ add_sdram:
 	move.w #0x14,-(SP)       // Maddalt
 	trap #1 
 	lea 10(SP),SP	
-             tst.l D0
-             bmi .not_sdram
+	tst.l D0
+	bmi .not_sdram
 	clr.w -(SP)              // stram
 	move.l #0x10000+16,-(SP) // 64K
 	move.w #0x44,-(SP)       // Mxalloc
@@ -4487,9 +4488,9 @@ ct60_configure_clock:	// D0.L: frequency, D1: mode
 	move.w #CT60_CLOCK_WRITE_RAM+DALLAS,D0
 	bsr ct60_rw_clock
 	bmi .ccc10   // error
-             cmp.w #CT60_CLOCK_WRITE_EEPROM,D7 // mode
-             bne.s .ccc12
-             moveq #0,D2
+	cmp.w #CT60_CLOCK_WRITE_EEPROM,D7 // mode
+	bne.s .ccc12
+	moveq #0,D2
 	moveq #WRITEE2,D1
 	move.w #CT60_CLOCK_WRITE_EEPROM+DALLAS,D0
 	bsr ct60_rw_clock
@@ -5431,6 +5432,36 @@ chip_density:                         // A23-A22 cdy2-1
 init_cookie_ct60:	
 
 	movem.l D0-D2/A0-A2,-(SP)
+	move.w #3,-(SP)          // TT ram if possible
+	move.l #NB_COOKIES*8,-(SP)
+	move.w #0x44,-(SP)       // Mxalloc
+	trap #1 
+	addq.w #8,SP
+	tst.l D0
+	ble .error_cookie_ct60
+	move.l D0,A1
+	move.l cookie,D0
+	beq .error_cookie_ct60
+	move.l A1,cookie
+	move.l D0,A0
+	moveq #NB_COOKIES-1,D1   // move cookies to TT ram
+.loop_move_cookies:
+		move.l (A0)+,D0
+		beq.s .end_cookies
+		move.l D0,(A1)+
+		move.l (A0)+,(A1)+
+	dbf D1,.loop_move_cookies
+	bra.s .init_cookie_ct60
+.end_cookies:
+	clr.l (A1)+
+	move.l #NB_COOKIES,(A1)+
+	subq.w #1,D1
+	bmi.s .init_cookie_ct60
+.loop_end_cookies:
+		clr.l (A1)+
+		clr.l (A1)+
+	dbf D1,.loop_end_cookies
+.init_cookie_ct60:
 	move.w #3,-(SP)          // TT ram if possible
 	move.l #CT60_COOKIE_SIZE,-(SP)
 	move.w #0x44,-(SP)       // Mxalloc

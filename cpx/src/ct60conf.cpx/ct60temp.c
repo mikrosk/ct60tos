@@ -1,6 +1,6 @@
 	
 /* CT60 TEMPerature - Pure C */
-/* Didier MEQUIGNON - v1.03a - March 2005 */
+/* Didier MEQUIGNON - v1.03b - April 2005 */
 
 #include <portab.h>
 #include <tos.h>
@@ -531,51 +531,51 @@ int main(int argc,const char *argv[])
 			{
 				switch((unsigned int)message[0])
 				{
-				case AC_OPEN:
-					app_name[0]=0;
-					if(app_id>=0 && myglobal[0]>=0x399)								/* version AES */
-					{
-						i=MT_appl_search(0,app_name,&app_stype,&app_sid,myglobal);	/* 1st app */
-						while(i && app_sid!=app_id)
-							i=MT_appl_search(1,app_name,&app_stype,&app_sid,myglobal);	/* next app */
-						if(i==0 || app_sid!=app_id)
-							app_name[0]=0;
-					}
-				 	if(!start_lang)
-						sprintf(mess_alert,
-						"[0][      CT60 TEMPERATURE       |V1.03a MEQUIGNON Didier 03/2005| |Temp.: %d øC     Seuil: %d øC |Lien avec processus %d %s][OK]",
-						temp,trigger_temp,app_id,app_name);
-					else
-						sprintf(mess_alert,
-						"[0][      CT60 TEMPERATURE       |V1.03a MEQUIGNON Didier 03/2005| |Temp.: %d øC Threshold: %d øC |Link with process %d %s][OK]",
-						temp,trigger_temp,app_id,app_name);
-					MT_form_xalert(1,mess_alert,ITIME*10L,0L,myglobal);
-					break;
-				case AP_TERM:
-					end=1;
-					break;				
-				case MSG_CT60_TEMP:
-					flag_msg=1;
-					app_id=message[1];
-					trigger_temp=(unsigned int)message[3];
-					daystop=(unsigned int)message[4];
-					timestop=(unsigned int)message[5];
-					if(avenrun[0]>=0)
-						load=avenrun[0];
-					else
-						load=load_avg;
-					if(load<0)
-						load=0;
-					if(load>MAX_CPULOAD)
-						load=MAX_CPULOAD;
-					msg[0]=MSG_CT60_TEMP;
-					msg[1]=temp_id;
-					*((UWORD **)(&msg[3]))=tab_temp;
-					*((UWORD **)(&msg[5]))=tab_cpuload;
-					msg[7]=(WORD)((load*100L)/MAX_CPULOAD);
-					msg[2]=0;
-					MT_appl_write(message[1],16,msg,myglobal);
-					break;
+					case AC_OPEN:
+						app_name[0]=0;
+						if(app_id>=0 && myglobal[0]>=0x399)								/* version AES */
+						{
+							i=MT_appl_search(0,app_name,&app_stype,&app_sid,myglobal);	/* 1st app */
+							while(i && app_sid!=app_id)
+								i=MT_appl_search(1,app_name,&app_stype,&app_sid,myglobal);	/* next app */
+							if(i==0 || app_sid!=app_id)
+								app_name[0]=0;
+						}
+					 	if(!start_lang)
+							sprintf(mess_alert,
+							"[0][      CT60 TEMPERATURE       |V1.03b MEQUIGNON Didier 04/2005| |Temp.: %d øC     Seuil: %d øC |Lien avec processus %d %s][OK]",
+							temp,trigger_temp,app_id,app_name);
+						else
+							sprintf(mess_alert,
+							"[0][      CT60 TEMPERATURE       |V1.03b MEQUIGNON Didier 04/2005| |Temp.: %d øC Threshold: %d øC |Link with process %d %s][OK]",
+							temp,trigger_temp,app_id,app_name);
+						MT_form_xalert(1,mess_alert,ITIME*10L,0L,myglobal);
+						break;
+					case AP_TERM:
+						end=1;
+						break;				
+					case MSG_CT60_TEMP:
+						flag_msg=1;
+						app_id=message[1];
+						trigger_temp=(unsigned int)message[3];
+						daystop=(unsigned int)message[4];
+						timestop=(unsigned int)message[5];
+						if(avenrun[0]>=0)
+							load=avenrun[0];
+						else
+							load=load_avg;
+						if(load<0)
+							load=0;
+						if(load>MAX_CPULOAD)
+							load=MAX_CPULOAD;
+						msg[0]=MSG_CT60_TEMP;
+						msg[1]=temp_id;
+						*((UWORD **)(&msg[3]))=tab_temp;
+						*((UWORD **)(&msg[5]))=tab_cpuload;
+						msg[7]=(WORD)((load*100L)/MAX_CPULOAD);
+						msg[2]=0;
+						MT_appl_write(message[1],16,msg,myglobal);
+						break;
 				}
 			}
 		}
@@ -649,16 +649,27 @@ int start_app(char *path_app,char *cmd,WORD *global)
 void call_app(char *var_env,char *cmd,WORD *global)
 
 {
-	char app_name[]="        ";
+	static char app_name[]="        ";
+	static char mess_alert[256];
 	char *env;
 	if(_app)
 	{
+		if(cmd!=NULL)
+			sprintf(mess_alert,"[0][%s|%s][]",var_env,cmd);
+		else
+			sprintf(mess_alert,"[0][%s][]",var_env);
+		MT_form_xalert(1,mess_alert,ITIME,0L,global);
 		env=getenv(var_env);
 		if(env!=NULL && env[0])
 		{
 			var_name_app(env,app_name);
 			if(MT_appl_find(app_name,global)<0)
-				start_app(env,cmd,global);
+			{
+				if(cmd!=NULL)
+					start_app(env,cmd,global);
+				else
+					start_app(env,"",global);
+			}
 		}
 	}
 }
@@ -737,30 +748,30 @@ int MT_form_xalert(int fo_xadefbttn,char *fo_xastring,long time_out,void (*call)
 		return(0);				/* error */
 	switch(fo_xastring[1])
 	{
-	case '1':
-		alert_tree[ALERTNOTE].ob_flags &= ~HIDETREE;
-		alert_tree[ALERTWAIT].ob_flags |= HIDETREE;
-		alert_tree[ALERTSTOP].ob_flags |= HIDETREE;
-		flag_img=1;
-		break;
-	case '2':
-		alert_tree[ALERTNOTE].ob_flags |= HIDETREE;
-		alert_tree[ALERTWAIT].ob_flags &= ~HIDETREE;
-		alert_tree[ALERTSTOP].ob_flags |= HIDETREE;
-		flag_img=1;
-		break;
-	case '3':
-		alert_tree[ALERTNOTE].ob_flags |= HIDETREE;
-		alert_tree[ALERTWAIT].ob_flags |= HIDETREE;
-		alert_tree[ALERTSTOP].ob_flags &= ~HIDETREE;		
-		flag_img=1;
-		break;			
-	default:
-		alert_tree[ALERTNOTE].ob_flags |= HIDETREE;
-		alert_tree[ALERTWAIT].ob_flags |= HIDETREE;
-		alert_tree[ALERTSTOP].ob_flags |= HIDETREE;		
-		flag_img=0;
-		break;
+		case '1':
+			alert_tree[ALERTNOTE].ob_flags &= ~HIDETREE;
+			alert_tree[ALERTWAIT].ob_flags |= HIDETREE;
+			alert_tree[ALERTSTOP].ob_flags |= HIDETREE;
+			flag_img=1;
+			break;
+		case '2':
+			alert_tree[ALERTNOTE].ob_flags |= HIDETREE;
+			alert_tree[ALERTWAIT].ob_flags &= ~HIDETREE;
+			alert_tree[ALERTSTOP].ob_flags |= HIDETREE;
+			flag_img=1;
+			break;
+		case '3':
+			alert_tree[ALERTNOTE].ob_flags |= HIDETREE;
+			alert_tree[ALERTWAIT].ob_flags |= HIDETREE;
+			alert_tree[ALERTSTOP].ob_flags &= ~HIDETREE;		
+			flag_img=1;
+			break;			
+		default:
+			alert_tree[ALERTNOTE].ob_flags |= HIDETREE;
+			alert_tree[ALERTWAIT].ob_flags |= HIDETREE;
+			alert_tree[ALERTSTOP].ob_flags |= HIDETREE;		
+			flag_img=0;
+			break;
 	}
 	for(i=0;i<5;alert_tree[ALERTLINE1+i].ob_spec.free_string=&line[i][0],line[i++][0]=0);
 	for(i=0;i<3;alert_tree[ALERTB1+i].ob_spec.free_string=&button[i][0],button[i++][0]=0);
@@ -900,15 +911,15 @@ int MT_form_xalert(int fo_xadefbttn,char *fo_xastring,long time_out,void (*call)
 				{
 					switch(objc_clic)
 					{
-					case ALERTB1:			/* buttons */
-						answer=1;
-						break;
-					case ALERTB2:
-						answer=2;
-						break;	
-					case ALERTB3:
-						answer=3;
-						break;
+						case ALERTB1:			/* buttons */
+							answer=1;
+							break;
+						case ALERTB2:
+							answer=2;
+							break;	
+						case ALERTB3:
+							answer=3;
+							break;
 					}
 				}
 				else
@@ -949,29 +960,29 @@ int test_stop(unsigned long daytime,unsigned int daystop,unsigned int timestop)
 		day=dayofweek(year,mon,mday)+1;					/* day of week */
 		switch(daystop)
 		{
-		case MONDAY_STOP:
-		case TUESDAY_STOP:
-		case WEDNESDAY_STOP:
-		case THURSDAY_STOP:
-		case FRIDAY_STOP:
-		case SATURDAY_STOP:
-		case SUNDAY_STOP:
-			if(day==daystop)
-				return(1);								/* stop */
-			break;
-		case WORKDAY_STOP:
-			if(day!=SATURDAY_STOP && day!=SUNDAY_STOP)
-				return(1);								/* stop */
-			break;
-		case WEEKEND_STOP:
-			if(day==SATURDAY_STOP || day==SUNDAY_STOP)
-				return(1);								/* stop */
-			break;
-		case EVERYDAY_STOP:
-			return(1);									/* stop */
-		case NO_STOP:
-		default:
-			break;
+			case MONDAY_STOP:
+			case TUESDAY_STOP:
+			case WEDNESDAY_STOP:
+			case THURSDAY_STOP:
+			case FRIDAY_STOP:
+			case SATURDAY_STOP:
+			case SUNDAY_STOP:
+				if(day==daystop)
+					return(1);								/* stop */
+				break;
+			case WORKDAY_STOP:
+				if(day!=SATURDAY_STOP && day!=SUNDAY_STOP)
+					return(1);								/* stop */
+				break;
+			case WEEKEND_STOP:
+				if(day==SATURDAY_STOP || day==SUNDAY_STOP)
+					return(1);								/* stop */
+				break;
+			case EVERYDAY_STOP:
+				return(1);									/* stop */
+			case NO_STOP:
+			default:
+				break;
 		}
 	}
 	return(0);											/* continue */

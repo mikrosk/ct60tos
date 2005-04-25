@@ -213,3 +213,9 @@ a CY27EE16) connected on the I2C port (file sdram.S).
 a DS1085 connected on the I2C port (file sdram.S).
 - Add write protect and reset for the 1st programmable clock generator 
 with a CY27EE16 (file sdram.S).
+
+2005-04-26 1.03b
+----------------
+- Fix rev 5 CPU display.
+- Cookies moved to SDRAM (128 maxi).
+- Add PSG printer patch (file magxboot.S).
