@@ -1,5 +1,5 @@
 /* TOS 4.04 Xbios for the CT60 board
-*  Didier Mequignon 2002 December, e-mail: aniplay@wanadoo.fr
+*  Didier Mequignon 2002-2005, e-mail: aniplay@wanadoo.fr
 *
 *  This library is free software; you can redistribute it and/or
 *  modify it under the terms of the GNU Lesser General Public
@@ -30,6 +30,7 @@
 #define CT60_CACHE_DELAY 2
 #define CT60_BOOT_ORDER 3
 #define CT60_CPU_FPU 4
+#define CT60_BOOT_LOG 5
 #define CT60_SAVE_NVRAM_1 7
 #define CT60_SAVE_NVRAM_2 8
 #define CT60_SAVE_NVRAM_3 9

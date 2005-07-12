@@ -1,5 +1,5 @@
 /* CT60 CONFiguration - Pure C */
-/* Didier MEQUIGNON - v1.03b - April 2005 */
+/* Didier MEQUIGNON - v1.03c - July 2005 */
 
 #include <portab.h>
 #include <tos.h>
@@ -75,6 +75,8 @@ typedef struct
 	unsigned char bootorder;
 	unsigned char cpufpu;
 	unsigned long frequency;
+	unsigned char beep;
+	unsigned char bootlog;
 } HEAD;
 
 typedef struct
@@ -194,13 +196,13 @@ void display_erreur(int err);
 void bubble_help(void);
 void call_st_guide(void);
 long cdecl temp_thread(unsigned int *param);
-int start_temp(unsigned int *param1,unsigned int *param2,unsigned int *param3);
-int start_ct60temp(unsigned int *param1,unsigned int *param2,unsigned int *param3);
+int start_temp(unsigned int *param1,unsigned int *param2,unsigned int *param3,unsigned int *param4);
+int start_ct60temp(unsigned int *param1,unsigned int *param2,unsigned int *param3,unsigned int *param4);
 int send_ask_temp(void);
 int test_stop(unsigned long daytime,unsigned int daystop,unsigned int timestop); 
 int dayofweek(int year,int mon,int mday);
 void SendIkbd(int count, char *buffer);
-void bip(void);
+void beep_psg(unsigned int beep);
 void stop_060(void);
 long version_060(void);
 int read_temp(void);
@@ -230,7 +232,7 @@ extern int read_i2c(long device_address);
 
 /* global variables in the 1st position of DATA segment */
 
-HEAD config={0,2,2,0x11,'/',1,0x1b2,0x87,0,50,0,0,1,0,1,1,MIN_FREQ};
+HEAD config={0,2,2,0x11,'/',1,0x1b2,0x87,0,50,0,0,1,0,1,1,MIN_FREQ,1,1};
 
 #include "ct60temp.hex"
 
@@ -257,8 +259,9 @@ USERBLK spec_trace={0,0};
 USERBLK spec_cpuload={0,0};
 int ed_objc,new_objc,ed_pos,new_pos;
 int start_lang,flag_bubble,selection;
-int language,keyboard,datetime,vmode,bootpref,bootdelay,scsi,cpufpu,tosram,blitterspeed,cachedelay,bootorder,nv_magic_code;
-unsigned int trigger_temp,daystop,timestop;
+int language,keyboard,datetime,vmode,bootpref,bootdelay,scsi,cpufpu;
+int tosram,blitterspeed,cachedelay,bootorder,bootlog,nv_magic_code;
+unsigned int trigger_temp,daystop,timestop,beep;
 char *buffer_bubble=NULL;
 char *buffer_path=NULL;
 unsigned short tab_temp[61],tab_temp_eiffel[61],tab_cpuload[61];
@@ -310,17 +313,19 @@ unsigned short tab_temp[61],tab_temp_eiffel[61],tab_cpuload[61];
 #define MENUBBLITTER 70
 #define MENUBTOSRAM 72
 #define MENUBCACHE 74
-#define MENUBOOT 75
-#define MENUBOXSTOP 76
-#define MENUBDAY 78
-#define MENUTIME 79
-#define MENUSTOP 80
+#define MENUBBOOTLOG 76
+#define MENUBOOT 77
+#define MENUBOXSTOP 78
+#define MENUBDAY 80
+#define MENUTIME 81
+#define MENUBBEEP 83
+#define MENUSTOP 84
 
-#define MENUBSAVE 81
-#define MENUBLOAD 82
-#define MENUBOK 83
-#define MENUBCANCEL 84
-#define MENUBINFO 85
+#define MENUBSAVE 85
+#define MENUBLOAD 86
+#define MENUBOK 87
+#define MENUBCANCEL 88
+#define MENUBINFO 89
 
 #define INFOBOX 0
 #define INFOLOGO 1
@@ -428,17 +433,21 @@ char *rs_strings[] = {
 	"Non","","",
 	"TOS:",
 	"Normal","","",
+	"boot.log:",
+	"Sans","","",
 	" Arrˆt ","","",
 	"Arrˆt programm‚:",
 	"Sans","","",
 	"xxxx","…: __:__","9999",
+	"Bip alarme:",
+	"Oui","","",
 	
 	"Sauve",
 	"Charge",
 	"OK",
 	"Annule",
 	
-	"CT60 Configuration V1.03b Avril 2005","","",
+	"CT60 Configuration V1.03c Juillet 2005","","",
 	"Ce CPX et systŠme:","","",
 	"Didier MEQUIGNON","","",
 	"aniplay@wanadoo.fr","","",
@@ -549,17 +558,21 @@ char *rs_strings_en[] = {
 	"No","","",
 	"TOS:",
 	"Normal","","",
+	"boot.log:",
+	"Without","","",
 	" Stop ","","",
 	"Stop programmed:",
 	"Without","","",
 	"xxxx","at: __:__","9999",
+	"Beep alarm:",
+	"Yes","","",
 	
 	"Save",
 	"Load",
 	"OK",
 	"Cancel",
 
-	"CT60 Configuration V1.03b April 2005","","",
+	"CT60 Configuration V1.03c July 2005","","",
 	"This CPX and system:","","",
 	"Didier MEQUIGNON","","",
 	"aniplay@wanadoo.fr","","",
@@ -655,28 +668,30 @@ TEDINFO rs_tedinfo[] = {
 	(char *)120L,(char *)121L,(char *)122L,IBM,0,2,0x1180,0,-1,7,1,
 	(char *)124L,(char *)125L,(char *)126L,IBM,0,2,0x1180,0,-1,4,1,
 	(char *)128L,(char *)129L,(char *)130L,IBM,0,2,0x1180,0,-1,8,1,
-	(char *)131L,(char *)132L,(char *)133L,IBM,0,2,0x1180,0,0,14,1,
-	(char *)135L,(char *)136L,(char *)137L,IBM,0,2,0x1180,0,-1,16,1,
-	(char *)138L,(char *)139L,(char *)140L,IBM,0,0,0x1180,0,0,5,10,
+	(char *)132L,(char *)133L,(char *)134L,IBM,0,2,0x1180,0,-1,7,1,
+	(char *)135L,(char *)136L,(char *)137L,IBM,0,2,0x1180,0,0,14,1,
+	(char *)139L,(char *)140L,(char *)141L,IBM,0,2,0x1180,0,-1,16,1,
+	(char *)142L,(char *)143L,(char *)144L,IBM,0,0,0x1180,0,0,5,10,
+	(char *)146L,(char *)147L,(char *)148L,IBM,0,2,0x1180,0,-1,5,1,
 
-	(char *)145L,(char *)146L,(char *)147L,IBM,0,2,0x1480,0,0,38,1,
-	(char *)148L,(char *)149L,(char *)150L,IBM,0,2,0x1180,0,0,38,1,
-	(char *)151L,(char *)152L,(char *)153L,IBM,0,2,0x1180,0,0,38,1,
-	(char *)154L,(char *)155L,(char *)156L,IBM,0,2,0x1180,0,0,38,1,
-	(char *)157L,(char *)158L,(char *)159L,IBM,0,2,0x1180,0,0,38,1,
-	(char *)160L,(char *)161L,(char *)162L,IBM,0,2,0x1180,0,0,38,1,
-	(char *)163L,(char *)164L,(char *)165L,IBM,0,2,0x1180,0,0,38,1,
-	(char *)166L,(char *)167L,(char *)168L,IBM,0,2,0x1180,0,0,38,1,
-	(char *)169L,(char *)170L,(char *)171L,IBM,0,2,0x1180,0,0,38,1,
-	(char *)172L,(char *)173L,(char *)174L,IBM,0,2,0x1180,0,0,38,1,
-	(char *)175L,(char *)176L,(char *)177L,IBM,0,2,0x1180,0,0,38,1,
+	(char *)153L,(char *)154L,(char *)155L,IBM,0,2,0x1480,0,0,38,1,
+	(char *)156L,(char *)157L,(char *)158L,IBM,0,2,0x1180,0,0,38,1,
+	(char *)159L,(char *)160L,(char *)161L,IBM,0,2,0x1180,0,0,38,1,
+	(char *)162L,(char *)163L,(char *)164L,IBM,0,2,0x1180,0,0,38,1,
+	(char *)165L,(char *)166L,(char *)167L,IBM,0,2,0x1180,0,0,38,1,
+	(char *)168L,(char *)169L,(char *)170L,IBM,0,2,0x1180,0,0,38,1,
+	(char *)171L,(char *)172L,(char *)173L,IBM,0,2,0x1180,0,0,38,1,
+	(char *)174L,(char *)175L,(char *)176L,IBM,0,2,0x1180,0,0,38,1,
+	(char *)177L,(char *)178L,(char *)179L,IBM,0,2,0x1180,0,0,38,1,
+	(char *)180L,(char *)181L,(char *)182L,IBM,0,2,0x1180,0,0,38,1,
+	(char *)183L,(char *)184L,(char *)185L,IBM,0,2,0x1180,0,0,38,1,
 
-	(char *)181L,(char *)182L,(char *)183L,IBM,0,2,0x1480,0,-1,17,1,
+	(char *)189L,(char *)190L,(char *)191L,IBM,0,2,0x1480,0,-1,17,1,
 	
-	(char *)212L,(char *)213L,(char *)214L,IBM,0,0,0x1180,0,0,4,32 };
+	(char *)220L,(char *)221L,(char *)222L,IBM,0,0,0x1180,0,0,4,32 };
 	
 OBJECT rs_object[] = {
-	-1,1,85,G_BOX,FL3DBAK,NORMAL,0x1100L,0,0,32,11,
+	-1,1,89,G_BOX,FL3DBAK,NORMAL,0x1100L,0,0,32,11,
 	2,-1,-1,G_TEXT,FL3DBAK,SELECTED,0L,0,0,32,1,
 	3,-1,-1,G_STRING,NONE,NORMAL,3L,1,1,14,1,
 	4,-1,-1,G_BOXTEXT,TOUCHEXIT,SHADOWED,1L,16,1,15,1,								/* popup selection */
@@ -736,7 +751,7 @@ OBJECT rs_object[] = {
 	58,-1,-1,G_BUTTON,SELECTABLE|TOUCHEXIT|FL3DIND,NORMAL,96L,16,5,15,1,
 	47,-1,-1,G_BUTTON,SELECTABLE|TOUCHEXIT|FL3DIND,NORMAL,97L,1,5,14,1,
 	60,-1,-1,G_TEXT,FL3DBAK,NORMAL,21L,1,2,14,1,
-	75,61,74,G_BOX,FL3DIND,NORMAL,0xff1100L,0,2,32,6,								/* boot box */
+	77,61,76,G_BOX,FL3DIND,NORMAL,0xff1100L,0,2,32,6,								/* boot box */
 	62,-1,-1,G_BOXTEXT,TOUCHEXIT,SHADOWED,27L,1,1,17,1,								/* popup boot order */
 	63,-1,-1,G_STRING,NONE,NORMAL,104L,20,1,3,1,
 	64,-1,-1,G_BOXTEXT,TOUCHEXIT,SHADOWED,28L,24,1,7,1,								/* popup favourite OS */
@@ -747,83 +762,87 @@ OBJECT rs_object[] = {
 	69,-1,-1,G_FTEXT,EDITABLE|FL3DBAK,NORMAL,31L,1,3,13,1,
 	70,-1,-1,G_STRING,NONE,NORMAL,119L,15,3,8,1,
 	71,-1,-1,G_BOXTEXT,TOUCHEXIT,SHADOWED,32L,24,3,6,1,								/* popup speed blitter */
-	72,-1,-1,G_STRING,NONE,NORMAL,123L,1,5,11,1,
-	73,-1,-1,G_BOXTEXT,TOUCHEXIT,SHADOWED,33L,12,5,4,1,								/* popup transfer TOS in RAM */
-	74,-1,-1,G_STRING,NONE,NORMAL,127L,18,5,4,1,
-	60,-1,-1,G_BOXTEXT,TOUCHEXIT,SHADOWED,34L,23,5,7,1,								/* popup TOS cache delay */
-	76,-1,-1,G_TEXT,FL3DBAK,NORMAL,26L,1,2,6,1,
-	80,77,79,G_BOX,FL3DIND,NORMAL,0xff1100L,0,2,32,6,								/* stop box */
-	78,-1,-1,G_STRING,NONE,NORMAL,134L,1,1,15,1,
-	79,-1,-1,G_BOXTEXT,TOUCHEXIT,SHADOWED,36L,16,1,15,1,							/* popup stop */
-	76,-1,-1,G_FTEXT,EDITABLE|FL3DBAK,NORMAL,37L,1,3,13,1,							/* time */
-	81,-1,-1,G_TEXT,FL3DBAK,NORMAL,35L,1,2,6,1,
+	72,-1,-1,G_STRING,NONE,NORMAL,123L,1,4,11,1,
+	73,-1,-1,G_BOXTEXT,TOUCHEXIT,SHADOWED,33L,12,4,4,1,								/* popup 2transfer TOS in RAM */
+	74,-1,-1,G_STRING,NONE,NORMAL,127L,18,4,4,1,
+	75,-1,-1,G_BOXTEXT,TOUCHEXIT,SHADOWED,34L,23,4,7,1,								/* popup TOS cache delay */
+	76,-1,-1,G_STRING,NONE,NORMAL,131L,1,5,9,1,
+	60,-1,-1,G_BOXTEXT,TOUCHEXIT,SHADOWED,35L,10,5,7,1,								/* popup boot.log */
+	78,-1,-1,G_TEXT,FL3DBAK,NORMAL,26L,1,2,6,1,
+	84,79,83,G_BOX,FL3DIND,NORMAL,0xff1100L,0,2,32,6,								/* stop box */
+	80,-1,-1,G_STRING,NONE,NORMAL,138L,1,1,15,1,
+	81,-1,-1,G_BOXTEXT,TOUCHEXIT,SHADOWED,37L,16,1,15,1,							/* popup stop */
+	82,-1,-1,G_FTEXT,EDITABLE|FL3DBAK,NORMAL,38L,1,3,13,1,							/* time */
+	83,-1,-1,G_STRING,NONE,NORMAL,145L,1,5,15,1,
+	78,-1,-1,G_BOXTEXT,TOUCHEXIT,SHADOWED,39L,16,5,4,1,								/* popup beep */
+	85,-1,-1,G_TEXT,FL3DBAK,NORMAL,36L,1,2,6,1,
 
-	82,-1,-1,G_BUTTON,SELECTABLE|EXIT|FL3DIND|FL3DBAK,NORMAL,141L,1,9,5,1,			/* Save */
-	83,-1,-1,G_BUTTON,SELECTABLE|EXIT|FL3DIND|FL3DBAK,NORMAL,142L,8,9,6,1,			/* Load */
-	84,-1,-1,G_BUTTON,SELECTABLE|EXIT|FL3DIND|FL3DBAK,NORMAL,143L,16,9,3,1,			/* OK */
-	85,-1,-1,G_BUTTON,SELECTABLE|DEFAULT|EXIT|FL3DIND|FL3DBAK,NORMAL,144L,21,9,6,1,	/* Cancel */
+	86,-1,-1,G_BUTTON,SELECTABLE|EXIT|FL3DIND|FL3DBAK,NORMAL,149L,1,9,5,1,			/* Save */
+	87,-1,-1,G_BUTTON,SELECTABLE|EXIT|FL3DIND|FL3DBAK,NORMAL,150L,8,9,6,1,			/* Load */
+	88,-1,-1,G_BUTTON,SELECTABLE|EXIT|FL3DIND|FL3DBAK,NORMAL,151L,16,9,3,1,			/* OK */
+	89,-1,-1,G_BUTTON,SELECTABLE|DEFAULT|EXIT|FL3DIND|FL3DBAK,NORMAL,152L,21,9,6,1,	/* Cancel */
 	0,-1,-1,G_BOXCHAR,SELECTABLE|EXIT|LASTOB|FL3DIND|FL3DBAK,NORMAL,0x69ff1100L,29,9,2,1,	/* i */
 
 	/* info box */
 	-1,1,15,G_BOX,FL3DBAK,OUTLINED,0x21100L,0,0,40,24,
 	2,-1,-1,G_IMAGE,NONE,NORMAL,0L,2,1,36,5,
-	3,-1,-1,G_TEXT,FL3DBAK,NORMAL,38L,1,7,38,1,
-	4,-1,-1,G_TEXT,FL3DBAK,NORMAL,39L,1,9,38,1,
-	5,-1,-1,G_TEXT,FL3DBAK,NORMAL,40L,1,10,38,1,
-	6,-1,-1,G_TEXT,FL3DBAK,NORMAL,41L,1,11,38,1,
-	7,-1,-1,G_TEXT,FL3DBAK,NORMAL,42L,1,13,38,1,
-	8,-1,-1,G_TEXT,FL3DBAK,NORMAL,43L,1,14,38,1,
-	9,-1,-1,G_TEXT,FL3DBAK,NORMAL,44L,1,15,38,1,
-	10,-1,-1,G_TEXT,FL3DBAK,NORMAL,45L,1,17,38,1,
-	11,-1,-1,G_TEXT,FL3DBAK,NORMAL,46L,1,18,38,1,
-	12,-1,-1,G_TEXT,FL3DBAK,NORMAL,47L,1,19,38,1,
-	13,-1,-1,G_TEXT,FL3DBAK,NORMAL,48L,1,20,38,1,
-	14,-1,-1,G_BUTTON,SELECTABLE|DEFAULT|EXIT|FL3DIND|FL3DBAK,NORMAL,178L,4,22,8,1,	/* OK */		
-	15,-1,-1,G_BUTTON,SELECTABLE|EXIT|FL3DIND|FL3DBAK,NORMAL,179L,16,22,8,1,		/* SDRAM */
-	0,-1,-1,G_BUTTON,SELECTABLE|EXIT|LASTOB|FL3DIND|FL3DBAK,NORMAL,180L,28,22,8,1,	/* Help */	
+	3,-1,-1,G_TEXT,FL3DBAK,NORMAL,40L,1,7,38,1,
+	4,-1,-1,G_TEXT,FL3DBAK,NORMAL,41L,1,9,38,1,
+	5,-1,-1,G_TEXT,FL3DBAK,NORMAL,42L,1,10,38,1,
+	6,-1,-1,G_TEXT,FL3DBAK,NORMAL,43L,1,11,38,1,
+	7,-1,-1,G_TEXT,FL3DBAK,NORMAL,44L,1,13,38,1,
+	8,-1,-1,G_TEXT,FL3DBAK,NORMAL,45L,1,14,38,1,
+	9,-1,-1,G_TEXT,FL3DBAK,NORMAL,46L,1,15,38,1,
+	10,-1,-1,G_TEXT,FL3DBAK,NORMAL,47L,1,17,38,1,
+	11,-1,-1,G_TEXT,FL3DBAK,NORMAL,48L,1,18,38,1,
+	12,-1,-1,G_TEXT,FL3DBAK,NORMAL,49L,1,19,38,1,
+	13,-1,-1,G_TEXT,FL3DBAK,NORMAL,50L,1,20,38,1,
+	14,-1,-1,G_BUTTON,SELECTABLE|DEFAULT|EXIT|FL3DIND|FL3DBAK,NORMAL,186L,4,22,8,1,	/* OK */		
+	15,-1,-1,G_BUTTON,SELECTABLE|EXIT|FL3DIND|FL3DBAK,NORMAL,187L,16,22,8,1,		/* SDRAM */
+	0,-1,-1,G_BUTTON,SELECTABLE|EXIT|LASTOB|FL3DIND|FL3DBAK,NORMAL,188L,28,22,8,1,	/* Help */	
 
 	/* alert box */
 	-1,1,32,G_BOX,FL3DBAK,OUTLINED,0x21100L,0,0,42,30,
-	2,-1,-1,G_BOXTEXT,FL3DIND,NORMAL,49L,0,0,42,1,
+	2,-1,-1,G_BOXTEXT,FL3DIND,NORMAL,51L,0,0,42,1,
 	3,-1,-1,G_IMAGE,NONE,NORMAL,1L,1,2,4,2,
 	4,-1,-1,G_IMAGE,NONE,NORMAL,2L,1,2,4,2,
 	5,-1,-1,G_IMAGE,NONE,NORMAL,3L,1,2,4,2,
-	6,-1,-1,G_STRING,NONE,NORMAL,184L,1,2,40,1,
-	7,-1,-1,G_STRING,NONE,NORMAL,185L,1,3,40,1,
-	8,-1,-1,G_STRING,NONE,NORMAL,186L,1,4,40,1,
-	9,-1,-1,G_STRING,NONE,NORMAL,187L,1,5,40,1,
-	10,-1,-1,G_STRING,NONE,NORMAL,188L,1,6,40,1,
-	11,-1,-1,G_STRING,NONE,NORMAL,189L,1,7,40,1,
-	12,-1,-1,G_STRING,NONE,NORMAL,190L,1,8,40,1,
-	13,-1,-1,G_STRING,NONE,NORMAL,191L,1,9,40,1,
-	14,-1,-1,G_STRING,NONE,NORMAL,192L,1,10,40,1,
-	15,-1,-1,G_STRING,NONE,NORMAL,193L,1,11,40,1,
-	16,-1,-1,G_STRING,NONE,NORMAL,194L,1,12,40,1,
-	17,-1,-1,G_STRING,NONE,NORMAL,195L,1,13,40,1,
-	18,-1,-1,G_STRING,NONE,NORMAL,196L,1,14,40,1,
-	19,-1,-1,G_STRING,NONE,NORMAL,197L,1,15,40,1,
-	20,-1,-1,G_STRING,NONE,NORMAL,198L,1,16,40,1,
-	21,-1,-1,G_STRING,NONE,NORMAL,199L,1,17,40,1,
-	22,-1,-1,G_STRING,NONE,NORMAL,200L,1,18,40,1,
-	23,-1,-1,G_STRING,NONE,NORMAL,201L,1,19,40,1,
-	24,-1,-1,G_STRING,NONE,NORMAL,202L,1,20,40,1,
-	25,-1,-1,G_STRING,NONE,NORMAL,203L,1,21,40,1,
-	26,-1,-1,G_STRING,NONE,NORMAL,204L,1,22,40,1,
-	27,-1,-1,G_STRING,NONE,NORMAL,205L,1,23,40,1,
-	28,-1,-1,G_STRING,NONE,NORMAL,206L,1,24,40,1,
-	29,-1,-1,G_STRING,NONE,NORMAL,207L,1,25,40,1,
-	30,-1,-1,G_STRING,NONE,NORMAL,208L,1,26,40,1,
-	31,-1,-1,G_BUTTON,SELECTABLE|DEFAULT|EXIT|FL3DIND|FL3DBAK,NORMAL,209L,1,28,10,1,
-	32,-1,-1,G_BUTTON,SELECTABLE|EXIT|FL3DIND|FL3DBAK,NORMAL,210L,12,28,10,1,
-	0,-1,-1,G_BUTTON,SELECTABLE|EXIT|LASTOB|FL3DIND|FL3DBAK,NORMAL,211L,23,28,10,1,
+	6,-1,-1,G_STRING,NONE,NORMAL,192L,1,2,40,1,
+	7,-1,-1,G_STRING,NONE,NORMAL,193L,1,3,40,1,
+	8,-1,-1,G_STRING,NONE,NORMAL,194L,1,4,40,1,
+	9,-1,-1,G_STRING,NONE,NORMAL,195L,1,5,40,1,
+	10,-1,-1,G_STRING,NONE,NORMAL,196L,1,6,40,1,
+	11,-1,-1,G_STRING,NONE,NORMAL,197L,1,7,40,1,
+	12,-1,-1,G_STRING,NONE,NORMAL,198L,1,8,40,1,
+	13,-1,-1,G_STRING,NONE,NORMAL,199L,1,9,40,1,
+	14,-1,-1,G_STRING,NONE,NORMAL,200L,1,10,40,1,
+	15,-1,-1,G_STRING,NONE,NORMAL,201L,1,11,40,1,
+	16,-1,-1,G_STRING,NONE,NORMAL,202L,1,12,40,1,
+	17,-1,-1,G_STRING,NONE,NORMAL,203L,1,13,40,1,
+	18,-1,-1,G_STRING,NONE,NORMAL,204L,1,14,40,1,
+	19,-1,-1,G_STRING,NONE,NORMAL,205L,1,15,40,1,
+	20,-1,-1,G_STRING,NONE,NORMAL,206L,1,16,40,1,
+	21,-1,-1,G_STRING,NONE,NORMAL,207L,1,17,40,1,
+	22,-1,-1,G_STRING,NONE,NORMAL,208L,1,18,40,1,
+	23,-1,-1,G_STRING,NONE,NORMAL,209L,1,19,40,1,
+	24,-1,-1,G_STRING,NONE,NORMAL,210L,1,20,40,1,
+	25,-1,-1,G_STRING,NONE,NORMAL,211L,1,21,40,1,
+	26,-1,-1,G_STRING,NONE,NORMAL,212L,1,22,40,1,
+	27,-1,-1,G_STRING,NONE,NORMAL,213L,1,23,40,1,
+	28,-1,-1,G_STRING,NONE,NORMAL,214L,1,24,40,1,
+	29,-1,-1,G_STRING,NONE,NORMAL,215L,1,25,40,1,
+	30,-1,-1,G_STRING,NONE,NORMAL,216L,1,26,40,1,
+	31,-1,-1,G_BUTTON,SELECTABLE|DEFAULT|EXIT|FL3DIND|FL3DBAK,NORMAL,217L,1,28,10,1,
+	32,-1,-1,G_BUTTON,SELECTABLE|EXIT|FL3DIND|FL3DBAK,NORMAL,218L,12,28,10,1,
+	0,-1,-1,G_BUTTON,SELECTABLE|EXIT|LASTOB|FL3DIND|FL3DBAK,NORMAL,219L,23,28,10,1,
 
 	/* TLV offset */
 	-1,1,3,G_BOX,FL3DBAK,OUTLINED,0x21100L,0,0,33,5,
-	2,-1,-1,G_FTEXT,EDITABLE|FL3DBAK,NORMAL,50L,1,1,31,1,
-	3,-1,-1,G_BUTTON,SELECTABLE|EXIT|FL3DIND|FL3DBAK,NORMAL,215L,7,3,6,1,					/* OK */
-	0,-1,-1,G_BUTTON,SELECTABLE|DEFAULT|EXIT|LASTOB|FL3DIND|FL3DBAK,NORMAL,216L,20,3,6,1 };	/* Cancel */
+	2,-1,-1,G_FTEXT,EDITABLE|FL3DBAK,NORMAL,52L,1,1,31,1,
+	3,-1,-1,G_BUTTON,SELECTABLE|EXIT|FL3DIND|FL3DBAK,NORMAL,223L,7,3,6,1,					/* OK */
+	0,-1,-1,G_BUTTON,SELECTABLE|DEFAULT|EXIT|LASTOB|FL3DIND|FL3DBAK,NORMAL,224L,20,3,6,1 };	/* Cancel */
 
-long rs_trindex[] = {0L,86L,102L,135L};
+long rs_trindex[] = {0L,90L,106L,139L};
 struct foobar {
 	int dummy;
 	int *image;
@@ -942,14 +961,14 @@ UWORD pic_stop[]={
 	0x37FF,0xFFEC,0x1BFF,0xFFD8,0x0DFF,0xFFB0,0x06FF,0xFF60,
 	0x037F,0xFEC0,0x01BF,0xFD80,0x00C0,0x0300,0x007F,0xFE00 };
 
-#define NUM_STRINGS 217	/* number of strings */
+#define NUM_STRINGS 225	/* number of strings */
 #define NUM_FRSTR 0		/* strings form_alert */
 #define NUM_IMAGES 0
 #define NUM_BB 4		/* number of BITBLK */
 #define NUM_FRIMG 0
 #define NUM_IB 0		/* number of ICONBLK */
-#define NUM_TI 51		/* number of TEDINFO */
-#define NUM_OBS 139		/* number of objects */
+#define NUM_TI 53		/* number of TEDINFO */
+#define NUM_OBS 143		/* number of objects */
 #define NUM_TREE 4		/* number of trees */ 
 
 #define TREE1 0
@@ -959,10 +978,10 @@ UWORD pic_stop[]={
 
 #ifndef LIGHT
 #define MAX_SELECT 7
-#define NB_BUB 43
+#define NB_BUB 45
 #else
 #define MAX_SELECT 5
-#define NB_BUB 43-12
+#define NB_BUB 45-12
 #endif
 
 #define USA 0
@@ -1058,12 +1077,16 @@ char *boot_order[2][8]={"  Nouv. boot SCSI0-7 -> IDE0-1 ",
                         "  Old boot IDE0-1 -> SCSI0-7 ",
                         "  Old boot SCSI7-0 -> IDE1-0 ",
                         "  Old boot IDE1-0 -> SCSI7-0 "};
+char *spec_boot_log[2][2]={"Avec","Sans","With","Without"};
+char *boot_log[2][2]={"  Avec ","  Sans ","  With    ","  Without "};
 char *spec_day_stop[2][11]={"Sans","Lundi","Mardi","Mercredi","Jeudi","Vendredi","Samedi","Dimanche","Jours ouvr‚s","Fin de semaine","Chaque jour",
                             "Without","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday","Mon-Fri","Weekend","Every day"};
 char *day_stop[2][11]={"  Sans           ","  Lundi          ","  Mardi          ","  Mercredi       ","  Jeudi          ","  Vendredi       ",
                        "  Samedi         ","  Dimanche       ","  Jours ouvr‚s   ","  Fin de semaine ","  Chaque jour    ",
                        "  Without   ","  Monday    ","  Tuesday   ","  Wednesday ","  Thursday  ","  Friday    ",
                        "  Saturday  ","  Sunday    ","  Mon-Fri   ","  Weekend   ","  Every day "};
+char *spec_beepp[2][2]={"Non","Oui","No","Yes"};
+char *beepp[2][2]={"  Non ","  Oui ","  No  ","  Yes "};
 
 /* BubbleGEM */
 
@@ -1185,12 +1208,18 @@ struct bubblegem bubbletab[NB_BUB] = {
 	{MENUBCACHE,
 	"Coupe les caches pendant 5 secondes|lors du lancement d'un programme|sous TOS",
 	"Disable the caches for 5 seconds|when a program is started|under TOS"},
+	{MENUBBOOTLOG,
+	"Redirige l'affichage des programmes|du dossier AUTO vers un fichier boot.log",
+	"Redirect displays of the AUTO folder's|programs to a file boot.log"},
 	{MENUBDAY,
 	"S‚l‚ctionne le mode|d'extinction programm‚e|aprŠs une proc‚dure shutdown",
 	"Select the stop mode programmed|after a shutdown procedure"},
 	{MENUTIME,
 	"Si le mode d'arrˆt est|activ‚, l'heure d'arrˆt|se r‚gle ici",
 	"If stop mode is active,|the time must be entered here"},
+	{MENUBBEEP,
+	"Active le bip d'alame|de la phase d'arrˆt",
+	"Enable the alarm beep|for the stop procedure"},
 	
 	{MENUBSAVE,
 	"Bouton pour sauver les|r‚glages sur le disque",
@@ -1290,6 +1319,7 @@ CPXINFO* CDECL cpx_init(XCPB *xcpb)
     if(daystop>11)
     	daystop=0;	
 	timestop=header->timestop;
+	beep=(int)header->beep&1;
 	if(!loops_per_sec)
 	{
 #ifdef DEBUG
@@ -1320,11 +1350,12 @@ CPXINFO* CDECL cpx_init(XCPB *xcpb)
 #endif
 		if((*Xcpb->get_cookie)(ID_CT60,&(long)ct60_arg) && (ct60_arg!=NULL))
 		{
-			ct60_arg->trigger_temp=(unsigned int)trigger_temp;
-			ct60_arg->daystop=(unsigned int)daystop;
-			ct60_arg->timestop=(unsigned int)timestop;          /* ACC cannot receive arg */
+			ct60_arg->trigger_temp=(unsigned short)trigger_temp;
+			ct60_arg->daystop=(unsigned short)daystop;
+			ct60_arg->timestop=(unsigned short)timestop;
+			ct60_arg->beep=(unsigned short)beep;         	/* ACC cannot receive arg */
 		}	
-		start_temp(&trigger_temp,&daystop,&timestop);			/* start thread or CT60TEMP.APP */
+		start_temp(&trigger_temp,&daystop,&timestop,&beep);	/* start thread or CT60TEMP.APP */
 	}
 #ifdef DEBUG
 	printf("\r\nCPX init finished");
@@ -1417,6 +1448,9 @@ int CDECL cpx_call(GRECT *work)
 	if(i>2359)
 		i=2359;	
 	sprintf(t_edinfo->te_ptext,"%04d",i);
+	beep=(int)header->beep&1;
+	t_edinfo=rs_object[MENUBBEEP].ob_spec.tedinfo;
+	t_edinfo->te_ptext=spec_beepp[start_lang][beep];
 	spec_cpuload.ub_code=cpu_load;
 	spec_trace.ub_code=trace_temp;
 	spec_trace.ub_parm=(long)tab_temp;
@@ -1538,6 +1572,7 @@ int CDECL cpx_call(GRECT *work)
 		blitterspeed=(int)ct60_rw_parameter(CT60_MODE_READ,CT60_BLITTER_SPEED,0L)&1;
 		cachedelay=(int)ct60_rw_parameter(CT60_MODE_READ,CT60_CACHE_DELAY,0L)&3;
 		bootorder=(int)ct60_rw_parameter(CT60_MODE_READ,CT60_BOOT_ORDER,0L)&7;
+		bootlog=(int)ct60_rw_parameter(CT60_MODE_READ,CT60_BOOT_LOG,0L)&1;
 		cpufpu=(int)ct60_rw_parameter(CT60_MODE_READ,CT60_CPU_FPU,0L)&1;
 		nv_magic_code=(int)((ct60_rw_parameter(CT60_MODE_READ,CT60_SAVE_NVRAM_1,0L)>>16) & 0xffff);
 		frequency=ct60_rw_parameter(CT60_MODE_READ,CT60_CLOCK,0L);
@@ -1549,6 +1584,7 @@ int CDECL cpx_call(GRECT *work)
 		blitterspeed=(int)ct60_rw_param(CT60_MODE_READ,CT60_BLITTER_SPEED,0L)&1;
 		cachedelay=(int)ct60_rw_param(CT60_MODE_READ,CT60_CACHE_DELAY,0L)&3;
 		bootorder=(int)ct60_rw_param(CT60_MODE_READ,CT60_BOOT_ORDER,0L)&7;
+		bootlog=(int)ct60_rw_param(CT60_MODE_READ,CT60_BOOT_LOG,0L)&1;
 		cpufpu=(int)ct60_rw_param(CT60_MODE_READ,CT60_CPU_FPU,0L)&1;
 		nv_magic_code=(int)((ct60_rw_param(CT60_MODE_READ,CT60_SAVE_NVRAM_1,0L)>>16) & 0xffff);
 		frequency=(int)ct60_rw_param(CT60_MODE_READ,CT60_CLOCK,0L);
@@ -1577,6 +1613,8 @@ int CDECL cpx_call(GRECT *work)
 	t_edinfo->te_ptext=spec_cache_delay[start_lang][cachedelay];
 	t_edinfo=rs_object[MENUBBOOTORDER].ob_spec.tedinfo;
 	t_edinfo->te_ptext=spec_boot_order[start_lang][bootorder];
+	t_edinfo=rs_object[MENUBBOOTLOG].ob_spec.tedinfo;
+	t_edinfo->te_ptext=spec_boot_log[start_lang][bootlog];
 	t_edinfo=rs_object[MENUBFPU].ob_spec.tedinfo;
 	t_edinfo->te_ptext=spec_fpu[start_lang][cpufpu];
     ed_pos=ed_objc=0;
@@ -2546,6 +2584,19 @@ void CDECL cpx_button(MRETS *mrets,int nclicks,int *event)
 					cachedelay=ret;
 				}
 				break;
+			case MENUBBOOTLOG:
+				objc_offset(rs_object,MENUBBOOTLOG,&menu.g_x,&menu.g_y);
+				menu.g_w=rs_object[MENUBBOOTLOG].ob_width;
+				menu.g_h=rs_object[MENUBBOOTLOG].ob_height;
+				ret=(*Xcpb->Popup)(boot_log[start_lang],2,bootlog,IBM,&menu,Work);
+				if(ret>=0 && ret!=bootlog)
+				{
+					t_edinfo=rs_object[MENUBBOOTLOG].ob_spec.tedinfo;
+					t_edinfo->te_ptext=spec_boot_log[start_lang][ret];
+					display_objc(MENUBBOOTLOG,Work);				
+					bootlog=ret;
+				}
+				break;
 			case MENUBDAY:
 				objc_offset(rs_object,MENUBDAY,&menu.g_x,&menu.g_y);
 				menu.g_w=rs_object[MENUBDAY].ob_width;
@@ -2558,7 +2609,20 @@ void CDECL cpx_button(MRETS *mrets,int nclicks,int *event)
 					display_objc(MENUBDAY,Work);
 					daystop=ret;
 				}
-				break;			
+				break;
+			case MENUBBEEP:
+				objc_offset(rs_object,MENUBBEEP,&menu.g_x,&menu.g_y);
+				menu.g_w=rs_object[MENUBBEEP].ob_width;
+				menu.g_h=rs_object[MENUBBEEP].ob_height;
+				ret=(*Xcpb->Popup)(beepp[start_lang],2,beep,IBM,&menu,Work);
+				if(ret>=0 && ret!=beep)
+				{
+					t_edinfo=rs_object[MENUBBEEP].ob_spec.tedinfo;
+					t_edinfo->te_ptext=spec_beepp[start_lang][ret];
+					display_objc(MENUBBEEP,Work);
+					beep=ret;
+				}
+				break;
 			case MENUBSAVE:
 				head->cpxhead.flags.resident=head->cpxhead.flags.bootinit=1;
 				header->language=code_lang[language];
@@ -2575,6 +2639,7 @@ void CDECL cpx_button(MRETS *mrets,int nclicks,int *event)
 				header->tosram=(unsigned char)tosram;
 				header->cachedelay=(unsigned char)cachedelay;
 				header->bootorder=(unsigned char)bootorder;
+				header->bootlog=(unsigned char)bootlog;
 				header->cpufpu=(unsigned char)cpufpu;
 				t_edinfo=rs_object[MENUTRIGGER].ob_spec.tedinfo;
 				header->trigger_temp=(unsigned int)atoi(t_edinfo->te_ptext);
@@ -2583,6 +2648,7 @@ void CDECL cpx_button(MRETS *mrets,int nclicks,int *event)
 				header->timestop=(((unsigned int)atoi(t_edinfo->te_ptext)/100)<<11)
 				                +(((unsigned int)atoi(t_edinfo->te_ptext)%100)<<5);
                 header->frequency=frequency;
+                header->beep=(unsigned char)beep;
                 if(nclicks<=1)
 					save_header();
 				if(((nclicks>1 && test_060()) || (flag_frequency && !test_060())) && frequency!=0)
@@ -2804,6 +2870,9 @@ void CDECL cpx_button(MRETS *mrets,int nclicks,int *event)
 					bootorder=(int)header->bootorder;					
 					t_edinfo=rs_object[MENUBBOOTORDER].ob_spec.tedinfo;
 					t_edinfo->te_ptext=spec_boot_order[start_lang][bootorder];
+					bootlog=(int)header->bootlog;					
+					t_edinfo=rs_object[MENUBBOOTLOG].ob_spec.tedinfo;
+					t_edinfo->te_ptext=spec_boot_log[start_lang][bootlog];
 					cpufpu=(int)header->cpufpu;
 					t_edinfo=rs_object[MENUBFPU].ob_spec.tedinfo;
 					t_edinfo->te_ptext=spec_fpu[start_lang][cpufpu];
@@ -2820,7 +2889,7 @@ void CDECL cpx_button(MRETS *mrets,int nclicks,int *event)
 					t_edinfo=rs_object[MENUBDAY].ob_spec.tedinfo;
 					t_edinfo->te_ptext=spec_day_stop[start_lang][daystop];
 					t_edinfo=rs_object[MENUTIME].ob_spec.tedinfo;
-					timestop=header->timestop;					
+					timestop=header->timestop;
 					i=(((timestop>>11) & 0x1f) * 100) + ((timestop>>5) & 0x3f);
 					if(i>2359)
 						i=2359;	
@@ -2831,6 +2900,9 @@ void CDECL cpx_button(MRETS *mrets,int nclicks,int *event)
 					if(test_060() && ct60_read_clock()<0)
 						frequency=0;
 					init_slider();
+					beep=(int)header->beep&1;
+					t_edinfo=rs_object[MENUBBEEP].ob_spec.tedinfo;
+					t_edinfo->te_ptext=spec_beepp[start_lang][beep];
 					display_objc(MENUBSELECT,Work);
 					display_selection(selection,1);
 				}
@@ -2857,6 +2929,7 @@ _ok_:
 					blitterspeed=(int)ct60_rw_parameter(CT60_MODE_WRITE,CT60_BLITTER_SPEED,(long)blitterspeed);
 					cachedelay=(int)ct60_rw_parameter(CT60_MODE_WRITE,CT60_CACHE_DELAY,(long)cachedelay);
 					bootorder=(int)ct60_rw_parameter(CT60_MODE_WRITE,CT60_BOOT_ORDER,(long)bootorder);
+					bootlog=(int)ct60_rw_parameter(CT60_MODE_WRITE,CT60_BOOT_LOG,(long)bootlog);
 					cpufpu=(int)ct60_rw_parameter(CT60_MODE_WRITE,CT60_CPU_FPU,(long)cpufpu);
 					ct60_rw_parameter(CT60_MODE_WRITE,CT60_CLOCK,(long)frequency);
 #ifndef LIGHT
@@ -2880,6 +2953,7 @@ _ok_:
 					blitterspeed=(int)ct60_rw_param(CT60_MODE_WRITE,CT60_BLITTER_SPEED,(long)blitterspeed);
 					cachedelay=(int)ct60_rw_param(CT60_MODE_WRITE,CT60_CACHE_DELAY,(long)cachedelay);
 					bootorder=(int)ct60_rw_param(CT60_MODE_WRITE,CT60_BOOT_ORDER,(long)bootorder);
+					bootlog=(int)ct60_rw_param(CT60_MODE_WRITE,CT60_BOOT_LOG,(long)bootlog);
 					cpufpu=(int)ct60_rw_param(CT60_MODE_WRITE,CT60_CPU_FPU,(long)cpufpu);
 					ct60_rw_param(CT60_MODE_WRITE,CT60_CLOCK,(long)frequency);
 #ifndef LIGHT
@@ -2897,10 +2971,10 @@ _ok_:
 #endif
 					Super((void *)stack);
 				}
-				if(tosram<0 || blitterspeed<0 || cachedelay<0 || bootorder<0 || cpufpu<0)
+				if(tosram<0 || blitterspeed<0 || cachedelay<0 || bootorder<0 || bootlog<0 || cpufpu<0)
 				{
 					if(tosram==-15 || blitterspeed==-15 || cachedelay==-15
-					 || bootorder==-15 || cpufpu==-15)   /* error device */
+					 || bootorder==-15 || bootlog==-15 || cpufpu==-15)   /* error device */
 					{
 						if(!start_lang)
 							form_alert(1,"[1][Type de flash|inconnu !][Annuler]");
@@ -3077,12 +3151,22 @@ int init_rsc(void)
 			rs_object[MENUBBOOTORDER].ob_y-=h;
 			rs_object[MENUBOS-1].ob_y-=h;
 			rs_object[MENUBOS].ob_y-=h;
-			rs_object[MENUDELAY].ob_y+=h;
-			rs_object[MENUBBLITTER-1].ob_y+=h;
-			rs_object[MENUBBLITTER].ob_y+=h;
+			rs_object[MENUBARBIT-1].ob_y-=(h-3);
+			rs_object[MENUBARBIT].ob_y-=(h-3);
+			rs_object[MENUBIDSCSI-1].ob_y-=(h-3);
+			rs_object[MENUBIDSCSI].ob_y-=(h-3);
+			rs_object[MENUDELAY].ob_y-=(h-6);
+			rs_object[MENUBBLITTER-1].ob_y-=(h-6);
+			rs_object[MENUBBLITTER].ob_y-=(h-6);
+			rs_object[MENUBTOSRAM-1].ob_y+=(h-7);
+			rs_object[MENUBTOSRAM].ob_y+=(h-7);
+			rs_object[MENUBCACHE-1].ob_y+=(h-7);
+			rs_object[MENUBCACHE].ob_y+=(h-7);
+			rs_object[MENUBBOOTLOG-1].ob_y+=(h-4);
+			rs_object[MENUBBOOTLOG].ob_y+=(h-4);
+
 			rs_object[MENUBOXSTOP].ob_y+=(h+1);
 			rs_object[MENUBOXSTOP].ob_height+=h;
-			
 			rs_object[MENUBSAVE].ob_y+=h;
 			rs_object[MENUBLOAD].ob_y+=h;
 			rs_object[MENUBOK].ob_y+=h;
@@ -3680,7 +3764,7 @@ HEAD *fix_header(void)
 	 && header->vmode==0 && header->scsi==0 && header->tosram==0
 	 && header->trigger_temp==0 && header->daystop==0 && header->timestop==0
 	 && header->blitterspeed==0 && header->cachedelay==0 && header->bootorder==0
-	 && header->cpufpu==0)
+	 && header->bootlog==0 && header->cpufpu==0 && header->beep==0)
 		*header=config;	/* buffer of header is always to 0 with ZCONTROL */
 	return(header);
 }
@@ -4408,7 +4492,7 @@ long cdecl temp_thread(unsigned int *param)				/* used with MagiC > 4.5 */
 {
 	register int i,temp;
 	unsigned long daytime;
-	unsigned int time,trigger_temp,daystop,timestop;
+	unsigned int time,trigger_temp,daystop,timestop,beep;
 	int temp_id,event,ret,count=0,count_mn=0,loops=1,stop;
 	unsigned long ticks,start_ticks,new_ticks,sum_ticks=0;
 	long uptime,load,old_load=0,load_avg=0,load_avg_mn=0,delay=ITIME,avenrun[3]={0,0,0};
@@ -4435,6 +4519,7 @@ long cdecl temp_thread(unsigned int *param)				/* used with MagiC > 4.5 */
 	trigger_temp=param[0];
 	daystop=param[1];
 	timestop=param[2];
+	beep=param[3];
 	while(1)
 	{
 		avenrun[0]=-1L;
@@ -4461,14 +4546,14 @@ long cdecl temp_thread(unsigned int *param)				/* used with MagiC > 4.5 */
 			stop=test_stop(daytime,daystop,timestop);
 		if(stop && !old_stop)
 		{
-			bip();
+			beep_psg(beep);
 			if(!start_lang)
 				ret=MT_form_xalert(1,"[2][ATTENTION !|Arrˆt programm‚ de votre|ordinateur dans 30 secondes ?][OK|Annuler]",ITIME*30L,0L,myglobal);
 			else
 				ret=MT_form_xalert(1,"[2][WARNING!|Stop programmed for your|computer in 30 seconds?][OK|Cancel]",ITIME*30L,0L,myglobal);
 			if(ret==1)
 			{
-				for(i=0;i<10;bip(),evnt_timer(ITIME),i++);
+				for(i=0;i<10;beep_psg(beep),evnt_timer(ITIME),i++);
 				if(!start_lang)
 					MT_form_xalert(1,"[1][Arrˆt de votre ordinateur...][]",ITIME*5L,stop_060,myglobal);
 				else
@@ -4491,13 +4576,13 @@ long cdecl temp_thread(unsigned int *param)				/* used with MagiC > 4.5 */
 		}
 		if(temp > MAX_TEMP-5)
 		{
-			bip();
+			beep_psg(beep);
 			if(!start_lang)
 				sprintf(mess_alert,"[3][ATTENTION !|Votre 060 est trop chaud: %d øC|La destruction est … %d øC|Arrˆt du microprocesseur dans 10 S|aprŠs ce message !][OK]",temp,MAX_TEMP);
 			else
 				sprintf(mess_alert,"[3][WARNING!|Your 68060 is too hot: %d øC|Destruction begins at %d øC|Your system will be stopped|10 secs after this message!][OK]",temp,MAX_TEMP);
 			MT_form_xalert(1,mess_alert,ITIME*5L,0L,myglobal);
-			for(i=0;i<10;bip(),evnt_timer(ITIME),i++);
+			for(i=0;i<10;beep_psg(beep),evnt_timer(ITIME),i++);
 			if(!start_lang)
 				sprintf(mess_alert,"[3][ATTENTION !|Votre 060 est trop chaud: %d øC|La destruction est … %d øC| |SystŠme Arrˆt‚ ! ][]",temp,MAX_TEMP);
 			else
@@ -4559,7 +4644,7 @@ long cdecl temp_thread(unsigned int *param)				/* used with MagiC > 4.5 */
 			old_time=time;
 			if(temp > trigger_temp && temp <= MAX_TEMP)
 			{
-				bip();
+				beep_psg(beep);
 			 	if(!start_lang)
 					sprintf(mess_alert,"[3][ATTENTION !|Votre 060 est trop chaud: %d øC|La destruction est … %d øC|Arrˆtez votre ordinateur !][OK]",temp,MAX_TEMP);
 				else
@@ -4596,6 +4681,7 @@ long cdecl temp_thread(unsigned int *param)				/* used with MagiC > 4.5 */
 				trigger_temp=(unsigned int)message[3];
 				daystop=(unsigned int)message[4];
 				timestop=(unsigned int)message[5];
+				beep=(unsigned int)message[6];
 				if(avenrun[0]>=0)
 					load=avenrun[0];
 				else
@@ -4616,14 +4702,14 @@ long cdecl temp_thread(unsigned int *param)				/* used with MagiC > 4.5 */
 	}
 }
 
-int start_temp(unsigned int *param1,unsigned int *param2,unsigned int *param3)
+int start_temp(unsigned int *param1,unsigned int *param2,unsigned int *param3,unsigned int *param4)
 
 {
 	register int ret,err,i,j;
-	unsigned int param[3];
+	static unsigned int param[4];
 	THREADINFO thi;
-	char path_app[256],path_acc[256];
-	char name[9];
+	static char path_app[256],path_acc[256];
+	static char name[9];
 	int type,sid;
 	if(temp_id>=0)
 		return(temp_id);
@@ -4634,16 +4720,23 @@ int start_temp(unsigned int *param1,unsigned int *param2,unsigned int *param3)
     {
 		if(mint || magic)
 		{
-			if(start_ct60temp(param1,param2,param3))
+#ifdef DEBUG
+			printf("\r\nSend params to temperature ACC/APP");
+#endif
+			if(start_ct60temp(param1,param2,param3,param4))
 				return(appl_find("CT60TEMP"));
 		}
     }
 	if(appl_find("FREEDOM2")<0 && magic >=0x405
 	 && magic_date >= 0x19960401L && temp_id<0)
 	{						/* threads exists since MagiC 4.5 */ 
+#ifdef DEBUG
+		printf("\r\nStart temperature thread");
+#endif
 		param[0]=*param1;
 		param[1]=*param2;
 		param[2]=*param3;
+		param[3]=*param4;
 		thi.proc=(void *)temp_thread;
 		thi.user_stack=NULL;
 		thi.stacksize=4096L;
@@ -4661,6 +4754,9 @@ int start_temp(unsigned int *param1,unsigned int *param2,unsigned int *param3)
 			strcpy(path_app,"C:\\");
 		if((mint  || magic) && ap_id>=0)
 		{	/* try to find the ACC path */
+#ifdef DEBUG
+			printf("\r\nSearch temperature ACC/APP");
+#endif
 			if(appl_search(0,name,&type,&sid))
 			{
 				do
@@ -4723,7 +4819,10 @@ int start_temp(unsigned int *param1,unsigned int *param2,unsigned int *param3)
 				{
 					if(mint || magic)
 					{
-						if(start_ct60temp(param1,param2,param3))
+#ifdef DEBUG
+						printf("\r\nSend params to temperature ACC/APP");
+#endif
+						if(start_ct60temp(param1,param2,param3,param4))
 							return(appl_find("CT60TEMP"));
 					}
 					else
@@ -4742,7 +4841,7 @@ int start_temp(unsigned int *param1,unsigned int *param2,unsigned int *param3)
 	return(-1);
 }
 
-int start_ct60temp(unsigned int *param1,unsigned int *param2,unsigned int *param3)
+int start_ct60temp(unsigned int *param1,unsigned int *param2,unsigned int *param3,unsigned int *param4)
 
 {
 	register int ret=0;
@@ -4750,7 +4849,10 @@ int start_ct60temp(unsigned int *param1,unsigned int *param2,unsigned int *param
 	strcpy(path_app,"CT60TEMP.APP");
 	if(shel_find(path_app))
 	{
-		sprintf(&cmd_line[1],"%d %d %d",*param1,*param2,*param3);
+#ifdef DEBUG
+		printf("\r\n params: %d %d %d %d",*param1,*param2,*param3,*param4);
+#endif
+		sprintf(&cmd_line[1],"%d %d %d %d",*param1,*param2,*param3,*param4);
 		ret=strlen(&cmd_line[1]);
 		cmd_line[0]=(char)ret;
 		if(magic)
@@ -4781,7 +4883,8 @@ int send_ask_temp(void)
 	msg[3]=(int)trigger_temp;
 	msg[4]=(int)daystop;
 	msg[5]=(int)timestop;
-	msg[2]=msg[6]=msg[7]=0;
+	msg[6]=(int)beep;
+	msg[2]=msg[7]=0;
 	if((ret=appl_write(temp_id,16,msg))!=0)
 		time_out_thread=0;
 	return(ret);
@@ -4856,16 +4959,18 @@ int dayofweek(int year,int mon,int mday)
 	return(doe %7);
 }
 
-void bip(void)
+void beep_psg(unsigned int beep)
 
 {
-	static unsigned char tab_bip[] = {
+	static unsigned char tab_beep[] = {
 	0,0xA0,1,0,2,0,3,0,4,0,5,0,6,0,7,0xFE,8,13,9,0,10,0,0xFF,10,
 	0,0,1,0,2,0,3,0,4,0,5,0,6,0,7,0xFF,8,0,9,0,10,0,0xFF,0 };
-	Dosound(tab_bip);
+	if(beep)
+		Dosound(tab_beep);
 }
 
 void SendIkbd(int count, char *buffer)
+
 {
 	while(count>=0)
 	{

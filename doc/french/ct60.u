@@ -4,7 +4,7 @@
 !title   Documentation de la
 !programimage ..\img\ct60.img
 !program CT60
-!version Version 1.03b
+!version Version 1.03c
 !date    (!today)
 !author  Didier MEQUIGNON
 !street  25, rue de l'Ascenseur
@@ -654,8 +654,7 @@ en ROM est un 4.02).
 !item Le remplacement de la routine d'affichage de texte du BIOS.
 !item Une image en 65K couleurs affich‚e pendant 2 secondes.
 !item Contr“le et correction du modecode obtenu de la NVM.
-!item Contr“le et initialisation d'une horloge programmable s‚rielle avec 
-un CY27EE16 (port I2C).
+!item Contr“le et initialisation d'une horloge programmable s‚rielle (port I2C).
 !item L'affichage du type de 68060 (r‚vision, masque et fr‚quence).
 !item La modification du PCR pour les modŠles bugg‚s r‚vision 1.
 !item La lecture et l'affichage du type de SDRAM via sa EEPROM. 
@@ -682,6 +681,7 @@ MSDOS et recherche un *.SYS pour charger le driver de disques.
 !item Test de vitesse pour les disques bootables.
 !end_itemize
 !item Le patch pour le menu de boot.
+!item La redirection de l'affichage des programmes AUTO vers un fichier boot.log.
 !item Le patch de la fonction Pexec pour le copyback (cpush aprŠs la 
 relocation).
 !item Les patchs blitter des fonctions VDI, vro_cpyfm, vr_trnfm, et 
@@ -1768,6 +1768,7 @@ besoin de beaucoup de temps si vous voulez tester la ST-RAM et la SDRAM).
 PMMU.
 !item Sous TOS, couper les caches pendant 5 secondes lors du lancement 
 d'un programme ou supprimer la boite d'alerte copyback.
+!item Redirige l'affichage des programmes du dossier AUTO vers un fichier boot.log.
 !end_itemize
 
 
@@ -1802,6 +1803,7 @@ Sur cette page vous pouvez :
 !item S‚l‚ctionner le mode d'extinction programm‚e aprŠs une proc‚dure 
 shutdown.
 !item Entrer l'heure d'arrˆt si le mode d'arrˆt est activ‚.
+!item Activer le bip d'alame de la phase d'arrˆt.
 !end_itemize
 
 

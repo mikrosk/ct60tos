@@ -108,8 +108,7 @@ ct4:	clr.l _texas_tlv0831_clk_high		;clk=1
 	moveq #0,D0								;read
 	jsr ct60_rw_param
 	add.l D3,D0								;offset
-	cmp.w #MES_TEMP_ERROR,D0				;error
-	beq.s ct3
+	bmi.s ct5
 	cmp.w #MES_TEMP_0,D0
 	bcs.s ct5
 	cmp.w #MES_TEMP_25,D0

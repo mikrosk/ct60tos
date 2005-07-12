@@ -10,6 +10,7 @@
 #define CT60_CACHE_DELAY 2L
 #define CT60_BOOT_ORDER 3L
 #define CT60_CPU_FPU 4L
+#define CT60_BOOT_LOG 5L
 #define CT60_SAVE_NVRAM_1 7L
 #define CT60_SAVE_NVRAM_2 8L
 #define CT60_SAVE_NVRAM_3 9L
@@ -25,6 +26,7 @@ typedef struct
 	unsigned short timestop;
 	unsigned short speed_fan;
 	unsigned long cpu_frequency; /* in MHz * 10 */
+	unsigned short beep;
 } CT60_COOKIE;
 
 #define ct60_read_core_temperature(type_deg) (long)xbios(0xc60a,(short)type_deg)

@@ -5,7 +5,7 @@
 *  - Cache
 *  Eiffel keyboard XBIOS
 *
-*  Didier Mequignon 2001-2004, e-mail: aniplay@wanadoo.fr
+*  Didier Mequignon 2001-2005, e-mail: aniplay@wanadoo.fr
 *
 *  This library is free software; you can redistribute it and/or
 *  modify it under the terms of the GNU Lesser General Public
@@ -551,6 +551,7 @@ wait7:
 	moveq #CT60_MODE_READ,D0                            // read
 	bsr ct60_rw_param
 	add.l D3,D0                                         // offset
+	bmi.s ct5
 	cmp.w #MES_TEMP_0,D0
 	bcs.s ct5
 	cmp.w #MES_TEMP_25,D0

@@ -1,6 +1,6 @@
 	
 /* CT60 TEMPerature - Pure C */
-/* Didier MEQUIGNON - v1.03b - April 2005 */
+/* Didier MEQUIGNON - v1.03c - June 2005 */
 
 #include <portab.h>
 #include <tos.h>
@@ -87,7 +87,7 @@ int MT_form_xalert(int fo_xadefbttn,char *fo_xastring,long time_out,void (*call)
 void (*function)(void);
 int test_stop(unsigned long daytime,unsigned int daystop,unsigned int timestop);
 int dayofweek(int year,int mon,int mday);
-void bip(void);
+void beep_psg(unsigned int beep);
 void SendIkbd(int count, char *buffer);
 void stop_60(void);
 int read_temp(void);
@@ -190,7 +190,7 @@ int main(int argc,const char *argv[])
 {
 	register int i,temp;
 	unsigned long daytime;
-	unsigned int time,trigger_temp,daystop,timestop;
+	unsigned int time,trigger_temp,daystop,timestop,beep;
 	int temp_id,app_id=-1,app_sid,app_stype,flag_cpuload,event,ret,end=0,count=0,count_mn=0,loops=1,stop,cpu_060,flag_msg=0;
 	unsigned long ticks,run_ticks,start_ticks,new_ticks,sum_ticks=0;
 	long uptime,load,old_load=0,load_avg=0,load_avg_mn=0,delay=ITIME,avenrun[3]={0,0,0};
@@ -215,6 +215,7 @@ int main(int argc,const char *argv[])
 	COOKIE *p;
 	MX_KERNEL *mx_kernel;
 	trigger_temp=daystop=timestop=0;
+	beep=1;
 	if(_app)
 	{
 		if(argc>1)
@@ -223,6 +224,8 @@ int main(int argc,const char *argv[])
 			daystop=(unsigned int)atoi(argv[2]);
 		if(argc>3)
 			timestop=(unsigned int)atoi(argv[3]);
+		if(argc>4)
+			beep=(unsigned int)atoi(argv[4])&1;
 	}
 	else
 	{
@@ -234,6 +237,7 @@ int main(int argc,const char *argv[])
 					trigger_temp=(unsigned int)ct60_arg->trigger_temp;
 					daystop=(unsigned int)ct60_arg->daystop;
 					timestop=(unsigned int)ct60_arg->timestop;
+					beep=(unsigned int)ct60_arg->beep;
 			}
 		}
 	}
@@ -382,7 +386,7 @@ int main(int argc,const char *argv[])
 			stop=test_stop(daytime,daystop,timestop);
 		if(stop && !old_stop)
 		{
-			bip();
+			beep_psg(beep);
 			if(!start_lang)
 				ret=MT_form_xalert(1,"[2][ATTENTION !|Arrˆt programm‚ de votre|ordinateur dans 30 secondes ?][OK|Annuler]",ITIME*30L,0L,myglobal);
 			else
@@ -391,7 +395,7 @@ int main(int argc,const char *argv[])
 			{
 				if(myglobal[0]>=0x399)									/* version AES */
 					MT_shel_write(SHW_SHUTDOWN,1,0,"","",myglobal);		/* send AP_TERM to all applications */
-				for(i=0;i<10;bip(),evnt_timer(ITIME),i++);
+				for(i=0;i<10;beep_psg(beep),evnt_timer(ITIME),i++);
 				if(!start_lang)
 					MT_form_xalert(1,"[1][ATTENTION !|Arrˆt de votre ordinateur...][]",ITIME*5L,stop_60,myglobal);
 				else
@@ -414,7 +418,7 @@ int main(int argc,const char *argv[])
 		}
 		if(temp>(MAX_TEMP-5) && ticks-run_ticks>=(5000UL/CLOCKS_PER_SEC))
 		{
-			bip();
+			beep_psg(beep);
 			if(!start_lang)
 				sprintf(mess_alert,"[3][ATTENTION !|Votre 060 est trop chaud: %d øC|La destruction est … %d øC|Arrˆt du microprocesseur dans 10 S|aprŠs ce message !][OK]",temp,MAX_TEMP);
 			else
@@ -424,7 +428,7 @@ int main(int argc,const char *argv[])
 				MT_shel_write(SHW_SHUTDOWN,1,0,"","",myglobal);		/* send AP_TERM to all applications */
 			if(_app)
 				end=1;
-			for(i=0;i<10;bip(),evnt_timer(ITIME),i++);
+			for(i=0;i<10;beep_psg(beep),evnt_timer(ITIME),i++);
 			if(!start_lang)
 				sprintf(mess_alert,"[3][ATTENTION !|Votre 060 est trop chaud: %d øC|La destruction est … %d øC| |SystŠme Arrˆt‚ ! ][]",temp,MAX_TEMP);
 			else
@@ -485,9 +489,10 @@ int main(int argc,const char *argv[])
 				 | (((unsigned short)(eiffel_temp[2]&1))<<15);
 			}
 			old_time=time;
-			if(temp > trigger_temp && temp <= MAX_TEMP  && ticks-run_ticks>=(5000UL/CLOCKS_PER_SEC))
+			if(trigger_temp && temp > trigger_temp && temp <= MAX_TEMP
+			  && ticks-run_ticks>=(5000UL/CLOCKS_PER_SEC))
 			{
-				bip();
+				beep_psg(beep);
 			 	if(!start_lang)
 					sprintf(mess_alert,"[3][ATTENTION !|Votre 060 est trop chaud: %d øC|La destruction est … %d øC|Arrˆtez votre ordinateur !][OK]",temp,MAX_TEMP);
 				else
@@ -543,11 +548,11 @@ int main(int argc,const char *argv[])
 						}
 					 	if(!start_lang)
 							sprintf(mess_alert,
-							"[0][      CT60 TEMPERATURE       |V1.03b MEQUIGNON Didier 04/2005| |Temp.: %d øC     Seuil: %d øC |Lien avec processus %d %s][OK]",
+							"[0][      CT60 TEMPERATURE       |V1.03c MEQUIGNON Didier 06/2005| |Temp.: %d øC     Seuil: %d øC |Lien avec processus %d %s][OK]",
 							temp,trigger_temp,app_id,app_name);
 						else
 							sprintf(mess_alert,
-							"[0][      CT60 TEMPERATURE       |V1.03b MEQUIGNON Didier 04/2005| |Temp.: %d øC Threshold: %d øC |Link with process %d %s][OK]",
+							"[0][      CT60 TEMPERATURE       |V1.03c MEQUIGNON Didier 06/2005| |Temp.: %d øC Threshold: %d øC |Link with process %d %s][OK]",
 							temp,trigger_temp,app_id,app_name);
 						MT_form_xalert(1,mess_alert,ITIME*10L,0L,myglobal);
 						break;
@@ -560,6 +565,7 @@ int main(int argc,const char *argv[])
 						trigger_temp=(unsigned int)message[3];
 						daystop=(unsigned int)message[4];
 						timestop=(unsigned int)message[5];
+						beep=(unsigned int)message[6];
 						if(avenrun[0]>=0)
 							load=avenrun[0];
 						else
@@ -1016,13 +1022,14 @@ int dayofweek(int year,int mon,int mday)
 	return(doe %7);
 }
 
-void bip(void)
+void beep_psg(unsigned int beep)
 
 {
-	static unsigned char tab_bip[] = {
+	static unsigned char tab_beep[] = {
 	0,0xA0,1,0,2,0,3,0,4,0,5,0,6,0,7,0xFE,8,13,9,0,10,0,0xFF,10,
 	0,0,1,0,2,0,3,0,4,0,5,0,6,0,7,0xFF,8,0,9,0,10,0,0xFF,0 };
-	Dosound(tab_bip);
+	if(beep)
+		Dosound(tab_beep);
 }
 
 void SendIkbd(int count, char *buffer)

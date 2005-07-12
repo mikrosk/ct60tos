@@ -1,5 +1,5 @@
-/* TOS 4.04 Boot order patch for the CT60 board
-*  Didier Mequignon 2003 November, e-mail: aniplay@wanadoo.fr
+/* TOS 4.04 Boot memory patch for the CT60 board
+*  Didier Mequignon 2003-2005, e-mail: aniplay@wanadoo.fr
 *
 *  This library is free software; you can redistribute it and/or
 *  modify it under the terms of the GNU Lesser General Public
@@ -27,4 +27,25 @@ begin1:
 	jmp	init_flash_parameters
 end1:
 
+	.align	2
+	.long	0x1B4
+	.long	end2-begin2
+begin2:
+	nop
+	nop
+	nop
+	nop
+	nop
+	nop
+	nop
+	nop
+	nop
+	nop
+	nop
+	nop
+	nop
+	nop
+	nop
+end2:
+	
 

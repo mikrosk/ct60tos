@@ -102,6 +102,10 @@ CacheCtrl()                  XBIOS Function 160.
           CT60_CPU_FPU 4
           If the bit 0 of the value is cleared, the FPU is disabled.
 
+          CT60_BOOT_LOG 5
+          If the bit 0 is cleared, the stdout output of the AUTO 
+          folder files is writed inside a boot.log on the boot drive.
+
           CT60_PARAM_OFFSET_TLV 10
           Value contains a signed offset in points.  A point is equal 
           to 2.8 øC. 

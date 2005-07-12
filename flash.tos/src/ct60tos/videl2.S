@@ -328,7 +328,8 @@ screen_ntc_boot:                     // 320 * 240 * 65K colors */
 	beq .v7                 // monochrome
 	move.l A0,A1
 	move.w #38399,D0        // 154KB for test videl clock
-.v9:		clr.l (A1)+
+.v9:
+		clr.l (A1)+
 	dbf D0,.v9
 	move.w SR,-(SP)
 	or.w #0x700,SR          // no IRQ
@@ -455,7 +456,7 @@ set_external_clock:
 	bclr #2,D0              // 32 MHz
 	move.w D0,0xC0(A0)
 	bclr #0,0xA(A0)         // internal clock
-             bsr measure_clock_videl
+	bsr measure_clock_videl
 	move.l cookie,D1
 	beq .external_clock_ok
 	move.l D1,A1
@@ -471,17 +472,17 @@ set_external_clock:
 	move.w D0,D1            // internal clock
 	clr.l (A1)
 	bset #0,0xA(A0)         // external clock
-             bsr measure_clock_videl
+	bsr measure_clock_videl
 	move.l 4(A1),12(A1)     // copy size
 	move.l #0x5F465245,(A1)+// _FRE
 	move.l D0,(A1)+
 	clr.l (A1)
 	cmp.w #2,D7             // VGA
 	beq.s .internal_clock_ok
-             cmp.w #32,D1            // 32 MHz internal clock
-             bls.s .internal_clock_ok
-             cmp.w #32,D0            // 32 MHz
-             beq.s .external_clock_ok
+	cmp.w #32,D1            // 32 MHz internal clock
+	bls.s .internal_clock_ok
+	cmp.w #32,D0            // 32 MHz
+	beq.s .external_clock_ok
 .internal_clock_ok:
 	bclr #0,0xA(A0)         // internal clock
 .external_clock_ok:

@@ -34,7 +34,7 @@
 #include "vars.h"
 
 // #define DEBUG
-
+// #define INIT_SDRAM_MOVE16
 // #define RESET // removed because not works with some motherboards/SDR60 versions
 #define XFRB_SIZE 0x10000
 #define SPEED_BUFFER_SIZE 0x10000 // mini 512 bytes
@@ -224,7 +224,7 @@ init_sdram:
 	move.w (SP)+,SR
 	move.l #0x00E00FB6,8     // set access fault vector
 	move.b 0xFFFF8006,D0
-	lsr.b #6,D0              // 0:ST nomo, 1:ST col, 2:VGA, 3:TV
+	lsr.b #6,D0              // 0:ST mono, 1:ST col, 2:VGA, 3:TV
 	cmp.b #2,D0              // VGA
 	beq.s .ok_screen
 	move.l #0x5F465251,D0    // _FRQ cookie, internal clock
@@ -1139,14 +1139,15 @@ error8:	.asciz "SDRAM type error"
 error9:	.asciz "SDRAM refresh rate error"
 	.asciz "SDRAM refresh rate error"
 error10:	.byte 13,10
-	.asciz "SDRAM read failure at $"
+	.asciz "            SDRAM read failure at $"
 	.byte 13,10
-	.asciz "SDRAM erreur v‚rification en $"
+	.asciz "            SDRAM erreur v‚rification en $"
 error11:	.asciz "CTCM not found"
 	.asciz "CTCM non trouv‚e"
 error12:	.asciz "CTCM frequency error"
 	.asciz "CTCM erreur fr‚quence"
 name1:	.asciz "Eiffel"
+name2:	.asciz "boot.log"
 message0:	.byte 0x1B,0x62,0x34,0x41
 	.byte 0x1B,0x62,0x32,0x54
 	.byte 0x1B,0x62,0x33,0x41
@@ -1191,13 +1192,13 @@ message15:	.byte 27
 	.ascii "."
 	.byte ((VERSION/16) & 0xF) + 0x30
 	.byte (VERSION & 0xF) + 0x30
-	.asciz "b "
+	.asciz "c "
 message15b:	
-	.ascii "2005 April "
+	.ascii "2005 July "
 	.byte 27
 	.ascii "q"
 	.byte 13,10,0
-	.ascii "Avril 2005 "
+	.ascii "Juillet 2005 "
 	.byte 27
 	.ascii "q"
 	.byte 13,10,0
@@ -1588,7 +1589,7 @@ boot_drive:
 	beq.s .loop_drive
 	lea boot_ide_2(PC),A5
 .loop_drive:
-		clr.w -(SP)                       // stram
+		clr.w -(SP)                       // STRAM
 		move.l #SPEED_BUFFER_SIZE,-(SP)   // size
 		move.w #0x44,-(SP)                // Mxalloc
 		trap #1 
@@ -2902,9 +2903,9 @@ scsi_read:	// D0: drive, D1.L: DMA bytes, D2: bytes cmd, A0: DMA buffer, A1: buf
 .sr2:
 	bsr get_timer_c
 	sub.l D3,D0
-	move.l D0,D3	           // time speed test
-	cpusha DC
+	move.l D0,D3            // time speed test
 	bsr get_status_scsi
+	cpusha DC
 	and.l #0xFF,D0          // error code
 .sr4:
 	move.w #0x8F,0xFFFF8606 // Initiate Receive/Reset
@@ -3558,6 +3559,34 @@ auto_exec_prg:
 	add.w #12,SP
 	tst.w D0
 	bne .end_auto_prg        // error
+	move.l #-1,-(SP)         // handles
+	clr.l -(SP)
+	move.l #CT60_BOOT_LOG,-(SP)
+	move.w #CT60_MODE_READ,-(SP)
+	move.w #rw_parameter,-(SP)
+	trap #14
+	lea 12(SP),SP 
+	btst #0,D0
+	bne.s .no_boot_log
+	move.w #1,-(SP)          // stdout
+	move.w #0x45,-(SP)       // Fdup
+	trap #1
+	addq.w #4,SP
+	move.w D0,2(SP)          // dup handle
+	bmi.s .no_boot_log
+	clr.w -(SP)
+	pea name2(PC)
+	move #0x3C,-(SP)         // Fcreate
+	trap #1
+	addq.w #8,SP
+	move.w D0,(SP)           // handle
+	bmi.s .no_boot_log
+	move.w D0,-(SP)
+	move.w #1,-(SP)          // stdout
+	move.w #0x46,-(SP)       // Fforce
+	trap #1
+	addq.w #6,SP
+.no_boot_log:
 	move.w #7,-(SP)          // all files
 	move.l 0xAE8,-(SP)       // path
 	move.w #0x4E,-(SP)       // Fsfirst
@@ -3570,7 +3599,7 @@ auto_exec_prg:
 		trap #1              // Fsfirst or Fsnext
 		add.w D7,SP
 		tst.w D0
-		bne .end_auto_prg    // error
+		bne .end_loop_auto   // error
 		move.l 0xAE8,A0      // path
 		move.l 0xAEC,A2      // file
 		lea 0xB1C,A1         // auto name
@@ -3626,11 +3655,26 @@ auto_exec_prg:
 		cmp.l #-66,D0
 		beq.s .pexec_ok
 		bsr error_tos
-		bra.s .end_auto_prg
+		bra.s .end_loop_auto
 .pexec_ok:
-		moveq #2,D7         // for fix stack
-		move.w #0x4F,-(SP)  // Fsnext
+		moveq #2,D7          // for fix stack
+		move.w #0x4F,-(SP)   // Fsnext
 	bra .loop_auto_folder
+.end_loop_auto:
+	move.w (SP)+,D0          // handle
+	bmi.s .end_dup
+	move.w D0,-(SP)
+	move.w #0x3E,-(SP)
+	trap #1                  // Fclose
+	addq.w #4,SP
+.end_dup:
+	move.w (SP)+,D0          // dup handle
+	bmi.s .end_auto_prg
+	move.w D0,-(SP)
+	move.w #1,-(SP)          // stdout
+	move.w #0x46,-(SP)       // Fforce
+	trap #1
+	addq.w #6,SP
 .end_auto_prg:
 	lea 0x8870,SP            // stack
 	move.l 0xAE4,-(SP)       // return address
@@ -4114,7 +4158,7 @@ test_keyboard:
 	cmp.l #1,D0
 	bhi.s .keyboard_error_2
 .rtc_bypass:	
-	clr.w -(SP)              // stram
+	clr.w -(SP)              // STRAM
 	move.l #0x2000,-(SP)     // 8K
 	move.w #0x44,-(SP)       // Mxalloc
 	trap #1 
@@ -4285,8 +4329,17 @@ add_sdram:
 	ble .not_sdram
 	move.l D0,-(SP)          // size
 	move.l D1,-(SP)          // start
+	cmp.l #0x752019F3,memvalid
+	bne.s .not_valid
+	cmp.l #0x237698AA,memval2
+	bne.s .not_valid
+	cmp.l #0x5555AAAA,memval3
+	beq .ram_valid
+.not_valid:
 	move.l D1,A4
-	add.l D0,A4
+#ifndef INIT_SDRAM_MOVE16
+	add.l D0,A4              // end
+#endif
 	move.l D0,D7
 	lsr.l #8,D7
 	lea message16(PC),A0
@@ -4303,7 +4356,41 @@ add_sdram:
 	subq.l #1,D7
 	move.w D7,D6
 	swap D7
+#ifdef INIT_SDRAM_MOVE16
+	move.l D0,D4
+	lea 256(A4),A4
+	move.l A4,A0
+	movem.l D0-D4/A1-A3,-(A0)
+	movem.l D0-D4/A1-A3,-(A0)
+	movem.l D0-D4/A1-A3,-(A0)
+	movem.l D0-D4/A1-A3,-(A0)
+	movem.l D0-D4/A1-A3,-(A0)
+	movem.l D0-D4/A1-A3,-(A0)
+	movem.l D0-D4/A1-A3,-(A0)
+	movem.l D0-D4/A1-A3,-(A0)
+	bra.s .next_loop_sdram
+#endif
 .init_sdram:
+#ifdef INIT_SDRAM_MOVE16
+			move16 (A0)+,(A4)+
+			move16 (A0)+,(A4)+
+			move16 (A0)+,(A4)+
+			move16 (A0)+,(A4)+
+			move16 (A0)+,(A4)+
+			move16 (A0)+,(A4)+
+			move16 (A0)+,(A4)+
+			move16 (A0)+,(A4)+
+			move16 (A0)+,(A4)+
+			move16 (A0)+,(A4)+
+			move16 (A0)+,(A4)+
+			move16 (A0)+,(A4)+
+			move16 (A0)+,(A4)+
+			move16 (A0)+,(A4)+
+			move16 (A0)+,(A4)+
+			move16 (A0)+,(A4)+
+			lea -256(A0),A0
+.next_loop_sdram:
+#else
 			movem.l D0-D3/A0-A3,-(A4)
 			movem.l D0-D3/A0-A3,-(A4)
 			movem.l D0-D3/A0-A3,-(A4)
@@ -4312,6 +4399,7 @@ add_sdram:
 			movem.l D0-D3/A0-A3,-(A4)
 			movem.l D0-D3/A0-A3,-(A4)
 			movem.l D0-D3/A0-A3,-(A4)
+#endif
 		dbf D6,.init_sdram
 		moveq #0x2E,D0	
 		bsr display_char
@@ -4333,12 +4421,13 @@ add_sdram:
 	unlk A6
 	lea message17(PC),A0     // MB/S
 	bsr display_string
+.ram_valid:
 	move.w #0x14,-(SP)       // Maddalt
 	trap #1 
 	lea 10(SP),SP	
 	tst.l D0
 	bmi .not_sdram
-	clr.w -(SP)              // stram
+	clr.w -(SP)              // STRAM
 	move.l #0x10000+16,-(SP) // 64K
 	move.w #0x44,-(SP)       // Mxalloc
 	trap #1 
@@ -4349,7 +4438,7 @@ add_sdram:
 	addq.l #7,D0
 	and.b #0xF0,D0           // 16 bytes alignment
 	move.l D0,A1             // fastram buffer
-	clr.w -(SP)              // stram
+	clr.w -(SP)              // STRAM
 	move.l #XFRB_SIZE+16+20,-(SP) // 64K
 	move.w #0x44,-(SP)       // Mxalloc
 	trap #1 
@@ -4385,6 +4474,9 @@ add_sdram:
 	move.l A2,(A0)+
 	clr.l (A0)
 .not_sdram:
+	move.l #0x752019F3,memvalid
+	move.l #0x237698AA,memval2
+	move.l #0x5555AAAA,memval3
 	bsr init_cookie_ct60
 	moveq #3,D0
 	jsr 0xE00BD2
@@ -4418,13 +4510,13 @@ ct60_configure_clock:	// D0.L: frequency, D1: mode
 	moveq #11,D0
 	lsr.w D0,D2  // offset_def
 	cmp.l #MIN_FREQ_DALLAS+333,D6
-	bhi.s .ccc14 // strap on CLK
+	bge.s .ccc14 // strap on CLK
 	add.l D6,D6  // strap on CLK/2
 .ccc14:
 	cmp.l #MIN_FREQ_DALLAS,D6
 	blt .ccc1    // error	
 	cmp.l #MAX_FREQ_DALLAS,D6
-	bhi .ccc1    // error	
+	bgt .ccc1    // error	
 	move.w D2,D4 // offset = offset_def
 	move.l D6,D5 // frequency
 	sub.l #DEF_FREQ,D5
@@ -4432,7 +4524,7 @@ ct60_configure_clock:	// D0.L: frequency, D1: mode
 	add.l #DAC_DEF,D5
 	bmi.s .ccc15
 	cmp.l #1023,D5 // dac
-	bls.s .ccc16
+	ble.s .ccc16
 .ccc15:
 	move.l D6,D4 // frequency
 	sub.l #DEF_FREQ,D4
@@ -4441,12 +4533,12 @@ ct60_configure_clock:	// D0.L: frequency, D1: mode
 	blt .ccc1    // error
 	cmp.l #6,D4
 	bgt .ccc1    // error
-	add.w D2,D4  // offset_def
+	add.w D2,D4  // + offset_def
 	bmi .ccc1    // error
 	cmp.l #31,D4
-	bhi .ccc1    // error
+	bgt .ccc1    // error
 	move.w D4,D0 // offset
-	sub.w D2,D0  // offset def
+	sub.w D2,D0  // - offset def
 	muls #OFFSET_STEP,D0
 	add.l #DEF_FREQ,D0 // fos
 	move.l D6,D5 // frequency
@@ -4455,7 +4547,7 @@ ct60_configure_clock:	// D0.L: frequency, D1: mode
 	add.l #DAC_DEF,D5
 	bmi .ccc1    // error
 	cmp.l #1023,D5 // dac
-	bhi .ccc1    // error
+	bgt .ccc1    // error
 .ccc16:
 	moveq #8,D0  // WC = 0
 	and.w D3,D0  // adr
@@ -4468,7 +4560,7 @@ ct60_configure_clock:	// D0.L: frequency, D1: mode
 	bsr tempo_20ms
 .ccc13:
 	// MUX : PDN0/1 = 0, SEL0 = 1, EN0 = 0, 0M = 1, 1M = 0, DIV1 = 1 
-             move.w #0x1240,D2 // mux
+	move.w #0x1240,D2 // mux
 	cmp.l #51000,D6 // frequency
 	bcs.s .ccc17
 	or.w #0x80,D2   // 1M = 1 => /2

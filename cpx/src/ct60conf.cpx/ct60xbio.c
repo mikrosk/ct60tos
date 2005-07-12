@@ -1,6 +1,6 @@
 	
 /* CT60 XBIOS - Pure C */
-/* Didier MEQUIGNON - March 2005 */
+/* Didier MEQUIGNON - June 2005 */
 
 #include <tos.h>
 #include <stdio.h>
@@ -53,9 +53,9 @@ int main(void)
 	}
 	Cconws("\r\n\n");
 	Cconout(27);
-	Cconws("p XBIOS CT60 v1.03b ");
+	Cconws("p XBIOS CT60 v1.03c ");
 	Cconout(27);
-	Cconws("q March 2005\r\n");
+	Cconws("q June 2005\r\n");
 	if(((p=get_cookie('_MCH'))==0) || (p->v.l!=0x30000)		/* Falcon */
 #ifndef TEST
 	 || ((p=get_cookie('_CPU'))==0) || (p->v.l!=0x3C)       /* 68060 */

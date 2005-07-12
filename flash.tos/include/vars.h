@@ -1,5 +1,5 @@
 /* TOS 4.04 Xbios vars for the CT60 board
-*  Didier Mequignon 2002-2004, e-mail: aniplay@wanadoo.fr
+*  Didier Mequignon 2002-2005, e-mail: aniplay@wanadoo.fr
 *
 *  This library is free software; you can redistribute it and/or
 *  modify it under the terms of the GNU Lesser General Public
@@ -20,11 +20,13 @@
 #define	_VARS_H
 
 #define etv_critic 0x404
+#define memvalid   0x420
 #define memctrl    0x424
 #define resvalid   0x426
 #define resvector  0x42A
 #define phystop    0x42E
 #define _memtop    0x436
+#define memval2    0x43A
 #define flock      0x43E
 #define _bootdev   0x446
 #define sshiftmd   0x44C

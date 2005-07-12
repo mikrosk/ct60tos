@@ -4,7 +4,7 @@
 !title   Documentation of the
 !programimage ..\img\ct60.img
 !program CT60
-!version Version 1.03b
+!version Version 1.03c
 !date    (!today)
 !author  Didier MEQUIGNON
 !street  25, rue de l'Ascenseur
@@ -637,7 +637,7 @@ logo copied at the top of the ST-RAM (needed if the TOS in ROM is a 4.02).
 !item The replacement of the XBIOS Bconout routine (display texts).
 !item The picture in 65K colors displayed during 2 seconds.
 !item Check and fix the modecode get from NVM.
-!item Check and set the serial programmable clock with a CY27EE16 (I2C port).
+!item Check and set the serial programmable clock (I2C port).
 !item The display of the 68060's type (revision, mask and frequency).
 !item The modification of PCR for the bugged types revision 1.
 !item The reading and the display of the SDRAM's type from his EEPROM. 
@@ -664,6 +664,7 @@ displayed.
 !item Add speed test for bootables devices.
 !end_itemize
 !item The patch for the boot menu.
+!item The displays redirection of the AUTO programs to a file boot.log.
 !item The patch for the Pexec function for the copyback (cpush after the 
 relocation).
 !item The blitter patchs of the VDI functions, vro_cpyfm, vr_trnfm, and
@@ -1733,6 +1734,7 @@ ST-RAM and the SDRAM).
 !item Set the transfer of TOS 4.0x in RAM with using of the PMMU.
 !item Under TOS, remove the caches during 5 seconds when a program is 
 started or remove the copyback alert box. 
+!item Redirect displays of the AUTO folder's programs to a file boot.log.
 !end_itemize
 
 
@@ -1764,6 +1766,7 @@ At this page you can :
 !begin_itemize
 !item Select the mode of the stop programmed after a shutdown procedure.
 !item Enter the time if the mode of stop is actived.
+!item Enable the alarm beep for the stop procedure.
 !end_itemize
 
 

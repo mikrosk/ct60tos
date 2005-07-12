@@ -219,3 +219,12 @@ with a CY27EE16 (file sdram.S).
 - Fix rev 5 CPU display.
 - Cookies moved to SDRAM (128 maxi).
 - Add PSG printer patch (file magxboot.S).
+
+2005-07-13 1.03c
+----------------
+- Add the CT60_BOOT_LOG parameter in flash for writes to boot.log the 
+stdout of the AUTO folder files (file sdram.S).
+- Add memvalid, memval2, memval3 test for the SDRAM init (files sdram.S 
+and init_par.S).
+- Fix for negative temperature (file xbios2.S).
+- Fix CTCM frequency error (file sdram.S).
