@@ -1,6 +1,6 @@
 /*  Debug the CT60
  * 
- * Didier Mequignon, January 2003, e-mail: aniplay@wanadoo.fr
+ * Didier Mequignon, 2003-2005, e-mail: aniplay@wanadoo.fr
  *
  *  This library is free software; you can redistribute it and/or
  *  modify it under the terms of the GNU Lesser General Public
@@ -18,9 +18,12 @@
  */
 
 	.globl	exception
+	
+#include "vars.h"
 
 exception:
 
+	clr.l memvalid
 	lea.l mess1(PC),A0
 	bsr display_string
 	addq.w #1,D1
@@ -347,4 +350,3 @@ tab_status:	.ascii "CVZNX   012 MS T"
 tab_fslw1:	.ascii "    M LRWSSTTTTTIPSPPIPSWTRWTB S"
 tab_fslw2:	.ascii "    A K  ZZTTMMMOBBTTLFPPWEETP S"
 tab_fslw3:	.ascii "         1010210 EEAB    E  RE E"
-	

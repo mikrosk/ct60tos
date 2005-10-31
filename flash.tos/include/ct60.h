@@ -42,6 +42,6 @@
 #define ct60_read_core_temperature(type_deg) (long)trap_14_ww((short)(0xc60a),(short)(type_deg))
 #define	ct60_rw_parameter(mode,type_param,value) (long)trap_14_wwll((short)(0xc60b),(short)(mode),(long)(type_param),(long)(value))
 #define ct60_cache(cache_mode) (long)trap_14_ww((short)(0xc60c),(short)(cache_mode))
-#define ct60_flush_cache() (long)trap_14_ww((short)(0xc60d))
+#define ct60_flush_cache() (long)trap_14_w((short)(0xc60d))
 
-#endif	_CT60_H
+#endif

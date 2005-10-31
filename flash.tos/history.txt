@@ -228,3 +228,21 @@ stdout of the AUTO folder files (file sdram.S).
 and init_par.S).
 - Fix for negative temperature (file xbios2.S).
 - Fix CTCM frequency error (file sdram.S).
+
+2005-11-01 pre-alpha 1.04
+-------------------------
+- Add bypass SDRAM test with memvalid, memval2, memval3 before PMMU 
+init (file sdram.S).
+- Add PCI BIOS (files pci_bios.S and xbios2.S).
+- Add PCI drivers call, there are a test of the code '_PCI' at 
+0x00ED0000 for call the init of PCI devices at 0x00ED0004 (128KB), but 
+also at 0x00EC0000 (192KB) and 0x00EB0000 (256KB).
+- Add Bconout in 256 colors for PCI graphic card (file conout.S).
+- Removed Atari logo when PCI graphic card is used (file blitter2.S).
+- Fix page fault (invalid access) with 4MB STRAM cards between the end 
+of the STRAM and the TOS 4.04 EPROM (file pmmu.c).
+- Fix CPU frequency value in MHz * 10 inside the CT60 cookie (used by 
+the CT60CONF.CPX).
+- Flush cache during VDI function v_pline because sometimes this 
+function crash the TOS with the SDRAM and the copyback cache (file 
+cache.S).

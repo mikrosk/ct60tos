@@ -1,4 +1,4 @@
-/*  Flashing tool for the CT60 board
+/*  CT60 board patchs
  *  Copyright (C) 2000 Xavier Joubert
  *
  *  This program is free software; you can redistribute it and/or modify
@@ -27,4 +27,4 @@
 void ct60tos_patch(void);
 void ct60tos_half_flash(void);
 
-#endif /* _CT60TOS_H */
+#endif

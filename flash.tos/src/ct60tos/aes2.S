@@ -66,4 +66,3 @@ det_evnt_multi:
 	clr.w D0
 	swap D0
 	rts
- 

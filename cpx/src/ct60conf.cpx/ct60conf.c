@@ -1,5 +1,5 @@
 /* CT60 CONFiguration - Pure C */
-/* Didier MEQUIGNON - v1.03c - July 2005 */
+/* Didier MEQUIGNON - v1.04 - October 2005 */
 
 #include <portab.h>
 #include <tos.h>
@@ -258,7 +258,7 @@ NVM nvram;
 USERBLK spec_trace={0,0};
 USERBLK spec_cpuload={0,0};
 int ed_objc,new_objc,ed_pos,new_pos;
-int start_lang,flag_bubble,selection;
+int start_lang,flag_bubble,selection,no_jumper;
 int language,keyboard,datetime,vmode,bootpref,bootdelay,scsi,cpufpu;
 int tosram,blitterspeed,cachedelay,bootorder,bootlog,nv_magic_code;
 unsigned int trigger_temp,daystop,timestop,beep;
@@ -447,7 +447,7 @@ char *rs_strings[] = {
 	"OK",
 	"Annule",
 	
-	"CT60 Configuration V1.03c Juillet 2005","","",
+	"CT60 Configuration V1.04 Octobre 2005","","",
 	"Ce CPX et systäme:","","",
 	"Didier MEQUIGNON","","",
 	"aniplay@wanadoo.fr","","",
@@ -572,7 +572,7 @@ char *rs_strings_en[] = {
 	"OK",
 	"Cancel",
 
-	"CT60 Configuration V1.03c July 2005","","",
+	"CT60 Configuration V1.04 October 2005","","",
 	"This CPX and system:","","",
 	"Didier MEQUIGNON","","",
 	"aniplay@wanadoo.fr","","",
@@ -1628,22 +1628,34 @@ int CDECL cpx_call(GRECT *work)
 		cpx_timer(&ret);
 		selection=PAGE_TEMP;
 		ed_objc=MENUTRIGGER;
+		no_jumper=0;
 		if((value=ct60_read_clock())<0)
 			frequency=0;                 /* no programmable clock */
 		else
 		{
 			if(step_frequency==DAC_STEP) /* Dallas DS1085 programmable clock */
 			{
-				if((*Xcpb->get_cookie)(ID_CT60,&(long)ct60_arg) && (ct60_arg!=NULL)
-				 && ct60_arg->cpu_frequency!=0
-				 && (ct60_arg->cpu_frequency*100UL)<(MIN_FREQ_DALLAS+300UL))
-				{                        /* strap on CLK/2 */
-					min_freq=(MIN_FREQ_DALLAS+600UL)/2;
-					max_freq=MIN_FREQ_DALLAS;
-					value>>=1;           /* /2 */
-				}	                     /* strap on CLK */
-				else
-					min_freq=MIN_FREQ_DALLAS+600UL;
+				min_freq=MIN_FREQ_DALLAS+600UL;
+				if((*Xcpb->get_cookie)(ID_CT60,&(long)ct60_arg) && (ct60_arg!=NULL))
+				{
+#ifdef DEBUG
+					printf("\r\nCPU frequency: %3lu.%01lu MHz",ct60_arg->cpu_frequency/10,ct60_arg->cpu_frequency%10);
+#endif
+					if(ct60_arg->cpu_frequency==0)
+					{
+						ct60_arg->cpu_frequency=loops_per_sec/100000; /* for MagiC */
+#ifdef DEBUG
+						printf("\r\nCPU frequency from bogomips: %3lu.%01lu MHz",ct60_arg->cpu_frequency/10,ct60_arg->cpu_frequency%10);
+#endif						
+					}
+					if((ct60_arg->cpu_frequency*100UL) < (MIN_FREQ_DALLAS+300UL))
+					{                        /* strap on CLK/2 */
+						min_freq=(MIN_FREQ_DALLAS+600UL)/2;
+						max_freq=MIN_FREQ_DALLAS;
+						value>>=1;           /* /2 */
+						no_jumper=1;
+					}	                     /* strap on CLK */
+				}
 			}
 			if(value<min_freq || value>max_freq)
 			{
@@ -2657,7 +2669,16 @@ void CDECL cpx_button(MRETS *mrets,int nclicks,int *event)
 					if(value>0)
 					{
 						if(step_frequency==DAC_STEP) /* Dallas DS1085 programmable clock */
-							min_freq=MIN_FREQ_DALLAS+600UL;
+						{
+							if(no_jumper)
+							{
+								min_freq=(MIN_FREQ_DALLAS+600UL)/2;
+								max_freq=MIN_FREQ_DALLAS;
+								value>>=1;           /* /2 */
+							}
+							else
+								min_freq=MIN_FREQ_DALLAS+600UL;
+						}
  						else
 							min_freq=MIN_FREQ;
 						if(frequency<min_freq)
@@ -5008,6 +5029,9 @@ int read_temp(void)
 {
 	register int temp,temperature,i;
 	static int old_temp[8]={0,0,0,0,0,0,0,0};
+	static int ct63=0;
+	if(ct63)
+		return(0);
 	if(flag_xbios)
 		temp=(int)ct60_read_core_temperature(CT60_CELCIUS);
 	else
@@ -5023,6 +5047,8 @@ int read_temp(void)
 		temperature>>=3;
 		return(temperature);
 	}
+	else if(temp==0)
+		ct63=1;
 	return(temp);
 }
 

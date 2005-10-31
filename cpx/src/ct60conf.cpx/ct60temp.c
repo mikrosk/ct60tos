@@ -1,6 +1,6 @@
 	
 /* CT60 TEMPerature - Pure C */
-/* Didier MEQUIGNON - v1.03c - June 2005 */
+/* Didier MEQUIGNON - v1.04 - October 2005 */
 
 #include <portab.h>
 #include <tos.h>
@@ -548,11 +548,11 @@ int main(int argc,const char *argv[])
 						}
 					 	if(!start_lang)
 							sprintf(mess_alert,
-							"[0][      CT60 TEMPERATURE       |V1.03c MEQUIGNON Didier 06/2005| |Temp.: %d øC     Seuil: %d øC |Lien avec processus %d %s][OK]",
+							"[0][      CT60 TEMPERATURE       |V1.04 MEQUIGNON Didier 10/2005| |Temp.: %d øC     Seuil: %d øC |Lien avec processus %d %s][OK]",
 							temp,trigger_temp,app_id,app_name);
 						else
 							sprintf(mess_alert,
-							"[0][      CT60 TEMPERATURE       |V1.03c MEQUIGNON Didier 06/2005| |Temp.: %d øC Threshold: %d øC |Link with process %d %s][OK]",
+							"[0][      CT60 TEMPERATURE       |V1.04 MEQUIGNON Didier 10/2005| |Temp.: %d øC Threshold: %d øC |Link with process %d %s][OK]",
 							temp,trigger_temp,app_id,app_name);
 						MT_form_xalert(1,mess_alert,ITIME*10L,0L,myglobal);
 						break;
@@ -1058,6 +1058,9 @@ int read_temp(void)
 {
 	register int temp,temperature,i;
 	static int old_temp[8]={0,0,0,0,0,0,0,0};
+	static int ct63=0;
+	if(ct63)
+		return(0);
 	if(flag_xbios)
 		temp=(int)ct60_read_core_temperature(CT60_CELCIUS);
 	else
@@ -1073,6 +1076,8 @@ int read_temp(void)
 		temperature>>=3;
 		return(temperature);
 	}
+	else if(temp==0)
+		ct63=1;
 	return(temp);
 }
 

@@ -1,5 +1,6 @@
 /*  TOS 4.04 patch for the CT60 board
  *  Copyright (C) 2001 Xavier Joubert
+ *                2005 Didier Mequignon
  *
  *  This library is free software; you can redistribute it and/or
  *  modify it under the terms of the GNU Lesser General Public
@@ -129,9 +130,33 @@ end12:
 	.align	2
 	.long	0x990C
 	.long	end13-begin13
-begin13:
-	cinva	ic
-	bra.s	begin13-0x990C+0x9918
+begin13: // v_pline, thanks to Roger Burrows
+	subq.w	#1,D3
+	movem.w	code13(PC),D0/D1/A1
+	movea.l	A2,A0
+	move.l	0x652(A4),D2
+loop13:
+	roxr.l	#1,D2
+	bcs.s	set13
+	move.w	D0,(A0)+
+	dbf		D3,loop13
+	move.w	A1,(A0)+
+	cpusha	bc
+	rts
+set13:
+	move.w	D1,(A0)+
+	dbf		D3,loop13
+	move.w	A1,(A0)+
+	cpusha	bc
+	rts
+code13:
+	and.w	D0,(A5)+
+	or.w	D1,(A5)+
+	jmp		(A3)
+	nop
+	nop
+	nop
+	nop
 end13:
 
 	.align	2

@@ -14,7 +14,7 @@
  * option any later version.  See doc/license.txt for details.
  *
  * Didier Mequignon 2003/01, add 65K colors & TOS_CT60 flag
- *
+ *                  2005/10, add 256 colors without planes
  */
 
 
@@ -197,8 +197,8 @@ gsx_conout:                     // Gsx enters here
         andi.w  #0xFF,d1        // Limit to the chars we have
 
 
-        movea.l con_state,a0    //based on our state goto the correct
-        jmp     (a0)            //stub routine
+        movea.l con_state,a0    // based on our state goto the correct
+        jmp     (a0)            // stub routine
 
 normal_ascii:
         cmp.w   #0x20,d1        // If the character is printable ascii
@@ -563,7 +563,7 @@ escI:
  * escL - Insert Line.
  */
 escL:           bsr     escf            // hide cursor.
-                move.w  _v_cur_cy,d1     // line to begin scrolling down.
+                move.w  _v_cur_cy,d1    // line to begin scrolling down.
                 bsr     p_sc_dwn        // scroll down 1 line & blank current line.
 esclmout:       clr.w   d0
                 move.w  _v_cur_cy,d1
@@ -725,7 +725,7 @@ escl:           bsr     escf            // hide cursor.
  */
 esco:           bsr     escf            // hide cursor.
                 bsr     escj            // save cursor position.
-                move.w  _v_cur_cx,d2     // test current x.
+                move.w  _v_cur_cx,d2    // test current x.
                 beq     esco_space      // if x = x minimum, just output a space.
                 btst    #0,d2           // x even or odd?
                 bne.s   esco_blnk       // if odd, branch.
@@ -956,72 +956,74 @@ dc_out:
  *       destroyed:  d0.w,d1.l,d2.l,d3.w,d5.w,a1.l,a2.l
  */
 blnk_blt:
-        sub.l   d1,d2                   //form cell delta x, delta y in d2
-        move    d1,d0                   //get cell x for cell_addr call
-        swap    d1                      //get cell y in d1.w
+        sub.l   d1,d2                   // form cell delta x, delta y in d2
+        move    d1,d0                   // get cell x for cell_addr call
+        swap    d1                      // get cell y in d1.w
 
-        bsr     cell_addr               //form screen address of top/left cell in a1
+        bsr     cell_addr               // form screen address of top/left cell in a1
 
-        move    _v_planes,d3            //# of planes -> d3
-        cmp.w   #4,d3                   //form 1,2, or 3
-        bne.s   b2                      //    in d0 for shift purposes
-        subq.w  #1,d3                   //4 planes -> 3 shifts
+        move    _v_planes,d3            // # of planes -> d3
+        cmp.w   #4,d3                   // form 1,2, or 3
+        bne.s   b2                      // in d0 for shift purposes
+        subq.w  #1,d3                   // 4 planes -> 3 shifts
         bra.S   b1
 b2:    
         cmp.w   #8,d3                   // 8 planes
         bne.s   b3
+        cmp.l   #0x01000000,_v_bas_ad
+        bcc     no_planes               // graphic card
         moveq.l #4,d3                   // 4 shifts
         bra.s   b1
 b3:    
         cmp.w   #16,d3                  // 65K colors
         bcc     no_planes   
 b1:
-        asr.w   #1,d2                   //d2 = # of cell-pairs per row in region -1
-        move.w  d2,d1                   //
-        addq.w  #1,d1                   //d1 = # of cell-pairs per row in region
-        asl.w   d3,d1                   //d1 = total bytes per row in region
-        move.w  _v_lin_wr,a2            //line wrap to a2
-        suba.w  d1,a2                   //line stride to a2
+        asr.w   #1,d2                   // d2 = # of cell-pairs per row in region -1
+        move.w  d2,d1                   // 
+        addq.w  #1,d1                   // d1 = # of cell-pairs per row in region
+        asl.w   d3,d1                   // d1 = total bytes per row in region
+        move.w  _v_lin_wr,a2            // line wrap to a2
+        suba.w  d1,a2                   // line stride to a2
 
-        move.w  d2,d1                   //# of cell pairs per row in region -1
-        swap    d2                      //cell delta y in lo word
+        move.w  d2,d1                   // # of cell pairs per row in region -1
+        swap    d2                      // cell delta y in lo word
         addq.w  #1,d2                   // # of vertical cells in region
         mulu    _v_cel_ht,d2            // d2 = # of lines in region
         subq.w  #1,d2                   // d2 = # of lines in region -1
 
-        clr.l   d0                      //assume 0 background color
-        move.w  _v_col_bg,d5            //background color to d5
+        clr.l   d0                      // assume 0 background color
+        move.w  _v_col_bg,d5            // background color to d5
 
-        cmp.w   #2,_v_planes            //test for 1 or 2 planes
-        bmi     mono                    //br if monochrome
-        beq     plane2                  //br if 2 planes
-        cmp.w   #4,_v_planes            //test for 4 planes
+        cmp.w   #2,_v_planes            // test for 1 or 2 planes
+        bmi     mono                    // br if monochrome
+        beq     plane2                  // br if 2 planes
+        cmp.w   #4,_v_planes            // test for 4 planes
         beq     plane4
         
 //  8 planes
 
 plane8:
-        asr     #1,d5                   //shift background color plane 0 to cy
-        negx.w  d0                      //d0.w=0xFFFF if cy=1, =0x0000 if cy=0
-        swap    d0                      //put 1st bit in high word
-        asr     #1,d5                   //shift plane 1 to cy
-        negx.w  d0                      //fill with all 1's if cy
+        asr     #1,d5                   // shift background color plane 0 to cy
+        negx.w  d0                      // d0.w=0xFFFF if cy=1, =0x0000 if cy=0
+        swap    d0                      // put 1st bit in high word
+        asr     #1,d5                   // shift plane 1 to cy
+        negx.w  d0                      // fill with all 1's if cy
 
-        clr.l   d3                      //assume all 0's for planes 2 & 3
+        clr.l   d3                      // assume all 0's for planes 2 & 3
         asr.w   #1,d5
         negx.w  d3
         swap    d3
         asr.w   #1,d5
         negx.w  d3
         
-        clr.l   d4                      //assume all 0's for planes 4 & 5
+        clr.l   d4                      // assume all 0's for planes 4 & 5
         asr.w   #1,d5
         negx.w  d4
         swap    d4
         asr.w   #1,d5
         negx.w  d4
 
-        clr.l   d6                      //assume all 0's for planes 4 & 5
+        clr.l   d6                      // assume all 0's for planes 4 & 5
         asr.w   #1,d5
         negx.w  d6
         swap    d6
@@ -1035,28 +1037,28 @@ plane8:
 //  d1 = # of cell-pairs in region -1
 
 plane8y:
-        move.w  d1,d5                   //reset cell-pair -1 count
+        move.w  d1,d5                   // reset cell-pair -1 count
 plane8x:
-        move.l  d0,(a1)+                //fill background to planes 0 & 1
-        move.l  d3,(a1)+                //fill background to planes 2 & 3
-        move.l  d4,(a1)+                //fill background to planes 4 & 5
-        move.l  d6,(a1)+                //fill background to planes 6 & 7
-        dbra    d5,plane8x              //go for rest of row
+        move.l  d0,(a1)+                // fill background to planes 0 & 1
+        move.l  d3,(a1)+                // fill background to planes 2 & 3
+        move.l  d4,(a1)+                // fill background to planes 4 & 5
+        move.l  d6,(a1)+                // fill background to planes 6 & 7
+        dbra    d5,plane8x              // go for rest of row
 
-        add.l   a2,a1                   //skip non-region area with stride advance
-        dbra    d2,plane8y              //do all rows in region
+        add.l   a2,a1                   // skip non-region area with stride advance
+        dbra    d2,plane8y              // do all rows in region
         rts
 
 //  4 planes
 
 plane4:
-        asr     #1,d5                   //shift background color plane 0 to cy
-        negx.w  d0                      //d0.w=0xFFFF if cy=1, =0x0000 if cy=0
-        swap    d0                      //put 1st bit in high word
-        asr     #1,d5                   //shift plane 1 to cy
-        negx.w  d0                      //fill with all 1's if cy
+        asr     #1,d5                   // shift background color plane 0 to cy
+        negx.w  d0                      // d0.w=0xFFFF if cy=1, =0x0000 if cy=0
+        swap    d0                      // put 1st bit in high word
+        asr     #1,d5                   // shift plane 1 to cy
+        negx.w  d0                      // fill with all 1's if cy
 
-        clr.l   d3                      //assume all 0's for planes 2 & 3
+        clr.l   d3                      // assume all 0's for planes 2 & 3
         asr.w   #1,d5
         negx.w  d3
         swap    d3
@@ -1070,22 +1072,22 @@ plane4:
 //  d1 = # of cell-pairs in region -1
 
 plane4y:
-        move.w  d1,d5                   //reset cell -1 count
+        move.w  d1,d5                   // reset cell -1 count
 plane4x:
-        move.l  d0,(a1)+                //fill background to planes 0 & 1
-        move.l  d3,(a1)+                //fill background to planes 2 & 3
-        dbra    d5,plane4x              //go for rest of row
+        move.l  d0,(a1)+                // fill background to planes 0 & 1
+        move.l  d3,(a1)+                // fill background to planes 2 & 3
+        dbra    d5,plane4x              // go for rest of row
 
-        add.l   a2,a1                   //skip non-region area with stride advance
-        dbra    d2,plane4y              //do all rows in region
+        add.l   a2,a1                   // skip non-region area with stride advance
+        dbra    d2,plane4y              // do all rows in region
         rts
 
 plane2:
-        asr.w   #1,d5                   //shift background color plane 0 to cy
-        negx.w  d0                      //d0.w=0xFFFF if cy=1, =0x0000 if cy=0
-        swap    d0                      //put 1st bit in high word
-        asr.w   #1,d5                   //shift plane 1 to cy
-        negx.w  d0                      //fill with all 1's if cy
+        asr.w   #1,d5                   // shift background color plane 0 to cy
+        negx.w  d0                      // d0.w=0xFFFF if cy=1, =0x0000 if cy=0
+        swap    d0                      // put 1st bit in high word
+        asr.w   #1,d5                   // shift plane 1 to cy
+        negx.w  d0                      // fill with all 1's if cy
 
 //  d0 packed as long word of blanking background
 //
@@ -1095,13 +1097,13 @@ plane2:
 //  d1 = # of cell-pairs in region -1
 
 plane2y:
-        move.w  d1,d5                   //reset cell-pair -1 count
+        move.w  d1,d5                   // reset cell-pair -1 count
 plane2x:
-        move.l  d0,(a1)+                //fill background to planes 0 & 1
-        dbra    d5,plane2x              //go for rest of row
+        move.l  d0,(a1)+                // fill background to planes 0 & 1
+        dbra    d5,plane2x              // go for rest of row
 
-        add.l   a2,a1                   //skip non-region area with stride advance
-        dbra    d2,plane2y              //do all rows in region
+        add.l   a2,a1                   // skip non-region area with stride advance
+        dbra    d2,plane2y              // do all rows in region
         rts
 
 mono:
@@ -1116,31 +1118,71 @@ mono:
 //  d1 = # of cell-pairs in region -1
 
 plane1y:
-        move.w  d1,d5                   //reset cell-pair -1 count
+        move.w  d1,d5                   // reset cell-pair -1 count
 plane1x:
-        move.w  d0,(a1)+                //fill background to plane
-        dbra    d5,plane1x              //go for rest of row
+        move.w  d0,(a1)+                // fill background to plane
+        dbra    d5,plane1x              // go for rest of row
 
-        add.l   a2,a1                   //skip non-region area with stride advance
-        dbra    d2,plane1y              //do all rows in region
+        add.l   a2,a1                   // skip non-region area with stride advance
+        dbra    d2,plane1y              // do all rows in region
         rts                                                
         
-no_planes:                              // 65K colors
-             
-        move    d2,d1                   //d2 = # of cell per row in region -1
-        addq.w  #1,d1                   //d1 = # of cell per row in region
-        asl.w   #4,d1                   //d1 = total bytes per row in region
-        move.w  _v_lin_wr,a2            //line wrap to a2
-        suba.w  d1,a2                   //line stride to a2
+no_planes:
+
+        cmp.w   #8,d3                   // 8 planes
+        bne     ntc                     // 65K colors
+
+        move.w  d2,d1                   // d2 = # of cell per row in region -1
+        addq.w  #1,d1                   // d1 = # of cell per row in region
+        asl.w   #3,d1                   // d1 = total bytes per row in region
+        move.w  _v_lin_wr,a2            // line wrap to a2
+        suba.w  d1,a2                   // line stride to a2
  
-        move.w  d2,d1                   //# of cell per row in region -1
-        swap    d2                      //cell delta y in lo word
+        move.w  d2,d1                   // # of cell per row in region -1
+        swap    d2                      // cell delta y in lo word
+        addq.w  #1,d2                   // # of vertical cells in region
+        mulu    _v_cel_ht,d2            // d2 = # of lines in region
+        subq.w  #1,d2                   // d2 = # of lines in region -1
+
+        move.w  _v_col_bg,d5            // background color to d5
+        asl.w #8,D5
+        move.b  _v_col_bg+1,d5          // background color to d5
+        move.w  d5,d0
+        swap d0
+        move.w  d5,d0
+        
+//  a1 -> top/left cell to start blanking
+//  a2 = stride length
+//  d2 = # of lines in region -1
+//  d1 = # of cell-pairs in region -1
+
+no_planesy_256:
+        move.w  d1,d5                   // reset cell -1 count
+no_planesx_256:
+        move.l  d0,(a1)+                // fill background
+        move.l  d0,(a1)+ 
+        dbra    d5,no_planesx_256       // go for rest of row
+
+        add.l   a2,a1                   // skip non-region area with stride advance
+        dbra    d2,no_planesy_256       // do all rows in region        
+        rts
+
+ntc:                                    // 65K colors
+             
+        move.w  d2,d1                   // d2 = # of cell per row in region -1
+        addq.w  #1,d1                   // d1 = # of cell per row in region
+        asl.w   #4,d1                   // d1 = total bytes per row in region
+        move.w  _v_lin_wr,a2            // line wrap to a2
+        suba.w  d1,a2                   // line stride to a2
+ 
+        move.w  d2,d1                   // # of cell per row in region -1
+        swap    d2                      // cell delta y in lo word
         addq.w  #1,d2                   // # of vertical cells in region
         mulu    _v_cel_ht,d2            // d2 = # of lines in region
         subq.w  #1,d2                   // d2 = # of lines in region -1
 
 #ifndef TOS_CT60
-        move.w  _v_col_bg,d5            //background color to d5
+        move.w  _v_col_bg,d5            // background color to d5
 #else
         move.w  LINEA_VAR+0xB0C,d5      // bg
 #endif           
@@ -1154,16 +1196,16 @@ no_planes:                              // 65K colors
 //  d1 = # of cell-pairs in region -1
 
 no_planesy:
-        move.w  d1,d5                   //reset cell -1 count
+        move.w  d1,d5                   // reset cell -1 count
 no_planesx:
-        move.l  d0,(a1)+                //fill background
+        move.l  d0,(a1)+                // fill background
         move.l  d0,(a1)+ 
         move.l  d0,(a1)+
         move.l  d0,(a1)+ 
-        dbra    d5,no_planesx           //go for rest of row
+        dbra    d5,no_planesx           // go for rest of row
 
-        add.l   a2,a1                   //skip non-region area with stride advance
-        dbra    d2,no_planesy           //do all rows in region        
+        add.l   a2,a1                   // skip non-region area with stride advance
+        dbra    d2,no_planesy           // do all rows in region        
         rts
 
 
@@ -1214,14 +1256,17 @@ y_clipped:
         move.w  d0,d5
         cmp.w   #16,d3                  // 65K colors
         bcc.s   x_disp_ntc
+        cmp.l   #0x01000000,_v_bas_ad
+        bcc     x_disp_256              // graphic card
         bclr    #0,d5                   // d5.w <- even(X)
         mulu    d5,d3                   // d3.l <- planes // even(X)
-
         btst    #0,d0                   // calculate Xmod2
         beq.s   y_disp                  // Xmod2 = 0 ?
-
         addq.l  #1,d3                   // Xmod2 = 1
         bra.s   y_disp
+
+x_disp_256:
+       lsr.w    #1,D5
 
 x_disp_ntc:
         mulu    d5,d3  
@@ -1230,10 +1275,8 @@ y_disp:
 
 //       Y displacement = Y // cell conversion factor
 
-
         move.w  _v_cel_wr,d5
         mulu    d1,d5
-
 
 //       cell address = screen base address + Y displacement + X displacement
 
@@ -1242,7 +1285,6 @@ y_disp:
         adda.l  d3,a1                   // d5 <- cell address
         add.w   _v_cur_of, a1           // add offset from screen-begin (fix)
         rts
-
 
 
 /*
@@ -1270,6 +1312,8 @@ cell_xfer:
         move.w  _v_planes,d6
         cmp.w   #16,d6                  // 65K colors
         bcc     p_lp0_ntc 
+        cmp.l   #0x01000000,_v_bas_ad
+        bcc     p_lp0_256               // graphic card
         subq.w  #1,d6                   // for dbra.
 
 p_lp0:
@@ -1282,12 +1326,12 @@ p_lp0:
         beq.s   back_0
 
 back_1:
-        bcc.S   blk_invrt               // back:1  fore:0  =>  invert block
+        bcc.s   blk_invrt               // back:1  fore:0  =>  invert block
         moveq.l #-1,d3                  // all ones.
         bra.s   blk_reg                 // back:1  fore:1  =>  all ones
 
 back_0:
-        bcs.S   blk_xfer                // back:0  fore:1  =>  direct substitution
+        bcs.s   blk_xfer                // back:0  fore:1  =>  direct substitution
         moveq.l #0,d3                   // all zeroes.
 
 //                                      // back:0  fore:0  =>  all zeros
@@ -1323,6 +1367,40 @@ blk_invrt:                              // inject the inverted source block
 
         addq.w  #plane_offset,a1        // a1 -> top of block in next plane
         dbra    d6,p_lp0
+        rts
+        
+p_lp0_256:
+        move.l  d7,d6                   // fg color
+        swap d6                         // bg color
+        move.w  d4,d5                   // reset block length counter
+        move.l  a0,a4                   // a4 -> top of source block
+        move.l  a1,a5                   // a5 -> top of current dest plane
+
+blk_xfer_256:                           // inject the source block
+        move.b  (a4),d0
+        move.l  a5,a1
+        moveq.l #7,d1
+
+blk_xfer_byte_256:
+        add.b   d0,d0
+        bcc.s   blk_xfer_bgc_256
+        move.b  d7,(a1)+                // fg color
+        
+        dbra    d1,blk_xfer_byte_256
+        adda.w  a3,a5
+        adda.w  a2,a4
+
+        dbra    d5,blk_xfer_256
+        rts
+
+blk_xfer_bgc_256:
+        move.b  d6,(a1)+                // bg color
+
+        dbra    d1,blk_xfer_byte_256
+        adda.w  a3,a5
+        adda.w  a2,a4
+
+        dbra    d5,blk_xfer_256
         rts
 
 p_lp0_ntc:
@@ -1443,6 +1521,8 @@ neg_cell:
         move.w  _v_planes,d6
         cmp.w   #16,d6
         bcc     neg_cell_ntc            // 65K colors
+        cmp.l   #0x01000000,_v_bas_ad
+        bcc     neg_cell_256
         subq.w  #1,d6                   // for dbra.
 
 plane_loop:
@@ -1461,6 +1541,22 @@ neg_loop:
         dbra    d6,plane_loop
 //        bclr    #6,_v_stat_0                // end of critical section.
         rts
+
+neg_cell_256:
+
+//        bset    #6,_v_stat_0                // end of critical section.
+        move.w  d4,d5                   // reset cell length counter
+        move.l  a1,a4                   // a4 -> top of current dest plane
+
+neg_loop_256:
+        not.l   (a4)
+        not.l   4(a4)
+        add.w   a2,a4
+
+        dbra    d5,neg_loop_256
+//        bclr    #6,_v_stat_0                // end of critical section.
+        rts
+
 
 neg_cell_ntc:
 
@@ -1537,12 +1633,11 @@ inc_cell_ptr:
         addq.w  #1,d0                           // next cell to right
         cmp.w   #16,_v_planes                   // 65K colors
         bcc     next_word_ntc
-
+        cmp.l   #0x01000000,_v_bas_ad
+        bcc     next_word_256
         btst    #0,d0                           // if X is even, move to next
         beq     next_word                       // word in the plane
-
         addq.w  #1,a1                           // a1 -> new cell
-
         clr.w   d3                              // indicate no wrap needed
         rts
 
@@ -1552,15 +1647,16 @@ next_word:
         asl.w   #1,d3
         subq.w  #1,d3                           // d3 <- offset to next word in plane
         add.w   d3,a1                           // a1 -> new cell (1st plane)
-
         clr.w   d3                              // indicate no wrap
         rts
         
 next_word_ntc:
 
         addq.w #8,a1
-        addq.w #8,a1     
-         
+
+next_word_256:
+
+        addq.w #8,a1          
         clr.w   d3                              // indicate no wrap
         rts
 
@@ -1590,41 +1686,41 @@ next_word_ntc:
  *     d0.w,d1.l,d2.l,d3.l,d5.w,a1.l,a2.l,a3.l
  */
 p_sc_up:
-        move.l  _v_bas_ad,a3    //get base addr to destination
-        move.w  _v_cel_wr,d3    //cell wrap to temp
-        mulu.w  d1,d3           //cell y nbr // cell wrap is destination offset
-        lea.l   (a3,d3.l),a3    //form destination add in a3
+        move.l  _v_bas_ad,a3    // get base addr to destination
+        move.w  _v_cel_wr,d3    // cell wrap to temp
+        mulu.w  d1,d3           // cell y nbr //  cell wrap is destination offset
+        lea.l   (a3,d3.l),a3    // form destination add in a3
         neg.w   d1
-        add.w   _v_cel_my,d1    //form (max-1) - top row # for total rows to move
-        move.w  _v_cel_wr,d3    //cell wrap to temp d3
-        lea.l   (a3,d3.w),a2    //form source address from cell wrap + base address
-        mulu    d1,d3           //form # of bytes to move in d3
+        add.w   _v_cel_my,d1    // form (max-1) - top row # for total rows to move
+        move.w  _v_cel_wr,d3    // cell wrap to temp d3
+        lea.l   (a3,d3.w),a2    // form source address from cell wrap + base address
+        mulu    d1,d3           // form # of bytes to move in d3
 
 #if HAVE_MEMMOVE
-        move.l  d3,-(sp)        // move memory
+        move.l  d3,-(sp)        //  move memory
         move.l  a2,-(sp)
         move.l  a3,-(sp)
         jsr     _memmove
         add.w   #12,sp
 #else
-        asr.l   #2,d3           //divide by 4 for long byte moves
-        bra.s   scrup1          //enter loop at test
+        asr.l   #2,d3           // divide by 4 for long byte moves
+        bra.s   scrup1          // enter loop at test
 
 scrup0:
-        move.l  (a2)+,(a3)+     //move bytes
+        move.l  (a2)+,(a3)+     // move bytes
 scrup1:
         subq.l  #1,d3
-        bpl.s   scrup0          //loop til finished
+        bpl.s   scrup0          // loop til finished
 #endif
 
-        move.w  _v_cel_my,d1    //bottom line cell address y to top/left cell
+        move.w  _v_cel_my,d1    // bottom line cell address y to top/left cell
 scr_out:
-        move.w  d1,d2           //for bottom/left cell too
+        move.w  d1,d2           // for bottom/left cell too
         swap    d1
         swap    d2
-        clr.w   d1              //top/left starts at left edge
-        move.w  _v_cel_mx,d2    //maximum x for right edge on bottom/right
-        bra     blnk_blt        //exit thru blank out
+        clr.w   d1              // top/left starts at left edge
+        move.w  _v_cel_mx,d2    // maximum x for right edge on bottom/right
+        bra     blnk_blt        // exit thru blank out
 
 
 
@@ -1640,7 +1736,7 @@ p_sc_dwn:
         lea.l   (a3,d3.w),a2    // form destination from source + cell wrap
         move.w  d1,d0
         neg.w   d0              // do tricky subtract
-        add.w   _v_cel_my,d0    //   to form # of cell rows to move
+        add.w   _v_cel_my,d0    // to form # of cell rows to move
         mulu    d0,d3           // form # of bytes to move in d3
 
 #if HAVE_MEMMOVE

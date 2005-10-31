@@ -4,7 +4,7 @@
 !title   Documentation de la
 !programimage ..\img\ct60.img
 !program CT60
-!version Version 1.03c
+!version Version 1.04
 !date    (!today)
 !author  Didier MEQUIGNON
 !street  25, rue de l'Ascenseur
@@ -717,6 +717,12 @@ racine du disque de d‚marrage. Essay‚ avec le moyau Linux 2.4.25.
 
 Certes, vous pouvez toujours utiliser MAGXBOOT.PRG ou ATABOOT.PRG dans le 
 dossier AUTO.
+
+(!U)
+ATTENTION !
+(!u)
+
+Sous le mode 030, replacez le mode sur '-'.
 
 
 !subsubnode Bootargs extension (Linux)
@@ -1708,7 +1714,9 @@ Tant que vous ne coupez pas la machine, le g‚n‚rateur d'horloge fonctionne
 avec la derniŠre fr‚quence ‚crite dans sa RAM. A la mise sous tension le 
 g‚n‚rateur d'horloge copie lui-mˆme dans sa RAM la fr‚quence d'origine 
 sauv‚e dans sa EEPROM. Appuyer sur CTRL ou ALT ne sert donc … rien si l'on 
-ne coupe pas la machine ‚galement.
+ne coupe pas la machine ‚galement. Vous pouvez aussi utiliser CTRL-ALT-UNDO
+pour restorer les valeurs par d‚faut des param‚tres NVRAM/Flash ou encore 
+passer par le mode 030 pour choisir une autre fr‚quence.
 
 (!U)
 Initialisation
@@ -1735,6 +1743,9 @@ En cas d'impossibilit‚ de red‚marrer la machine avec le (!B) module CTCM
 plage de 33 … 66 MHz, et ensuite le reprogrammer … nouveau avec la CT60 en 
 sauvant une nouvelle valeur dans la EEPROM. La fr‚quence est alors doubl‚e 
 lorsque le pont est … nouveau en place !
+
+La CT60 ne d‚marre pas avec le boost du Falcon si le pont est coup‚ 
+(fr‚quence F030 > fr‚quence CT60 soit 33 MHz).
 
 Comme le (!B) module ak-modul-bus (!b), il reste possible de raccorder 
 le (!B) module CTCM (!b) sur le port MODEM 2 via un cable de liaison HE10 
@@ -1768,7 +1779,7 @@ besoin de beaucoup de temps si vous voulez tester la ST-RAM et la SDRAM).
 PMMU.
 !item Sous TOS, couper les caches pendant 5 secondes lors du lancement 
 d'un programme ou supprimer la boite d'alerte copyback.
-!item Redirige l'affichage des programmes du dossier AUTO vers un fichier boot.log.
+!item Rediriger l'affichage des programmes du dossier AUTO vers un fichier boot.log.
 !end_itemize
 
 

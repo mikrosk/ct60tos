@@ -58,18 +58,18 @@
 #define bytes_ln -2
 #define v_lin_wr  2
 
-#define power_flag    -68
-#define flag_statvec  -64
-#define pbuf_statvec  -60
-#define count_io3_mfp -54
-#define start_hz_200  -52
-#define flag_cache    -48
-#define save_hz_200   -44
-#define save_source   -40
-#define save_target   -36
-#define save_contrl   -32
-#define adr_source    -28
-#define adr_target    -24
-#define adr_fonts     -20
+#define power_flag          -68
+#define flag_statvec        -64
+#define pbuf_statvec        -60
+#define count_io3_mfp       -54
+#define start_hz_200        -52
+#define flag_cache          -48
+#define save_hz_200         -44
+#define save_source         -40
+#define save_target         -36
+#define save_contrl         -32
+#define adr_source          -28
+#define adr_target          -24
+#define adr_fonts           -20   /* 5 longs */
 
-#endif	_VARS_H
+#endif

@@ -1,4 +1,4 @@
-/*  Flashing tool for the CT60 board
+/*  CT60 board patchs
  *  Copyright (C) 2000 Xavier Joubert
  *
  *  This program is free software; you can redistribute it and/or modify
@@ -22,7 +22,7 @@
  */
 
 #ifndef	_GENTOS_H
-#define	_GENTOS_H	1
+#define	_GENTOS_H
 
 #define TOS4_SIZE	(512*1024)
 
@@ -34,4 +34,4 @@ void load_tos(char*, Bit8u*, Bit32u);
 void save_tos(char*, Bit8u*, Bit32u);
 int main(int, char**);
 
-#endif	/* _GENTOS_H */
+#endif

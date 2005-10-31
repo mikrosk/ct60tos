@@ -6514,4 +6514,3 @@ pic_boot:
  .long 0x7f050000 
 
  .ascii "END_XIMG"
- 

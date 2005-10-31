@@ -1,0 +1,3 @@
+#define CONFIG_FB_RADEON_I2C
+#define CONFIG_FB_MODE_HELPERS
+

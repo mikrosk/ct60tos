@@ -1640,5 +1640,3 @@ tab_frame_UVGA:   .short  797,      787,       19,    19,   787,      789 //  86
 tab_frame_UVGA_NI:.short 1643,     1601,       65,    65,  1601,     1631 //  60 Hz 768 lines ULTRA VGA NI
 tab_frame_MONO:   .short 1001,        0,        0,    67,   867,      999 //  71 Hz 400 lines SM124
 tab_frame_MONO_O: .short 1243,        0,        0,    27,  1147,     1241 //  52 Hz 560 lines SM124
-
- 

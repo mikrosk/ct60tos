@@ -1,4 +1,4 @@
-/*  Flashing tool for the CT60 board
+/*  CT60 board
  *  Copyright (C) 2000 Xavier Joubert
  *
  *  This program is free software; you can redistribute it and/or modify
@@ -24,7 +24,7 @@
 #ifndef	_MAIN_H
 #define	_MAIN_H	1
 
-#define VERSION 0x0103
+#define VERSION 0x0104
 
 #define Bit32u unsigned long
 #define Bit32s signed long
@@ -33,8 +33,8 @@
 #define Bit8u unsigned char
 #define Bit8s signed char
 
-#define RESERVE_MEM_FONTS 0x8000
-#define RESERVE_MEM 0x60000
+#define RESERVE_MEM_FONTS  0x8000
+#define RESERVE_MEM       0x60000
 
 #define FLASH_ADR  0x00E00000
 #define FLASH_SIZE 0x00100000
@@ -43,4 +43,4 @@
 
 #define	MAX_ERROR_LENGTH	256
 
-#endif /* _MAIN_H */
+#endif

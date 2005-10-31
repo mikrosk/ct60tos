@@ -4,7 +4,7 @@
 !title   Documentation of the
 !programimage ..\img\ct60.img
 !program CT60
-!version Version 1.03c
+!version Version 1.04
 !date    (!today)
 !author  Didier MEQUIGNON
 !street  25, rue de l'Ascenseur
@@ -698,6 +698,12 @@ of the boot folder. Tested with the kernel 2.4.25.
 
 Sure you can always use MAGXBOOT.PRG or ATABOOT.PRG inside the AUTO 
 folder.
+
+(!U)
+ATTENTION !
+(!u)
+
+Under the 030 mode, set the default mode to '-'.
 
 
 !subsubnode Bootargs extension (Linux)
@@ -1676,7 +1682,8 @@ So long as you not cut the power on the machine, the clock gererator works
 with the latest frequency writed inside his RAM. During the power on 
 sequency, the clock generator copy himself inside his RAM the original 
 frequency saved in his EEPROM. Press on CTRL or ALT has no effect if you 
-not cut the power before.
+not cut the power before. You can also use CTRL-ALT-UNDO for restore 
+NVRAM/Flash parameters or use the 030 mode for select another frequency.
 
 (!U)
 Initialisation
@@ -1703,6 +1710,9 @@ When it's impossible to restart the computer with the (!B) CTCM module
 33 and 66 MHz), and after reprogram again the module with the CT60 by 
 saving a new value inside the EEPROM. Now, the frequency is multiplyed by 
 two when the strap is again in place !
+
+The CT60 not start with the Falcon boost if the strap is removed (F030 
+frequency > CT60 frequency so 33 MHz).
 
 Like the (!B) ak-modul-bus module (!b), the last solution is to connect 
 the (!B) CTCM module (!b) on the MODEM 2 port with a link HE10 SUBD and 

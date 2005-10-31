@@ -1,0 +1,48 @@
+OUTPUT_ARCH(m68k)
+SEARCH_DIR(/lib); SEARCH_DIR(/usr/lib); SEARCH_DIR(/usr/local/lib); SEARCH_DIR(/usr/m68k-atari-mint/lib);
+PROVIDE (__stack = 0);
+MEMORY
+{
+  stram (rw)  : ORIGIN =  0x10000, LENGTH = 0x10000
+  flash (rx) : ORIGIN = 0xEC0000, LENGTH = 0x30000
+}
+SECTIONS
+{
+  .text :
+  {
+    CREATE_OBJECT_SYMBOLS
+    *(.text)
+    /* The next six sections are for SunOS dynamic linking.  The order
+       is important.  */
+    *(.dynrel)
+    *(.hash)
+    *(.dynsym)
+    *(.dynstr)
+    *(.rules)
+    *(.need)
+    _etext = .;
+    __etext = .;
+  } > flash
+  . = ALIGN(2);
+  .data :
+  {
+    /* The first three sections are for SunOS dynamic linking.  */
+    *(.dynamic)
+    *(.got)
+    *(.plt)
+    *(.data)
+    *(.linux-dynamic) /* For Linux dynamic linking.  */
+    CONSTRUCTORS
+    _edata  =  .;
+    __edata  =  .;
+  } > flash
+  .bss :
+  {
+    __bss_start = .;
+   *(.bss)
+   *(COMMON)
+   _end = ALIGN(4) ;
+   __end = ALIGN(4) ;
+  } > stram
+}
+

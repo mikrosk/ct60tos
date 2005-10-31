@@ -1,4 +1,4 @@
-/*  Flashing tool for the CT60 board
+/*  CT60 board Flash commands
  *  Copyright (C) 2000 Xavier Joubert
  *
  *  This program is free software; you can redistribute it and/or modify
@@ -22,7 +22,7 @@
  */
 
 #ifndef	_COMMAND_H
-#define	_COMMAND_H	1
+#define	_COMMAND_H
 
 #define CMD_UNLOCK1	0xAA
 #define CMD_UNLOCK2	0x55
@@ -34,4 +34,4 @@
 #define CMD_AUTOSELECT	0x90
 #define CMD_READ	0xF0
 
-#endif /* _COMMAND_H */
+#endif

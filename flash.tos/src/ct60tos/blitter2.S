@@ -168,10 +168,14 @@ cf3:
 	
 logo_atari:
 
+	cmp.l #0x01000000,_v_bas_ad
+	bcc.s .no_logo
 	move.l _memtop,A0
 	add.l #0x6408,A0
 	pea.l (A0)
 	jmp 0xE00666
+.no_logo:
+	jmp 0xE0066E
 	
 	
 	dc.l 0x58425241  /* XBRA */
@@ -185,6 +189,25 @@ det_vdi:
 	movem.l A0-A3,-(SP)
 	move.l D1,A1
 	move.l (A1),A3   // CONTRL
+//	cmp.w #6,(A3)    // v_pline
+//	bne.s v14
+//	movec.l CACR,D0  // TOS v_pline can crash with copyback cache & SDRAM
+//	cmp.l #0xA0808000,D0
+//	bne v3
+//	jsr 0xE0085A     // caches off
+//	movem.l (SP)+,A0-A3
+//	moveq #0x73,D0
+//	clr.w -(SP)      // format if > 68000
+//	pea.l v15(PC)
+//	move.w SR,-(SP)
+//	move.l det_vdi-4,-(SP)
+//	rts
+//v15:
+//	move.l D0,-(SP)  // return after v_pline
+//	jsr 0xE250C8     // caches on
+//	move.l (SP)+,D0
+//	rte
+//v14:
 	cmp.w #109,(A3)  // vro_cpyfm
 	beq.s v10
 	cmp.w #110,(A3)  // vr_trnfm

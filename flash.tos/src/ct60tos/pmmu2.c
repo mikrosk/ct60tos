@@ -186,6 +186,14 @@ long init_mmu_tree(void)
 						offset+=PAGESIZE;
 					}
 				}
+				else if(adr>=end_stram && adr<ZONE_EPROM)
+				{
+					for(pgi=0;pgi<PAGE_TABLE_SIZE;pgi++)       /* 3rd level of the mmu tree */
+					{
+						*p2++ = offset+(NOCACHE+RESIDENT);
+						offset+=PAGESIZE;
+					}
+				}
 				else if(adr>=ZONE_IO && adr<END_ZONE_IO)
 				{
 					for(pgi=0;pgi<PAGE_TABLE_SIZE;pgi++)       /* 3rd level of the mmu tree */

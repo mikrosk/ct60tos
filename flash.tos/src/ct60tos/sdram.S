@@ -36,14 +36,15 @@
 // #define DEBUG
 // #define INIT_SDRAM_MOVE16
 // #define RESET // removed because not works with some motherboards/SDR60 versions
-#define XFRB_SIZE 0x10000
+#define PCI_DRIVERS_SIZE  0x20000
+#define XFRB_SIZE         0x10000
 #define SPEED_BUFFER_SIZE 0x10000 // mini 512 bytes
-#define NB_COOKIES 128
-#define CT60_COOKIE_SIZE 256
+#define NB_COOKIES         128
+#define CT60_COOKIE_SIZE   256
 #define DEFAULT_BOOT_DELAY 800    // 4 seconds
-#define TIME_OUT_CMD 200          // 1 second
-#define TIME_OUT_4S 800
-#define TIME_OUT_10S 2000
+#define TIME_OUT_CMD       200    // 1 second
+#define TIME_OUT_4S        800
+#define TIME_OUT_10S      2000
 
 #define rw_parameter 0xc60b
 
@@ -141,6 +142,9 @@
 #define _sdcnf    0xf2000000      // SDRAM configuration 0xf2xx0000 
 
 #define  WAIT_US bsr wait_26us  
+
+#define LINEA_VAR 0x3E86
+#define _v_cel_ht LINEA_VAR-46  // cell height (width is 8)
 
 init_060:
 
@@ -247,16 +251,63 @@ init_sdram:
 	beq.s .blitter_slow
 	bset #2,0xFFFF8007       // blitter 16 MHz
 .blitter_slow:
-	lea spaces(PC),A0
-	bsr display_string_single
+	bsr ct60_configure_sdram
+	clr.l ramtop
+	clr.l ramvalid
+	move.l D0,D5             // save return value
+	bmi.s .error_sdram_for_pci
+	add.w #26,D0             // size 0-3 for 64MB-512MB
+	moveq #0,D1
+	bset D0,D1
+	add.l #0x01000000,D1
+	move.l D1,ramtop
+	move.l #0x1357BD13,ramvalid
+.error_sdram_for_pci:
+	move.l _sysbase,A0       // header ROM
+	move.l 0x24(A0),A0       // kbshift
+	move.b (A0),D1
+	and.b #0xF,D1
+	cmp.b #4,D1              // CTRL
+	beq.s .error_pci
+	cmp.b #8,D1              // ALT
+	beq.s .error_pci
+	move.w #1,-(SP)
+	move.w #299,-(SP)        // install PCI BIOS
+	trap #14
+	addq.w #4,SP
+	tst.w D0
+//	bmi.s .error_pci
+	clr.w -(SP)                       // STRAM
+	move.l #PCI_DRIVERS_SIZE,-(SP)    // size for bss
+	move.w #0x44,-(SP)                // Mxalloc
+	trap #1 
+	addq.w #8,SP
+	tst.l D0
+	ble.s .error_pci
+	move.l D0,A0
+	move.l #0x5F504349,(A0)  // _PCI
+	clr.l ramtop             // SDRAM was detected for PCI BIOS
+	clr.l ramvalid           // but need a test
+	lea 0xED0000,A0          // 128 KB
+	cmp.l #0x5F504349,(A0)   // _PCI
+	beq.s .call_pci_init
+	lea 0xEC0000,A0          // 192 KB
+	cmp.l #0x5F504349,(A0)   // _PCI
+	beq.s .call_pci_init
+	lea 0xEB0000,A0          // 256 KB
+	cmp.l #0x5F504349,(A0)   // _PCI
+	bne.s .error_pci
+.call_pci_init:
+	jsr 4(A0)                // drivers PCI in flash
+.error_pci:
+	bsr spaces
 	lea message0(PC),A0
 	cmp.w #2,0x3E86          // number of planes
 	bhi.s .title_colors
 	lea message0b(PC),A0
 .title_colors:
 	bsr display_string_single
-	lea spaces(PC),A0
-	bsr display_string_single
+	bsr spaces
 	movec.l PCR,D0
 	swap D0
 	lea message8(PC),A0      // 68060
@@ -314,9 +365,12 @@ init_sdram:
 	bhi.s .measure_mhz
 	move.l _sysbase,A0       // header ROM
 	move.l 0x24(A0),A0       // kbshift
-	moveq #0xC,D1            // ALT or CTRL
-	and.b (A0),D1
-	bne.s .reset_clock
+	move.b (A0),D1
+	and.b #0xF,D1
+	cmp.b #4,D1              // CTRL
+	beq.s .reset_clock
+	cmp.b #8,D1              // ALT
+	beq.s .reset_clock
 	moveq #CT60_CLOCK_WRITE_RAM,D1
 	bsr ct60_configure_clock
 	move.l D0,D7
@@ -519,8 +573,7 @@ init_sdram:
 	sub.l _memtop,D0
 	cmp.l #RESERVE_MEM,D0
 	beq .init_mmu            // pmmu tree in STRAM & no SDRAM
-	bsr ct60_configure_sdram
-	tst.l D0
+	move.l D5,D0             // return value from ct60_configure_sdram
 	bpl .ok_sdram
 	move.w D0,D1
 	lea error9(PC),A0
@@ -549,10 +602,7 @@ init_sdram:
 	beq.s .error_sdram
 	lea error1(PC),A0	
 .error_sdram:
-	move.l A0,-(SP)
-	lea crlf_spaces(PC),A0
-	bsr display_string_single
-	move.l (SP)+,A0
+	bsr crlf_spaces
 	bsr display_string
 .error_sdram2:
 	move.w #7,-(SP)          // Crawcin
@@ -589,8 +639,7 @@ init_sdram:
 	add.w #26,D0             // size 0-3 for 64MB-512MB
 	moveq #0,D5
 	bset D0,D5
-	lea crlf_spaces(PC),A0
-	bsr display_string_single
+	bsr crlf_spaces
 	lea message1(PC),A0
 	bsr display_string_single
 	lea message5(PC),A0
@@ -607,6 +656,13 @@ init_sdram:
 	bsr display_string_single
 	lea message6(PC),A0
 	bsr display_string
+	cmp.l #0x752019F3,memvalid
+	bne.s .make_test
+	cmp.l #0x237698AA,memval2
+	bne.s .make_test
+	cmp.l #0x5555AAAA,memval3
+	beq .bypass_test
+.make_test:
 	lea 0x1000000,A0
 	move.l A0,A1
 	add.l D5,A1              // end SDRAM
@@ -643,6 +699,7 @@ init_sdram:
 		add.l #0x2000,A0         // 8K step
 	cmp.l A1,A0
 	bcs.s .loop_sdram_test
+.bypass_test:
 	moveq #18,D0             // CAS laytency
 	bsr read_i2c_sdram
 	bmi.s .test_ok           // error
@@ -713,12 +770,14 @@ init_sdram:
 	swap D0
 	cmp.w #0x4E56,D0         // NV magic code
 	bne .no_nvm_read_saved
-	lea crlf_spaces(PC),A0
 	tst.w d7
 	beq .no_tos_in_ram
 	lea separator(PC),A0
-.no_tos_in_ram:
 	bsr display_string_single
+	bra.s .tos_in_ram
+.no_tos_in_ram:
+	bsr crlf_spaces
+.tos_in_ram:
 	lea message51b(PC),A0    // NVRAM restored
 	bsr display_string
 .no_nvm_read_saved:
@@ -1146,6 +1205,10 @@ error11:	.asciz "CTCM not found"
 	.asciz "CTCM non trouv‚e"
 error12:	.asciz "CTCM frequency error"
 	.asciz "CTCM erreur fr‚quence"
+error13:	.byte 13,10
+	.asciz "CTPCI not found"
+	.byte 13,10
+	.asciz "CTPCI non trouv‚e"
 name1:	.asciz "Eiffel"
 name2:	.asciz "boot.log"
 message0:	.byte 0x1B,0x62,0x34,0x41
@@ -1162,9 +1225,8 @@ message0:	.byte 0x1B,0x62,0x34,0x41
 	.byte 13,10,0
 message0b:	.ascii "ATARI FALCON/CT60 TOS4.04"
 crlf:	.byte 13,10,0
+xlf:	.byte 10,10,10,10,10,0
 separator:	.asciz ", "
-crlf_spaces:	.byte 13,10
-spaces:	.asciz "            "
 message1:	.asciz "SDRAM "
 message2:	.asciz "64"
 message3:	.asciz "128"
@@ -1192,13 +1254,13 @@ message15:	.byte 27
 	.ascii "."
 	.byte ((VERSION/16) & 0xF) + 0x30
 	.byte (VERSION & 0xF) + 0x30
-	.asciz "c "
+	.asciz " pre-alpha "
 message15b:	
-	.ascii "2005 July "
+	.ascii "2005 November "
 	.byte 27
 	.ascii "q"
 	.byte 13,10,0
-	.ascii "Juillet 2005 "
+	.ascii "Novembre 2005 "
 	.byte 27
 	.ascii "q"
 	.byte 13,10,0
@@ -3184,7 +3246,7 @@ ide_read: 	// D0.L: bytes, A0: IDE buffer, A1: cmd buffer
 		bsr wait_end_cmd_ide
 		bmi.s .ir1        // time-out
  		tst.l D2
- 	             beq.s .ir9 	     // no data
+		beq.s .ir9 	     // no data
 		moveq #9,D0       // DRQ & ERR
 		and.b 0xFFF0001D,D0   // state
 		btst #3,D0        // DRQ
@@ -3850,8 +3912,8 @@ display_xbra:
 get_timer_c:
 
 	move.l D1,-(SP)
-	move SR,-(SP)
-	or #0x700,SR             // no interrupts
+	move.w SR,-(SP)
+	or.w #0x700,SR           // no interrupts
 	move.l _hz_200,D0
 	asl.l #8,D0
 	moveq #0,D1
@@ -3980,12 +4042,32 @@ display_string_single:
 
 	movem.l D0/A0,-(SP)
 .os2:
-	move.b (A0)+,D0
-	beq.s .os1
-	bsr display_char
+		move.b (A0)+,D0
+		beq.s .os1
+		bsr display_char
 	bra.s .os2
 .os1:
 	movem.l (SP)+,D0/A0
+	rts
+
+crlf_spaces:
+	move.l D0,-(SP)
+	moveq #13,D0
+	bsr display_char
+	moveq #10,D0
+	bsr display_char
+	move.l (SP)+,D0
+	
+spaces:
+	movem.l D0/D1,-(SP)
+	moveq #11,D1
+.loop_spaces:
+		moveq #0x1B,D0
+		bsr display_char
+		moveq #0x43,D0 // ESC C
+		bsr display_char
+	dbf D1,.loop_spaces
+	movem.l (SP)+,D0/D1
 	rts
 
 hex_long:
@@ -4288,6 +4370,11 @@ test_keyboard:
 add_sdram:
 
 	movem.l D1-D7/A1-A5,-(SP)
+	cmp.w #8,_v_cel_ht       // font 8 x 8
+	bhi.s .font_16x8
+	lea xlf(PC),A0
+	bsr display_string_single
+.font_16x8:
 	lea message15(PC),A0     // boot version
 	bsr display_string_single
 	lea message15b(PC),A0
@@ -4474,6 +4561,32 @@ add_sdram:
 	move.l A2,(A0)+
 	clr.l (A0)
 .not_sdram:
+	clr.w -(SP)
+	move.w #299,-(SP)        // display devices PCI BIOS
+	trap #14
+	addq.w #4,SP
+	tst.w D0
+	bpl.s .no_error_pci_bios
+	lea error13(PC),A0
+	bsr display_string
+//	bra.s .no_pci_bios	
+.no_error_pci_bios:
+	move.l #0x5F504349,D0    // cookie _PCI
+	bsr get_cookie
+	move.l A0,D0
+	beq.s .no_pci_bios
+	lea 0xED0000,A0          // 128 KB
+	cmp.l #0x5F504349,(A0)   // _PCI
+	beq.s .pci_init_after_sdram
+	lea 0xEC0000,A0          // 192 KB
+	cmp.l #0x5F504349,(A0)   // _PCI
+	beq.s .pci_init_after_sdram
+	lea 0xEB0000,A0          // 256 KB
+	cmp.l #0x5F504349,(A0)   // _PCI
+	bne.s .no_pci_bios
+.pci_init_after_sdram:
+	jsr 10(A0)                // drivers PCI in flash, call after SDRAM added
+.no_pci_bios:
 	move.l #0x752019F3,memvalid
 	move.l #0x237698AA,memval2
 	move.l #0x5555AAAA,memval3
@@ -5573,7 +5686,7 @@ init_cookie_ct60:
 		clr.l (A1)+
 	dbf D0,.clear_data_ct60_cookie
 	move.l 4(A0),A0          // buffer
-	move.w D2,8(A0)          // CPU frequency in MHz * 10
+	move.l D2,8(A0)          // CPU frequency in MHz * 10
 	move.l phystop,A0
 	clr.w count_io3_mfp(A0)
 	move.l _hz_200,start_hz_200(A0)
