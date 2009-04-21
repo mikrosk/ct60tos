@@ -800,6 +800,7 @@ devices:                                                    // the manufacturer 
 	.long 0x000422AB, fujitsu_mbm29f400bc-devices
 	.long 0x00042258, fujitsu_mbm29f800ba-devices
 	.long 0x00012258, amd_am29f800bb-devices
+	.long 0x00202258, st_m29f800db-devices
 	.long 0x000122D6, amd_am29f800bt-devices
 	.long 0
 	
@@ -809,6 +810,7 @@ fujitsu_mbm29f400bc:
 
 fujitsu_mbm29f800ba:
 amd_am29f800bb:
+st_m29f800db:
 	.long FLASH_ADR+0xFF0F0000, FLASH_UNLOCK1+0xFF000000, FLASH_UNLOCK2+0xFF000000
 	.long 0
 
