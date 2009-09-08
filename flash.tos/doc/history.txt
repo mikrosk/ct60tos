@@ -1,0 +1,283 @@
+2003-06-15 0.98 (no history and no version before)
+---------------
+- Boot version inside the TOS (file sdram.S).
+- CPU frequency displayed during boot (file sdram.S).
+- Bug fixed inside the blitter patch (file blitter2.S).
+- Add BUFSH patch (32KB max for newdesk.inf), thanks to Florent Lafabrie (file aes.S).
+
+2003-06-22 0.98a
+----------------
+- Add XBIOS(160) CacheCtrl() MilanTOS (file xbios2.S).
+
+2003-06-27 0.98b
+----------------
+- Add test inside Pexec for start programs packed by Ice without 
+crashes (file gemdos2.S).
+
+2003-07-01 0.98c
+----------------
+- Value of the '_FPU' cookie changed to 0x00100000 like MiNT (file 
+cookie.S).
+- Flash parameters in 0xFFEF0000 (was 0x00EF0000 before, file 
+xbios.S).
+ 
+2003-07-09 0.98d
+----------------
+- Add versions of ABE & SDR inside the flash parameters (file 
+sdram.S) => use Flash Tool CT60.
+- Add a patch for the memory test, there are 6 digits for display TT 
+RAM size (128, 256 and 512 broken before, files pmmu.S & sdram.S).
+- Add a patch for a copyback alert inside Fread if the data start by 
+0x601A (files gemdos.S & gemdos2.S). 
+
+2003-07-14 0.98e
+----------------
+- Add a TOS call test for the copyback alert and a 3rd button 
+'ignore' (file gemdos2.S). 
+
+2003-07-18 0.99
+---------------
+- Set 16 bytes alignment for the Fast Ram Buffer, and add a 'XFRB' cookie 
+and 64KB 16 bytes aligned buffer (file sdram2.S).
+- Change the 1st button 'Yes' of the copyback alert to a 'Yes 5 S' delay 
+without caches (file gemdos2.S)
+- Add CT60_CACHE_DELAY parameter in flash for remove the caches during 
+5 seconds after a Pexec, if this parameter is to 0, the normal cpusha 
+method is used for flush the caches (file gemdos2.S).
+
+2003-07-27 0.99a
+----------------
+- Fix PMMU zone 0x00F10000 to 0x00F9FFFF, Supervisor Protect removed 
+(file pmmu.c).
+- Add CT60_BOOT_ORDER parameter in flash for boot on SCSI drives 
+before IDE drives (files boot.S and sdram.S).
+
+2003-08-03 0.99b
+----------------
+- Last basepage displayed for the exception procedure (file debug2.S) 
+and Access Fault vector set before (file sdram.S).
+- Add measure of the FALCON VIDEL clock for use an external 32MHz 
+clock with the F030 BOOST and an RGB or monochome monitor. If the 
+internal clock is > 32MHz and the external clock is equal to 32 MHz, 
+the boot set the external clock. 2 cookies are created '_FRQ' with the 
+value of the internal clock (F030 BOOST) and '_FRE' with the value of 
+the external clock (file sdram.S and videl2.S).
+- Now the CT60 cookie value is a pointer of 256 bytes cleared during 
+the boot (used by the CPX).
+
+2003-08-15 0.99c
+----------------
+- Add tests in french (file sdram.S).
+- Fix resvector (0x42A) patch (files sdram.S and pmmu.S).
+- Add resvector XBRA display (sdram.S).
+- Add test vectors overwrited for fpsp and isp emulation inside the 
+VBL (files gemdos2.S and vectors2.S).
+- Fix the "Unable to alloc AES blt buffer" error message with a new 
+screen of NVDI in 2 colors. work_out[4] (number of planes) from 
+vq_extnd() was to 0. Caches are removed during v_opnwk() (files 
+sdram.S and aes.S). Strange NVDI bug...
+
+2003-08-31 0.99d
+----------------
+- Add a warning about the SDRAM CAS Latency unsupported (file 
+sdram.S).
+- Add bit 1 inside the CT60_CACHE_DELAY parameter in flash for 
+remove the copyback alert (Fread test), if this bit is to 0 (file 
+gemdos2.S). 
+- Add fan speed measure with IO3 MFP interrupt (file sdram.S), 
+returned with the CT60 cookie. You need a 3 wires FAN (or pump if 
+watercooling) : 
+                       1N4148
+ * Yellow ---<47 ohms>---|<|---> IO3 MFP pin 28
+ * Red    ---------------------> +12V CT60 FAN connector
+ * Black  --------------------->  GND CT60 FAN connector    
+ 
+2003-10-22 0.99e
+----------------
+- SDRAM module data width 64 & 72 bits supported but there are a 
+message about data width error if there are a failure during the short 
+memory test of the SDRAM 72 bits.
+
+2003-11-08 0.99f
+----------------
+- More infos displayed about the SDRAM module.
+
+2003-11-23 0.99g
+----------------
+- Flash parameters init added to the NVRAM init with the CTRL-ALT-UNDO 
+keys during the memory test.
+
+2004-02-29 1.00
+---------------
+- Add CT60_CPU_FPU parameter in flash, if the the bit 0 is to 0, the 
+FPU is disabled (files cookies.S and vector2.S).
+- Add keyboard test, if an Eiffel card is found (version >= 1.0.4), 
+you can see the version (files xbios.S, xbios2.S and sdram.S).
+- PAGE UP/DOWN, END, PRINT SCREEN, POWER, and VOLUME UP/DOWN keys
+tested for Eiffel card (files xbios.S, xbios2.S, aes.S and aes2.S). 
+
+2004-05-07 1.01
+---------------
+- Add a choice of the operating system if the favourite OS entry is
+not to zero inside the CPX (TOS, MagiC, and Linux).
+- Add MagXBoot (files magxboot.S and sdram.S).
+- Add Ataboot (files ataboot.S and sdram.S).
+
+2004-05-13 1.01a
+----------------
+- Add a new option for Linux and bootargs file, -V: Extended video modecode.
+Because the kernel command line has a video=atafb:keep feature, during 
+boot it's better to get extended video modes. Bits are:
+ HORFLAG   9  : double width
+ HORFLAG2  10 : width increased
+ VESA      11 : SVGA 608 lines
+ ULTRA_VGA 12 : SVGA 768 lines
+ Cookies _FRQ (internal frequency) and _FRE (external frequency) 
+exists always because ataboot need this values (files ataboot.S, 
+extvidel.S, sdram.S, and videl2.S).
+- Add another keyboard test with the IKBD commands settime and 
+gettime (file sdram.S).
+- If the NVM bootdelay value is <> 0, the boot menu use the NVM 
+boot_delay.
+- Fix illegal instruction with MagiC 6.20 during boot with the SDRAM
+(file magxboot.S).
+
+2004-05-17 1.01b
+----------------
+- Fix keyboard test with the IKBD commands settime and gettime 
+because TOS calls had year 2000 bug (file sdram.S).
+
+2004-05-22 1.01c
+----------------
+- Fix monitor test, if SVGA monitor and external clock 32MHz (file 
+sdram.S).
+- Add flash AMD AM29F800BB support for new CT60 (file xbios2.S).
+- Malloc in STRAM for ataboot (file ataboot.S), kernel 2.2.25 works 
+now without -s option (2.4.25 need -s).
+
+2004-09-21 1.02
+---------------
+- New boot features (files sdram.S and boot.S):
+ * Add identify device procedure for SCSI and IDE drives, the boot wait 
+   if a removable drive is not ready.
+ * Add IDE slave support (device 17).
+ * Add CompactFlash support.
+ * Add combined MSDOS/TOS root and partition support, this feature 
+   support byte swapping needed by MSDOS format and search a *.SYS for 
+   load the disk driver.
+ * Add speed test for bootables devices.   
+- Four choices with the CT60_BOOT_ORDER parameter in flash for boot
+on SCSI drives before IDE drives or slave before master (file sdram.S).
+- Check and fix modecode get from NVM (file videl2.S).
+- Removed Eiffel END key because it's already used by F12 (SHIFT-F2),
+and add status Eiffel POWER key 0xF6 0x05 0x00 0x00 0x00 0x73 because 
+it's already used by the TOS (CTRL <-) (files xbios2.S).
+
+2004-10-02 1.02a
+----------------
+- Add Atari Diagnostics Cartridge (CT60 version) moved to 
+0x00ED0000-0x00EEFFFF. This diagnostics are called with 
+CTRL-ALT-SHIFT-SHIFT during the boot picture (file videl2.S).
+- CRC in TOS 4.04 flash used again (file blitter.S).
+- Display path for Auto folder files (file sdram.S).
+- Moved the format boot picture to XIMG TC16 for get free place for 
+the Atari Diagnostics.
+- Add a picture/demo code 'XIMG' test at 0x00ED0000 for call a picture/demo 
+at 0x00ED0004 for replace the boot picture (file videl2.S).
+
+2004-10-26 1.02b
+----------------
+- Add NVRAM TOS parameters inside the Flash who can replace the XBIOS 
+NVMAccess() read call, and the Gettime()/Settime() from the IKBD (files 
+sdram.S, xbios.S, xbios2.S). This feature is for fix NVM problems 
+caused by a battery failure. 
+- Add 4 normal choices with the CT60_BOOT_ORDER parameter in flash for 
+boot on SCSI drives and IDE drives who not support new I/O functions 
+(file sdram.S). The old boot also bypass the keyboard test.
+- Fix short Farenheit temperature value returned by the XBIOS to long 
+value (file xbios2.S).
+- Add display CPU frequency during boot on the Eiffel LCD (need 
+v1.0.9).
+
+2005-02-05 1.03
+---------------
+- Add Initialize Device Parameters IDE command for old Caviar drives 
+where the original TOS can't boot without floppy disk rescue (file 
+sdram.S).
+- Add test and setting of a programmable clock generator module (with 
+a CY27EE16) connected on the I2C port (file sdram.S).
+
+2005-03-04 1.03a
+----------------
+- Add test and setting of a 2nd programmable clock generator with 
+a DS1085 connected on the I2C port (file sdram.S).
+- Add write protect and reset for the 1st programmable clock generator 
+with a CY27EE16 (file sdram.S).
+
+2005-04-26 1.03b
+----------------
+- Fix rev 5 CPU display.
+- Cookies moved to SDRAM (128 maxi).
+- Add PSG printer patch (file magxboot.S).
+
+2005-07-13 1.03c
+----------------
+- Add the CT60_BOOT_LOG parameter in flash for writes to boot.log the 
+stdout of the AUTO folder files (file sdram.S).
+- Add memvalid, memval2, memval3 test for the SDRAM init (files sdram.S 
+and init_par.S).
+- Fix for negative temperature (file xbios2.S).
+- Fix CTCM frequency error (file sdram.S).
+
+2009-09-09 alpha 1.04
+---------------------
+- Add bypass SDRAM test with memvalid, memval2, memval3 before PMMU 
+init (file sdram.S).
+- Add PCI BIOS (files pci_bios.S and xbios2.S).
+- Add PCI drivers call, there are a test of the code '_PCI' at 
+0x00ED0000 for call the init of PCI devices at 0x00ED0004 (128KB), but 
+also at 0x00EC0000 (192KB) and 0x00EB0000 (256KB).
+- Add Bconout in 256 colors for PCI graphic card (file conout.S).
+- Add boot order menu if 'c' key is pressed after the Atari logo 
+(file sdram.S).
+- Add dump function with key 'm' after a crash, it's possible to add other
+  functions in C with a call entry to the PCI drivers (file debug2.S).
+- Removed Atari logo when PCI graphic card is used (file blitter2.S).
+- Fix page fault (invalid access) with 4MB STRAM cards between the end 
+of the STRAM and the TOS 4.04 EPROM (file pmmu.c).
+- Fix CPU frequency value in MHz * 10 inside the CT60 cookie (used by 
+the CT60CONF.CPX).
+- Flush cache during VDI function v_pline because sometimes this 
+function crash the TOS with the SDRAM and the copyback cache (file 
+cache.S).
+- Add COLDFIRE target(s):
+  * CPU test and init (sdram.S).
+  * cf68klib (sdram.S, cf68klib.S).
+  * Cache (xbios2.S, xbios2.S, gemdos2.S, magxboot.S).
+  * PMMU (pmmu.S, pmmu2.c, sdram.S).
+  * Cookies _CPU, _SND, _FPU, _SWI (cookies.S).
+  * PCI BIOS (pci_bios.S, xbios2.S, xbios2.S).
+  * Timers GPT (xbios2.S, xbios2.S).
+  * VBL form SLT timer (xbios2.S).
+  * Serial PSC0 (xbios2.S, xbios2.S).
+  * IKBD from CAN or serial (xbios2.S, xbios2.S).
+  * Parameters in Flash (xbios2.S, xbios2.S).
+  * Backup NVM (SRAM) stored in flash (xbios2.S, xbios2.S).
+  * MFP removed (mfp.S, xbios2.S).
+  * PSG and MIDI removed (bios.S, xbios2.S).
+  * DSP init removed (dsp.S).
+  * Cartridge access removed (cartridge.S)
+  * Virtual screen 640 x 400 x 2 (xbios2.S, xbios2.S).
+  * Videl mode code test (videl.S, videl2.S).
+  * HD vectors, removed floppy disk (boot.S).
+  * Compact Flash booting and interface (sdram.S).
+  * Debug (debug2.S).
+  * Bios vectors auxistat, auxin, auxostat, auxout... (bios.S).
+  * Conout serial redirection (bios2.S, conout.S).
+  * Blitter and VDI removed (blitter2.S, xbios2.S).
+  * Linux ataboot removed (sdram.S and link). 
+  * Minors changes inside aes.S, aes2.S, gemdos.S, movep2.S.
+- Add CTPCI IDE selection (sdram.S).
+- Removed CTCM half clock (sdram.S).
+- Add entry point to the PCI drivers for replace set_video inside the AES (aes2.S).
+

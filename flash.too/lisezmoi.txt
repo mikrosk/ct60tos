@@ -29,6 +29,24 @@ Pin 16 TDO              --> Pin 4
 Pin 17 TDI              --> Pin 5
 Pin 18 TMS              --> Pin 6
 
+
+Cette mise … jour permet de changer l'affichage du boot pour la 
+version de ABE et SDR :
+- Se placer en mode 060.
+- Charger le fichier jedec -> boot/version est ‚ditable.
+- Vous pouver changer boot/version.
+- Cliquer sur "Programmer".
+- Au message d'alerte "Impossible de mettre … jour le hard", cliquer 
+  sur : "Ecrire Version".
+Cette mise … jour permet aussi de forcer le composant … programmer ABE 
+ou SDR, parceque depuis la CT63 il est impossible to d‚tecter le 
+composant … partir du fichier jedec (SDR60 ‚tait un XC95144XL-7-TQ144 
+et ABE60 un C95144XL-10-TQ144). Quand vous chergez le fichier jedec, 
+le nom de fichier est aussi test‚ et un message d'alerte arrive pour 
+changer de composant. La seconde m‚thode est de cliquer sur la ligne 
+d'information de la source.
+
+
 Pour plus d'informations:
 aniplay@wanadoo.fr
 

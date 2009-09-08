@@ -24,22 +24,45 @@
 #ifndef	_MAIN_H
 #define	_MAIN_H	1
 
-#define VERSION 0x0104
-
-#define Bit32u unsigned long
-#define Bit32s signed long
-#define Bit16u unsigned short
-#define Bit16s signed short
-#define Bit8u unsigned char
-#define Bit8s signed char
-
 #define RESERVE_MEM_FONTS  0x8000
+#ifndef COLDFIRE
 #define RESERVE_MEM       0x60000
+#endif
 
-#define FLASH_ADR  0x00E00000
-#define FLASH_SIZE 0x00100000
-#define PARAM_SIZE (64*1024)
-#define TESTS_SIZE 0x00020000
+#ifdef COLDFIRE
+
+#ifdef MCF5445X /* M54455EVB */
+
+#define PARAM_SIZE  (128*1024)
+#define FLASH_SIZE  0x00120000
+
+#else
+
+#ifdef MCF5474X /* COLDARI */
+
+#define PARAM_SIZE  (64*1024)
+#define FLASH_SIZE  0x00100000
+
+#else /* MCF548X - M5484LITE */
+
+#define PARAM_SIZE  (64*1024)
+#define FLASH_SIZE  0x00100000
+
+#endif /* MCF547X */
+
+#endif /* M5445X */
+
+#else /* ATARI -CT60 */
+
+#define PARAM_SIZE  (64*1024)
+#define FLASH_SIZE  0x00100000
+
+#endif /* COLDFIRE */
+
+#define FLASH_ADR   0x00E00000
+#define TESTS_SIZE  0x00020000
+#define FLASH_ADR2  0x00FC0000
+#define FLASH_SIZE2 0x00030000
 
 #define	MAX_ERROR_LENGTH	256
 

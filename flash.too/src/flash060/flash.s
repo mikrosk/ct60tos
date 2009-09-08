@@ -1,5 +1,5 @@
 ;  Flashing CT60
-;  Didier Mequignon 2003 July / 2004 May, e-mail: aniplay@wanadoo.fr
+;  Didier Mequignon 2003-2006, e-mail: aniplay@wanadoo.fr
 ;  Based on the flash tool Copyright (C) 2000 Xavier Joubert
 ;
 ;  This program is free software; you can redistribute it and/or modify
@@ -40,6 +40,7 @@ CMD_READ equ $F0
 
 	.export get_date_flash
 	.export get_version_flash
+	.export read_flash
 	.export program_flash
 	.import flash_device
 
@@ -95,11 +96,59 @@ get_version_flash:
 	move.l A2,SP
 	move.w (SP)+,SR
 	rts
-
-program_flash: ; D0.L: offset, D1.L: total size, A0: source, D2: lock_interrupts	
+	
+read_flash: ; D0.L: offset, D1.L: total size, A0: target
 
 	movem.l D1-A6,-(SP)
-	tst D2
+	move.w SR,-(SP)
+	or #0x700,SR                                        ; lock interrupts
+	lea.l FLASH_ADR,A2
+	add.l D0,A2                                         ; offset
+	move.l D1,D7                                        ; size
+	lsr.l #2,D7                                         ; /4
+	lea.l .no_flash(PC),A1
+	move.l 8,A5                                         ; bus error
+	move.l A1,8
+	move.l SP,A6	
+	moveq #ERR_CT60,D0
+	moveq #3,D3
+	movec.l D3,SFC                                      ; CPU space 3
+	movec.l D3,DFC
+	move.l (A2),D0
+	cmp.w #60,0x59E
+	beq.s .end_test_read
+	moves.l (A2),D1
+.end_test_read:		
+	move.l A5,8                                         ; bus error
+	move.l A6,SP
+	move.w (SP)+,SR
+	cmp.w #60,0x59E
+	beq.s .read_060
+.loop_030:
+		moves.l (A2)+,D0
+		move.l D0,(A0)+
+	subq.l #1,D7
+	bgt.s .loop_030
+	moveq #0,D0	
+	bra .read_end
+.read_060:
+		move.l (A2)+,(A0)+
+	subq.l #1,D7
+	bgt.s .read_060
+	moveq #0,D0	
+	bra .read_end
+.no_flash:
+	move.l A5,8                                         ; bus error
+	move.l A6,SP
+	move.w (SP)+,SR
+.read_end:
+	movem.l (SP)+,D1-A6
+	rts
+
+program_flash: ; D0.L: offset, D1.L: total size, A0: source, D2: lock_interrupts
+
+	movem.l D1-A6,-(SP)
+	tst.w D2
 	beq.s .not_locked1
 	move.w SR,-(SP)
 	or #0x700,SR                                        ; lock interrupts
@@ -329,6 +378,7 @@ devices:
 	dc.l 0x000422AB, fujitsu_mbm29f400bc-devices
 	dc.l 0x00042258, fujitsu_mbm29f800ba-devices
 	dc.l 0x00012258, amd_am29f800bb-devices
+	dc.l 0x00202258, st_m29f800db-devices
 	dc.l 0
 	
 fujitsu_mbm29f400bc:
@@ -358,6 +408,7 @@ fujitsu_mbm29f400bc:
 
 fujitsu_mbm29f800ba:
 amd_am29f800bb:
+st_m29f800db:
 	dc.l FLASH_ADR+0x00000, FLASH_UNLOCK1, FLASH_UNLOCK2
 	dc.l FLASH_ADR+0x04000, FLASH_UNLOCK1, FLASH_UNLOCK2
 	dc.l FLASH_ADR+0x06000, FLASH_UNLOCK1, FLASH_UNLOCK2

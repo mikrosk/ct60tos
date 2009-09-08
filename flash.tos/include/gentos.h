@@ -27,11 +27,11 @@
 #define TOS4_SIZE	(512*1024)
 
 void gentos_error(char*, char*);
-Bit32u apply_patch(Bit8u*, Bit8u*);
-Bit32u modify_tos(Bit8u*);
-Bit32u load_file(char*, Bit8u*, Bit32u);
-void load_tos(char*, Bit8u*, Bit32u);
-void save_tos(char*, Bit8u*, Bit32u);
+unsigned long apply_patch(unsigned char*, unsigned char*);
+unsigned long modify_tos(unsigned char*);
+unsigned long load_file(char*, unsigned char*, unsigned long);
+void load_tos(char*, unsigned char*, unsigned long);
+void save_tos(char*, unsigned char*, unsigned long);
 int main(int, char**);
 
 #endif

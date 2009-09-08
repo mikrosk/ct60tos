@@ -1,0 +1,19 @@
+The Independent JPEG Group's JPEG software
+libjpeg release 6b
+http://www.ijg.org/
+
+Instructions for build this accessory here libjpeg.a is used:
+
+ The structure FILE is replaced by the DOS handle, so ferror() cannot 
+works inside jdatadst.c, 3 lines are disabled:
+//  fflush(dest->outfile);
+//  if ( ferror(dest->outfile))
+//    ERREXIT(cinfo, JERR_FILE_WRITE);
+
+ And inside jinclude.h:
+#define JFREAD(file,buf,sizeofbuf)  \
+  ((size_t) Fread( (int) (file), (long) (sizeofbuf), (void *) (buf)))
+//  ((size_t) fread((void *) (buf), (size_t) 1, (size_t) (sizeofbuf), (file)))
+#define JFWRITE(file,buf,sizeofbuf)  \
+  ((size_t) Fwrite( (int) (file), (long) (sizeofbuf), (void *) (buf)))
+//  ((size_t) fwrite((const void *) (buf), (size_t) 1, (size_t) (sizeofbuf), (file)))

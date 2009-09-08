@@ -29,6 +29,21 @@ Pin 16 TDO              --> Pin 4
 Pin 17 TDI              --> Pin 5
 Pin 18 TMS              --> Pin 6
 
+This update allows to change ABE et SDR boot display version:
+- You are in 060 mode.
+- Load the jedec file -> boot/version is editable.
+- You can change boot/version yourself.
+- Click on "Program".
+- At the alert box "Cannot update the hardware" arrives, click on :
+  "Write Version".
+This update allows to force the programming chip to ABE or SDR, 
+because since the CT63 it's impossible to detect the chip from the 
+jedec file (SDR60 was a XC95144XL-7-TQ144 and ABE60 a C95144XL-10-
+TQ144). When you load the jedec file, the filename it's also tested 
+and an alert box arrives for change the chip. The second method is to 
+click on the source info line.
+
+
 For more information:
 aniplay@wanadoo.fr
 

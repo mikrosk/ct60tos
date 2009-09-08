@@ -1,5 +1,6 @@
 /*  CT60 board Flash commands
  *  Copyright (C) 2000 Xavier Joubert
+ *  Copyright (C) 2006 Didier Mequignon
  *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -24,6 +25,11 @@
 #ifndef	_COMMAND_H
 #define	_COMMAND_H
 
+#ifdef COLDFIRE
+
+#ifdef MCF547X /* COLDARI */
+
+/* amd devices */
 #define CMD_UNLOCK1	0xAA
 #define CMD_UNLOCK2	0x55
 #define CMD_SECTOR_ERASE1	0x80
@@ -31,7 +37,37 @@
 #define CMD_SECTOR_ERASE_SUSPEND 0xB0
 #define CMD_SECTOR_ERASE_RESUME 0x30
 #define CMD_PROGRAM	0xA0
-#define CMD_AUTOSELECT	0x90
-#define CMD_READ	0xF0
+#define CMD_AUTOSELECT 0x90
+#define CMD_READ 0xF0
 
-#endif
+#else /* MCF548X - MCF5445X */
+
+/* intel devices */
+#define CMD_UNLOCK1	0x60
+#define CMD_UNLOCK2	0xD0
+#define CMD_LOCK1	0x60
+#define CMD_LOCK2	0x01
+#define CMD_SECTOR_ERASE1	0x20
+#define CMD_SECTOR_ERASE2	0xD0
+#define CMD_PROGRAM	0x40
+#define CMD_STATUS 0x70
+#define CMD_READ 0xFF
+
+#endif /* MCF547X */
+
+#else /* ATARI - CT60 */
+
+/* fujitsu - amd - st devices */
+#define CMD_UNLOCK1	0xAA
+#define CMD_UNLOCK2	0x55
+#define CMD_SECTOR_ERASE1	0x80
+#define CMD_SECTOR_ERASE2	0x30
+#define CMD_SECTOR_ERASE_SUSPEND 0xB0
+#define CMD_SECTOR_ERASE_RESUME 0x30
+#define CMD_PROGRAM	0xA0
+#define CMD_AUTOSELECT 0x90
+#define CMD_READ 0xF0
+
+#endif /* COLDFIRE */
+
+#endif /* _COMMAND_H */
