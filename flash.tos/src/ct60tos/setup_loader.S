@@ -1,7 +1,7 @@
 /*
 	CT60 setup loader
 
-	Copyright (C) 2009	Patrice Mandin
+	Copyright (C) 2009-2010	Patrice Mandin
 
 	This program is free software; you can redistribute it and/or modify
 	it under the terms of the GNU General Public License as published by
@@ -19,7 +19,7 @@
 */
 
 #define SETUP_PROG_START	0xe7ab00+0x150
-#define SETUP_PROG_LENGTH	16720
+#define SETUP_PROG_LENGTH	18176
 
 	.text
 
