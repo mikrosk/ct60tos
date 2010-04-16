@@ -25,6 +25,7 @@
 #include <mint/falcon.h>
 #include <mint/cookie.h>
 
+#include "config.h"
 #include "form_vt.h"
 #include "form_cpu.h"
 #include "misc.h"
@@ -89,6 +90,10 @@ static form_t form_cpu[]={
 	{FORM_TEXT, "Temperature: --- " CHAR_DEG "C", FORM_X+2,FORM_Y+10},
 	{FORM_TEXT, "Reload settings", FORM_X+2,FORM_Y+12},
 	{FORM_TEXT, "Save settings", FORM_X+2,FORM_Y+13},
+#ifndef SETUP_STANDALONE
+	{FORM_TEXT, "IMPORTANT NOTE: changing CPU frequency requires a reset,", FORM_X+2,FORM_Y+FORM_H-4},
+	{FORM_TEXT, "and will be forced when you exit this program.", FORM_X+2,FORM_Y+FORM_H-3},
+#endif
 	{FORM_END, 0,0,0}
 };
 
@@ -98,6 +103,10 @@ form_setting_t form_setting_cpu[]={
 	{FORM_X+2,FORM_Y+13, NULL, SETTING_FUNC, 0, saveFormCpu},	/* Save settings */
 	{0, 0, NULL, SETTING_END}
 };
+
+/*--- Global variables ---*/
+
+char cpufreq_changed;
 
 /*--- Variables ---*/
 
@@ -112,7 +121,7 @@ const form_menu_t form_menu_cpu={
 };
 
 static unsigned long start_tick, cur_tick;
-static unsigned long frequency = 0, max_freq = 0;
+static unsigned long frequency = 0, min_freq = 0, max_freq = 0;
 static unsigned long cookie_ct60;
 static char has_ct60;
 
@@ -155,12 +164,14 @@ void initFormCpu(void)
 		if (((pcr>>16) & 1)==0) {
 			num_rev = 0;
 			max_freq = MAX_FREQ_REV1;
+			min_freq = MIN_FREQ_REV1;
 			if ((rev==1) || (rev==5)) {
 				num_rev=1;
 			} else if (rev==2) {
 				num_rev=2;
 			} else if (rev>=6) {
 				max_freq = MAX_FREQ_REV6;
+				min_freq = MIN_FREQ_REV6;
 				num_rev=3;
 			}
 			strCopy(chip_mask[num_rev], &form_cpu[FORM_MASK].text[FORM_MASK_POS]);
@@ -245,6 +256,7 @@ static void saveFormCpu(void)
 			/* Error */
 		} else {
 			ct60_rw_parameter(CT60_MODE_WRITE,CT60_CLOCK,(long)frequency);
+			cpufreq_changed = 1;
 		}
 	}
 }
@@ -266,8 +278,8 @@ static void updownFreq(int direction)
 	switch(direction) {
 		case SETTING_DIR_UP:
 			frequency -= ct60_freq_step;
-			if (frequency < ct60_freq_min) {
-				frequency = ct60_freq_min;
+			if (frequency < min_freq) {
+				frequency = min_freq;
 			}
 			break;
 		case SETTING_DIR_DOWN:

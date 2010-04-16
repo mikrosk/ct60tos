@@ -52,10 +52,16 @@
 
 /*--- Defines ---*/
 
-enum {
-	NVM_READ=0,
-	NVM_WRITE,
-	NVM_RESET
-};
+#ifndef NVM_READ
+#define NVM_READ 0
+#endif
+
+#ifndef NVM_WRITE
+#define NVM_WRITE 1
+#endif
+
+#ifndef NVM_RESET
+#define NVM_RESET 2
+#endif
 
 #endif /* NVRAM_H */

@@ -1,6 +1,6 @@
 /*
 	CT60 Setup
-	Boot order
+	CT60 infos
 
 	Copyright (C) 2009	Patrice Mandin
 
@@ -19,16 +19,17 @@
 	Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 */
 
-#ifndef FORM_BOOTORDER_H
-#define FORM_BOOTORDER_H
+#ifndef FORM_CT60_H
+#define FORM_CT60_H
 
 /*--- Variables ---*/
 
-extern const form_menu_t form_menu_bootorder;
-extern form_setting_t form_setting_bootorder[];
+extern const form_menu_t form_menu_ct60;
 
 /*--- Functions prototypes ---*/
 
-void displayFormBootOrder(void);
+void displayFormCt60(void);
 
-#endif /* FORM_BOOTORDER_H */
+void updateFormCt60(void);
+
+#endif /* FORM_CT60_H */

@@ -24,6 +24,8 @@
 
 /*--- Variables ---*/
 
+extern char cpufreq_changed;
+
 extern const form_menu_t form_menu_cpu;
 extern form_setting_t form_setting_cpu[];
 

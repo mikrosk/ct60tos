@@ -65,13 +65,15 @@
 #define DIV2N     0x47
 #define REF                 10000UL /* KHz */
 
-#define MIN_FREQ            65000UL /* KHz */
-#define MIN_FREQ_DALLAS     66000UL /* KHz */
+#define MIN_FREQ            50000UL /* KHz */
+#define MIN_FREQ_DALLAS     50000UL /* KHz */
 #define MAX_FREQ_DALLAS    133000UL /* KHz */
 #define MAX_FREQ_REV1_BOOT  66000UL /* KHz */
 #define MAX_FREQ_REV1       75000UL /* KHz */
+#define MIN_FREQ_REV1       50000UL /* KHz */
 #define MAX_FREQ_REV6_BOOT 100000UL /* KHz */
 #define MAX_FREQ_REV6      110000UL /* KHz */
+#define MIN_FREQ_REV6       66000UL /* KHz */
 
 unsigned long ct60_freq_min;
 unsigned long ct60_freq_step;

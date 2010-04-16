@@ -23,8 +23,10 @@
 #include <mint/osbind.h>
 #include <vt52.h>
 
+#include "config.h"
 #include "form_vt.h"
 #include "form_nvram.h"
+#include "form_ct60.h"
 #include "form_cpu.h"
 #include "form_sdram.h"
 #include "form_devices.h"
@@ -38,7 +40,7 @@
 
 #define CHANGE_VIDEO_MODE 1
 
-#define NUM_MENU_ENTRIES 6
+#define NUM_MENU_ENTRIES 9
 
 enum {
 	STATE_MENU=0,		/* Selecting a form in left menu */
@@ -66,11 +68,11 @@ static const form_menu_t form_menu_empty={
 static const menu_t menu[NUM_MENU_ENTRIES]={
 	{"NVRAM",	&form_menu_nvram, &form_setting_nvram[0]},
 	{"          ",	&form_menu_empty, NULL},
-	{"CPU",		&form_menu_cpu, &form_setting_cpu[0]},
-	{"SDRAM",	&form_menu_sdram, NULL},
-	/*{"          ",	&form_menu_empty, NULL},
-	{"Devices",	&form_menu_devices, NULL},
-	{"Boot order",	&form_menu_bootorder, NULL},*/
+	{"CT60",	&form_menu_ct60, NULL},
+	{" CPU",	&form_menu_cpu, &form_setting_cpu[0]},
+	{" SDRAM",	&form_menu_sdram, NULL},
+	{"          ",	&form_menu_empty, NULL},
+	{"Boot order",	&form_menu_bootorder, &form_setting_bootorder[0]},
 	{"          ",	&form_menu_empty, NULL},
 	{"Exit",	&form_menu_exit, &form_setting_exit[0]}
 };
@@ -105,6 +107,8 @@ void __main(void)
 #if CHANGE_VIDEO_MODE
 	video_save();
 #endif
+
+	cpufreq_changed = 0;
 
 	display_banner();
 	vt_initSettings(NULL);
@@ -169,7 +173,10 @@ void __main(void)
 	Cconws("\r\n" C_ON);
 #endif
 
-	if (exit_type == SETUP_RESET) {
+#ifdef SETUP_STANDALONE
+	cpufreq_changed = 0;
+#endif
+	if ((exit_type == SETUP_RESET) || cpufreq_changed) {
 		Super(0);
 
 		__asm__ __volatile__(
@@ -180,6 +187,7 @@ void __main(void)
 
 static int wait_loop(void)
 {
+#ifndef SETUP_STANDALONE
 	unsigned long dot_tick, cur_tick, start_tick;
 	int start_setup = 0;
 
@@ -212,6 +220,9 @@ static int wait_loop(void)
 #endif
 
 	return start_setup;
+#else
+	return 1;
+#endif
 }
 
 static void display_banner(void)
@@ -223,8 +234,8 @@ static void display_banner(void)
 
 	Cconws(CLEAR_DOWN);
 
-	vt_setCursorPos((WIDTH-10)>>1,0);
-	Cconws("CT60 Setup");
+	vt_setCursorPos((WIDTH-18)>>1,0);
+	Cconws("CT60 Setup - v 1.1");
 	vt_setCursorPos((WIDTH-25)>>1,1);
 	Cconws("(C) 2009 - Patrice Mandin");
 }
@@ -260,10 +271,10 @@ static void display_status(void)
 
 	switch(setup_state) {
 		case STATE_MENU:
-			Cconws(CLEAR_DOWN "Menu selection");
+			Cconws(CLEAR_DOWN "UP/DOWN: Select menu, RIGHT: Enter menu, ESC: Quit");
 			break;
 		case STATE_FORM_SELECT:
-			Cconws(CLEAR_DOWN "Setting selection");
+			Cconws(CLEAR_DOWN "ARROWS: Select setting, ENTER: Enter setting, ESC: Back");
 			break;
 		case STATE_FORM_INPUT:
 			Cconws(CLEAR_DOWN "Enter new value: ");

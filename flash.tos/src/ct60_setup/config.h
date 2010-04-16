@@ -1,6 +1,6 @@
 /*
 	CT60 Setup
-	Boot order
+	Defines for configuration
 
 	Copyright (C) 2009	Patrice Mandin
 
@@ -19,16 +19,13 @@
 	Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 */
 
-#ifndef FORM_BOOTORDER_H
-#define FORM_BOOTORDER_H
+#ifndef CONFIG_H
+#define CONFIG_H 1
 
-/*--- Variables ---*/
+/* Define for standalone program
+ *   - Disable delay with 'Press DEL to enter setup' message
+ *   - Do not force reset on exit
+ */
+#define SETUP_STANDALONE 1
 
-extern const form_menu_t form_menu_bootorder;
-extern form_setting_t form_setting_bootorder[];
-
-/*--- Functions prototypes ---*/
-
-void displayFormBootOrder(void);
-
-#endif /* FORM_BOOTORDER_H */
+#endif /* CONFIG_H */
