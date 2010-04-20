@@ -674,19 +674,19 @@ clean:
 	rm -f $(HEX) $(HEXCF) $(HEXCF2) $(HEXCF3) pci.map pci_cf.map pci_cf2.map pci_cf3.map $(DRIVERFVDI) $(DRIVERFVDICF) $(DRIVERFVDICF2) $(DRIVERFVDICF3) 
 
 $(HEX):	$(OBJS)
-	$(LD) -oformat srec -Map pci.map --cref -T pci.lk \
+	$(LD) --oformat srec -Map pci.map --cref -T pci.lk \
 	--entry Start -o $(HEX) $(OBJS)
 
 $(HEXCF):	$(OBJDIRCF)/header.o $(OBJSCF) $(OBJSRTOSCF) $(OBJSLWIPCF) $(OBJSBUSBCF) $(OBJSAC97CF)
-	$(LD) -oformat srec -Map pci_cf.map --cref -T pcicf.lk \
+	$(LD) --oformat srec -Map pci_cf.map --cref -T pcicf.lk \
 	--entry Start -o $(HEXCF) $(OBJSCF)
 
 $(HEXCF2):	$(OBJDIRCF2)/header.o $(OBJSCF2) $(OBJSRTOSCF2) $(OBJSLWIPCF2)
-	$(LD) -oformat srec -Map pci_cf2.map --cref -T pcicf2.lk \
+	$(LD) --oformat srec -Map pci_cf2.map --cref -T pcicf2.lk \
 	--entry Start -o $(HEXCF2) $(OBJSCF2)
 
 $(HEXCF3):	$(OBJDIRCF3)/header.o $(OBJSCF3) $(OBJSRTOSCF3) $(OBJSLWIPCF3) $(OBJSAC97CF3)
-	$(LD) -oformat srec -Map pci_cf3.map --cref -T pcicf3.lk \
+	$(LD) --oformat srec -Map pci_cf3.map --cref -T pcicf3.lk \
 	--entry Start -o $(HEXCF3) $(OBJSCF3)
 
 $(DRIVERFVDI): $(OBJDIR)/radeon/spec.o $(OBJDIR)/radeon/accel.o $(OBJDIR)/radeon/radeon_base.o $(OBJSDRIVERFVDI)
