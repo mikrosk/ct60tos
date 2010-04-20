@@ -373,9 +373,10 @@ int end_timeout(long msec)
 
 void mdelay(long msec)
 {
+	long val;
+
 	msec<<=8;
 	msec/=5;
-	long val;
 	val=get_timer_c();
 	while((get_timer_c()-val) < msec);
 }

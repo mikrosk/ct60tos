@@ -132,6 +132,8 @@ int clip_line(Virtual *vwk, long *x_1, long *y_1, long *x_2, long *y_2)
 {
 	long left, top, right, bottom;
 	long x1, y1, x2, y2, m1, m2;
+	int draw;
+
 	struct fb_info *info;
 	info=rinfo_fvdi->info;
 	x1 = *x_1;
@@ -153,7 +155,7 @@ int clip_line(Virtual *vwk, long *x_1, long *y_1, long *x_2, long *y_2)
 		right  = (long)vwk->clip.rectangle.x2;
 		bottom = (long)vwk->clip.rectangle.y2;
 	}
-	int draw = 0;
+	draw = 0;
 	while(1)
 	{
 		int code1 = clip_encode(x1, y1, left, top, right, bottom);
@@ -3404,6 +3406,8 @@ long CDECL c_set_colour(Virtual *vwk, long index, long red, long green, long blu
 long CDECL c_set_resolution(struct mode_option *resolution)
 {
 	struct fb_info *info;
+	struct fb_var_screeninfo var;
+
 	info=rinfo_fvdi->info;
 #ifdef TEST_NOPCI
 	if(resolution->used && resolution->width==640 && resolution->height==480 && resolution->bpp==16)
@@ -3426,7 +3430,6 @@ long CDECL c_set_resolution(struct mode_option *resolution)
 	}
 	return(0);
 #else /* TEST_NOPCI */
-	struct fb_var_screeninfo var;
 #ifdef SEMAPHORE
 	xSemaphoreTakeRADEON();
 #endif
