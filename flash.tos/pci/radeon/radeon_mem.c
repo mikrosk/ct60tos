@@ -12,7 +12,7 @@
  */
 
 #include <mint/errno.h> 
-#include <sysvars.h>
+#include <mint/sysvars.h>
 #include "fb.h"
 #include "radeonfb.h"
 

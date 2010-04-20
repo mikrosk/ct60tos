@@ -21,7 +21,7 @@
 #include <mint/osbind.h>
 #include <mint/falcon.h>
 #include <string.h>
-#include <sysvars.h>
+#include <mint/sysvars.h>
 #include "radeon/fb.h"
 #include "radeon/radeonfb.h"
 #include "ct60.h"

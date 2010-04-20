@@ -1,6 +1,6 @@
 #include "../../radeon/radeonfb.h"
-#include <osbind.h>
-#include <sysvars.h>
+#include <mint/osbind.h>
+#include <mint/sysvars.h>
 #include <string.h>
 #include <pcixbios.h>
 #include <x86emu/x86emu.h>
