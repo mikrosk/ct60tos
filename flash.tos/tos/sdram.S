@@ -3217,7 +3217,7 @@ message15:	.byte 27
 message15a:
 	.asciz " alpha "
 message15b:
-	.ascii " "
+	.ascii " PM20100409 "
 	.byte 27
 	.ascii "q"
 	.byte 13,10,0
