@@ -88,7 +88,7 @@ debug5:	.ascii "hdv_mediach"
 	.byte 13,10,0
 debug6:	.asciz "Vsetmode 0x"
 debug7:	.asciz "ValidMode 0x"
-debug8:	.asciz "Gettime 0x
+debug8:	.asciz "Gettime 0x"
 	
 	.align 2
 #endif
