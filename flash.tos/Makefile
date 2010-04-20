@@ -95,6 +95,8 @@ GENTOS_OBJS=	\
 		$(OBJDIR)/tos/vectors.o \
 		$(OBJDIR)/tos/videl.o \
 		$(OBJDIR)/tos/debug.o \
+		$(OBJDIR)/tos/setup_loader.o \
+		$(OBJDIR)/tos/setup_firmware.o \
 		\
 		$(OBJDIR)/tos/half.o \
 		\
@@ -140,6 +142,8 @@ GENTOS_OBJS_1GB=	\
 		$(OBJDIR)/tos/vectors.o \
 		$(OBJDIR)/tos/videl.o \
 		$(OBJDIR)/tos/debug.o \
+		$(OBJDIR)/tos/setup_loader.o \
+		$(OBJDIR)/tos/setup_firmware.o \
 		\
 		$(OBJDIR)/tos/half.o \
 		\
