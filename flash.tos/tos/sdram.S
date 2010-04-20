@@ -162,7 +162,7 @@
 #define CT60_CALC_CLOCK_ERROR  -2
 #define CYPRESS 0x0000
 #define DALLAS  0x8000
-#define MIN_FREQ_DALLAS     66000 // KHz
+#define MIN_FREQ_DALLAS     50000 // KHz
 #define MAX_FREQ_DALLAS    133000 // KHz
 #define MIN_FREQ            50000 // KHz
 #define MAX_FREQ           110000 // KHz
