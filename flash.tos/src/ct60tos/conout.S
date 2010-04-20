@@ -610,7 +610,7 @@ escc:           and.w   #0x0F,d0        // low-order bits only.
 #else
                 cmp.w   #16,_v_planes   // 65K colors
                 bcc.s   set_bg_ntc 
-                move.w  d0,_v_col_fg    // set the foreground color.
+                move.w  d0,_v_col_bg    // set the foreground color.
                 rts
 set_bg_ntc:
                 lea.l   LINEA_VAR+0xB12,a0        // Falcon

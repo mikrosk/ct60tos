@@ -75,6 +75,8 @@ GENTOS_OBJS=	\
 		$(OBJDIR)/ct60tos/vectors.o \
 		$(OBJDIR)/ct60tos/videl.o \
 		$(OBJDIR)/ct60tos/debug.o \
+		$(OBJDIR)/ct60tos/setup_loader.o \
+		$(OBJDIR)/ct60tos/setup_firmware.o \
 		\
 		$(OBJDIR)/ct60tos/half.o \
 		\

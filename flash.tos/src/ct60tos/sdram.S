@@ -1194,11 +1194,11 @@ message15:	.byte 27
 	.byte (VERSION & 0xF) + 0x30
 	.asciz "c "
 message15b:	
-	.ascii "2005 July "
+	.ascii "2005 July - PM20090708 "
 	.byte 27
 	.ascii "q"
 	.byte 13,10,0
-	.ascii "Juillet 2005 "
+	.ascii "Juillet 2005 - PM20090708 "
 	.byte 27
 	.ascii "q"
 	.byte 13,10,0
