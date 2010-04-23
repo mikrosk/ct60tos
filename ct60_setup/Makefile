@@ -64,6 +64,7 @@ dist:
 		ct60_setup/*.pl \
 		ct60_setup/Makefile \
 		ct60_setup/COPYING \
+		ct60_setup/README \
 		--exclude=ct60_setup/$(FIRMWARE_TARGET)
 
 firmware:	$(FIRMWARE_TARGET)
