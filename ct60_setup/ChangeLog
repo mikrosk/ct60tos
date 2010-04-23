@@ -1,0 +1,12 @@
+v 1.1
+
+- Display ABE and SDR versions
+- Add notice that changing CPU frequency requires reset (when in Flash)
+- Can be compiled as a standalone version (no start delay, no forced reset on
+  exit).
+- Change boot order settings
+- Rev1-5 CPU can be downclocked to 50MHz
+
+v 1.0
+
+First release
