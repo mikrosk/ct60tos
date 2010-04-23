@@ -4,8 +4,8 @@
 #	0x5050a 0x02dc
 #	0x7aad0 0x552e
 
-#CROSS_PREFIX=
-CROSS_PREFIX=/home/patrice/local/bin/
+CROSS_PREFIX=
+#CROSS_PREFIX=/home/patrice/local/bin/
 
 CC=$(CROSS_PREFIX)m68k-atari-mint-gcc
 STRIP=$(CROSS_PREFIX)m68k-atari-mint-strip
