@@ -1,7 +1,0 @@
-Le MROS patch‚ remplace le MROS3_45 dans le dossier MROS de
-Cubase (g‚n‚ralement 2.06). Avec ce MROS3_45, Cubase fonctionne 
-seulement en mode turbo. 
-
-This MROS patchd replace the MROS3_45 inside the MROS folder of Cubase 
-(normally 2.06). With this MROS3_45, Cubase works only in turbo mode.
-
