@@ -7,6 +7,7 @@
 CROSS_PREFIX=
 #CROSS_PREFIX=/home/patrice/local/bin/
 
+AS=$(CROSS_PREFIX)m68k-atari-mint-as
 CC=$(CROSS_PREFIX)m68k-atari-mint-gcc
 STRIP=$(CROSS_PREFIX)m68k-atari-mint-strip
 OBJCOPY=$(CROSS_PREFIX)m68k-atari-mint-objcopy
@@ -27,7 +28,8 @@ HEADERS = ct60_ctcm.h ct60.h ct60_sdram.h form_bootorder.h form_cpu.h \
 
 EXTRA_DIST = $(HEADERS) setup_loader.S bin2src.pl
 
-CFLAGS  = -O2 -fomit-frame-pointer -Wall
+CFLAGS  = -Os -fomit-frame-pointer -Wall -m68060
+ASFLAGS = -m68060
 LDFLAGS = -nostdlib -Wl,--entry -Wl,_init_setup -lgcc
 ## If gcc generates some memcpy calls:
 #LDFLAGS = -nostdlib -Wl,--entry -Wl,_init_setup -lgcc -lc -lgcc
@@ -42,18 +44,12 @@ VERSION = 1.1
 
 all:	$(TARGET)
 
-.S.o:
-	${CC} -o $@ -c $<
-
-.c.o:
-	${CC} ${CFLAGS} -o $@ -c $<
-
 $(TARGET):	$(COBJECTS) $(SOBJECTS)
 	${CC} -o $@ $(SOBJECTS) $(COBJECTS) ${LDFLAGS}
 	${STRIP} $(TARGET)
 
 clean:
-	rm -f $(COBJECTS) $(SOBJECTS) $(TARGET) $(DEPEND)
+	rm -f $(COBJECTS) $(SOBJECTS) $(TARGET) $(DEPEND) $(FIRMWARE_TARGET) *~
 
 dist:
 	cd .. ; tar cvzf \
