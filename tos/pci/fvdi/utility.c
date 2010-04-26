@@ -412,6 +412,9 @@ Virtual *init_var_fvdi(void)
  	Workstation *wk;
 	Virtual *vwk;
 	Driver *driver;
+	Fontheader **system_font, *header;
+	long header_size;
+
 	blocks = BLOCKS;
 	block_size = BLOCK_SIZE * 1024;
 	arc_split = 16384;  /* 1/4 as many lines as largest ellipse axel radius in pixels */
@@ -610,8 +613,7 @@ Virtual *init_var_fvdi(void)
 	vwk->standard_handle = 1;
 	vwk->palette = 0;
 	
-	Fontheader **system_font, *header;
-	long header_size = sizeof(Fontheader) - sizeof(Fontextra);
+	header_size = sizeof(Fontheader) - sizeof(Fontextra);
 	system_font = (Fontheader **)linea_fonts();
 	if(!(header = (Fontheader *)Mxalloc(sizeof(Fontheader) * 3,3)))
 	{

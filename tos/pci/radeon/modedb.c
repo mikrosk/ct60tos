@@ -398,12 +398,13 @@ const struct fb_videomode vesa_modes[] = {
 static int fb_try_mode(struct fb_var_screeninfo *var, struct fb_info *info,
 		       const struct fb_videomode *mode, unsigned int bpp)
 {
+    int err = 0;
+
     DPRINTVAL("Trying mode ", mode->xres);
     DPRINTVAL("x", mode->yres);
     DPRINTVAL("-", bpp);
     DPRINTVAL("@", mode->refresh);
     DPRINT("\r\n");
-    int err = 0;
     var->xres = mode->xres;
     var->yres = mode->yres;
     var->xres_virtual = mode->xres;
