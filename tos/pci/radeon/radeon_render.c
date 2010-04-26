@@ -1,4 +1,4 @@
-#include <sysvars.h>
+#include <mint/sysvars.h>
 #include <string.h>
 #include "radeonfb.h"
 

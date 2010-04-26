@@ -19,7 +19,7 @@
 
 #include "config.h"
 #include <mint/osbind.h>
-#include <sysvars.h>
+#include <mint/sysvars.h>
 #include "fvdi.h"
 #include "relocate.h"
 

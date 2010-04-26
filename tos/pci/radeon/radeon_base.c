@@ -54,7 +54,7 @@
 
 #include <mint/errno.h>
 #include <string.h>
-#include <sysvars.h>
+#include <mint/sysvars.h>
 #include "fb.h"
 #include "i2c.h"
 #include "radeonfb.h"

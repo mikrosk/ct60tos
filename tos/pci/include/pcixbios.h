@@ -136,6 +136,10 @@ typedef struct                       /* structure of address conversion     */
 /******************************************************************************/
 /*                              Functions                                     */
 /******************************************************************************/
+#ifndef OSBIND_CLOBBER_LIST
+#define OSBIND_CLOBBER_LIST "d1", "d2", "a0", "a1", "a2", "memory"
+#endif
+
 #ifndef trap_14_wlw
 #define trap_14_wlw(n, a, b)	\
 __extension__	\
