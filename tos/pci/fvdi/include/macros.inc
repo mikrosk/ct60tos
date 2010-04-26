@@ -36,7 +36,6 @@
 	.endm
 
 	.macro	return
-	local	do_rte
   #ifdef	special_stack
 	move.l	(a7)+,a7
 	add.l	#SPECIAL_STACK_SIZE,stack_address
@@ -45,11 +44,11 @@
 	restore_regs
   #ifdef transparent
 	tst.w	_stand_alone
-	bne	.&do_rte
+	bne	.do_rte\@
 	moveq	#$73,d0
 	move.l	vdi_address(pc),-(a7)
 	rts
-.&do_rte:
+.do_rte\@:
 	rte
   #else
 	rte
@@ -75,15 +74,14 @@
 	.endm
 
 	.macro	use_special_stack
-	local	ok
 #define special_stack
 	move.w	sr,d0
 	or.w	#$700,sr
 	move.l	stack_address,a2
 	cmp.l	#vdi_stack,a2
-	beq	.&ok
+	beq	.ok\@
 	illegal
-.&ok:
+.ok\@:
 	move.l	a7,-(a2)
 	move.l	a2,a7
 	sub.w	#SPECIAL_STACK_SIZE-4,a2
@@ -92,19 +90,18 @@
 	.endm
 
 	.macro	ijsr indirect
-  #ifdef mc68000
-	local	return
-	pea	.&return
+  #if !defined(mc68020) && !defined(mc68030) && !defined(mc68040) && !defined(mc68060)
+	pea	.return\@
 	move.l	\indirect,-(a7)
 	rts
-.&return:
+.return\@:
   #else
 	jsr	([\indirect])
   #endif
 	.endm
 
 	.macro	ijmp indirect
-  #ifdef mc68000
+  #if !defined(mc68020) && !defined(mc68030) && !defined(mc68040) && !defined(mc68060)
 	move.l	\indirect,-(a7)
 	rts
   #else
