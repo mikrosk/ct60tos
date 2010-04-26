@@ -52,10 +52,12 @@ unsigned long apply_patch(unsigned char *buffer, unsigned char *patch)
   unsigned long len;
   unsigned char *top=buffer;
 
-  adr=buffer+(*((unsigned long *)p)++);
+  adr = buffer + *(unsigned long *)p;
+  p += sizeof(long);
   while(adr != (buffer-1))
   {
-    len=*((unsigned long *)p)++;
+    len = *(unsigned long *)p;
+    p += sizeof(long);
     if(len&0x80000000)
     {
       len&=0x7FFFFFFF;
@@ -72,7 +74,8 @@ unsigned long apply_patch(unsigned char *buffer, unsigned char *patch)
     top=(adr > top ? adr : top);
     if((unsigned long)p & 3)
       p=(unsigned char *)(((unsigned long)p & 0xFFFFFFFC)+4);
-    adr=&buffer[*((unsigned long *)p)++];
+    adr=&buffer[*(unsigned long *)p];
+    p += sizeof(long);
   }
 
   return (top-buffer);

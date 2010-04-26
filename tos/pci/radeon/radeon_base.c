@@ -2233,7 +2233,7 @@ int radeonfb_pci_register(long handle, const struct pci_device_id *ent)
 				}
 			}
 			flags = pci_rsc_desc->flags;
-			(unsigned long)pci_rsc_desc += (unsigned long)pci_rsc_desc->next;
+			pci_rsc_desc = (PCI_RSC_DESC*)((unsigned long)pci_rsc_desc + (unsigned long)pci_rsc_desc->next);
 		}
 		while(!(flags & FLG_LAST));
 	}
