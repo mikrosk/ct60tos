@@ -1,23 +1,23 @@
 /*
- *  This program is free software; you can redistribute it and/or modify
- *  it under the terms of the GNU General Public License as published by
- *  the Free Software Foundation; either version 2 of the License, or
- *  (at your option) any later version.
- *
- *  This program is distributed in the hope that it will be useful,
- *  but WITHOUT ANY WARRANTY; without even the implied warranty of
- *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- *  GNU General Public License for more details.
- *
- *  You should have received a copy of the GNU General Public License
- *  along with this program; if not, write to the Free Software
- *  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
- *
- *
- *  To contact author write to Xavier Joubert, 5 Cour aux Chais, 44 100 Nantes,
- *  FRANCE or by e-mail to xavier.joubert@free.fr.
- *
- */
+*  This program is free software; you can redistribute it and/or modify
+*  it under the terms of the GNU General Public License as published by
+*  the Free Software Foundation; either version 2 of the License, or
+*  (at your option) any later version.
+*
+*  This program is distributed in the hope that it will be useful,
+*  but WITHOUT ANY WARRANTY; without even the implied warranty of
+*  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+*  GNU General Public License for more details.
+*
+*  You should have received a copy of the GNU General Public License
+*  along with this program; if not, write to the Free Software
+*  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+*
+*
+*  To contact author write to Xavier Joubert, 5 Cour aux Chais, 44 100 Nantes,
+*  FRANCE or by e-mail to xavier.joubert@free.fr.
+*
+*/
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -39,147 +39,147 @@ char *program_name;
 
 void gentos_error(char *error, char *solution)
 {
-  fprintf(stderr, "%s: Error: %s\n", program_name, error);
-  if(solution != NULL)
-    fprintf(stderr, "%s: Solution: %s\n", program_name, solution);
-  exit(1);
+	fprintf(stderr, "%s: Error: %s\n", program_name, error);
+	if(solution != NULL)
+		fprintf(stderr, "%s: Solution: %s\n", program_name, solution);
+	exit(1);
 }
 
 unsigned long apply_patch(unsigned char *buffer, unsigned char *patch)
 {
-  unsigned char *p=patch;
-  unsigned char *adr;
-  unsigned long len;
-  unsigned char *top=buffer;
+	unsigned char *p=patch;
+	unsigned char *adr;
+	unsigned long len;
+	unsigned char *top=buffer;
 
-  adr = buffer + *(unsigned long *)p;
-  p += sizeof(long);
-  while(adr != (buffer-1))
-  {
-    len = *(unsigned long *)p;
-    p += sizeof(long);
-    if(len&0x80000000)
-    {
-      len&=0x7FFFFFFF;
+	adr = buffer + *(unsigned long *)p;
+	p += sizeof(long);
+	while(adr != (buffer-1))
+	{
+		len = *(unsigned long *)p;
+		p += sizeof(long);
+		if(len&0x80000000)
+		{
+			len&=0x7FFFFFFF;
 			if(len&0x40000000)
-	    {
-      	len&=0x3FFFFFFF;
-      	*((unsigned long *)p)+=(0xE80000-(unsigned long)ct60tos_half_flash);
+			{
+				len&=0x3FFFFFFF;
+				*((unsigned long *)p)+=(0xE80000-(unsigned long)ct60tos_half_flash);
 			}
 			else
-      	*((unsigned long *)(p+2))+=(0xE80000-(unsigned long)ct60tos_half_flash);
-    }
-    while(len--)
-      *adr++=*p++;
-    top=(adr > top ? adr : top);
-    if((unsigned long)p & 3)
-      p=(unsigned char *)(((unsigned long)p & 0xFFFFFFFC)+4);
-    adr=&buffer[*(unsigned long *)p];
-    p += sizeof(long);
-  }
+				*((unsigned long *)(p+2))+=(0xE80000-(unsigned long)ct60tos_half_flash);
+		}
+		while(len--)
+			*adr++=*p++;
+		top=(adr > top ? adr : top);
+		if((unsigned long)p & 3)
+			p=(unsigned char *)(((unsigned long)p & 0xFFFFFFFC)+4);
+		adr=&buffer[*(unsigned long *)p];
+		p += sizeof(long);
+	}
 
-  return (top-buffer);
+	return (top-buffer);
 }
 
 unsigned long modify_tos(unsigned char *buffer)
 {
-  unsigned long size=TOS4_SIZE;
-  unsigned long sizepatch;
-  unsigned long time;
-  unsigned long day,month,year,year1,year2;
+	unsigned long size=TOS4_SIZE;
+	unsigned long sizepatch;
+	unsigned long time;
+	unsigned long day,month,year,year1,year2;
 
-  time=Gettime();
-  day=(time>>16)&0x1F;
-  month=(time>>21)&0xF;
-  year=(time>>25)+1980;
-  buffer[24]=(unsigned char)(((month/10)<<4)+(month%10)); 
-  buffer[25]=(unsigned char)(((day/10)<<4)+(day%10)); 
-  year1=year/100;
-  year2=year%100;
-  buffer[26]=(unsigned char)(((year1/10)<<4)+(year1%10)); 
-  buffer[27]=(unsigned char)(((year2/10)<<4)+(year2%10));
+	time=Gettime();
+	day=(time>>16)&0x1F;
+	month=(time>>21)&0xF;
+	year=(time>>25)+1980;
+	buffer[24]=(unsigned char)(((month/10)<<4)+(month%10));
+	buffer[25]=(unsigned char)(((day/10)<<4)+(day%10));
+	year1=year/100;
+	year2=year%100;
+	buffer[26]=(unsigned char)(((year1/10)<<4)+(year1%10));
+	buffer[27]=(unsigned char)(((year2/10)<<4)+(year2%10));
 
-  sizepatch=apply_patch(buffer, (unsigned char *)ct60tos_patch);
+	sizepatch=apply_patch(buffer, (unsigned char *)ct60tos_patch);
 
-  size=(sizepatch > size ? sizepatch : size);
+	size=(sizepatch > size ? sizepatch : size);
 
-  return size;
+	return size;
 }
 
 unsigned long load_file(char *filename, unsigned char *buffer, unsigned long length)
 {
-  unsigned short handle;
-  unsigned long return_value;
+	unsigned short handle;
+	unsigned long return_value;
 
-  if((return_value=Fopen(filename, 0)) < 0)
-  {
-    char error[MAX_ERROR_LENGTH];
-    snprintf(error, MAX_ERROR_LENGTH, "Unable to open file %s.", filename);
-    gentos_error(error, NULL);
-  }
-  handle=(unsigned short)return_value;
+	if((return_value=Fopen(filename, 0)) < 0)
+	{
+		char error[MAX_ERROR_LENGTH];
+		snprintf(error, MAX_ERROR_LENGTH, "Unable to open file %s.", filename);
+		gentos_error(error, NULL);
+	}
+	handle=(unsigned short)return_value;
 
-  return_value=Fread(handle, length, buffer);
+	return_value=Fread(handle, length, buffer);
 
-  Fclose(handle);
+	Fclose(handle);
 
-  if(return_value < 0)
-  {
-    char error[MAX_ERROR_LENGTH];
-    snprintf(error, MAX_ERROR_LENGTH, "Unable to read file %s.", filename);
-    gentos_error(error, NULL);
-  }
+	if(return_value < 0)
+	{
+		char error[MAX_ERROR_LENGTH];
+		snprintf(error, MAX_ERROR_LENGTH, "Unable to read file %s.", filename);
+		gentos_error(error, NULL);
+	}
 
-  return return_value;
+	return return_value;
 }
 
 unsigned long load_tests(char *filename, unsigned char *buffer, unsigned long length)
 {
-  if((length=load_file(filename, buffer, length)) >= TESTS_SIZE)
-  {
-    char error[MAX_ERROR_LENGTH];
-    snprintf(error, MAX_ERROR_LENGTH, "File %s is not a valid tests image.", filename);
-    gentos_error(error, NULL);
-  }
-  return length;
+	if((length=load_file(filename, buffer, length)) >= TESTS_SIZE)
+	{
+		char error[MAX_ERROR_LENGTH];
+		snprintf(error, MAX_ERROR_LENGTH, "File %s is not a valid tests image.", filename);
+		gentos_error(error, NULL);
+	}
+	return length;
 }
 
 void load_tos(char *filename, unsigned char *buffer, unsigned long length)
 {
-  if((load_file(filename, buffer, length) != TOS4_SIZE) ||
-     (buffer[2]!=0x04) ||
-     (buffer[3]!=0x04))
-  {
-    char error[MAX_ERROR_LENGTH];
-    snprintf(error, MAX_ERROR_LENGTH, "File %s is not a valid TOS 4.04 image.", filename);
-    gentos_error(error, NULL);
-  }
+	if((load_file(filename, buffer, length) != TOS4_SIZE) ||
+		(buffer[2]!=0x04) ||
+		(buffer[3]!=0x04))
+	{
+		char error[MAX_ERROR_LENGTH];
+		snprintf(error, MAX_ERROR_LENGTH, "File %s is not a valid TOS 4.04 image.", filename);
+		gentos_error(error, NULL);
+	}
 }
 
 void save_tos(char *filename, unsigned char *buffer, unsigned long length)
 {
-  unsigned short handle;
-  unsigned long return_value;
+	unsigned short handle;
+	unsigned long return_value;
 
-  if((return_value=Fcreate(filename, 0)) < 0)
-  {
-    char error[MAX_ERROR_LENGTH];
-    snprintf(error, MAX_ERROR_LENGTH, "Unable to create file %s.", filename);
-    gentos_error(error, NULL);
-  }
-  handle=(unsigned short)return_value;
+	if((return_value=Fcreate(filename, 0)) < 0)
+	{
+		char error[MAX_ERROR_LENGTH];
+		snprintf(error, MAX_ERROR_LENGTH, "Unable to create file %s.", filename);
+		gentos_error(error, NULL);
+	}
+	handle=(unsigned short)return_value;
 
-  if(Fwrite(handle, length, buffer) != length)
-  {
-    char error[MAX_ERROR_LENGTH];
-    Fclose(handle);
-    snprintf(error, MAX_ERROR_LENGTH, "Unable to write file %s.", filename);
-    gentos_error(error, NULL);
-  }
+	if(Fwrite(handle, length, buffer) != length)
+	{
+		char error[MAX_ERROR_LENGTH];
+		Fclose(handle);
+		snprintf(error, MAX_ERROR_LENGTH, "Unable to write file %s.", filename);
+		gentos_error(error, NULL);
+	}
 
-  Fclose(handle);
+	Fclose(handle);
 }
- 
+
 int main(int argc, char **argv)
 {
 	static unsigned short crctab[256] = {
@@ -215,81 +215,81 @@ int main(int argc, char **argv)
 		0x7c26,0x6c07,0x5c64,0x4c45,0x3ca2,0x2c83,0x1ce0,0x0cc1,
 		0xef1f,0xff3e,0xcf5d,0xdf7c,0xaf9b,0xbfba,0x8fd9,0x9ff8,
 		0x6e17,0x7e36,0x4e55,0x5e74,0x2e93,0x3eb2,0x0ed1,0x1ef0 };
-#if 0 //#ifdef COLDFIRE
-  static char cmd[256];
-#endif
-  unsigned long length;
-  unsigned char *buffer;
-  unsigned short crc,crc2;
-  unsigned long i;
+	#if 0 //#ifdef COLDFIRE
+	static char cmd[256];
+	#endif
+	unsigned long length;
+	unsigned char *buffer;
+	unsigned short crc,crc2;
+	unsigned long i;
 
-  program_name=argv[0];
-  if(argc != 3 && argc != 4 && argc !=5)
-  {
-    fprintf(stderr, "Usage: %s tos404.bin [sparrow.out] ct60tos.bin\n", program_name);
-    exit(1);
-  }
-  
-  if((buffer=(unsigned char *)malloc(FLASH_SIZE-PARAM_SIZE)) == NULL)
-    gentos_error("Not enough memory for work buffer.", NULL);
-  for(i=0;i<(FLASH_SIZE-PARAM_SIZE);buffer[i++]=0xFF);
-    
-  load_tos(argv[1], buffer, FLASH_SIZE-PARAM_SIZE-TESTS_SIZE);
-  length=modify_tos(buffer);
+	program_name=argv[0];
+	if(argc != 3 && argc != 4 && argc !=5)
+	{
+		fprintf(stderr, "Usage: %s tos404.bin [sparrow.out] ct60tos.bin\n", program_name);
+		exit(1);
+	}
 
-#ifdef COLDFIRE
-  if(argc==4 && length>(CF68KLIB-FLASH_TOS_FIRE_ENGINE))
-    gentos_error("Not enough flash space for load cf68klib.", NULL);
-#else
-  if(argc==4 && length>(FLASH_SIZE-PARAM_SIZE-TESTS_SIZE))
-    gentos_error("Not enough flash space for load tests.", NULL);
-#endif
-    
-  crc=0;
-  for(i=0;i < (FLASH_SIZE/2)-2;i++)
-  {
-			crc2 = crctab[buffer[i] ^ (unsigned char)(crc>>8)];
-			crc <<= 8;
-			crc ^= crc2;
-  }
-  buffer[i++] = (unsigned char)(crc>>8);
-  buffer[i] = (unsigned char)crc;
-  
-  if(argc == 3)
-    save_tos(argv[2], buffer, length);
+	if((buffer=(unsigned char *)malloc(FLASH_SIZE-PARAM_SIZE)) == NULL)
+		gentos_error("Not enough memory for work buffer.", NULL);
+	for(i=0;i<(FLASH_SIZE-PARAM_SIZE);buffer[i++]=0xFF);
+
+	load_tos(argv[1], buffer, FLASH_SIZE-PARAM_SIZE-TESTS_SIZE);
+	length=modify_tos(buffer);
+
+	#ifdef COLDFIRE
+	if(argc==4 && length>(CF68KLIB-FLASH_TOS_FIRE_ENGINE))
+		gentos_error("Not enough flash space for load cf68klib.", NULL);
+	#else
+	if(argc==4 && length>(FLASH_SIZE-PARAM_SIZE-TESTS_SIZE))
+		gentos_error("Not enough flash space for load tests.", NULL);
+	#endif
+
+	crc=0;
+	for(i=0;i < (FLASH_SIZE/2)-2;i++)
+	{
+		crc2 = crctab[buffer[i] ^ (unsigned char)(crc>>8)];
+		crc <<= 8;
+		crc ^= crc2;
+	}
+	buffer[i++] = (unsigned char)(crc>>8);
+	buffer[i] = (unsigned char)crc;
+
+	if(argc == 3)
+		save_tos(argv[2], buffer, length);
 	else
-	{  	
+	{
 		int *work;
 		unsigned long size_pci_drivers;
 		char *buf, *buffer_pci_drivers;
 
 		if(argc ==4)
 		{
-#ifdef COLDFIRE
-	    length=load_tests(argv[2], buffer+CF68KLIB-FLASH_ADR, 0x10000);
-	    save_tos(argv[3], buffer, CF68KLIB-FLASH_ADR+length);
-#else
-    	length=load_tests(argv[2],buffer+FLASH_SIZE-PARAM_SIZE-TESTS_SIZE,TESTS_SIZE);
-    	save_tos(argv[3], buffer, FLASH_SIZE-PARAM_SIZE-TESTS_SIZE+length);
-#endif
+			#ifdef COLDFIRE
+			length=load_tests(argv[2], buffer+CF68KLIB-FLASH_ADR, 0x10000);
+			save_tos(argv[3], buffer, CF68KLIB-FLASH_ADR+length);
+			#else
+			length=load_tests(argv[2],buffer+FLASH_SIZE-PARAM_SIZE-TESTS_SIZE,TESTS_SIZE);
+			save_tos(argv[3], buffer, FLASH_SIZE-PARAM_SIZE-TESTS_SIZE+length);
+			#endif
 		}
 		else
 		{
-#ifdef COLDFIRE
+			#ifdef COLDFIRE
 			load_tests(argv[2], buffer+CF68KLIB-FLASH_ADR, 0x10000);
-#endif
-  		if((buffer_flash = (char *)malloc(0x200000)) == NULL)
-			   gentos_error("Not enough memory for pci drivers buffer.", NULL);
+			#endif
+			if((buffer_flash = (char *)malloc(0x200000)) == NULL)
+				gentos_error("Not enough memory for pci drivers buffer.", NULL);
 			memset(buffer_flash,-1,0x200000);
 			printf("read srec file %s...\r\n", argv[3]);
 			if(srec_read(argv[3]))
-			   gentos_error("Error with HEX file pci drivers.", NULL);
+				gentos_error("Error with HEX file pci drivers.", NULL);
 			if((start_addr < FLASH_ADR) || (start_addr >= (FLASH_ADR2+FLASH_SIZE2)))
-			   gentos_error("Error with HEX file, bad start address.", NULL);
+				gentos_error("Error with HEX file, bad start address.", NULL);
 			if((end_addr < FLASH_ADR) || (end_addr >= (FLASH_ADR2+FLASH_SIZE2)))
-			   gentos_error("Error with HEX file, bad end address.", NULL);
+				gentos_error("Error with HEX file, bad end address.", NULL);
 			if(end_addr <= start_addr)
-			   gentos_error("Error with HEX file, end address < start address.", NULL);
+				gentos_error("Error with HEX file, end address < start address.", NULL);
 			if(end_addr >= FLASH_ADR2)
 			{
 				memcpy(buffer_flash+0x100000,buffer_flash+FLASH_ADR2-FLASH_ADR,end_addr-FLASH_ADR2);
@@ -298,21 +298,21 @@ int main(int argc, char **argv)
 			else
 				size_pci_drivers = end_addr-start_addr;
 			buffer_pci_drivers = buffer_flash+start_addr-FLASH_ADR;
-  		if((work = (int *)malloc(sizeof(int)*(size_pci_drivers+65536))) == NULL)
-			   gentos_error("Not enough memory for compress work buffer.", NULL);
+			if((work = (int *)malloc(sizeof(int)*(size_pci_drivers+65536))) == NULL)
+				gentos_error("Not enough memory for compress work buffer.", NULL);
 			buf = buffer+start_addr-FLASH_ADR;
 			printf("compress PCI part %d bytes (0x%08lX-0x%08lX)... \r\n", (int)size_pci_drivers, start_addr, end_addr);
-		  length = (unsigned long)LZ_CompressFast(buffer_pci_drivers, buf+8, (int)size_pci_drivers, work);
+			length = (unsigned long)LZ_CompressFast(buffer_pci_drivers, buf+8, (int)size_pci_drivers, work);
 			if(length > FLASH_ADR+FLASH_SIZE-PARAM_SIZE-start_addr-8)
-    		gentos_error("Not enough memory for put compressed pci drivers in flash.", NULL);			
+				gentos_error("Not enough memory for put compressed pci drivers in flash.", NULL);
 			buf[0] = buf[3]='_';
 			buf[1] = 'L';
 			buf[2] = 'Z';
 			*(unsigned long *)&buf[4] = length;
 			length += 8;
 			printf("save TOS file %s, %d bytes...\r\n", argv[4], (int)(start_addr-FLASH_ADR+length));
-	    save_tos(argv[4], buffer, start_addr-FLASH_ADR+length);
+			save_tos(argv[4], buffer, start_addr-FLASH_ADR+length);
 		}
-  }
+	}
 	return 0;
 }
