@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/sh
 # usage: get_patch_addr.sh <map file> <output file>
 
 echo "#ifndef CT60TOS_PATCH_ADDR_H_" > $2

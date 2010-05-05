@@ -12,7 +12,7 @@ CC		= $(CROSS_PREFIX)gcc
 LD		= $(CROSS_PREFIX)ld
 STRIP		= $(CROSS_PREFIX)strip
 
-ASFLAGS		= -m68060 -Iinclude
+ASFLAGS		= -m68060 -Iinclude -I.
 CFLAGS		= -m68060 -Wall -O2 -fomit-frame-pointer -Iinclude -I.
 
 TARGET		= ct60tos.bin
@@ -20,6 +20,7 @@ TOS_PATCHER	= gentos
 TOS_PATCHES	= tos_patches.bin
 TOS_PATCHES_MAP	= $(subst .bin,.map,$(TOS_PATCHES))
 TOS_ADDR_H	= tos_addr.h
+TOS_VERSION_H = version.h
 
 TOS_DIR		= tos
 OBJ_DIR		= obj_tos
@@ -27,9 +28,13 @@ include $(TOS_DIR)/TOS_CT60
 TOS_OBJS	= $(OBJS:%.o=$(OBJ_DIR)/%.o)
 
 # user defs
-VERSION		= 0x0104
+TOS_VERSION	= 0x0104
 
-default: $(TARGET)
+default: $(TOS_VERSION_H) $(TARGET)
+
+$(TOS_VERSION_H):
+	./gen_version.sh $(TOS_VERSION) $@
+	touch -m $(TOS_DIR)/version.S
 
 $(OBJ_DIR):
 	mkdir $@
@@ -56,5 +61,5 @@ $(TARGET): nonfree/tos404.bin nonfree/sparrow.out $(TOS_PATCHES) $(TOS_PATCHER)
 
 clean:
 	rm -rf $(OBJ_DIR)
-	rm -f  $(TOS_PATCHER) $(TOS_PATCHES) $(TOS_PATCHES_MAP) $(TOS_ADDR_H) $(TARGET)
+	rm -f  $(TOS_PATCHER) $(TOS_PATCHES) $(TOS_PATCHES_MAP) $(TOS_ADDR_H) $(TOS_VERSION_H) $(TARGET)
 	rm -f *~
