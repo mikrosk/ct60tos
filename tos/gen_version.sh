@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 # usage: get_version.sh <version in hex> <output file>
 
 echo "#ifndef CT60TOS_VERSION_H_" > $2
