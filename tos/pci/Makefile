@@ -15,7 +15,7 @@ COMPRESS_BINARY= ../compress.ttp
 
 ATICOD = ../nonfree/ativcm20.cod
 
-SRCDIR = ./
+SRCDIR = .
 INCDIR = ./include
 INCDIRFVDI = ./fvdi/include
 OBJDIR = ./obj

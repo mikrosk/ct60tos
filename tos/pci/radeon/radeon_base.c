@@ -60,7 +60,9 @@
 #include "radeonfb.h"
 #include "edid.h"
 #include "ati_ids.h"
+#ifdef COLDFIRE
 #include "../../include/fire.h"
+#endif
 
 typedef struct
 {
