@@ -1,4 +1,4 @@
-OBJS = \
+CT60_OBJFILES = \
 	start.o \
 	\
 	pmmu.o \
@@ -38,3 +38,7 @@ OBJS = \
 	videl2.o \
 	\
 	end.o
+
+CTPCI_OBJFILES = $(CT60_OBJFILES)
+
+CTPCI_1GB_OBJFILES = $(subst xbios2.o,xbios2_1gb.o,$(CTPCI_OBJFILES))

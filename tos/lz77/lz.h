@@ -3,9 +3,8 @@
 * Author:      Marcus Geelnard
 * Description: LZ77 coder/decoder interface.
 * Reentrant:   Yes
-* $Id: lz.h,v 1.2 2004/05/25 22:36:44 marcus256 Exp $
 *-------------------------------------------------------------------------
-* Copyright (c) 2003-2004 Marcus Geelnard
+* Copyright (c) 2003-2006 Marcus Geelnard
 *
 * This software is provided 'as-is', without any express or implied
 * warranty. In no event will the authors be held liable for any damages
