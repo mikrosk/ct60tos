@@ -24,7 +24,7 @@
 
 	.align	2
 	.long	0x526
-	.long	end1-begin1+0x80000000
+	.long	end1-begin1
 begin1:
 	jsr	replace_mfp
 	nop
@@ -37,7 +37,7 @@ end1:
 
 	.align	2
 	.long	0x3C50 
-	.long	end2-begin2+0x80000000
+	.long	end2-begin2
 begin2:	jmp	int_timer_c_mfp
 end2:
 
@@ -45,7 +45,7 @@ end2:
 
 	.align	2
 	.long	0x544
-	.long	end3-begin3+0x80000000
+	.long	end3-begin3
 begin3: 	// tempo 20mS *15 MFP after IKBD reset
 	jsr	tempo_reset_ikbd
 	nop

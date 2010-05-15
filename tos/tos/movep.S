@@ -63,7 +63,7 @@ end3:
 
 	.align	2
 	.long	0x2B1E
-	.long	end4-begin4+0x80000000
+	.long	end4-begin4
 begin4:
 	 jsr	movep_e02b1e
 	nop

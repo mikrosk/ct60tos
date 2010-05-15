@@ -46,7 +46,7 @@ end1:
 
 	.align	2
 	.long	0x904
-	.long	end2-begin2+0x80000000
+	.long	end2-begin2
 begin2:
 	jsr	flush_caches_x
 	nop
@@ -65,7 +65,7 @@ end3:
 
 	.align	2
 	.long	0x946
-	.long	end4-begin4+0x80000000
+	.long	end4-begin4
 begin4:
 	jsr	flush_caches_x
 	nop
@@ -73,7 +73,7 @@ end4:
 
 	.align	2
 	.long	0xDF4
-	.long	end5-begin5+0x80000000
+	.long	end5-begin5
 begin5:
 	jsr	flush_caches_x
 	nop
@@ -81,7 +81,7 @@ end5:
 
 	.align	2
 	.long	0x43B0
-	.long	end6-begin6+0x80000000
+	.long	end6-begin6
 begin6:
 	jsr	flush_caches_x
 	clr.l	-(sp)
@@ -89,7 +89,7 @@ end6:
 
 	.align	2
 	.long	0x46CA
-	.long	end7-begin7+0x80000000
+	.long	end7-begin7
 begin7:
 	jsr	flush_caches_x
 	nop
@@ -97,14 +97,14 @@ end7:
 
 	.align	2
 	.long	0x85A
-	.long	end8-begin8+0x80000000
+	.long	end8-begin8
 begin8:
 	jmp	caches_disable
 end8:
 
 	.align	2
 	.long	0x18CA
-	.long	end9-begin9+0x80000000
+	.long	end9-begin9
 begin9:
 	jsr	flush_caches
 	bra.s	begin9-0x18CA+0x18DE
@@ -114,7 +114,7 @@ end9:
 	.long	0x1944
 	.long	end10-begin10
 begin10:
-	jsr	flush_data_cache+0x80000000
+	jsr	flush_data_cache
 	bra.s	begin10-0x18CA+0x18DE
 end10:
 
@@ -414,7 +414,7 @@ end30:
 	.align	2
 	.long	0x250C8
 #ifdef COLDFIRE
-	.long	end31-begin31+0x80000000
+	.long	end31-begin31
 begin31:
 	jmp	caches_enable
 #else

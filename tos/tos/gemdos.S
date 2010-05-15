@@ -25,7 +25,7 @@
 
 	.align	2
 	.long	0x1F164                /* Pexec */
-	.long	end1-begin1+0x80000000
+	.long	end1-begin1
 begin1:
 	jsr	flush_cache_pexec
 end1:
@@ -34,7 +34,7 @@ end1:
 
 	.align	2
 	.long	0x1DF62
-	.long	end2-begin2+0x80000000
+	.long	end2-begin2
 begin2:
 	.short	0x41F9
 	.long	det_gemdos
@@ -44,7 +44,7 @@ end2:
 
 	.align	2
 	.long	0x214
-	.long	end3-begin3+0x80000000
+	.long	end3-begin3
 begin3:
 	move.l	#det_vbl,0x70.w
 end3:
@@ -55,7 +55,7 @@ end3:
 	
 	.align	2
 	.long	0x1C382
-	.long	end4-begin4+0x80000000
+	.long	end4-begin4
 begin4:
 	jmp	_gouser
 end4:
@@ -64,7 +64,7 @@ end4:
 
 	.align	2
 	.long	0x1C3C0
-	.long	end5-begin5+0x80000000
+	.long	end5-begin5
 begin5:
 	jmp	_termuser
 end5:
@@ -73,7 +73,7 @@ end5:
 
 	.align	2
 	.long	0x1C3CC
-	.long	end6-begin6+0x80000000
+	.long	end6-begin6
 begin6:
 	jmp	_xsuper
 end6:

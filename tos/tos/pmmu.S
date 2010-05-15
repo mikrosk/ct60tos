@@ -37,7 +37,7 @@
 	
 	.align	2
 	.long	0x30
-	.long	end1-begin1+0x80000000
+	.long	end1-begin1
 begin1:
 #ifdef COLDFIRE
 	move.l	#init_cf-FLASH_ADR+FLASH_TOS_FIRE_ENGINE,D1
@@ -57,7 +57,7 @@ end1:
 
 	.align	2
 	.long	0x632
-	.long	end2-begin2+0x80000000
+	.long	end2-begin2
 begin2:
 	jsr	init_sdram
 end2:
@@ -111,7 +111,7 @@ end4:
 
 	.align	2
 	.long	0x96E
-	.long	end5-begin5+0x80000000
+	.long	end5-begin5
 begin5:
 	jmp	add_sdram
 end5:
@@ -134,7 +134,7 @@ end7:
 
 	.align	2
 	.long	0x7D5A
-	.long	end8-begin8+0x80000000
+	.long	end8-begin8
 begin8:
 	jmp	display_ram_test
 end8:

@@ -24,7 +24,7 @@
 
 	.align	2
 	.long	0xEBE
-	.long	end1-begin1+0xC0000000
+	.long	end1-begin1
 begin1:
 	.long	_bconout2
 end1:
@@ -33,7 +33,7 @@ end1:
 
 	.align	2
 	.long	0xECA
-	.long	end2-begin2+0xC0000000
+	.long	end2-begin2
 begin2:
 	.long	_bconout5
 end2:
@@ -42,7 +42,7 @@ end2:
 
 	.align	2
 	.long	0x1094C
-	.long	end3-begin3+0xC0000000
+	.long	end3-begin3
 begin3:
 	.long	normal_ascii
 end3:
@@ -51,7 +51,7 @@ end3:
 	
 	.align	2
 	.long	0xD18
-	.long	end4-begin4+0xC0000000
+	.long	end4-begin4
 begin4:
 	.long	_blink
 end4:
@@ -62,7 +62,7 @@ end4:
 	
 	.align	2
 	.long	0xE5A
-	.long	end5-begin5+0xC0000000
+	.long	end5-begin5
 begin5:
 	.long	auxistat
 end5:
@@ -71,7 +71,7 @@ end5:
 
 	.align	2
 	.long	0xE7A
-	.long	end6-begin6+0xC0000000
+	.long	end6-begin6
 begin6:
 	.long	auxin
 end6:
@@ -80,7 +80,7 @@ end6:
 
 	.align	2
 	.long	0xE9A
-	.long	end7-begin7+0xC0000000
+	.long	end7-begin7
 begin7:
 	.long	auxostat
 end7:
@@ -89,7 +89,7 @@ end7:
 
 	.align	2
 	.long	0xEBA
-	.long	end8-begin8+0xC0000000
+	.long	end8-begin8
 begin8:
 	.long	auxout
 end8:
@@ -98,56 +98,56 @@ end8:
 
 	.align	2
 	.long	0xE76
-	.long	end9-begin9+0xC0000000
+	.long	end9-begin9
 begin9:      // centronics
 	.long	error_ok
 end9:
 
 	.align	2
 	.long	0xE96
-	.long	end10-begin10+0xC0000000
+	.long	end10-begin10
 begin10:      // centronics
 	.long	error_ok
 end10:
 
 	.align	2
 	.long	0xEB6
-	.long	end11-begin11+0xC0000000
+	.long	end11-begin11
 begin11:      // centronics
 	.long	error_ok
 end11:
 
 	.align	2
 	.long	0xE62
-	.long	end12-begin12+0xC0000000
+	.long	end12-begin12
 begin12:      // MIDI
 	.long	error_ok
 end12:
 
 	.align	2
 	.long	0xE82
-	.long	end13-begin13+0xC0000000
+	.long	end13-begin13
 begin13:      // MIDI
 	.long	error_ok
 end13:
 
 	.align	2
 	.long	0xEA6
-	.long	end14-begin14+0xC0000000
+	.long	end14-begin14
 begin14:      // MIDI
 	.long	error_ok
 end14:
 
 	.align	2
 	.long	0xEC2
-	.long	end15-begin15+0xC0000000
+	.long	end15-begin15
 begin15:      // MIDI
 	.long	error_ok
 end15:
 
 	.align	2
 	.long	0xEA2
-	.long	end16-begin16+0xC0000000
+	.long	end16-begin16
 begin16:      // IKBD
 	.long	error_ok
 end16:
@@ -156,7 +156,7 @@ end16:
 
 	.align	2
 	.long	0xEC6
-	.long	end17-begin17+0xC0000000
+	.long	end17-begin17
 begin17:      // IKBD
 	.long	ikbdwc
 end17:
@@ -165,7 +165,7 @@ end17:
 
 	.align	2
 	.long	0x228
-	.long	end18-begin18+0x80000000
+	.long	end18-begin18
 begin18:
 	.short	0x21FC
 	.long	det_bios

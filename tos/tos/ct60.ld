@@ -1,0 +1,60 @@
+/* CT60 link script, raw binary image */
+OUTPUT_FORMAT(binary)
+MEMORY
+{
+	/* TOS 4.04 memory area */
+	flash1 (rx) :	ORIGIN = 0x00E00000, LENGTH = 512K
+	/* Originally unused */
+	flash2 (rx) :	ORIGIN = 0x00E80000, LENGTH = 512K
+	/* TOS <1.06 memory area */
+	flash3 (rx) :	ORIGIN = 0x00FC0000, LENGTH = 192K
+}
+SECTIONS
+{
+	.text1 :
+	{
+		/*
+		 * Each patch contain headers with start addresses and
+		 * lengths to avoid typing tens of sections and problems
+		 * with section align. We include 'text' sections but
+		 * this is only safety check, those files shouldn't
+		 * contain any 'data' and 'bss' sections.
+		 * Please note placement into 'flash1' is just cosmetic
+		 * thing, none of following files depends on it.
+		 */
+		pmmu.o( .text )
+		cookies.o( .text )
+		dsp.o( .text )
+		periph.o( .text )
+		cache.o( .text )
+		movep.o( .text )
+		boot.o( .text )
+		init_par.o( .text )
+		blitter.o( .text )
+		bios.o( .text )
+		xbios.o( .text )
+		gemdos.o( .text )
+		aes.o( .text )
+		vectors.o( .text )
+		videl.o( .text )
+		debug.o( .text )
+	} > flash1
+
+	.text2 :
+	AT( ADDR( .text1 ) + SIZEOF( .text1 ) )
+	{
+		/*
+		 * Final "patch", put start address and length here,
+		 * even when the size is probably bigger than necessary
+		 * due to 4-byte align...
+		 */
+		LONG( . )
+		/* omit header and last 0xFFFFFFFF */
+		LONG( SIZEOF( .text2 ) - 12 )
+		version.o( .text )
+		*( .text )
+		LONG( 0xFFFFFFFF )
+		_etext = .;
+		__etext = .;
+	} > flash2
+}

@@ -60,8 +60,6 @@ _init_emulation_vectors:
 #else
 	move.l #0x4E714EF9,(A1)+ // JMP
 	lea null,A0           // for debug null pointer
-	add.l #FLASH_ADR+0x80000,A0
-	sub.l #_ct60tos_half_flash,A0
 	move.l A0,(A1)
 #endif
 	move.l (SP)+,A1

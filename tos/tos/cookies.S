@@ -134,7 +134,7 @@ end6:
 
 	.align	2
 	.long	0x3B0
-	.long	end7-begin7+0x80000000
+	.long	end7-begin7
 begin7:
 	jsr	before_init_cookies 
 	nop

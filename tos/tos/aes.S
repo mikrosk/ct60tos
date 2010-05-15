@@ -335,7 +335,7 @@ end34:
 
 	.align	2
 	.long	0x34258
-	.long	end35-begin35+0x80000000
+	.long	end35-begin35
 begin35:
 	jsr	fix_bug_nvdi
 end35:
@@ -344,7 +344,7 @@ end35:
 
 	.align	2
 	.long	0x20122
-	.long	end36-begin36+0x80000000
+	.long	end36-begin36
 begin36:
 	jsr	det_evnt_multi
 end36:
@@ -357,7 +357,7 @@ end36:
 
 	.align	2
 	.long	0x3475A
-	.long	end37-begin37+0x80000000
+	.long	end37-begin37
 begin37:
 	jmp	_dsptch
 end37:
@@ -366,7 +366,7 @@ end37:
 
 	.align	2
 	.long	0x34776
-	.long	end38-begin38+0x80000000
+	.long	end38-begin38
 begin38:
 	jmp	_savestate
 end38:
@@ -375,7 +375,7 @@ end38:
 
 	.align	2
 	.long	0x347B8
-	.long	end39-begin39+0x80000000
+	.long	end39-begin39
 begin39:
 	jmp	_switchto
 end39:
@@ -384,7 +384,7 @@ end39:
 
 	.align	2
 	.long	0x347E4
-	.long	end40-begin40+0x80000000
+	.long	end40-begin40
 begin40:
 	jmp	_gotopgm
 end40:
@@ -393,7 +393,7 @@ end40:
 
 	.align	2
 	.long	0x34810
-	.long	end41-begin41+0x80000000
+	.long	end41-begin41
 begin41:
 	jmp	_psetup
 end41:
@@ -411,14 +411,14 @@ end42:
 
 	.align	2
 	.long	0x34432
-	.long	end43-begin43+0x80000000
+	.long	end43-begin43
 begin43:
 	move.l	#det_aes,0x88
 end43:
 
 	.align	2
 	.long	0x3443C
-	.long	end44-begin44+0x80000000
+	.long	end44-begin44
 begin44:
 	move.l	#det_aes,0x88
 end44:
@@ -427,7 +427,7 @@ end44:
 
 	.align	2
 	.long	0x35664
-	.long	end45-begin45+0x80000000
+	.long	end45-begin45
 begin45:
 	jmp	_far_mchange
 end45:
@@ -436,7 +436,7 @@ end45:
 
 	.align	2
 	.long	0x355D8
-	.long	end46-begin46+0x80000000
+	.long	end46-begin46
 begin46:
 	jmp	_far_bchange
 end46:
@@ -445,7 +445,7 @@ end46:
 
 	.align	2
 	.long	0x21AD8
-	.long	end47-begin47+0x80000000
+	.long	end47-begin47
 begin47:
 	jmp	_forkq
 end47:
@@ -455,7 +455,7 @@ end47:
 
 	.align	2
 	.long	0x2E91A
-	.long	end48-begin48+0x80000000
+	.long	end48-begin48
 begin48:
 	jmp	patch_tran_check
 end48:
@@ -478,7 +478,7 @@ end50:
 
 	.align	2
 	.long	0x4800C
-	.long	end51-begin51+0x80000000
+	.long	end51-begin51
 begin51:
 	jmp	patch_set_video
 end51:

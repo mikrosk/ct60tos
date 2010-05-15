@@ -22,26 +22,27 @@ HOSTCFLAGS	= -Wall -O2 -fomit-frame-pointer -Iinclude -Ilz77 -D$(PLATFORM)
 # main targets
 CT60_TOS	= ct60tos.bin
 CTPCI_TOS	= ctpcitos.bin
-CTPCI_TOS_1GB	= ctpci1gb.bin
+CTPCI_1GB_TOS	= ctpci1gb.bin
 
 TOS_PATCHER	= gentos
-TOS_PATCHES	= tos_patches.bin
-TOS_PATCHES_MAP	= $(basename $(TOS_PATCHES)).map
-TOS_ADDR_H	= tos_addr.h
+CT60_PATCHES	= ct60_patches.bin
+CTPCI_PATCHES	= $(CT60_PATCHES)
+CTPCI_1GB_PATCHES = ctpci_1gb_patches.bin
 TOS_VERSION_H	= version.h
 
 TOS_DIR		= tos
 OBJ_DIR		= obj
-include $(TOS_DIR)/OBJFILES
-# we must define it in this way since we can't randomly mix/separate C and S files, order is important
-CT60_OBJS	= $(CT60_OBJFILES:%.o=$(OBJ_DIR)/%.o)
-CTPCI_OBJS	= $(CTPCI_OBJFILES:%.o=$(OBJ_DIR)/%.o)
-CTPCI_1GB_OBJS	= $(CTPCI_1GB_OBJFILES:%.o=$(OBJ_DIR)/%.o)
+include $(TOS_DIR)/SRCFILES
+# order is no longer important, it matters what's in linker script!
+CT60_OBJS	= $(patsubst %.c,,$(SRCFILES:%.S=$(OBJ_DIR)/%.o)) $(patsubst %.S,,$(SRCFILES:%.c=$(OBJ_DIR)/%.o))
+CTPCI_OBJS	= $(CT60_OBJS)
+# we can do this since linker script uses '*' notation ...
+CTPCI_1GB_OBJS	= $(subst xbios2.o,xbios2_1gb.o,$(CTPCI_OBJS))
 
 # user defs
 TOS_VERSION	= 0x0104
 
-default: $(TOS_VERSION_H) $(CT60_TOS) #$(CTPCI_TOS) $(CTPCI_TOS_1GB)
+default: $(TOS_VERSION_H) $(CT60_TOS) #$(CTPCI_TOS) $(CTPCI_1GB_TOS)
 
 # build rules
 $(OBJ_DIR)/%.o:	$(TOS_DIR)/%.S
@@ -64,20 +65,15 @@ $(TOS_VERSION_H):
 $(OBJ_DIR):
 	mkdir $@
 
-$(TOS_PATCHES): $(OBJ_DIR) $(CT60_OBJS)
-	$(LD) --oformat binary -Map=$(TOS_PATCHES_MAP) -o $@ $(CT60_OBJS)
+$(CT60_PATCHES): $(OBJ_DIR) $(CT60_OBJS) $(TOS_DIR)/ct60.ld
+	$(LD) -o $@ -L$(OBJ_DIR) $(CT60_OBJS) -T $(TOS_DIR)/ct60.ld
 
-$(TOS_PATCHES_MAP): $(TOS_PATCHES)
-
-$(TOS_ADDR_H): $(TOS_PATCHES_MAP)
-	./get_patch_addr.sh $(TOS_PATCHES_MAP) $(TOS_ADDR_H)
-
-$(TOS_PATCHER): gentos.c lz77/lz.c $(TOS_ADDR_H)
+$(TOS_PATCHER): gentos.c lz77/lz.c
 	gcc $(HOSTCFLAGS) -o $@ gentos.c lz77/lz.c
 
 # main rules
-$(CT60_TOS): nonfree/tos404.bin nonfree/sparrow.out $(TOS_PATCHES) $(TOS_PATCHER)
-	./$(TOS_PATCHER) --tos nonfree/tos404.bin --tospatch $(TOS_PATCHES) --tests nonfree/sparrow.out --out $@
+$(CT60_TOS): nonfree/tos404.bin nonfree/sparrow.out $(CT60_PATCHES) $(TOS_PATCHER)
+	./$(TOS_PATCHER) --tos nonfree/tos404.bin --tospatch $(CT60_PATCHES) --tests nonfree/sparrow.out --out $@
 
 $(PCI_DIR)/pci.hex:
 	make -C pci ctpci
@@ -85,10 +81,10 @@ $(PCI_DIR)/pci.hex:
 $(CTPCI_TOS): nonfree/tos404.bin nonfree/sparrow.out $(CTPCI_PATCHES) $(TOS_PATCHER) $(PCI_DIR)/pci.hex
 	./$(TOS_PATCHER) --tos nonfree/tos404.bin --tospatch $(CTPCI_PATCHES) --tests nonfree/sparrow.out --pci $(PCI_DIR)/pci.hex --out $@
 
-$(CTPCI_TOS_1GB): nonfree/tos404.bin nonfree/sparrow.out $(CTPCI_1GB_PATCHES) $(TOS_PATCHER) $(PCI_DIR)/pci.hex
+$(CTPCI_1GB_TOS): nonfree/tos404.bin nonfree/sparrow.out $(CTPCI_1GB_PATCHES) $(TOS_PATCHER) $(PCI_DIR)/pci.hex
 	./$(TOS_PATCHER) --tos nonfree/tos404.bin --tospatch $(CTPCI_1GB_PATCHES) --tests nonfree/sparrow.out --pci $(PCI_DIR)/pci.hex --out $@
 clean:
 	rm -rf $(OBJ_DIR)
-	rm -f $(CT60_TOS) $(CTPCI_TOS) $(CTPCI_TOS_1GB)
-	rm -f  $(TOS_PATCHER) $(TOS_PATCHES) $(TOS_PATCHES_MAP) $(TOS_ADDR_H) $(TOS_VERSION_H)
+	rm -f $(CT60_TOS) $(CTPCI_TOS) $(CTPCI_1GB_TOS)
+	rm -f $(TOS_PATCHER) $(CT60_PATCHES) $(CTPCI_PATCHES) $(CTPCI_1GB_PATCHES) $(TOS_VERSION_H)
 	rm -f *~

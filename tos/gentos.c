@@ -30,7 +30,6 @@
 #include <time.h>
 
 #include "endianness.h"
-#include "tos_addr.h"
 
 static void showHelp( const char* sProgramName )
 {
@@ -94,28 +93,28 @@ static size_t loadFile( const char* sPath, void* pBuffer, size_t bufferSize, siz
 	}
 
 	fclose( pFs );
-	
+
 	return readBytes;
 }
 
 static size_t saveFile( const char* sPath, const void* pBuffer, size_t bufferSize )
 {
 	size_t writeBytes;
-	
+
 	FILE* pFs = fopen( sPath, "wb" );
 	if( pFs == NULL )
 	{
 		showError( "Unable to open file %s!", sPath );
 	}
-	
+
 	writeBytes = fwrite( pBuffer, 1, bufferSize, pFs );
 	if( writeBytes != bufferSize )
 	{
 		showError( "Failed to write %d bytes, disk full?", bufferSize );
 	}
-	
+
 	fclose( pFs );
-	
+
 	return writeBytes;
 }
 
@@ -123,9 +122,6 @@ static size_t patchTos( unsigned char* pTos, const unsigned char* pPatches )
 {
 	int year;
 
-	unsigned char* p;
-	unsigned long  len;
-	
 	unsigned char* top = NULL;
 
 	time_t timeSec;
@@ -144,44 +140,28 @@ static size_t patchTos( unsigned char* pTos, const unsigned char* pPatches )
 	// patch TOS ... input buffer consists of 4-byte aligned blocks with header:
 	// .long target_address
 	// .long length
-	// if bit 31 of length is set, then first instruction is jmp/jsr <2nd flash area address>
-	// if bit 31 and 30 of length is set, then first long is a vector to 2nd flash area
 	do
 	{
-		// beware, not x64 friendly!
-		p = &pTos[BE32( *(unsigned long*)pPatches )];
-		pPatches += sizeof( unsigned long* );
+		unsigned char* p;
+		unsigned long len;
+		unsigned long addr;
+
+		addr = BE32( *(unsigned long*)pPatches );
+		if( addr == FLASH_ADR + TOS4_SIZE )
+		{
+			// adjust final "patch" as our index 0 begins at FLASH_ADR ...
+			addr -= FLASH_ADR;
+		}
+		p = &pTos[addr];
+		pPatches += sizeof( addr );
 
 		len = BE32( *(unsigned long*)pPatches );
 		pPatches += sizeof( len );
 
-		if( len & 0x80000000 )
-		{
-			unsigned long* pl;
-			unsigned long  l;
-
-			len &= 0x7FFFFFFF;
-
-			if( len & 0x40000000 )
-			{
-				len &= 0x3FFFFFFF;
-
-				pl = (unsigned long*)pPatches;
-			}
-			else
-			{
-				pl = (unsigned long*)( pPatches + 2 );	// skip jmp/jsr instruction
-			}
-			// new address = <address of 2nd flash area> + function offset
-			// 0xe4 is an offset introduced by m68k-atari-mint-ld
-			l = BE32( *pl );
-			l = ( FLASH_ADR + TOS4_SIZE ) + ( l - (unsigned long)ct60tos_half_flash );
-			*pl = BE32( l );
-		}
 		memcpy( p, pPatches, len );
 		p += len;
 		pPatches += len;
-		
+
 		top = p > top ? p : top;
 
 		if( (unsigned long)pPatches & 3 )
@@ -190,7 +170,7 @@ static size_t patchTos( unsigned char* pTos, const unsigned char* pPatches )
 		}
 	}
 	while( *(unsigned long*)pPatches != 0xffffffff );
-	
+
 	return top - pTos;
 }
 
@@ -199,7 +179,7 @@ static void createChecksum( unsigned char* pBuffer )
 	unsigned short crc;
 	unsigned short crc2;
 	int i;
-	
+
 	static unsigned short crctab[256] =
 	{
 		0x0000,0x1021,0x2042,0x3063,0x4084,0x50a5,0x60c6,0x70e7,
@@ -235,7 +215,7 @@ static void createChecksum( unsigned char* pBuffer )
 		0xef1f,0xff3e,0xcf5d,0xdf7c,0xaf9b,0xbfba,0x8fd9,0x9ff8,
 		0x6e17,0x7e36,0x4e55,0x5e74,0x2e93,0x3eb2,0x0ed1,0x1ef0
 	};
-	
+
 	for( i = 0, crc = 0; i < FLASH_SIZE/2 - 2; i++ )
 	{
 		crc2 = crctab[pBuffer[i] ^ (unsigned char)( crc >> 8 )];
@@ -249,7 +229,7 @@ static void createChecksum( unsigned char* pBuffer )
 int main( int argc, char* argv[] )
 {
 	int i;
-	
+
 	size_t flashSize;
 
 	char*          sPathTos = NULL;
@@ -339,9 +319,9 @@ int main( int argc, char* argv[] )
 
 	flashSize = patchTos( pBufferFlash, pBufferPatches );
 	flashSize = TOS4_SIZE > flashSize ? TOS4_SIZE : flashSize;	// in case we patch only some small portions of original TOS
-	
+
 	createChecksum( pBufferFlash );
-	
+
 	if( sPathTests != NULL )
 	{
 		if( flashSize > FLASH_SIZE - PARAM_SIZE - TESTS_SIZE )
@@ -356,7 +336,7 @@ int main( int argc, char* argv[] )
 			// tests (max TESTS_SIZE bytes)                                |
 			// params (PARAM_SIZE bytes)                                  v FLASH_ADR + FLASH_SIZE
 			size_t testsSize;
-			
+
 			testsSize = loadFile( sPathTests, pBufferFlash + ( FLASH_SIZE - PARAM_SIZE - TESTS_SIZE ), TESTS_SIZE, -1 );	// TODO: check if tests file size <= TESTS_SIZE
 			saveFile( sPathOut, pBufferFlash, FLASH_SIZE - PARAM_SIZE - TESTS_SIZE + testsSize );
 		}

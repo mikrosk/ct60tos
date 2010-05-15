@@ -29,7 +29,7 @@
 
 	.align	2
 	.long	0x798
-	.long	end1-begin1+0x80000000
+	.long	end1-begin1
 begin1:
 	jsr	menu_boot
 end1:
@@ -38,7 +38,7 @@ end1:
 
 	.align	2
 	.long	0xB42
-	.long	end2-begin2+0x80000000
+	.long	end2-begin2
 begin2:
 	jmp	boot_drive
 end2:
@@ -57,28 +57,28 @@ end3:
 
 	.align	2
 	.long	0x312
-	.long	end4-begin4+0x80000000
+	.long	end4-begin4
 begin4:
 	move.l	#error_unknow_device,hdv_rw
 end4:
 
 	.align	2
 	.long	0x31A
-	.long	end5-begin5+0x80000000
+	.long	end5-begin5
 begin5:
 	move.l	#error_ok,hdv_bpb
 end5:
 
 	.align	2
 	.long	0x322
-	.long	end6-begin6+0x80000000
+	.long	end6-begin6
 begin6:
 	move.l	#error_unknow_device,hdv_mediach
 end6:
 
 	.align	2
 	.long	0x30A
-	.long	end7-begin7+0x80000000
+	.long	end7-begin7
 begin7:
 	move.l	#error_unknow_device,hdv_init
 end7:

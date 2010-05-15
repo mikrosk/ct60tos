@@ -28,7 +28,7 @@
 
 	.align	2
 	.long	0x230
-	.long	end1-begin1+0x80000000
+	.long	end1-begin1
 begin1:
 	.short	0x21FC
 	.long	det_xbios
@@ -38,7 +38,7 @@ end1:
 
 	.align	2
 	.long	0x26C4
-	.long	end2-begin2+0x80000000
+	.long	end2-begin2
 begin2:
 	jsr	new_statvec
 	nop
@@ -49,7 +49,7 @@ end2:
 
 	.align	2
 	.long	0x340A
-	.long	end3-begin3+0x80000000
+	.long	end3-begin3
 begin3:
 	jsr	new_ikbdvect
 	nop
@@ -59,7 +59,7 @@ end3:
 	
 	.align	2
 	.long	0x216C
-	.long	end4-begin4+0x80000000
+	.long	end4-begin4
 begin4:
 	jmp	nvm_access
 end4:	
@@ -72,7 +72,7 @@ end4:
 #else	
 	.long	0x212E
 #endif
-	.long	end5-begin5+0x80000000
+	.long	end5-begin5
 begin5:
 	jmp	test_rtc
 end5:	
@@ -81,7 +81,7 @@ end5:
 	
 	.align	2
 	.long	0x230E
-	.long	end6-begin6+0x80000000
+	.long	end6-begin6
 begin6:
 	jsr	fix_settime
 end6:	
@@ -100,7 +100,7 @@ end7:
 	
 	.align	2
 	.long	0x2264
-	.long	end8-begin8+0x80000000
+	.long	end8-begin8
 begin8:
 	jsr	fix_gettime
 end8:
@@ -111,7 +111,7 @@ end8:
 
 	.align	2
 	.long	0x22A0
-	.long	end9-begin9+0x80000000
+	.long	end9-begin9
 begin9:
 	jmp	gettime
 end9:
@@ -120,7 +120,7 @@ end9:
 
 	.align	2
 	.long	0x231A
-	.long	end10-begin10+0x80000000
+	.long	end10-begin10
 begin10:
 	jmp	end_settime
 end10:
@@ -129,21 +129,21 @@ end10:
 
 	.align	2
 	.long	0x332
-	.long	end11-begin11+0x80000000
+	.long	end11-begin11
 begin11:
 	move.l	#error_ok,dump_vec
 end11:
 
 	.align	2
 	.long	0x33A
-	.long	end12-begin12+0x80000000
+	.long	end12-begin12
 begin12:
 	move.l	#error_ok,ptr_stat
 end12:
 
 	.align	2
 	.long	0x342
-	.long	end13-begin13+0x80000000
+	.long	end13-begin13
 begin13:
 	move.l	#error_ok,ptr_vec
 end13:
@@ -152,7 +152,7 @@ end13:
 
 	.align	2
 	.long	0x34A
-	.long	end14-begin14+0x80000000
+	.long	end14-begin14
 begin14:
 	move.l	#auxostat,aux_sta
 end14:
@@ -161,7 +161,7 @@ end14:
 	
 	.align	2
 	.long	0x352
-	.long	end15-begin15+0x80000000
+	.long	end15-begin15
 begin15:
 	move.l	#auxout,aux_vec
 end15:
@@ -192,7 +192,7 @@ end17:
 
 	.align	2
 	.long	0x5A8
-	.long	end18-begin18+0x80000000
+	.long	end18-begin18
 begin18:
 	jsr	_Setscreen
 end18:

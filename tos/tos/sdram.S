@@ -1292,8 +1292,6 @@ init_cf:
 	bgt.s .copy_tos
 	lea FLASH_ADR,A1
 	lea restart_emulation,A0
-	add.l #FLASH_ADR+0x80000,A0
-	sub.l #_ct60tos_half_flash,A0	
 	move.l A0,4(A1)
 	move.l A0,0x10(A1)       // header TOS404
 	move.w #0x4EF9,D0
@@ -1340,14 +1338,9 @@ init_cf:
 	lea debug107(PC),A0
 	bsr debug_display_string	
 #endif
-	move.l #FLASH_ADR+0x80000,D0
-	sub.l #_ct60tos_half_flash,D0 // offset ... gentos :-(
 	lea _init_mmu,A0
-	add.l D0,A0
 	lea _update_tlb,A1
-	add.l D0,A1
 	lea _LZ_Uncompress,A2
-	add.l D0,A2
 	/* Start cf68klib in RAM */
 	jmp CF68KLIB
 	
@@ -1933,8 +1926,6 @@ init_sdram:
 	pea 0x1000000            // out: SDRAM temp
 	pea 8(A0)                // in
 	lea _LZ_Uncompress,A0
-	add.l #FLASH_ADR+0x80000,A0
-	sub.l #_ct60tos_half_flash,A0
 	jsr (A0)
 	move.l (SP)+,A0
 	subq.l #8,A0
@@ -1942,8 +1933,6 @@ init_sdram:
 	move.l D0,-(SP)          // size PCI drivers
 	move.l A0,-(SP)          // base PCI drivers => force TOS in RAM
 	lea _init_mmu_tree,A0
-	add.l #FLASH_ADR+0x80000,A0
-	sub.l #_ct60tos_half_flash,A0
 	jsr (A0)
 	addq.l #8,SP
 .not_compressed_pci_drivers:
@@ -2534,8 +2523,6 @@ init_sdram:
 	clr.l -(SP)
 	clr.l -(SP)
 	lea _init_mmu_tree,A0
-	add.l #FLASH_ADR+0x80000,A0
-	sub.l #_ct60tos_half_flash,A0
 	jsr (A0)
 	addq.l #8,SP
 	tst.l D0
@@ -8243,8 +8230,6 @@ menu_boot:
 	move.l D0,D1
 	move.l #0x5F465055,D0    // _FPU cookie
 	bsr get_cookie
-	add.l #FLASH_ADR+0x80000,A1
-	sub.l #_ct60tos_half_flash,A1
 	jsr (A1)
 .normal_boot:
 	unlk A6

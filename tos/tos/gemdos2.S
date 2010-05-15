@@ -566,8 +566,6 @@ det_vbl:
 	tst.b _frclock+3
 	bne.s .no_test_vectors
 	lea _init_emulation_vectors,A0
-	add.l #0xE80000,A0
-	sub.l #_ct60tos_half_flash,A0
 	jsr (A0)
 #endif
 .no_test_vectors:	

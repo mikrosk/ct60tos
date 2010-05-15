@@ -22,7 +22,7 @@
 
 	.align	2
 	.long	0xADA
-	.long	end1-begin1+0x80000000
+	.long	end1-begin1
 begin1:	// CTRL-ALT-UNDO
 	jmp	init_flash_parameters
 end1:
