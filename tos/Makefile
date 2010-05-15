@@ -65,8 +65,9 @@ $(TOS_VERSION_H):
 $(OBJ_DIR):
 	mkdir $@
 
+# we need to enter OBJ_DIR else filename matching doesn't work correctly in link script
 $(CT60_PATCHES): $(OBJ_DIR) $(CT60_OBJS) $(TOS_DIR)/ct60.ld
-	$(LD) -o $@ -L$(OBJ_DIR) $(CT60_OBJS) -T $(TOS_DIR)/ct60.ld
+	cd $(OBJ_DIR) && $(LD) -o ../$@ $(notdir $(CT60_OBJS)) -T ../$(TOS_DIR)/ct60.ld
 
 $(TOS_PATCHER): gentos.c lz77/lz.c
 	gcc $(HOSTCFLAGS) -o $@ gentos.c lz77/lz.c

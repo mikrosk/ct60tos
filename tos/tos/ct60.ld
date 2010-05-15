@@ -39,18 +39,27 @@ SECTIONS
 		videl.o( .text )
 		debug.o( .text )
 	} > flash1
+	end_of_text1 = .;
 
+	/* End of text1 is aligned on 4-byte boundary. */
 	.text2 :
-	AT( ADDR( .text1 ) + SIZEOF( .text1 ) )
+	AT( end_of_text1 )
 	{
 		/*
-		 * Final "patch", put start address and length here,
-		 * even when the size is probably bigger than necessary
-		 * due to 4-byte align...
-		 */
-		LONG( . )
-		/* omit header and last 0xFFFFFFFF */
-		LONG( SIZEOF( .text2 ) - 12 )
+		* Final "patch" header, put start address and length here,
+		* even when the size is probably bigger than necessary
+		* due to 4-byte align...
+		*/
+		LONG( ADDR( .text3 ) )
+		/* omit last 0xFFFFFFFF */
+		LONG( SIZEOF( .text3 ) - 4 )
+	} > flash1
+	end_of_text2 = .;
+
+	/* End of text2 therefore continues without any padding. */
+	.text3 :
+	AT( end_of_text2 )
+	{
 		version.o( .text )
 		*( .text )
 		LONG( 0xFFFFFFFF )
