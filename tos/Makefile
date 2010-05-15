@@ -88,4 +88,4 @@ clean:
 	rm -rf $(OBJ_DIR)
 	rm -f $(CT60_TOS) $(CTPCI_TOS) $(CTPCI_1GB_TOS)
 	rm -f $(TOS_PATCHER) $(CT60_PATCHES) $(CTPCI_PATCHES) $(CTPCI_1GB_PATCHES) $(TOS_VERSION_H)
-	rm -f *~
+	rm -f *~ $(TOS_DIR)/*~

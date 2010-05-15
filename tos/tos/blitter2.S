@@ -28,7 +28,7 @@
 	.globl	logo_atari
 	.globl	det_vdi
 	
-#include "main.h"
+#include "ct60_hw.h"
 #include "vars.h"
 
 #ifdef COLDFIRE

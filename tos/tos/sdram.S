@@ -54,7 +54,7 @@
 	.globl ct60_configure_sdram
 #endif
 
-#include "main.h"
+#include "ct60_hw.h"
 #include "ct60.h"
 #include "vars.h"
 #include "pci_bios.h"

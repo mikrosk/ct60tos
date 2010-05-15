@@ -27,7 +27,7 @@
 #include "fire.h"
 #endif
 
-#include "main.h"
+#include "ct60_hw.h"
 #include "vars.h"
 	
 init_vectors:

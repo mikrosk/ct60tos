@@ -19,7 +19,7 @@
 #include <osbind.h>
 #include <stdio.h>
 #include <string.h>
-#include "main.h"
+#include "ct60_hw.h"
 
 extern void *buffer_flash;
 unsigned long start_addr,end_addr;

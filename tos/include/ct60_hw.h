@@ -21,8 +21,8 @@
  *
  */
 
-#ifndef	_MAIN_H
-#define	_MAIN_H	1
+#ifndef	CT60_HW_H_
+#define	CT60_HW_H_
 
 #define RESERVE_MEM_FONTS  0x8000
 #ifndef COLDFIRE
@@ -31,14 +31,12 @@
 
 #ifdef COLDFIRE
 
-#ifdef MCF5445X /* M54455EVB */
+#if defined(MCF5445X) /* M54455EVB */
 
 #define PARAM_SIZE  (128*1024)
 #define FLASH_SIZE  0x00120000
 
-#else
-
-#ifdef MCF5474X /* COLDARI */
+#elif defined(MCF5474X) /* COLDARI */
 
 #define PARAM_SIZE  (64*1024)
 #define FLASH_SIZE  0x00100000
@@ -48,22 +46,21 @@
 #define PARAM_SIZE  (64*1024)
 #define FLASH_SIZE  0x00100000
 
-#endif /* MCF547X */
-
 #endif /* M5445X */
 
-#else /* ATARI -CT60 */
+#else /* ATARI - CT60 */
 
-#define PARAM_SIZE  (64*1024)
-#define FLASH_SIZE  0x00100000
+#define PARAM_SIZE	(64*1024)	/* 64 KB */
+#define FLASH_SIZE  (1024*1024)	/* 1MB */
 
 #endif /* COLDFIRE */
 
-#define FLASH_ADR   0x00E00000
-#define TESTS_SIZE  0x00020000
-#define FLASH_ADR2  0x00FC0000
-#define FLASH_SIZE2 0x00030000
+#define TOS4_SIZE	(512*1024)	/* 512 KB */
 
-#define	MAX_ERROR_LENGTH	256
+#define FLASH_ADR	0x00E00000	/* TOS area (2x512 KB) */
+#define TESTS_SIZE  (128*1024)	/* 128 KB */
+
+#define FLASH_ADR2  0x00FC0000	/* TOS 1.x area (192 KB) */
+#define FLASH_SIZE2 (192*1024)	/* 192 KB */
 
 #endif

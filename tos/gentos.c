@@ -13,22 +13,13 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#define TOS4_SIZE	(512*1024)	// 512 KB
-
-#define FLASH_ADR	0x00E00000	// TOS area (2x512 KB)
-#define FLASH_SIZE  (1024*1024)	// 1MB
-#define TESTS_SIZE  (128*1024)	// 128 KB
-#define PARAM_SIZE	(64*1024)	// 64 KB
-
-#define FLASH_ADR2  0x00FC0000	// TOS 1.x area (192 KB)
-#define FLASH_SIZE2 (192*1024)	// 192 KB
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <stdarg.h>
 #include <time.h>
 
+#include "ct60_hw.h"
 #include "endianness.h"
 
 static void showHelp( const char* sProgramName )

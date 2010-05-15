@@ -22,7 +22,7 @@
  *
  */
  
-#include "main.h"
+#include "ct60_hw.h"
 #ifdef COLDFIRE
 #include "fire.h"
 #endif

@@ -68,7 +68,7 @@
 	.globl new_ikbdvect
 	.globl new_statvec
 
-#include "main.h"
+#include "ct60_hw.h"
 #include "ct60.h"
 #include "command.h"
 #include "vars.h"

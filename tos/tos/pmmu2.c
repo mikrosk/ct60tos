@@ -18,7 +18,7 @@
  */
 
 #include <mint/osbind.h>
-#include "main.h"
+#include "ct60_hw.h"
 #include "ct60.h"
 
 #include "pci_bios.h"
