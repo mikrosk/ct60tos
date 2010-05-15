@@ -26,7 +26,7 @@ CTPCI_1GB_TOS	= ctpci1gb.bin
 
 TOS_PATCHER	= gentos
 CT60_PATCHES	= ct60_patches.bin
-CTPCI_PATCHES	= $(CT60_PATCHES)
+CTPCI_PATCHES	= ctpci_patches.bin
 CTPCI_1GB_PATCHES = ctpci_1gb_patches.bin
 TOS_VERSION_H	= version.h
 
@@ -100,3 +100,7 @@ clean:
 	rm -f $(CT60_TOS) $(CTPCI_TOS) $(CTPCI_1GB_TOS)
 	rm -f $(TOS_PATCHER) $(CT60_PATCHES) $(CTPCI_PATCHES) $(CTPCI_1GB_PATCHES) $(TOS_VERSION_H)
 	rm -f *~ $(TOS_DIR)/*~
+
+clean_pci:
+	make clean
+	make -C pci clean
