@@ -64,7 +64,7 @@ SUBOBJDIRSCF2=	\
 		$(OBJDIRCF2)/usb \
 		$(OBJDIRCF2)/bdos \
 		$(OBJDIRCF2)/freertos
-		
+
 SUBOBJDIRSCF3=	\
 		$(OBJDIRCF3)/radeon \
 		$(OBJDIRCF3)/emulator \
@@ -142,7 +142,7 @@ OBJSDRIVERFVDICF=	\
 		$(OBJDIRCF)/fvdi/common/colours.o \
 		$(OBJDIRCF)/fvdi/common/falc_pal.o \
 		$(OBJDIRCF)/gcc.o
-		
+
 OBJSDRIVERFVDICF2=	\
 		$(OBJDIRCF)/radeon/mouse.o \
 		$(OBJDIRCF)/radeon/8b_pal.o \
@@ -237,8 +237,8 @@ OBJSNETCF3=	\
 		$(OBJDIRCF3)/net/fecbd.o \
 		$(OBJDIRCF3)/net/am79c874.o \
 		$(OBJDIRCF3)/net/init.o
-		
-		
+
+
 OBJSLWIPCF=	\
 		$(OBJDIRCF)/lwip/tcp_out.o \
 		$(OBJDIRCF)/lwip/inet.o \
@@ -382,7 +382,7 @@ OBJSBUSB=
 OBJSBUSBCF=	\
 		$(OBJDIRCF)/usb_dev/msc.o \
 		$(OBJDIRCF)/usb_dev/msc_desc.o \
-		$(OBJDIRCF)/usb_dev/usb.o 
+		$(OBJDIRCF)/usb_dev/usb.o
 
 OBJSBUSBCF2=
 
@@ -391,7 +391,7 @@ OBJSBUSBCF3=
 OBJSAC97CF=	\
 		$(OBJDIRCF)/ac97/control.o \
 		$(OBJDIRCF)/ac97/ac97_codec.o \
-		$(OBJDIRCF)/ac97/mcf548x_ac97.o 
+		$(OBJDIRCF)/ac97/mcf548x_ac97.o
 
 OBJSAC97CF3=	\
 		$(OBJDIRCF)/ac97/control.o \
@@ -418,7 +418,7 @@ OBJSBDOSCF=	\
 		$(OBJDIRCF)/bdos/time.o \
 		$(OBJDIRCF)/bdos/rwa.o \
 		$(OBJDIRCF)/bdos/setjmp.o
-		
+
 OBJSBDOSCF2=	\
 		$(OBJDIRCF)/bdos/fsbuf.o \
 		$(OBJDIRCF)/bdos/fsfat.o \
@@ -671,7 +671,7 @@ coldari: $(HEXCF3) $(DRIVERFVDICF3)
 
 clean:
 	rm -rf $(OBJDIR) $(OBJDIRCF) $(OBJDIRCF2) $(OBJDIRCF3)
-	rm -f $(HEX) $(HEXCF) $(HEXCF2) $(HEXCF3) pci.map pci_cf.map pci_cf2.map pci_cf3.map $(DRIVERFVDI) $(DRIVERFVDICF) $(DRIVERFVDICF2) $(DRIVERFVDICF3) 
+	rm -f $(HEX) $(HEXCF) $(HEXCF2) $(HEXCF3) pci.map pci_cf.map pci_cf2.map pci_cf3.map $(DRIVERFVDI) $(DRIVERFVDICF) $(DRIVERFVDICF2) $(DRIVERFVDICF3)
 
 $(HEX):	$(OBJS)
 	$(LD) --oformat srec -Map pci.map --cref -T pci.lk \
@@ -985,7 +985,7 @@ $(OBJDIRCF2)/bdos//%.o:	$(SRCDIR)/bdos//%.S
 	$(CREATEOBJDIRSCF2)
 	$(CC) $(INCLUDE) $(CFLAGSCF2) -mshort -c $< -o $@
 
-$(OBJDIR)/%.o:	$(SRCDIR)%.c
+$(OBJDIR)/%.o:	$(SRCDIR)/%.c
 	$(CREATEOBJDIRS)
 	$(CC) $(INCLUDE) $(INCLUDEFVDI) $(CFLAGS) -c $< -o $@
 

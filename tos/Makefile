@@ -42,7 +42,7 @@ CTPCI_1GB_OBJS	= $(subst xbios2.o,xbios2_1gb.o,$(CTPCI_OBJS))
 # user defs
 TOS_VERSION	= 0x0104
 
-default: $(TOS_VERSION_H) $(CT60_TOS) #$(CTPCI_TOS) $(CTPCI_1GB_TOS)
+default: $(TOS_VERSION_H) $(CT60_TOS) $(CTPCI_TOS) $(CTPCI_1GB_TOS)
 
 # build rules
 $(OBJ_DIR)/%.o:	$(TOS_DIR)/%.S
@@ -69,6 +69,12 @@ $(OBJ_DIR):
 $(CT60_PATCHES): $(OBJ_DIR) $(CT60_OBJS) $(TOS_DIR)/ct60.ld
 	cd $(OBJ_DIR) && $(LD) -o ../$@ $(notdir $(CT60_OBJS)) -T ../$(TOS_DIR)/ct60.ld
 
+$(CTPCI_PATCHES): $(OBJ_DIR) $(CTPCI_OBJS) $(TOS_DIR)/ct60.ld
+	cd $(OBJ_DIR) && $(LD) -o ../$@ $(notdir $(CTPCI_OBJS)) -T ../$(TOS_DIR)/ct60.ld
+
+$(CTPCI_1GB_PATCHES): $(OBJ_DIR) $(CTPCI_1GB_OBJS) $(TOS_DIR)/ct60.ld
+	cd $(OBJ_DIR) && $(LD) -o ../$@ $(notdir $(CTPCI_1GB_OBJS)) -T ../$(TOS_DIR)/ct60.ld
+
 $(TOS_PATCHER): gentos.c lz77/lz.c
 	gcc $(HOSTCFLAGS) -o $@ gentos.c lz77/lz.c
 
@@ -76,8 +82,13 @@ $(TOS_PATCHER): gentos.c lz77/lz.c
 $(CT60_TOS): nonfree/tos404.bin nonfree/sparrow.out $(CT60_PATCHES) $(TOS_PATCHER)
 	./$(TOS_PATCHER) --tos nonfree/tos404.bin --tospatch $(CT60_PATCHES) --tests nonfree/sparrow.out --out $@
 
+ifeq ($(CROSS),yes)
 $(PCI_DIR)/pci.hex:
-	make -C pci ctpci
+	make -C pci ctpci CROSS=Y
+else
+$(PCI_DIR)/pci.hex:
+	make -C pci ctpci CROSS=N
+endif
 
 $(CTPCI_TOS): nonfree/tos404.bin nonfree/sparrow.out $(CTPCI_PATCHES) $(TOS_PATCHER) $(PCI_DIR)/pci.hex
 	./$(TOS_PATCHER) --tos nonfree/tos404.bin --tospatch $(CTPCI_PATCHES) --tests nonfree/sparrow.out --pci $(PCI_DIR)/pci.hex --out $@
