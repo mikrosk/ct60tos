@@ -1,4 +1,4 @@
-CROSS = N
+CROSS = Y
 
 CROSSBINDIR_IS_Y = m68k-atari-mint-
 CROSSBINDIR_IS_N =
@@ -9,11 +9,6 @@ CC = $(CROSSBINDIR)gcc
 LD = $(CROSSBINDIR)ld
 NM = $(CROSSBINDIR)nm
 rm = rm
-
-BINHEX_BINARY= ../binhex.ttp
-COMPRESS_BINARY= ../compress.ttp
-
-ATICOD = ../nonfree/ativcm20.cod
 
 SRCDIR = .
 INCDIR = ./include
@@ -520,7 +515,6 @@ OBJS=	\
 		$(OBJDIR)/radeon/spec_rom.o \
 		$(OBJDIR)/radeon/radeon_base_rom.o \
 		$(OBJDIR)/radeon/radeon_video.o \
-		$(OBJDIR)/radeon/radeon_theatre_dsp.o \
 		$(OBJDIR)/radeon/radeon_theatre.o \
 		$(OBJDIR)/radeon/radeon_vid.o \
 		$(OBJDIR)/dma_utils/dma_utils.o \
@@ -560,7 +554,6 @@ OBJSCF=	\
 		$(OBJDIRCF)/radeon/accel_rom.o \
 		$(OBJDIRCF)/radeon/radeon_base_rom.o \
 		$(OBJDIRCF)/radeon/radeon_video.o \
-		$(OBJDIR)/radeon/radeon_theatre_dsp.o \
 		$(OBJDIRCF)/radeon/radeon_theatre.o \
 		$(OBJDIRCF)/radeon/radeon_vid.o \
 		$(OBJDIRCF)/get.o \
@@ -641,7 +634,6 @@ OBJSCF3=	\
 		$(OBJDIRCF)/radeon/accel_rom.o \
 		$(OBJDIRCF)/radeon/radeon_base_rom.o \
 		$(OBJDIRCF)/radeon/radeon_video.o \
-		$(OBJDIR)/radeon/radeon_theatre_dsp.o \
 		$(OBJDIRCF)/radeon/radeon_theatre.o \
 		$(OBJDIRCF)/radeon/radeon_vid.o \
 		$(OBJDIRCF)/get.o \
@@ -670,6 +662,7 @@ m54455evb: $(HEXCF2) $(DRIVERFVDICF2)
 coldari: $(HEXCF3) $(DRIVERFVDICF3)
 
 clean:
+	rm -f *~
 	rm -rf $(OBJDIR) $(OBJDIRCF) $(OBJDIRCF2) $(OBJDIRCF3)
 	rm -f $(HEX) $(HEXCF) $(HEXCF2) $(HEXCF3) pci.map pci_cf.map pci_cf2.map pci_cf3.map $(DRIVERFVDI) $(DRIVERFVDICF) $(DRIVERFVDICF2) $(DRIVERFVDICF3)
 
@@ -732,6 +725,10 @@ define CREATEOBJDIRSCF3
 		fi ; \
 	done
 endef
+
+$(OBJDIR)/lz.o:	../lz77/lz.c
+	$(CREATEOBJDIRS)
+	$(CC) $(INCLUDE) $(INCLUDEFVDI) $(CFLAGS) -DONLY_UNCOMPRESS -I../lz77 -c $< -o $@
 
 #$(OBJDIR)/radeon/%.o:	$(SRCDIR)/radeon/%.c
 #	$(CREATEOBJDIRS)
@@ -804,18 +801,6 @@ $(OBJDIRCF2)/radeon/accel_rom.o:	$(SRCDIR)/radeon/accel.c
 $(OBJDIRCF3)/radeon/accel_rom.o:	$(SRCDIR)/radeon/accel.c
 	$(CREATEOBJDIRSCF3)
 	$(CC) $(INCLUDE) $(INCLUDEFVDI) $(CFLAGSCF3) -DDRIVER_IN_ROM -c $< -o $@
-
-$(OBJDIR)/radeon/radeon_theatre_dsp.o: $(ATICOD)
-	$(COMPRESS_BINARY) $(ATICOD) ./ati.bin
-	$(BINHEX_BINARY) ./ati.bin $(SRCDIR)/radeon/radeon_theatre_dsp.txt theatre_dsp
-	@rm ati.bin
-	@echo "#include \"config.h\"" > $(SRCDIR)/radeon/radeon_theatre_dsp.c
-	@echo "#ifdef RADEON_THEATRE" >> $(SRCDIR)/radeon/radeon_theatre_dsp.c
-	@cat $(SRCDIR)/radeon/radeon_theatre_dsp.txt >> $(SRCDIR)/radeon/radeon_theatre_dsp.c
-	@echo "#endif" >> $(SRCDIR)/radeon/radeon_theatre_dsp.c
-	@rm $(SRCDIR)/radeon/radeon_theatre_dsp.txt
-	$(CREATEOBJDIRS)
-	$(CC) $(INCLUDE) $(CFLAGS) -c $(SRCDIR)/radeon/radeon_theatre_dsp.c -o $@
 
 $(OBJDIR)/radeon/%.o:	$(SRCDIR)/radeon/%.c
 	$(CREATEOBJDIRS)
