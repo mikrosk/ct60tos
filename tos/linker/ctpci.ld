@@ -1,14 +1,6 @@
-/* CT60 link script, raw binary image */
+/* CT60 TOS + CTPCI link script, raw binary image */
 OUTPUT_FORMAT(binary)
-MEMORY
-{
-	/* TOS 4.04 memory area */
-	flash1 (rx) :	ORIGIN = 0x00E00000, LENGTH = 512K
-	/* Originally unused */
-	flash2 (rx) :	ORIGIN = 0x00E80000, LENGTH = 512K
-	/* TOS <1.06 memory area */
-	flash3 (rx) :	ORIGIN = 0x00FC0000, LENGTH = 192K
-}
+INCLUDE ctpci_memory.ld
 SECTIONS
 {
 	.text1 :

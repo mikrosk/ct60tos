@@ -19,19 +19,24 @@ CFLAGS		= -m68060 -Wall -O2 -fomit-frame-pointer -Iinclude -Ilz77
 # flags for host gcc
 HOSTCFLAGS	= -Wall -O2 -fomit-frame-pointer -Iinclude -Ilz77 -D$(PLATFORM)
 
+# directories
+TOP_DIR		= $(PWD)
+
+TOS_DIR		= tos
+OBJ_DIR		= obj
+LINKER_DIR	= $(TOP_DIR)/linker
+
 # main targets
 CT60_TOS	= ct60tos.bin
 CTPCI_TOS	= ctpcitos.bin
 CTPCI_1GB_TOS	= ctpci1gb.bin
 
 TOS_PATCHER	= gentos
-CT60_PATCHES	= ct60_patches.bin
-CTPCI_PATCHES	= ctpci_patches.bin
-CTPCI_1GB_PATCHES = ctpci_1gb_patches.bin
+CT60_PATCHES	= $(TOP_DIR)/ct60_patches.bin
+CTPCI_PATCHES	= $(TOP_DIR)/ctpci_patches.bin
+CTPCI_1GB_PATCHES = $(TOP_DIR)/ctpci_1gb_patches.bin
 TOS_VERSION_H	= version.h
 
-TOS_DIR		= tos
-OBJ_DIR		= obj
 include $(TOS_DIR)/SRCFILES
 # order is no longer important, it matters what's in linker script!
 CT60_OBJS	= $(patsubst %.c,,$(SRCFILES:%.S=$(OBJ_DIR)/%.o)) $(patsubst %.S,,$(SRCFILES:%.c=$(OBJ_DIR)/%.o))
@@ -66,14 +71,14 @@ $(OBJ_DIR):
 	mkdir $@
 
 # we need to enter OBJ_DIR else filename matching doesn't work correctly in link script
-$(CT60_PATCHES): $(OBJ_DIR) $(CT60_OBJS) $(TOS_DIR)/ct60.ld
-	cd $(OBJ_DIR) && $(LD) -o ../$@ $(notdir $(CT60_OBJS)) -T ../$(TOS_DIR)/ct60.ld
+$(CT60_PATCHES): $(OBJ_DIR) $(CT60_OBJS) $(LINKER_DIR)/ct60.ld
+	cd $(OBJ_DIR) && $(LD) -o $@ $(notdir $(CT60_OBJS)) -L$(LINKER_DIR) -T $(LINKER_DIR)/ct60.ld
 
-$(CTPCI_PATCHES): $(OBJ_DIR) $(CTPCI_OBJS) $(TOS_DIR)/ct60.ld
-	cd $(OBJ_DIR) && $(LD) -o ../$@ $(notdir $(CTPCI_OBJS)) -T ../$(TOS_DIR)/ct60.ld
+$(CTPCI_PATCHES): $(OBJ_DIR) $(CTPCI_OBJS) $(LINKER_DIR)/ctpci.ld
+	cd $(OBJ_DIR) && $(LD) -o $@ $(notdir $(CTPCI_OBJS)) -L$(LINKER_DIR) -T $(LINKER_DIR)/ctpci.ld
 
-$(CTPCI_1GB_PATCHES): $(OBJ_DIR) $(CTPCI_1GB_OBJS) $(TOS_DIR)/ct60.ld
-	cd $(OBJ_DIR) && $(LD) -o ../$@ $(notdir $(CTPCI_1GB_OBJS)) -T ../$(TOS_DIR)/ct60.ld
+$(CTPCI_1GB_PATCHES): $(OBJ_DIR) $(CTPCI_1GB_OBJS) $(LINKER_DIR)/ctpci.ld
+	cd $(OBJ_DIR) && $(LD) -o $@ $(notdir $(CTPCI_1GB_OBJS)) -L$(LINKER_DIR) -T $(LINKER_DIR)/ctpci.ld
 
 $(TOS_PATCHER): gentos.c lz77/lz.c
 	gcc $(HOSTCFLAGS) -o $@ gentos.c lz77/lz.c
