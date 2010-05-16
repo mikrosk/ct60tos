@@ -490,7 +490,7 @@ int LZ_CompressFast( unsigned char *in, unsigned char *out,
 *  insize  - Number of input bytes.
 *************************************************************************/
 
-void LZ_Uncompress( unsigned char *in, unsigned char *out,
+int LZ_Uncompress( unsigned char *in, unsigned char *out,
     unsigned int insize )
 {
     unsigned char marker, symbol;
@@ -499,7 +499,7 @@ void LZ_Uncompress( unsigned char *in, unsigned char *out,
     /* Do we have anything to uncompress? */
     if( insize < 1 )
     {
-        return;
+        return 0;
     }
 
     /* Get marker symbol from input stream */
@@ -541,4 +541,9 @@ void LZ_Uncompress( unsigned char *in, unsigned char *out,
         }
     }
     while( inpos < insize );
+    
+    /* !!! BEWARE THIS IS ADDED BY DIDIER, DON'T FORGET TO
+     * INCLUDE IT BY FUTURE UPDATES OF THIS FILE !!!
+     */
+    return outpos;
 }

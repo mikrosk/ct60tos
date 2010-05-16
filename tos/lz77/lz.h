@@ -45,7 +45,7 @@ int LZ_Compress( unsigned char *in, unsigned char *out,
                  unsigned int insize );
 int LZ_CompressFast( unsigned char *in, unsigned char *out,
                      unsigned int insize, unsigned int *work );
-void LZ_Uncompress( unsigned char *in, unsigned char *out,
+int LZ_Uncompress( unsigned char *in, unsigned char *out,
                     unsigned int insize );
 
 
