@@ -18,12 +18,14 @@ CFLAGS		= -m68060 -Wall -O2 -fomit-frame-pointer -Iinclude -Ilz77
 
 # flags for host gcc
 HOSTCFLAGS	= -Wall -O2 -fomit-frame-pointer -Iinclude -Ilz77 -D$(PLATFORM)
+#HOSTCFLAGS	= -Wall -g -Iinclude -Ilz77 -D$(PLATFORM)
 
 # directories
 TOP_DIR		= $(PWD)
 
 TOS_DIR		= tos
 OBJ_DIR		= obj
+PCI_DIR		= pci
 LINKER_DIR	= $(TOP_DIR)/linker
 
 # main targets
@@ -88,18 +90,18 @@ $(CT60_TOS): nonfree/tos404.bin nonfree/sparrow.out $(CT60_PATCHES) $(TOS_PATCHE
 	./$(TOS_PATCHER) --tos nonfree/tos404.bin --tospatch $(CT60_PATCHES) --tests nonfree/sparrow.out --out $@
 
 ifeq ($(CROSS),yes)
-$(PCI_DIR)/pci.hex:
+$(PCI_DIR)/pci.bin:
 	make -C pci ctpci CROSS=Y
 else
-$(PCI_DIR)/pci.hex:
+$(PCI_DIR)/pci.bin:
 	make -C pci ctpci CROSS=N
 endif
 
-$(CTPCI_TOS): nonfree/tos404.bin nonfree/sparrow.out $(CTPCI_PATCHES) $(TOS_PATCHER) $(PCI_DIR)/pci.hex
-	./$(TOS_PATCHER) --tos nonfree/tos404.bin --tospatch $(CTPCI_PATCHES) --tests nonfree/sparrow.out --pci $(PCI_DIR)/pci.hex --out $@
+$(CTPCI_TOS): nonfree/tos404.bin $(CTPCI_PATCHES) $(TOS_PATCHER) $(PCI_DIR)/pci.bin
+	./$(TOS_PATCHER) --tos nonfree/tos404.bin --tospatch $(CTPCI_PATCHES) --pci $(PCI_DIR)/pci.bin --out $@
 
-$(CTPCI_1GB_TOS): nonfree/tos404.bin nonfree/sparrow.out $(CTPCI_1GB_PATCHES) $(TOS_PATCHER) $(PCI_DIR)/pci.hex
-	./$(TOS_PATCHER) --tos nonfree/tos404.bin --tospatch $(CTPCI_1GB_PATCHES) --tests nonfree/sparrow.out --pci $(PCI_DIR)/pci.hex --out $@
+$(CTPCI_1GB_TOS): nonfree/tos404.bin $(CTPCI_1GB_PATCHES) $(TOS_PATCHER) $(PCI_DIR)/pci.bin
+	./$(TOS_PATCHER) --tos nonfree/tos404.bin --tospatch $(CTPCI_1GB_PATCHES) --pci $(PCI_DIR)/pci.bin --out $@
 clean:
 	rm -rf $(OBJ_DIR)
 	rm -f $(CT60_TOS) $(CTPCI_TOS) $(CTPCI_1GB_TOS)

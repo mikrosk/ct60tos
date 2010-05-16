@@ -21,6 +21,7 @@
 
 #include "ct60_hw.h"
 #include "endianness.h"
+#include "lz.h"
 
 static void showHelp( const char* sProgramName )
 {
@@ -28,15 +29,15 @@ static void showHelp( const char* sProgramName )
 	fprintf( stderr, "--help:     this help\n" );
 	fprintf( stderr, "--tos:      path to unmodified TOS 4.04 image\n" );
 	fprintf( stderr, "--tospatch: path to binary with TOS patches\n" );
-	fprintf( stderr, "--tests:    path to binary with tests  (optional)\n" );
-	fprintf( stderr, "--pci:      path to PCI hex file (optional)\n" );
+	fprintf( stderr, "--tests:    path to binary with tests (optional)\n" );
+	fprintf( stderr, "--pci:      path to binary with PCI image (optional)\n" );
 	fprintf( stderr, "--out:      path to final TOS image\n" );
 }
 
 static void waitAndExit( void )
 {
-	fprintf( stderr, "Press Enter to exit.\n" );
 #ifdef ATARI
+	fprintf( stderr, "Press Enter to exit.\n" );
 	getchar();
 #endif
 	exit( 1 );
@@ -64,6 +65,12 @@ static void* allocMemory( size_t size )
 	}
 
 	return p;
+}
+
+static size_t fileSize( const char* sPath )
+{
+	// TODO
+	return 0;
 }
 
 static size_t loadFile( const char* sPath, void* pBuffer, size_t bufferSize, size_t expectedSize )
@@ -109,11 +116,9 @@ static size_t saveFile( const char* sPath, const void* pBuffer, size_t bufferSiz
 	return writeBytes;
 }
 
-static size_t patchTos( unsigned char* pTos, const unsigned char* pPatches )
+static void patchTosDate( unsigned char* pTos )
 {
 	int year;
-
-	unsigned char* top = NULL;
 
 	time_t timeSec;
 	time( &timeSec );
@@ -127,8 +132,18 @@ static size_t patchTos( unsigned char* pTos, const unsigned char* pPatches )
 	pTos[26] = (unsigned char)( ( ( year / 10 ) << 4 ) + ( year % 10 ) );
 	year = ( pTime->tm_year + 1900 ) % 100;
 	pTos[27] = (unsigned char)( ( ( year / 10 ) << 4 ) + ( year % 10 ) );
+}
 
-	// patch TOS ... input buffer consists of 4-byte aligned blocks with header:
+// not very nice but comfortable ;)
+static unsigned long startAddress;
+static unsigned long endAddress;
+
+static void patchImage( unsigned char* pImage, const unsigned char* pPatches )
+{
+	startAddress	= 0xFFFFFFFF;
+	endAddress		= 0;
+
+	// patch image ... input buffer consists of 4-byte aligned blocks with header:
 	// .long target_address
 	// .long length
 	do
@@ -138,22 +153,30 @@ static size_t patchTos( unsigned char* pTos, const unsigned char* pPatches )
 		unsigned long addr;
 
 		addr = BE32( *(unsigned long*)pPatches );
-		if( addr == FLASH_ADR + TOS4_SIZE )
-		{
-			// adjust final "patch" as our index 0 begins at FLASH_ADR ...
-			addr -= FLASH_ADR;
-		}
-		p = &pTos[addr];
 		pPatches += sizeof( addr );
 
 		len = BE32( *(unsigned long*)pPatches );
 		pPatches += sizeof( len );
 
+		// check / set VMA ranges ...
+		startAddress = addr < startAddress ? addr : startAddress;
+		endAddress = ( addr + len ) > endAddress ? ( addr + len ) : endAddress;
+
+		if( addr >= FLASH_ADR2 )
+		{
+			fprintf( stderr, "Forcing compression of PCI image ...\n" );
+		}
+		if( addr >= FLASH_ADR )
+		{
+			// our index 0 begins at FLASH_ADR ...
+			addr -= FLASH_ADR;
+		}
+
+		p = &pImage[addr];
+
 		memcpy( p, pPatches, len );
 		p += len;
 		pPatches += len;
-
-		top = p > top ? p : top;
 
 		if( (unsigned long)pPatches & 3 )
 		{
@@ -161,11 +184,9 @@ static size_t patchTos( unsigned char* pTos, const unsigned char* pPatches )
 		}
 	}
 	while( *(unsigned long*)pPatches != 0xffffffff );
-
-	return top - pTos;
 }
 
-static void createChecksum( unsigned char* pBuffer )
+static void createTosChecksum( unsigned char* pBuffer )
 {
 	unsigned short crc;
 	unsigned short crc2;
@@ -308,35 +329,123 @@ int main( int argc, char* argv[] )
 	pBufferPatches = allocMemory( FLASH_SIZE - PARAM_SIZE );
 	loadFile( sPathTosPatches, pBufferPatches, FLASH_SIZE - PARAM_SIZE, -1 );	// TODO: check if patches file size <= FLASH_SIZE - PARAM_SIZE
 
-	flashSize = patchTos( pBufferFlash, pBufferPatches );
-	flashSize = TOS4_SIZE > flashSize ? TOS4_SIZE : flashSize;	// in case we patch only some small portions of original TOS
+	patchTosDate( pBufferFlash );
+	patchImage( pBufferFlash, pBufferPatches );
 
-	createChecksum( pBufferFlash );
+	flashSize = endAddress - FLASH_ADR;	// file size = 0 ... end address-1
+	flashSize = TOS4_SIZE > flashSize ? TOS4_SIZE : flashSize;	// in case we patch only some small portions of original TOS
+	if( flashSize >= FLASH_SIZE - PARAM_SIZE )
+	{
+		showError( "CT60 TOS loads too high in flash memory." );
+	}
+
+	createTosChecksum( pBufferFlash );
 
 	if( sPathTests != NULL )
 	{
-		if( flashSize > FLASH_SIZE - PARAM_SIZE - TESTS_SIZE )
+		if( sPathPci != NULL )
+		{
+			showError( "Tests image can't be used with PCI!" );
+		}
+		else if( flashSize >= FLASH_SIZE - PARAM_SIZE - TESTS_SIZE )
 		{
 			showError( "TOS with patches takes 0x%x bytes, no space for tests, missing %d bytes", flashSize, flashSize -( FLASH_SIZE - PARAM_SIZE - TESTS_SIZE ) );
 		}
 		else
 		{
-			// patched TOS image (TOS4_SIZE bytes)                        + FLASH_ADR
-			// new code (flashSize - TOS4_SIZE bytes)                     |
-			// (possible empty space)                                     |
-			// tests (max TESTS_SIZE bytes)                                |
-			// params (PARAM_SIZE bytes)                                  v FLASH_ADR + FLASH_SIZE
+			// patched TOS image             + FLASH_ADR
+			// new code                      | [+TOS4_SIZE]
+			// (possible empty space)        | [+flashSize - TOS4_SIZE]
+			// tests (max TESTS_SIZE bytes)  |
+			// params                        | [+TESTS_SIZE]
+			// end of flash                  + [+PARAM_SIZE]
+
 			size_t testsSize;
 
-			testsSize = loadFile( sPathTests, pBufferFlash + ( FLASH_SIZE - PARAM_SIZE - TESTS_SIZE ), TESTS_SIZE, -1 );	// TODO: check if tests file size <= TESTS_SIZE
-			saveFile( sPathOut, pBufferFlash, FLASH_SIZE - PARAM_SIZE - TESTS_SIZE + testsSize );
+			testsSize = loadFile( sPathTests, &pBufferFlash[FLASH_SIZE-PARAM_SIZE-TESTS_SIZE], TESTS_SIZE, -1 );	// TODO: check if tests file size <= TESTS_SIZE
+			// use testsSize instead of TESTS_SIZE because testsSize <= TESTS_SIZE
+			flashSize = FLASH_SIZE - PARAM_SIZE - TESTS_SIZE + testsSize;
 		}
 	}
-	else
+
+	if( sPathPci != NULL )
 	{
-		printf( "TOS with patches takes 0x%x bytes.\n", flashSize );
-		saveFile( sPathOut, pBufferFlash, flashSize );
+		unsigned char*  pTemp;
+		unsigned char*  pBufferPci;
+		size_t pciSize;
+
+		pTemp = allocMemory( FLASH_SIZE + FLASH_SIZE2 );
+		loadFile( sPathPci, pTemp, FLASH_SIZE + FLASH_SIZE2, -1 );	// TODO: guess what ;)
+
+		/*
+		 * Allocate buffer big enough to hold also 2nd flash area. We can't
+		 * use directly pBufferFlash because if something should go into
+		 * 2nd flash area, whole PCI image has to be compressed first.
+		 */
+		pBufferPci = allocMemory( FLASH_ADR2+FLASH_SIZE2 - FLASH_ADR );
+		memset( pBufferPci, 0xff, FLASH_ADR2+FLASH_SIZE2 - FLASH_ADR );
+
+		// [0x000000] => 0x00E00000 (FLASH_ADR)
+		// [0x0C0000] => 0x00EC0000 (PCI base)
+		// [0x100000] => 0x00F00000 (FLASH_ADR + FLASH_SIZE)
+		// [0x1C0000] => 0x00FC0000 (FLASH_ADR2)
+		// [0x1F0000] => 0x00FF0000 (FLASH_ADR2 + FLASH_SIZE2)
+		patchImage( pBufferPci, pTemp );
+
+		free( pTemp );
+		pTemp = NULL;
+
+		// this isn't 100% correct check but ld script takes care about overflows etc
+		if( endAddress >= FLASH_ADR2 )
+		{
+			// copy 2nd flash area just after 1st area (for making continuous image)
+			memcpy( &pBufferPci[FLASH_SIZE], &pBufferPci[FLASH_ADR2-FLASH_ADR], endAddress - FLASH_ADR2  );
+			pciSize = ( FLASH_ADR+FLASH_SIZE - startAddress ) + ( endAddress - FLASH_ADR2 );
+
+			pTemp = allocMemory( ( pciSize + 65536 ) * sizeof( unsigned int ) );
+			// WARNING: output buffer might be overwritten past the pciSize!
+			fprintf( stderr, "Compressing PCI image (%d bytes) ... ", pciSize );
+			pciSize = LZ_CompressFast(
+				&pBufferPci[startAddress-FLASH_ADR],		// in
+				&pBufferFlash[startAddress-FLASH_ADR+8],	// out
+				pciSize,									// in size
+				(unsigned int*)pTemp );						// work buffer
+			fprintf( stderr, "done (%d bytes).\n", pciSize );
+
+			if( startAddress + pciSize + 8 >= FLASH_ADR + FLASH_SIZE - PARAM_SIZE )
+			{
+				showError( "Compressed PCI image loads too high in flash memory." );
+			}
+
+			free( pTemp );
+			pTemp = NULL;
+
+			pTemp = &pBufferFlash[startAddress-FLASH_ADR];
+			pTemp[0] = '_';
+			pTemp[1] = 'L';
+			pTemp[2] = 'Z';
+			pTemp[3] = '_';
+			*(unsigned long*)&pTemp[4] = BE32( pciSize );
+
+			// 0 ... startAddress is CT60 TOS (with some gap)
+			flashSize = ( startAddress - FLASH_ADR ) + pciSize;
+		}
+		else
+		{
+			if( endAddress >= FLASH_ADR - PARAM_SIZE )
+			{
+				showError( "PCI image loads too high in flash memory, try with --compress-pci" );
+			}
+
+			pciSize = endAddress - startAddress;
+			memcpy( &pBufferFlash[startAddress - FLASH_ADR], pBufferPci, pciSize );
+
+			flashSize = endAddress - FLASH_ADR;
+		}
+
 	}
+
+	saveFile( sPathOut, pBufferFlash, flashSize );
 
 	return 0;
 }

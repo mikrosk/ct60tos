@@ -6,14 +6,14 @@ SECTIONS
 	.text1 :
 	{
 		/*
-		 * Each patch contain headers with start addresses and
-		 * lengths to avoid typing tens of sections and problems
-		 * with section align. We include 'text' sections but
-		 * this is only safety check, those files shouldn't
-		 * contain any 'data' and 'bss' sections.
-		 * Please note placement into 'flash1' is just cosmetic
-		 * thing, none of following files depends on it.
-		 */
+		* Each patch contain headers with start addresses and
+		* lengths to avoid typing tens of sections and problems
+		* with section align. We include 'text' sections but
+		* this is only safety check, those files shouldn't
+		* contain any 'data' and 'bss' sections.
+		* Please note placement into 'flash1' is just cosmetic
+		* thing, none of following files depends on it.
+		*/
 		pmmu.o( .text )
 		cookies.o( .text )
 		dsp.o( .text )
@@ -30,32 +30,24 @@ SECTIONS
 		vectors.o( .text )
 		videl.o( .text )
 		debug.o( .text )
+		/* Final "patch" header */
+		LONG( ADDR( .text2 ) )
+		LONG( SIZEOF( .text2 ) )
 	} > flash1
 	end_of_text1 = .;
 
-	/* End of text1 is aligned on 4-byte boundary. */
 	.text2 :
 	AT( end_of_text1 )
 	{
-		/*
-		* Final "patch" header, put start address and length here,
-		* even when the size is probably bigger than necessary
-		* due to 4-byte align...
-		*/
-		LONG( ADDR( .text3 ) )
-		/* omit last 0xFFFFFFFF */
-		LONG( SIZEOF( .text3 ) - 4 )
-	} > flash1
-	end_of_text2 = .;
-
-	/* End of text2 therefore continues without any padding. */
-	.text3 :
-	AT( end_of_text2 )
-	{
 		version.o( .text )
-		*( .text )
-		LONG( 0xFFFFFFFF )
+		*( .text )	/* remaining files */
 		_etext = .;
 		__etext = .;
+	} > flash2
+
+	.text3 :
+	{
+		/* end flag */
+		LONG( 0xFFFFFFFF )
 	} > flash2
 }
