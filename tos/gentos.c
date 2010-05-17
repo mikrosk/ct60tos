@@ -69,8 +69,19 @@ static void* allocMemory( size_t size )
 
 static size_t fileSize( const char* sPath )
 {
-	// TODO
-	return 0;
+	size_t	size = 0;
+	FILE*	pFs;
+
+	pFs = fopen( sPath, "rb" );
+	if( pFs != NULL )
+	{
+		fseek( pFs, 0, SEEK_END );
+		size = ftell( pFs );
+
+		fclose( pFs );
+	}
+
+	return size;
 }
 
 static size_t loadFile( const char* sPath, void* pBuffer, size_t bufferSize, size_t expectedSize )
@@ -326,8 +337,12 @@ int main( int argc, char* argv[] )
 		showError( "File '%s' is not a valid TOS 4.04 image!", sPathTos );
 	}
 
+	if( fileSize( sPathTosPatches ) > FLASH_SIZE - PARAM_SIZE )
+	{
+		showError( "File '%s' is too big.", sPathTosPatches );
+	}
 	pBufferPatches = allocMemory( FLASH_SIZE - PARAM_SIZE );
-	loadFile( sPathTosPatches, pBufferPatches, FLASH_SIZE - PARAM_SIZE, -1 );	// TODO: check if patches file size <= FLASH_SIZE - PARAM_SIZE
+	loadFile( sPathTosPatches, pBufferPatches, FLASH_SIZE - PARAM_SIZE, -1 );
 
 	patchTosDate( pBufferFlash );
 	patchImage( pBufferFlash, pBufferPatches );
@@ -349,7 +364,8 @@ int main( int argc, char* argv[] )
 		}
 		else if( flashSize >= FLASH_SIZE - PARAM_SIZE - TESTS_SIZE )
 		{
-			showError( "TOS with patches takes 0x%x bytes, no space for tests, missing %d bytes", flashSize, flashSize -( FLASH_SIZE - PARAM_SIZE - TESTS_SIZE ) );
+			showError( "TOS with patches takes 0x%x bytes, no space for tests, missing %d bytes",
+					   flashSize, flashSize -( FLASH_SIZE - PARAM_SIZE - TESTS_SIZE ) );
 		}
 		else
 		{
@@ -362,7 +378,11 @@ int main( int argc, char* argv[] )
 
 			size_t testsSize;
 
-			testsSize = loadFile( sPathTests, &pBufferFlash[FLASH_SIZE-PARAM_SIZE-TESTS_SIZE], TESTS_SIZE, -1 );	// TODO: check if tests file size <= TESTS_SIZE
+			if( fileSize( sPathTests ) > TESTS_SIZE )
+			{
+				showError( "File '%s' is too big.", sPathTosPatches );
+			}
+			testsSize = loadFile( sPathTests, &pBufferFlash[FLASH_SIZE-PARAM_SIZE-TESTS_SIZE], TESTS_SIZE, -1 );
 			// use testsSize instead of TESTS_SIZE because testsSize <= TESTS_SIZE
 			flashSize = FLASH_SIZE - PARAM_SIZE - TESTS_SIZE + testsSize;
 		}
@@ -374,8 +394,12 @@ int main( int argc, char* argv[] )
 		unsigned char*  pBufferPci;
 		size_t pciSize;
 
+		if( fileSize( sPathPci ) > FLASH_SIZE + FLASH_SIZE2 )
+		{
+			showError( "File '%s' is too big.", sPathTosPatches );
+		}
 		pTemp = allocMemory( FLASH_SIZE + FLASH_SIZE2 );
-		loadFile( sPathPci, pTemp, FLASH_SIZE + FLASH_SIZE2, -1 );	// TODO: guess what ;)
+		loadFile( sPathPci, pTemp, FLASH_SIZE + FLASH_SIZE2, -1 );
 
 		/*
 		 * Allocate buffer big enough to hold also 2nd flash area. We can't

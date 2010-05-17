@@ -43,15 +43,31 @@ include $(TOS_DIR)/SRCFILES
 # order is no longer important, it matters what's in linker script!
 CT60_OBJS	= $(patsubst %.c,,$(SRCFILES:%.S=$(OBJ_DIR)/%.o)) $(patsubst %.S,,$(SRCFILES:%.c=$(OBJ_DIR)/%.o))
 CTPCI_OBJS	= $(CT60_OBJS)
+CTPCI_1GB_OBJS	= $(CTPCI_OBJS)
 # we can do this since linker script uses '*' notation ...
-CTPCI_1GB_OBJS	= $(subst xbios2.o,xbios2_1gb.o,$(CTPCI_OBJS))
+CTPCI_1GB_OBJS	:= $(subst pmmu2.o,pmmu2_1gb.o,$(CTPCI_1GB_OBJS))
+CTPCI_1GB_OBJS	:= $(subst sdram.o,sdram_1gb.o,$(CTPCI_1GB_OBJS))
+CTPCI_1GB_OBJS	:= $(subst xbios2.o,xbios2_1gb.o,$(CTPCI_1GB_OBJS))
 
 # user defs
 TOS_VERSION	= 0x0104
 
 default: $(TOS_VERSION_H) $(CT60_TOS) $(CTPCI_TOS) $(CTPCI_1GB_TOS)
 
-# build rules
+# '#include' dependencies
+$(OBJ_DIR)/bios2.o: $(TOS_DIR)/bios2.S $(TOS_DIR)/conout.S
+	$(CC) $(ASFLAGS) -o $@ -c $<
+
+$(OBJ_DIR)/vectors2.o: $(TOS_DIR)/vectors2.S nonfree/isp.S nonfree/fpsp.S
+	$(CC) $(ASFLAGS) -o $@ -c $<
+
+$(OBJ_DIR)/videl2.o: $(TOS_DIR)/videl2.S $(TOS_DIR)/pic_boot.S
+	$(CC) $(ASFLAGS) -o $@ -c $<
+
+$(OBJ_DIR)/xbios2.o: $(TOS_DIR)/xbios2.S $(TOS_DIR)/pci_bios.S
+	$(CC) $(ASFLAGS) -o $@ -c $<
+
+# common build rules
 $(OBJ_DIR)/%.o:	$(TOS_DIR)/%.S
 	$(CC) $(ASFLAGS) -o $@ -c $<
 
@@ -61,7 +77,14 @@ $(OBJ_DIR)/%.o:	$(TOS_DIR)/%.c
 $(OBJ_DIR)/lz.o: lz77/lz.c
 	$(CC) $(CFLAGS) -DONLY_UNCOMPRESS -o $@ -c $<
 
-$(OBJ_DIR)/xbios2_1gb.o: $(TOS_DIR)/xbios2.S
+# CTPCI 1GB rules
+$(OBJ_DIR)/pmmu2_1gb.o: $(TOS_DIR)/pmmu2.c
+	$(CC) $(CFLAGS) -DCTPCI_1GB -o $@ -c $<
+
+$(OBJ_DIR)/sdram_1gb.o: $(TOS_DIR)/sdram.S
+	$(CC) $(ASFLAGS) -DCTPCI_1GB -o $@ -c $<
+
+$(OBJ_DIR)/xbios2_1gb.o: $(TOS_DIR)/xbios2.S $(TOS_DIR)/pci_bios.S
 	$(CC) $(ASFLAGS) -DCTPCI_1GB -o $@ -c $<
 
 # helper rules
