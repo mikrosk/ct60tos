@@ -77,7 +77,9 @@ $(OBJ_DIR)/%.o:	$(TOS_DIR)/%.c
 $(OBJ_DIR)/lz.o: lz77/lz.c
 	$(CC) $(CFLAGS) -DONLY_UNCOMPRESS -o $@ -c $<
 
-# CTPCI 1GB rules
+# CTPCI 1GB rules ... unfortunately, not working :( Crash occurs at:
+# PC:   0x00e82962 (inside xbios2_1gb.o)
+# addr: 0x80000000 (most probably has something to do with that PCI_* values changed by CTPCI_1GB)
 $(OBJ_DIR)/pmmu2_1gb.o: $(TOS_DIR)/pmmu2.c
 	$(CC) $(CFLAGS) -DCTPCI_1GB -o $@ -c $<
 
