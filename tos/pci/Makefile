@@ -18,8 +18,8 @@ SUBOBJDIRS=	\
 
 INCLUDE = -I$(INCDIR)
 INCLUDEFVDI = -I$(INCDIRFVDI)
-CFLAGS = -m68060 -Os -fno-builtin -fomit-frame-pointer -Wall -Wno-multichar -g
-LDFLAGS = -nostdlib --entry _init -s
+CFLAGS = -m68060 -Os -fno-builtin -fomit-frame-pointer -Wall -Wno-multichar
+LDFLAGS = -nostdlib
 
 OBJSDRIVERFVDI=	\
 		$(OBJDIR)/radeon/mouse.o \
@@ -83,10 +83,8 @@ OBJS=	\
 		$(OBJDIR)/radeon/spec_rom.o \
 		$(OBJDIR)/radeon/radeon_base_rom.o \
 		$(OBJDIR)/radeon/radeon_video.o \
-		$(OBJDIR)/radeon/radeon_theatre.o \
 		$(OBJDIR)/radeon/radeon_vid.o \
 		$(OBJDIR)/dma_utils/dma_utils.o \
-		$(OBJDIR)/lz.o \
 		$(OBJSDRIVERFVDI)
 
 HEX = pci.bin
@@ -97,25 +95,17 @@ all: $(HEX) $(DRIVERFVDI)
 ctpci: $(HEX) $(DRIVERFVDI)
 
 clean:
-	rm -f *~
-	rm -rf $(OBJDIR) $(OBJDIRCF) $(OBJDIRCF2) $(OBJDIRCF3)
-	rm -f $(HEX) $(HEXCF) $(HEXCF2) $(HEXCF3) pci.map pci_cf.map pci_cf2.map pci_cf3.map $(DRIVERFVDI) $(DRIVERFVDICF) $(DRIVERFVDICF2) $(DRIVERFVDICF3)
+	rm -f *~ */*~
+	rm -f *.o $(OBJDIR)/*.o $(OBJDIR)/*/*.o $(OBJDIR)/*/*/*.o
+	rm -f $(HEX) $(DRIVERFVDI) $(DRIVERFVDICF)
 
 $(HEX):	$(OBJS)
-	$(LD) -Map pci.map -L../linker -T pci.ld -o $(HEX) $(OBJS)
+	$(LD) -L../linker -T pci.ld -o $(HEX) $(OBJS)  -Map=mapa
 
 $(DRIVERFVDI): $(OBJDIR)/radeon/spec.o $(OBJDIR)/radeon/accel.o $(OBJDIR)/radeon/radeon_base.o $(OBJSDRIVERFVDI)
 	$(LD) $(LDFLAGS) -o $(DRIVERFVDI) $(OBJDIR)/radeon/spec.o $(OBJDIR)/radeon/accel.o $(OBJDIR)/radeon/radeon_base.o $(OBJSDRIVERFVDI)
 
-$(OBJDIR)/lz.o:	../lz77/lz.c
-	$(CREATEOBJDIRS)
-	$(CC) $(INCLUDE) $(INCLUDEFVDI) $(CFLAGS) -DONLY_UNCOMPRESS -I../lz77 -c $< -o $@
-
 $(OBJDIR)/radeon/radeon_base_rom.o:	$(SRCDIR)/radeon/radeon_base.c
-	$(CREATEOBJDIRS)
-	$(CC) $(INCLUDE) $(INCLUDEFVDI) $(CFLAGS) -DDRIVER_IN_ROM -c $< -o $@
-
-$(OBJDIR)/radeon/radeon_accel_rom.o:	$(SRCDIR)/radeon/radeon_accel.c
 	$(CREATEOBJDIRS)
 	$(CC) $(INCLUDE) $(INCLUDEFVDI) $(CFLAGS) -DDRIVER_IN_ROM -c $< -o $@
 
