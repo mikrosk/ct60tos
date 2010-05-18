@@ -1,16 +1,6 @@
-CROSS		= yes
+TOP_DIR		= $(PWD)
 
-ifeq ($(CROSS),yes)
-CROSS_PREFIX	= m68k-atari-mint-
-PLATFORM	= LINUX
-else
-CROSS_PREFIX	=
-PLATFORM	= ATARI
-endif
-
-CC		= $(CROSS_PREFIX)gcc
-LD		= $(CROSS_PREFIX)ld
-STRIP		= $(CROSS_PREFIX)strip
+include $(TOP_DIR)/CONFIGVARS
 
 # flags for CT60 TOS compilation (m68k)
 ASFLAGS		= -m68060 -Iinclude -I.
@@ -21,8 +11,6 @@ HOSTCFLAGS	= -Wall -O2 -fomit-frame-pointer -Iinclude -Ilz77 -D$(PLATFORM)
 #HOSTCFLAGS	= -Wall -g -Iinclude -Ilz77 -D$(PLATFORM)
 
 # directories
-TOP_DIR		= $(PWD)
-
 TOS_DIR		= tos
 OBJ_DIR		= obj
 PCI_DIR		= pci
@@ -117,13 +105,8 @@ $(TOS_PATCHER): gentos.c lz77/lz.c
 $(CT60_TOS): nonfree/tos404.bin nonfree/sparrow.out $(CT60_PATCHES) $(TOS_PATCHER)
 	./$(TOS_PATCHER) --tos nonfree/tos404.bin --tospatch $(CT60_PATCHES) --tests nonfree/sparrow.out --out $@
 
-ifeq ($(CROSS),yes)
 $(PCI_DIR)/pci.bin:
-	make -C pci ctpci CROSS=Y
-else
-$(PCI_DIR)/pci.bin:
-	make -C pci ctpci CROSS=N
-endif
+	make -C pci ctpci CROSS=$(CROSS)
 
 $(CTPCI_TOS): nonfree/tos404.bin $(CTPCI_PATCHES) $(TOS_PATCHER) $(PCI_DIR)/pci.bin
 	./$(TOS_PATCHER) --tos nonfree/tos404.bin --tospatch $(CTPCI_PATCHES) --pci $(PCI_DIR)/pci.bin --out $@

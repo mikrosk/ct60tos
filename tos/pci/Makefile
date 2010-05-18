@@ -1,14 +1,6 @@
-CROSS = Y
+TOP_DIR		= ..
 
-CROSSBINDIR_IS_Y = m68k-atari-mint-
-CROSSBINDIR_IS_N =
-
-CROSSBINDIR = $(CROSSBINDIR_IS_$(CROSS))
-
-CC = $(CROSSBINDIR)gcc
-LD = $(CROSSBINDIR)ld
-NM = $(CROSSBINDIR)nm
-rm = rm
+include $(TOP_DIR)/CONFIGVARS
 
 SRCDIR = .
 INCDIR = ./include
