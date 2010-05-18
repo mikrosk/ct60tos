@@ -88,7 +88,7 @@ $(OBJ_DIR)/sdram_1gb.o: $(TOS_DIR)/sdram.S
 	$(CC) $(ASFLAGS) -DCTPCI_1GB -o $@ -c $<
 
 $(OBJ_DIR)/xbios2_1gb.o: $(TOS_DIR)/xbios2.S $(TOS_DIR)/pci_bios.S
-       $(CC) $(ASFLAGS) -DCTPCI_1GB -o $@ -c $<
+	$(CC) $(ASFLAGS) -DCTPCI_1GB -o $@ -c $<
 
 # setup, run just once
 .PHONY: setup
