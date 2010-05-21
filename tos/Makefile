@@ -80,13 +80,18 @@ $(OBJ_DIR)/xbios2_1gb.o: $(TOS_DIR)/xbios2.S $(TOS_DIR)/pci_bios.S
 
 # setup, run just once
 .PHONY: setup
-setup: $(TOS_VERSION_H) $(OBJ_DIR)
+setup: check_ld $(TOS_VERSION_H) $(OBJ_DIR)
 
 $(OBJ_DIR):
 	mkdir $@
 
 $(TOS_VERSION_H): $(subst $(TOS_DIR)/lz.c,lz77/lz.c,$(SRCS))
 	./gen_version.sh $(TOS_VERSION) $@
+
+# we need this check because ld scripts wont be processed correctly
+.PHONY: check_ld	
+check_ld:
+	@$(LD) -v | grep -q "2.20" || ( echo "Your binutils are too old!" && false )
 
 # we need to enter OBJ_DIR else filename matching doesn't work correctly in link script
 $(CT60_PATCHES): $(TOS_VERSION_H) $(CT60_OBJS) $(LINKER_DIR)/ct60.ld

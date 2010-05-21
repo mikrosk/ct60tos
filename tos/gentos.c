@@ -34,15 +34,6 @@ static void showHelp( const char* sProgramName )
 	fprintf( stderr, "--out:      path to final TOS image\n" );
 }
 
-static void waitAndExit( void )
-{
-#ifdef ATARI
-	fprintf( stderr, "Press Enter to exit.\n" );
-	getchar();
-#endif
-	exit( 1 );
-}
-
 static void showError( const char* fmt, ... )
 {
 	va_list argptr;
@@ -53,7 +44,7 @@ static void showError( const char* fmt, ... )
 	fprintf( stderr, "\n" );
 	va_end( argptr );
 
-	waitAndExit();
+	exit( 1 );
 }
 
 static void* allocMemory( size_t size )
@@ -130,10 +121,11 @@ static size_t saveFile( const char* sPath, const void* pBuffer, size_t bufferSiz
 static void patchTosDate( unsigned char* pTos )
 {
 	int year;
-
 	time_t timeSec;
+	struct tm* pTime;
+	
 	time( &timeSec );
-	struct tm* pTime = localtime( &timeSec );
+	pTime = localtime( &timeSec );
 
 	// write new TOS date ...
 	pTos[24] = (unsigned char)( ( ( pTime->tm_mon / 10 ) << 4 ) + ( pTime->tm_mon % 10 ) );
@@ -168,7 +160,7 @@ static void patchImage( unsigned char* pImage, const unsigned char* pPatches )
 
 		len = BE32( *(unsigned long*)pPatches );
 		pPatches += sizeof( len );
-
+		
 		// check / set VMA ranges ...
 		startAddress = addr < startAddress ? addr : startAddress;
 		endAddress = ( addr + len ) > endAddress ? ( addr + len ) : endAddress;
@@ -309,7 +301,8 @@ int main( int argc, char* argv[] )
 		else
 		{
 			showHelp( argv[0] );
-			waitAndExit();
+			getchar();
+			exit( 1 );
 		}
 	}
 
@@ -428,13 +421,13 @@ int main( int argc, char* argv[] )
 
 			pTemp = allocMemory( ( pciSize + 65536 ) * sizeof( unsigned int ) );
 			// WARNING: output buffer might be overwritten past the pciSize!
-			fprintf( stderr, "Compressing PCI image (%d bytes) ... ", pciSize );
+			fprintf( stderr, "Compressing PCI image (%ld bytes) ... ", pciSize );
 			pciSize = LZ_CompressFast(
 				&pBufferPci[startAddress-FLASH_ADR],		// in
 				&pBufferFlash[startAddress-FLASH_ADR+8],	// out
 				pciSize,									// in size
 				(unsigned int*)pTemp );						// work buffer
-			fprintf( stderr, "done (%d bytes).\n", pciSize );
+			fprintf( stderr, "done (%ld bytes).\n", pciSize );
 
 			if( startAddress + pciSize + 8 >= FLASH_ADR + FLASH_SIZE - PARAM_SIZE )
 			{
