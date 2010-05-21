@@ -91,7 +91,8 @@ $(TOS_VERSION_H): $(subst $(TOS_DIR)/lz.c,lz77/lz.c,$(SRCS))
 # we need this check because ld scripts wont be processed correctly
 .PHONY: check_ld	
 check_ld:
-	@$(LD) -v | grep -q "2.20" || ( echo "Your binutils are too old!" && false )
+	@$(LD) -v > /dev/null || ( echo "$(LD) not found!"; false )
+	@$(LD) -v | grep -v -q "2.13" || ( echo "Your binutils are too old!"; false )
 
 # we need to enter OBJ_DIR else filename matching doesn't work correctly in link script
 $(CT60_PATCHES): $(TOS_VERSION_H) $(CT60_OBJS) $(LINKER_DIR)/ct60.ld
