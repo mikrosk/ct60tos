@@ -7,8 +7,8 @@ ASFLAGS		= -m68060 -Iinclude -I.
 CFLAGS		= -m68060 -Wall -O2 -fomit-frame-pointer -Iinclude -Ilz77
 
 # flags for host gcc
-HOSTCFLAGS	= -Wall -O2 -fomit-frame-pointer -Iinclude -Ilz77 -D$(PLATFORM)
-#HOSTCFLAGS	= -Wall -g -Iinclude -Ilz77 -D$(PLATFORM)
+#HOSTCFLAGS	= -Wall -O2 -fomit-frame-pointer -Iinclude -Ilz77 -D$(PLATFORM)
+HOSTCFLAGS	= -Wall -g -Iinclude -Ilz77 -D$(PLATFORM)
 
 # directories
 TOS_DIR		= tos
