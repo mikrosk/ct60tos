@@ -97,54 +97,43 @@ ctpci: $(HEX) $(DRIVERFVDI)
 clean:
 	rm -f *~ */*~
 	rm -f *.o $(OBJDIR)/*.o $(OBJDIR)/*/*.o $(OBJDIR)/*/*/*.o
-	rm -f $(HEX) $(DRIVERFVDI) $(DRIVERFVDICF)
+	rm -f $(HEX) $(DRIVERFVDI)
 
 $(HEX):	$(OBJS)
-	$(LD) -L../linker -T pci.ld -o $(HEX) $(OBJS)  -Map=mapa
+	$(LD) -L../linker -T pci.ld -o $(HEX) $(OBJS)
 
 $(DRIVERFVDI): $(OBJDIR)/radeon/spec.o $(OBJDIR)/radeon/accel.o $(OBJDIR)/radeon/radeon_base.o $(OBJSDRIVERFVDI)
 	$(LD) $(LDFLAGS) -o $(DRIVERFVDI) $(OBJDIR)/radeon/spec.o $(OBJDIR)/radeon/accel.o $(OBJDIR)/radeon/radeon_base.o $(OBJSDRIVERFVDI)
 
 $(OBJDIR)/radeon/radeon_base_rom.o:	$(SRCDIR)/radeon/radeon_base.c
-	$(CREATEOBJDIRS)
 	$(CC) $(INCLUDE) $(INCLUDEFVDI) $(CFLAGS) -DDRIVER_IN_ROM -c $< -o $@
 
 $(OBJDIR)/radeon/spec_rom.o:	$(SRCDIR)/radeon/spec.c
-	$(CREATEOBJDIRS)
 	$(CC) $(INCLUDE) $(INCLUDEFVDI) $(CFLAGS) -DDRIVER_IN_ROM -c $< -o $@
 
 $(OBJDIR)/radeon/accel_rom.o:	$(SRCDIR)/radeon/accel.c
-	$(CREATEOBJDIRS)
 	$(CC) $(INCLUDE) $(INCLUDEFVDI) $(CFLAGS) -DDRIVER_IN_ROM -c $< -o $@
 
 $(OBJDIR)/radeon/%.o:	$(SRCDIR)/radeon/%.c
-	$(CREATEOBJDIRS)
 	$(CC) $(INCLUDE) $(INCLUDEFVDI) $(CFLAGS) -c $< -o $@
 
 $(OBJDIR)/radeon/%.o:	$(SRCDIR)/radeon/%.S
-	$(CREATEOBJDIRS)
 	$(CC) $(INCLUDE) $(INCLUDEFVDI) $(CFLAGS) -c $< -o $@
 
 $(OBJDIR)/fvdi/common/%.o:	$(SRCDIR)/fvdi/common/%.c
-	$(CREATEOBJDIRS)
 	$(CC) $(INCLUDE) $(INCLUDEFVDI) $(CFLAGS) -c $< -o $@
 
 $(OBJDIR)/fvdi/common/%.o:	$(SRCDIR)/fvdi/common/%.S
-	$(CREATEOBJDIRS)
 	$(CC) $(INCLUDE) $(INCLUDEFVDI) $(CFLAGS) -c $< -o $@
 
 $(OBJDIR)/fvdi/%.o:	$(SRCDIR)/fvdi/%.c
-	$(CREATEOBJDIRS)
 	$(CC) $(INCLUDE) $(INCLUDEFVDI) $(CFLAGS) -c $< -o $@
 
 $(OBJDIR)/fvdi/%.o:	$(SRCDIR)/fvdi/%.S
-	$(CREATEOBJDIRS)
 	$(CC) $(INCLUDE) $(INCLUDEFVDI) $(CFLAGS) -c $< -o $@
 
 $(OBJDIR)/%.o:	$(SRCDIR)/%.c
-	$(CREATEOBJDIRS)
 	$(CC) $(INCLUDE) $(INCLUDEFVDI) $(CFLAGS) -c $< -o $@
 
 $(OBJDIR)/%.o:	$(SRCDIR)/%.S
-	$(CREATEOBJDIRS)
 	$(CC) $(INCLUDE) $(INCLUDEFVDI) $(CFLAGS) -c $< -o $@
