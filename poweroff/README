@@ -1,0 +1,24 @@
+			CT60 Power off
+
+
+0 Disclaimer
+------------
+
+Use at your own risks.
+
+It will shutdown the machine as soon as the program is run.
+
+If you run MiNT, power off won't be done, use proper MiNT shutdown program for
+that.
+
+
+1 Dependencies
+--------------
+
+- Gcc and binutils
+- Mintlib development package.
+
+
+-- 
+Patrice Mandin <patmandin@gmail.com>
+Web: http://pmandin.atari.org/
