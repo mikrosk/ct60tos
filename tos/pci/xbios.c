@@ -894,6 +894,7 @@ short vsetscreen(long logaddr, long physaddr, long rez, long modecode, long init
 	{
 #ifndef TEST_NOPCI
 		case 0x564E: /* 'VN' (Vsetscreen New) */
+		case 0x4D49:	/* MI_MAGIC */
 			switch((short)modecode)
 			{
 				case CMD_GETMODE:
@@ -919,7 +920,7 @@ short vsetscreen(long logaddr, long physaddr, long rez, long modecode, long init
 							modecode = (long)((unsigned long)Modecode);
 						init_screen_info(si, modecode);
 					}
-          return(0);
+					return(0);
 				case CMD_ALLOCPAGE:
 					{
 						long addr, addr_aligned;
