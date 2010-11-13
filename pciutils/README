@@ -1,0 +1,58 @@
+pciutils 3.1.7 for MiNT
+
+
+Note: only CTPCI currently supported, because I know how to get
+PCI bus/device/function numbers from PCIBIOS device handle.
+
+Milan and Hades support could easily be added, once this info is known.
+
+
+## Compilation
+
+# Compile for m68000
+
+make clean
+make DNS="no" OPT="-O2 -fomit-frame-pointer"
+
+# Compile for m68020
+
+make clean
+make DNS="no" OPT="-O2 -m68020 -fomit-frame-pointer"
+
+# Compile for m68020-60
+
+make clean
+make DNS="no" OPT="-O2 -m68020-60 -fomit-frame-pointer"
+
+# Compile for Coldfire
+
+make clean
+make DNS="no" OPT="-O2 -mcpu=5475 -fomit-frame-pointer"
+
+
+## Installation
+# Note: replace ${PREFIX} with the absolute path
+
+# Install programs
+
+make install
+
+# Install library for m68000
+
+make install-lib
+
+# Install library for m68020
+
+make install-lib LIBDIR=${PREFIX}/lib/m68020
+
+# Install library for m68020-60
+
+make install-lib LIBDIR=${PREFIX}/lib/m68020-60
+
+# Install library for Coldfire
+
+make install-lib LIBDIR=${PREFIX}/lib/m5475
+
+--
+Patrice Mandin <patmandin@gmail.com>
+http://pmandin.atari.org
