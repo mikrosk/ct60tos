@@ -1,7 +1,7 @@
 diff -Naur pciutils-3.1.7-linux/lib/mint-pcibios.c pciutils-3.1.7-mint/lib/mint-pcibios.c
 --- pciutils-3.1.7-linux/lib/mint-pcibios.c	1970-01-01 01:00:00.000000000 +0100
-+++ pciutils-3.1.7-mint/lib/mint-pcibios.c	2010-10-31 13:23:01.000000000 +0100
-@@ -0,0 +1,410 @@
++++ pciutils-3.1.7-mint/lib/mint-pcibios.c	2010-11-16 21:26:44.000000000 +0100
+@@ -0,0 +1,483 @@
 +/*
 + *	The PCI Library -- MiNT PCIBIOS access
 + *
@@ -187,6 +187,38 @@ diff -Naur pciutils-3.1.7-linux/lib/mint-pcibios.c pciutils-3.1.7-mint/lib/mint-
 +	return result;
 +}
 +
++static unsigned long pcibios_read_bar_size(unsigned long device_handle, int config_register)
++{
++	unsigned long old_register, size;
++	int num_bits;
++	
++	/* Read current register value */
++	pcibios_read_config_long(device_handle, &old_register, config_register);
++
++	/* Write not(0) */
++	pcibios_write_config_long(device_handle, config_register, 0xffffffffUL);
++
++	/* Read value */
++	pcibios_read_config_long(device_handle, &size, config_register);
++
++	/* Write previous register value */
++	pcibios_write_config_long(device_handle, config_register, old_register);
++
++	if (!size || size== 0xffffffff) {
++		return 0;
++	}
++
++	/* Find first 0 bit */
++	num_bits = 31;
++	for (num_bits=31; num_bits>0; --num_bits) {
++		if ((size & (1<<num_bits))==0) {
++			break;
++		}
++	}
++
++	return 1<<(num_bits+1);
++}
++
 +/*--- Functions ---*/
 +
 +static int
@@ -219,6 +251,45 @@ diff -Naur pciutils-3.1.7-linux/lib/mint-pcibios.c pciutils-3.1.7-mint/lib/mint-
 +mint_cleanup(struct pci_access *a)
 +{
 +	/*printf("mint_cleanup\n");*/
++}
++
++static void
++mint_scan_get_resources(struct pci_dev *d, long device_handle)
++{
++  int num_bars = 0, i, config_reg_rom = 0;
++  unsigned long v32;
++
++  switch(d->hdrtype) {
++    case PCI_HEADER_TYPE_NORMAL:
++      num_bars = 6;
++      config_reg_rom = 0x30;
++      break;
++    case PCI_HEADER_TYPE_BRIDGE:
++      num_bars = 2;
++      config_reg_rom = 0x38;
++      break;
++    case PCI_HEADER_TYPE_CARDBUS:
++      num_bars = 1;
++      break;
++  }
++
++  for (i=0; i<num_bars; i++) {
++    int config_reg = 0x10+(i<<2);
++
++    if (pcibios_read_config_long(device_handle, &v32, config_reg) == 0) {
++      d->base_addr[i] = v32;
++      d->size[i] = pcibios_read_bar_size(device_handle, config_reg);
++    }
++  }
++
++  if (config_reg_rom != 0) {
++    if (pcibios_read_config_long(device_handle, &v32, config_reg_rom) == 0) {
++      d->rom_base_addr = v32;
++      d->rom_size = pcibios_read_bar_size(device_handle, config_reg_rom);
++    }
++  }
++
++  d->known_fields |= PCI_FILL_BASES | PCI_FILL_ROM_BASE | PCI_FILL_SIZES;
 +}
 +
 +static void
@@ -261,6 +332,8 @@ diff -Naur pciutils-3.1.7-linux/lib/mint-pcibios.c pciutils-3.1.7-mint/lib/mint-
 +    ht &= 0x7f;
 +
 +    d->hdrtype = ht;
++
++    mint_scan_get_resources(d, device_handle);
 +
 +    pci_link_dev(a, d);
 +    switch (ht)
