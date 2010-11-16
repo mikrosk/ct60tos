@@ -317,7 +317,7 @@ diff -Naur pciutils-3.1.7-linux/lib/mint-pcibios.c pciutils-3.1.7-mint/lib/mint-
 +			if (result != 0) {
 +				return 0;
 +			}
-+			((unsigned long *)buf)[0] = swab16(v16);
++			((unsigned short *)buf)[0] = swab16(v16);
 +			buf += 2;
 +			pos += 2;
 +			i += 2;
@@ -372,7 +372,7 @@ diff -Naur pciutils-3.1.7-linux/lib/mint-pcibios.c pciutils-3.1.7-mint/lib/mint-
 +		if (((pos & 1)==0) && (len>=2)) {
 +			unsigned short v16;
 +
-+			v16 = swab16(((unsigned long *)buf)[0]);
++			v16 = swab16(((unsigned short *)buf)[0]);
 +
 +			result = pcibios_write_config_word(device_handle, pos, v16);
 +			if (result != 0) {
