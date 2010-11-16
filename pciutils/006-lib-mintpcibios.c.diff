@@ -69,7 +69,7 @@ diff -Naur pciutils-3.1.7-linux/lib/mint-pcibios.c pciutils-3.1.7-mint/lib/mint-
 +    "movl	%2,d0\n\t"	\
 +    "jbsr	%1@"	\
 +    : "=r"(retvalue)	\
-+    : "a"(func_ptr), "g"(p1), "g"(p2), "g"(p3)	\
++    : "a"(func_ptr), "g"(p1), "g"(p2), "d"(p3)	\
 +    : PCIBIOS_CLOBBER_LIST	\
 +  );	\
 +  retvalue;	\
@@ -87,7 +87,7 @@ diff -Naur pciutils-3.1.7-linux/lib/mint-pcibios.c pciutils-3.1.7-mint/lib/mint-
 +    "movl	%2,d0\n\t"	\
 +    "jbsr	%1@"	\
 +    : "=r"(retvalue)	\
-+    : "a"(func_ptr), "g"(p1), "g"(p2), "g"(p3)	\
++    : "a"(func_ptr), "g"(p1), "d"(p2), "g"(p3)	\
 +    : PCIBIOS_CLOBBER_LIST	\
 +  );	\
 +  retvalue;	\
