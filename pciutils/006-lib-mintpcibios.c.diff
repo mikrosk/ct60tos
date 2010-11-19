@@ -1,7 +1,7 @@
 diff -Naur pciutils-3.1.7-linux/lib/mint-pcibios.c pciutils-3.1.7-mint/lib/mint-pcibios.c
 --- pciutils-3.1.7-linux/lib/mint-pcibios.c	1970-01-01 01:00:00.000000000 +0100
-+++ pciutils-3.1.7-mint/lib/mint-pcibios.c	2010-11-16 21:26:44.000000000 +0100
-@@ -0,0 +1,483 @@
++++ pciutils-3.1.7-mint/lib/mint-pcibios.c	2010-11-19 21:51:58.000000000 +0100
+@@ -0,0 +1,466 @@
 +/*
 + *	The PCI Library -- MiNT PCIBIOS access
 + *
@@ -224,33 +224,25 @@ diff -Naur pciutils-3.1.7-linux/lib/mint-pcibios.c pciutils-3.1.7-mint/lib/mint-
 +static int
 +mint_detect(struct pci_access *a)
 +{
-+	/*printf("mint_detect: begin\n");*/
 +  if (Getcookie(C__PCI, (unsigned long *) &cookie_pci) != C_FOUND) {
-+	/*printf("mint_detect: no _PCI cookie\n");*/
 +    return 0;
 +  }
 +
 +  if (Getcookie(C_CT60, (unsigned long *) &cookie_ct60) != C_FOUND) {
-+	/*printf("mint_detect: no CT60 cookie\n");*/
 +    cookie_ct60 = 0;
-+    /* Only supports CTPCI for now */
-+    return 0;
 +  }
 +
-+	/*printf("mint_detect: end\n");*/
 +  return 1;
 +}
 +
 +static void
 +mint_init(struct pci_access *a)
 +{
-+	/*printf("mint_init\n");*/
 +}
 +
 +static void
 +mint_cleanup(struct pci_access *a)
 +{
-+	/*printf("mint_cleanup\n");*/
 +}
 +
 +static void
@@ -295,15 +287,11 @@ diff -Naur pciutils-3.1.7-linux/lib/mint-pcibios.c pciutils-3.1.7-mint/lib/mint-
 +static void
 +mint_scan(struct pci_access *a)
 +{
-+  int num_device = -1, ht, multi;
++  int num_device = -1;
 +  long result, device_handle;
 +  struct pci_dev *d;
 +  u32 vd;
 +
-+	/*printf("mint_scan: begin\n");
-+	printf("mint_scan: cookie_pci: 0x%08x\n", cookie_pci);
-+	printf("mint_scan: cookie_pci: 0x%08x\n", cookie_pci);
-+	printf("mint_scan:  version 0x%08x\n", cookie_pci->version);*/
 +  for (;;) {
 +    num_device++;
 +
@@ -313,30 +301,31 @@ diff -Naur pciutils-3.1.7-linux/lib/mint-pcibios.c pciutils-3.1.7-mint/lib/mint-
 +    }
 +    device_handle = result;
 +
-+	/*printf("mint_scan: add device 0x%08x\n", device_handle);*/
 +    d = pci_alloc_dev(a);
 +
 +    d->bus = 0;
-+    d->dev = device_handle & 0xffff;	/* CTPCI stores func|dev in device_handle, do not know about Milan/Hades */
-+    d->func = device_handle >> 16U;
++    d->dev = num_device;
++    d->func = 0;
++    if (cookie_ct60) {
++      /* CTPCI stores func|dev in device_handle, do not know about Milan/Hades */
++      d->dev = device_handle & 0xffff;
++      d->func = device_handle >> 16U;
++    }
++
++    /* Store device handle in internal aux field */
++    d->aux = (void *) device_handle;
 +
 +    vd = pci_read_long(d, PCI_VENDOR_ID);
 +    d->vendor_id = vd & 0xffff;
 +    d->device_id = vd >> 16U;
 +    d->known_fields = PCI_FILL_IDENT;
 +
-+    ht = pci_read_byte(d, PCI_HEADER_TYPE);
-+    multi = 0;
-+    if (!d->func)
-+      multi = ht & 0x80;
-+    ht &= 0x7f;
-+
-+    d->hdrtype = ht;
++    d->hdrtype = pci_read_byte(d, PCI_HEADER_TYPE) & 0x7f;	/* bit 7 is 1 for multifunction device */
 +
 +    mint_scan_get_resources(d, device_handle);
 +
 +    pci_link_dev(a, d);
-+    switch (ht)
++    switch (d->hdrtype)
 +    {
 +      case PCI_HEADER_TYPE_NORMAL:
 +        break;
@@ -345,11 +334,9 @@ diff -Naur pciutils-3.1.7-linux/lib/mint-pcibios.c pciutils-3.1.7-mint/lib/mint-
 +        /*pci_generic_scan_bus(a, busmap, pci_read_byte(t, PCI_SECONDARY_BUS));*/
 +        break;
 +      default:
-+        a->debug("Device %04x:%02x:%02x.%d has unknown header type %02x.\n", d->domain, d->bus, d->dev, d->func, ht);
++        a->debug("Device %04x:%02x:%02x.%d has unknown header type %02x.\n", d->domain, d->bus, d->dev, d->func, d->hdrtype);
 +    }
 +  }
-+
-+	/*printf("mint_scan: end\n");*/
 +}
 +
 +static int
@@ -361,9 +348,7 @@ diff -Naur pciutils-3.1.7-linux/lib/mint-pcibios.c pciutils-3.1.7-mint/lib/mint-
 +	if (pos >= 256)
 +		return 0;
 +
-+	device_handle = d->dev | ((d->func)<<16);
-+
-+	/*printf("mint_read: device 0x%08x pos %d len %d\n", device_handle, pos, len);*/
++	device_handle = (long) d->aux;
 +
 +	i = 0;
 +	while (i<len) {
@@ -375,7 +360,7 @@ diff -Naur pciutils-3.1.7-linux/lib/mint-pcibios.c pciutils-3.1.7-mint/lib/mint-
 +			if (result != 0) {
 +				return 0;
 +			}
-+			((unsigned long *)buf)[0] = swab32(v32);
++			((unsigned long *)buf)[0] = le32_to_cpu(v32);
 +			buf += 4;
 +			pos += 4;
 +			i += 4;
@@ -390,7 +375,7 @@ diff -Naur pciutils-3.1.7-linux/lib/mint-pcibios.c pciutils-3.1.7-mint/lib/mint-
 +			if (result != 0) {
 +				return 0;
 +			}
-+			((unsigned short *)buf)[0] = swab16(v16);
++			((unsigned short *)buf)[0] = le16_to_cpu(v16);
 +			buf += 2;
 +			pos += 2;
 +			i += 2;
@@ -419,9 +404,7 @@ diff -Naur pciutils-3.1.7-linux/lib/mint-pcibios.c pciutils-3.1.7-mint/lib/mint-
 +	if (pos >= 256)
 +		return 0;
 +
-+	device_handle = d->dev | ((d->func)<<16);
-+
-+	/*printf("mint_write: device 0x%08x pos %d len %d\n", device_handle, pos, len);*/
++	device_handle = (long) d->aux;
 +
 +	i = 0;
 +	while (i<len) {
@@ -429,7 +412,7 @@ diff -Naur pciutils-3.1.7-linux/lib/mint-pcibios.c pciutils-3.1.7-mint/lib/mint-
 +		if (((pos & 3)==0) && (len>=4)) {
 +			unsigned long v32;
 +
-+			v32 = swab32(((unsigned long *)buf)[0]);
++			v32 = cpu_to_le32(((unsigned long *)buf)[0]);
 +
 +			result = pcibios_write_config_long(device_handle, pos, v32);
 +			if (result != 0) {
@@ -445,7 +428,7 @@ diff -Naur pciutils-3.1.7-linux/lib/mint-pcibios.c pciutils-3.1.7-mint/lib/mint-
 +		if (((pos & 1)==0) && (len>=2)) {
 +			unsigned short v16;
 +
-+			v16 = swab16(((unsigned short *)buf)[0]);
++			v16 = cpu_to_le16(((unsigned short *)buf)[0]);
 +
 +			result = pcibios_write_config_word(device_handle, pos, v16);
 +			if (result != 0) {
