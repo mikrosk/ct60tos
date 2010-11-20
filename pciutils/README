@@ -1,10 +1,7 @@
 pciutils 3.1.7 for MiNT
 
 
-Note: only CTPCI currently supported, because I know how to get
-PCI bus/device/function numbers from PCIBIOS device handle.
-
-Milan and Hades support could easily be added, once this info is known.
+Tested on CTPCI and Milan.
 
 
 ## Compilation
