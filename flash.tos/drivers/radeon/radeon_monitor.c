@@ -1,5 +1,4 @@
 #include <mint/errno.h>
-#include <string.h>
 #include "radeonfb.h"
 #include "edid.h"
 #include "relocate.h"
@@ -122,7 +121,7 @@ static int radeon_parse_monitor_layout(struct radeonfb_info *rinfo, const char *
 	char s1[5], s2[5];
 	int i = 0, second = 0;
 	const char *s;
-	if(!monitor_layout)
+	if((monitor_layout == NULL) || (*monitor_layout == '\0'))
 		return 0;
 	s = monitor_layout;
 	do
@@ -191,20 +190,27 @@ void radeon_probe_screens(struct radeonfb_info *rinfo,
 		 * a layout for each card ?
 		 */
 #ifdef CONFIG_FB_RADEON_I2C
+		DPRINT("radeonfb: radeon_probe_screens: use monitor layout\r\n");
 		if(!ignore_edid)
 		{
 			if(rinfo->mon1_type != MT_NONE)
 			{
+				DPRINT("radeonfb: radeon_probe_screens: probe ddc_dvi on MON1\r\n");
 				if(!radeon_probe_i2c_connector(rinfo, ddc_dvi, &rinfo->mon1_EDID))
 				{
+					DPRINT("radeonfb: radeon_probe_screens: probe ddc_crt2 on MON1\r\n");
 					radeon_probe_i2c_connector(rinfo, ddc_crt2, &rinfo->mon1_EDID);
 					ddc_crt2_used = 1;
 				}
 			}
 			if(rinfo->mon2_type != MT_NONE)
 			{
+				DPRINT("radeonfb: radeon_probe_screens: probe ddc_vga on MON2\r\n");
 				if(!radeon_probe_i2c_connector(rinfo, ddc_vga, &rinfo->mon2_EDID) && !ddc_crt2_used)
+				{
+					DPRINT("radeonfb: radeon_probe_screens: probe ddc_crt2 on MON2\r\n");
 					radeon_probe_i2c_connector(rinfo, ddc_crt2, &rinfo->mon2_EDID);
+				}
 			}
 		}
 #endif /* CONFIG_FB_RADEON_I2C */
@@ -229,6 +235,9 @@ void radeon_probe_screens(struct radeonfb_info *rinfo,
 		/*
 		 * Auto-detecting display type (well... trying to ...)
 		 */
+#ifdef CONFIG_FB_RADEON_I2C
+		DPRINT("radeonfb: radeon_probe_screens: Auto-detecting\r\n");
+#endif
 #if 0 //#if DEBUG && defined(CONFIG_FB_RADEON_I2C)
 		{
 			unsigned char *EDIDs[4] = { NULL, NULL, NULL, NULL };
@@ -245,11 +254,20 @@ void radeon_probe_screens(struct radeonfb_info *rinfo,
 		{
 #ifdef CONFIG_FB_RADEON_I2C
 			if(rinfo->mon1_type == MT_NONE)
+			{
+				DPRINT("radeonfb: radeon_probe_screens: probe ddc_dvi on MON1\r\n");
 				rinfo->mon1_type = radeon_probe_i2c_connector(rinfo, ddc_dvi, &rinfo->mon1_EDID);
+			}
 			if(rinfo->mon1_type == MT_NONE)
+			{
+				DPRINT("radeonfb: radeon_probe_screens: probe ddc_vga on MON1\r\n");
 				rinfo->mon1_type = radeon_probe_i2c_connector(rinfo, ddc_vga, &rinfo->mon1_EDID);
+			}
 			if(rinfo->mon1_type == MT_NONE)
+			{
+				DPRINT("radeonfb: radeon_probe_screens: probe ddc_crt2 on MON1\r\n");
 				rinfo->mon1_type = radeon_probe_i2c_connector(rinfo, ddc_crt2, &rinfo->mon1_EDID);
+			}
 #endif /* CONFIG_FB_RADEON_I2C */
 			if(rinfo->mon1_type == MT_NONE)
 				rinfo->mon1_type = MT_CRT;
@@ -260,9 +278,13 @@ void radeon_probe_screens(struct radeonfb_info *rinfo,
 		 */
 #ifdef CONFIG_FB_RADEON_I2C
 		if(rinfo->mon1_type == MT_NONE)
+		{
+			DPRINT("radeonfb: radeon_probe_screens: probe ddc_dvi on MON1\r\n");
 			rinfo->mon1_type = radeon_probe_i2c_connector(rinfo, ddc_dvi, &rinfo->mon1_EDID);
+		}
 		if(rinfo->mon1_type == MT_NONE)
 		{
+			DPRINT("radeonfb: radeon_probe_screens: probe ddc_crt2 on MON1\r\n");
 			rinfo->mon1_type = radeon_probe_i2c_connector(rinfo, ddc_crt2, &rinfo->mon1_EDID);
 			if(rinfo->mon1_type != MT_NONE)
 				ddc_crt2_used = 1;
@@ -281,9 +303,15 @@ void radeon_probe_screens(struct radeonfb_info *rinfo,
 		 */
 #ifdef CONFIG_FB_RADEON_I2C
 		if(rinfo->mon2_type == MT_NONE)
+		{
+			DPRINT("radeonfb: radeon_probe_screens: probe ddc_vga on MON2\r\n");
 			rinfo->mon2_type = radeon_probe_i2c_connector(rinfo, ddc_vga,	&rinfo->mon2_EDID);
+		}
 		if(rinfo->mon2_type == MT_NONE && !ddc_crt2_used)
+		{
+			DPRINT("radeonfb: radeon_probe_screens: probe ddc_crt2 on MON2\r\n");
 			rinfo->mon2_type = radeon_probe_i2c_connector(rinfo, ddc_crt2, &rinfo->mon2_EDID);
+		}
 #endif /* CONFIG_FB_RADEON_I2C */
 		if(rinfo->mon2_type == MT_NONE)
 			rinfo->mon2_type = radeon_crt_is_connected(rinfo, !rinfo->reversed_DAC);
@@ -330,7 +358,7 @@ void radeon_probe_screens(struct radeonfb_info *rinfo,
 		Funcs_free(rinfo->mon2_EDID);
 		rinfo->mon2_EDID = NULL;
 	}
- bail:
+bail:
 	DPRINT("radeonfb: Monitor 1 type ");
 	DPRINT(radeon_get_mon_name(rinfo->mon1_type));
 	DPRINT(" found\r\n");
@@ -360,16 +388,12 @@ static void radeon_var_to_panel_info(struct radeonfb_info *rinfo, struct fb_var_
 	rinfo->panel_info.clock = 100000000 / var->pixclock;
 	rinfo->panel_info.hOver_plus = var->right_margin;
 	rinfo->panel_info.hSync_width = var->hsync_len;
-       	rinfo->panel_info.hblank = var->left_margin +
-		(var->right_margin + var->hsync_len);
+	rinfo->panel_info.hblank = var->left_margin + (var->right_margin + var->hsync_len);
 	rinfo->panel_info.vOver_plus = var->lower_margin;
 	rinfo->panel_info.vSync_width = var->vsync_len;
-       	rinfo->panel_info.vblank = var->upper_margin +
-		(var->lower_margin + var->vsync_len);
-	rinfo->panel_info.hAct_high =
-		(var->sync & FB_SYNC_HOR_HIGH_ACT) != 0;
-	rinfo->panel_info.vAct_high =
-		(var->sync & FB_SYNC_VERT_HIGH_ACT) != 0;
+	rinfo->panel_info.vblank = var->upper_margin + (var->lower_margin + var->vsync_len);
+	rinfo->panel_info.hAct_high = (var->sync & FB_SYNC_HOR_HIGH_ACT) != 0;
+	rinfo->panel_info.vAct_high = (var->sync & FB_SYNC_VERT_HIGH_ACT) != 0;
 	rinfo->panel_info.valid = 1;
 	/* We use a default of 200ms for the panel power delay, 
 	 * I need to have a real schedule() instead of mdelay's in the panel code.
@@ -405,7 +429,7 @@ static void radeon_videomode_to_var(struct fb_var_screeninfo *var,
  */
 void radeon_check_modes(struct radeonfb_info *rinfo, struct mode_option *resolution)
 {
-	struct fb_info * info = rinfo->info;
+	struct fb_info *info = rinfo->info;
 	int has_default_mode = 0;
 	struct mode_option xres_yres;
 	DPRINT("radeonfb: radeon_check_modes\r\n");
@@ -427,6 +451,10 @@ void radeon_check_modes(struct radeonfb_info *rinfo, struct mode_option *resolut
 		{
 			if((var.xres >= rinfo->panel_info.xres) && (var.yres >= rinfo->panel_info.yres))
 				radeon_var_to_panel_info(rinfo, &var);
+		}
+		else
+		{
+			DPRINT("radeonfb: radeon_check_modes: no data to parse\r\n");
 		}
 	}
 	/*
@@ -494,7 +522,7 @@ void radeon_check_modes(struct radeonfb_info *rinfo, struct mode_option *resolut
 		xres_yres.width = rinfo->panel_info.xres;
 		xres_yres.height = rinfo->panel_info.yres;
 		xres_yres.bpp = xres_yres.freq = 0;
-		if(fb_find_mode(&info->var, info, &xres_yres, modedb, dbsize, NULL, 8) == 0)
+		if(fb_find_mode(&info->var, info, &xres_yres, modedb, dbsize, NULL, (resolution->bpp >= 8) ? (unsigned int)resolution->bpp : 8) == 0)
 		{
 			rinfo->mon1_type = MT_CRT;
 			goto pickup_default;
@@ -509,7 +537,7 @@ pickup_default:
 	if(resolution->used)
 	{
 		if(fb_find_mode(&info->var, info, resolution, info->monspecs.modedb,
-		 info->monspecs.modedb_len, NULL, 8) != 0)
+		 info->monspecs.modedb_len, NULL, (resolution->bpp >= 8) ? (unsigned int)resolution->bpp : 8) != 0)
 			has_default_mode = 1;
  	}
 	/*
@@ -581,7 +609,7 @@ int radeon_match_mode(struct radeonfb_info *rinfo,
 	int has_rmx, native_db = 0;
 	int	distance = INT_MAX;
 	const struct fb_videomode	*candidate = NULL;
-//	DPRINT("radeonfb: radeon_match_mode\r\n");
+	DPRINT("radeonfb: radeon_match_mode\r\n");
 	/* Start with a copy of the requested mode */
 	memcpy(dest, src, sizeof(struct fb_var_screeninfo));
 	/* Check if we have a modedb built from EDID */
@@ -612,7 +640,7 @@ int radeon_match_mode(struct radeonfb_info *rinfo,
 		}
 		return 0;
 	}
-//	DPRINT("radeonfb: radeon_match_mode, look for a mode in the database\r\n");
+	DPRINT("radeonfb: radeon_match_mode, look for a mode in the database\r\n");
 	/* Now look for a mode in the database */
 	while(db)
 	{

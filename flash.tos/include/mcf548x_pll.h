@@ -13,7 +13,7 @@
 *********************************************************************/
 
 /* Register read/write macros */
-#define MCF_PLL_SPCR         (*(vuint32*)(&__MBAR[0x000300]))
+#define MCF_PLL_SPCR         (__MBAR+0x000300)
 
 /* Bit definitions and macros for MCF_PLL_SPCR */
 #define MCF_PLL_SPCR_MEMEN   (0x00000001)

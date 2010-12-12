@@ -1,6 +1,6 @@
-/* TOS 4.04 Xbios calls for the CT60/CTPCI boards
+/* TOS 4.04 Xbios calls for the CT60/CTPCI & Coldfire boards
  * Coldfire Xbios AC97 Sound 
- * Didier Mequignon 2005-2009, e-mail: aniplay@wanadoo.fr
+ * Didier Mequignon 2005-2010, e-mail: aniplay@wanadoo.fr
  *
  * This file is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -18,12 +18,13 @@
  */
 
 #include "config.h" 
-#include <mint/osbind.h>
+#include <mint/mintbind.h>
 #include <mint/falcon.h>
+#include <mint/sysvars.h>
 #include <string.h>
-#include <sysvars.h>
-#include "radeon/fb.h"
+#include "fb.h"
 #include "radeon/radeonfb.h"
+#include "lynx/smi.h"
 #include "ct60.h"
 #ifdef NETWORK
 #ifdef COLDFIRE
@@ -33,27 +34,27 @@
 #endif
 #endif
 
-#ifdef TEST_NOPCI
-#ifndef Screalloc
-#define Screalloc(size) (void *)trap_1_wl((short)(0x15),(long)(size))
+extern void init_var_linea(long video_found);
+extern long call_enumfunc(long (*enumfunc)(SCREENINFO *inf, long flag), SCREENINFO *inf, long flag);
+#ifdef COLDFIRE
+extern long init_videl(long width, long height, long bpp, long freq, long extended);
+extern void setrgb_videl(long index, long rgb, long type);
 #endif
-extern void init_var_linea(void);
-extern void init_videl_320_240_65K(unsigned short *screen_addr);
-extern void init_videl_640_480_65K(unsigned short *screen_addr);
+#if defined(COLDFIRE) && defined(NETWORK) && defined(LWIP)
+extern void board_printf(const char *fmt, ...);
+#else
+#define board_printf kprint
+extern void kprint(const char *fmt, ...);
 #endif
-   
-#define Modecode (*((short*)0x184C))
-
-extern const struct fb_videomode modedb[];
-extern const struct fb_videomode vesa_modes[];
-extern long total_modedb;
 
 unsigned long physbase(void);
 long vgetsize(long modecode);
+short validmode(long modecode);
 
 extern void ltoa(char *buf, long n, unsigned long base);                                    
-extern void init_var_linea(void);
 extern void cursor_home(void);
+   
+#define Modecode (*((short*)0x184C))
 
 typedef struct
 {
@@ -70,73 +71,33 @@ extern COOKIE *get_cookie(long id);
 extern int add_cookie(COOKIE *cook);
 
 /* global */
-extern struct radeonfb_info *rinfo_fvdi;
+extern struct fb_info *info_fvdi;
 extern struct mode_option resolution;
-extern short virtual;
+extern const struct fb_videomode modedb[];
+extern const struct fb_videomode vesa_modes[];
+extern long total_modedb;
+extern short video_found, video_log, os_magic, memory_ok, drive_ok;
 long fix_modecode, second_screen, second_screen_aligned;
 
-#undef SEMAPHORE
-
-#ifndef TEST_NOPCI
-
-#ifdef COLDFIRE
-#ifdef NETWORK
-#ifdef LWIP
-extern void xSemaphoreTakeRADEON(void);
-extern void xSemaphoreGiveRADEON(void);
-#undef SEMAPHORE
-#endif
-#endif
-#endif
-
+static short modecode_magic;
 static long bios_colors[256]; 
 
-/* some XBIOS functions for the radeon driver */
+/* some XBIOS functions for the video driver */
 
-void vsetrgb(long index, long count, long *array)
-{
-	short i;
-	unsigned red,green,blue;
-	struct fb_info *info;
-#ifdef SEMAPHORE
-	xSemaphoreTakeRADEON();
-#endif
-	info = rinfo_fvdi->info;
-	for(i = index; i < (count + index); i++)
-	{
-		bios_colors[i] = *array;
-		if(info->var.bits_per_pixel <= 8)
-		{
-			red = (*array>>16) & 0xFF;
-			green = (*array>>8) & 0xFF;
-			blue = *array & 0xFF;
-			radeonfb_setcolreg((unsigned)i, red << 8, green << 8, blue << 8, 0, info);
-		}
-		array++;
-	}
-#ifdef SEMAPHORE
-	xSemaphoreGiveRADEON();
-#endif
-}
-
-void vgetrgb(long index, long count, long *array)
-{
-	short i;
-	for(i = index; i < (count + index); i++)
-		*array++ = bios_colors[i];
-}
-
+#ifdef RADEON_RENDER
 void display_composite_texture(long op, char *src_tex, long src_x, long src_y, long w_tex, long h_tex, long dst_x, long dst_y, long width, long height)
 {
-	struct fb_info *info = rinfo_fvdi->info;
+	struct fb_info *info = info_fvdi;
 	unsigned long dstFormat;
+	if(info->screen_mono != NULL)
+		return;
 	switch(info->var.bits_per_pixel)
 	{
 		case 16: dstFormat = PICT_r5g6b5; break;
 		case 32: dstFormat = PICT_x8r8g8b8; break;
 		default: return;	
 	}
-	if(RADEONSetupForCPUToScreenTextureMMIO(rinfo_fvdi, (int)op, PICT_a8r8g8b8, dstFormat, src_tex, (int)w_tex << 2 , (int)w_tex, (int)h_tex, 0))
+	if(info->fbops->SetupForCPUToScreenTexture(info, (int)op, PICT_a8r8g8b8, dstFormat, src_tex, (int)w_tex << 2 , (int)w_tex, (int)h_tex, 0))
 	{
 		long x, y, x0 = dst_x;
 		for(y = 0; y < height; y += h_tex)
@@ -150,54 +111,50 @@ void display_composite_texture(long op, char *src_tex, long src_x, long src_y, l
 				int w = width - x;
 				if(w >= w_tex)
 					w = w_tex;
-				RADEONSubsequentCPUToScreenTextureMMIO(rinfo_fvdi, (int)dst_x, (int)dst_y, (int)src_x, (int)src_y, (int)w, (int)h);
+				info->fbops->SubsequentCPUToScreenTexture(info, (int)dst_x, (int)dst_y, (int)src_x, (int)src_y, (int)w, (int)h);
 				dst_x += w_tex;		
 			}
 			dst_y += h_tex;
 		}
 	}
 }
+#endif /* RADEON_RENDER */
 
 void display_mono_block(char *src_buf, long dst_x, long dst_y, long w, long h, long foreground, long background, long src_wrap)
 {
 	int skipleft;
-#ifdef SEMAPHORE
-	xSemaphoreTakeRADEON();
-#endif
-	RADEONSetClippingRectangleMMIO(rinfo_fvdi, (int)dst_x, (int)dst_y, (int)w - 1, (int)h -1);
+	if(info_fvdi->screen_mono != NULL)
+		return;
+	info_fvdi->fbops->SetClippingRectangle(info_fvdi, (int)dst_x, (int)dst_y, (int)w - 1, (int)h -1);
 	skipleft = ((int)src_buf & 3) << 3;
 	src_buf = (unsigned char*)((int)src_buf & ~3);
 	dst_x -= skipleft;
 	w += skipleft;
-	RADEONSetupForScanlineCPUToScreenColorExpandFillMMIO(rinfo_fvdi, (int)foreground, (int)background, 3, 0xffffffff);
-	RADEONSubsequentScanlineCPUToScreenColorExpandFillMMIO(rinfo_fvdi, (int)dst_x, (int)dst_y, (int)w, (int)h, (int)skipleft);
+	info_fvdi->fbops->SetupForScanlineCPUToScreenColorExpandFill(info_fvdi, (int)foreground, (int)background, 3, 0xffffffff);
+	info_fvdi->fbops->SubsequentScanlineCPUToScreenColorExpandFill(info_fvdi, (int)dst_x, (int)dst_y, (int)w, (int)h, (int)skipleft);
 	while(--h >= 0)
 	{
-		RADEONSubsequentScanlineMMIO(rinfo_fvdi, (unsigned long*)src_buf);
+		info_fvdi->fbops->SubsequentScanline(info_fvdi, (unsigned long*)src_buf);
 		src_buf += src_wrap;
 	}
-	RADEONDisableClippingMMIO(rinfo_fvdi);
-	radeonfb_sync(rinfo_fvdi->info);	
-#ifdef SEMAPHORE
-	xSemaphoreGiveRADEON();
-#endif
+	info_fvdi->fbops->DisableClipping(info_fvdi);
+	info_fvdi->fbops->fb_sync(info_fvdi);	
 }
 
 long clear_screen(long bg_color, long x, long y, long w, long h)
 {
-	struct fb_info *info = rinfo_fvdi->info;
-#ifdef SEMAPHORE
-	xSemaphoreTakeRADEON();
-#endif
+	struct fb_info *info = info_fvdi;
+	if(info->screen_mono != NULL)
+		return(0);
 	if(bg_color == -1)
 	{
 		x = y = 0;
 		w = info->var.xres_virtual;
 		h = info->var.yres_virtual;
 		if(info->var.bits_per_pixel >= 16)
-			RADEONSetupForSolidFillMMIO(rinfo_fvdi, 0, 15, 0xffffffff);  /* set */
+			info->fbops->SetupForSolidFill(info, 0, 15, 0xffffffff);  /* set */
 		else
-			RADEONSetupForSolidFillMMIO(rinfo_fvdi, 0, 0, 0xffffffff);   /* clr */
+			info->fbops->SetupForSolidFill(info, 0, 0, 0xffffffff);   /* clr */
 	}
 	else if(bg_color == -2)
 	{
@@ -207,32 +164,24 @@ long clear_screen(long bg_color, long x, long y, long w, long h)
 			case 16: bg_color = 0xffff; break;
 			default: bg_color = 0xffffff; break;
 		}
-		RADEONSetupForSolidFillMMIO(rinfo_fvdi, (int)bg_color, 6, 0xffffffff);  /* xor */
+		info->fbops->SetupForSolidFill(info, (int)bg_color, 6, 0xffffffff);  /* xor */
 	}
 	else
-		RADEONSetupForSolidFillMMIO(rinfo_fvdi, (int)bg_color, 3, 0xffffffff);  /* copy */
-	RADEONSubsequentSolidFillRectMMIO(rinfo_fvdi, (int)x, (int)y, (int)w, (int)h);
-	radeonfb_sync(rinfo_fvdi->info);
-#ifdef SEMAPHORE
-	xSemaphoreGiveRADEON();
-#endif
+		info->fbops->SetupForSolidFill(info, (int)bg_color, 3, 0xffffffff);  /* copy */
+	info->fbops->SubsequentSolidFillRect(info, (int)x, (int)y, (int)w, (int)h);
+	info->fbops->fb_sync(info);
 	return(1);
 }
 
 long move_screen(long src_x, long src_y, long dst_x, long dst_y, long w, long h)
 {
-	int xdir, ydir;
-#ifdef SEMAPHORE
-	xSemaphoreTakeRADEON();
-#endif
-	xdir = (int)(src_x - dst_x);
-	ydir = (int)(src_y - dst_y);
-	RADEONSetupForScreenToScreenCopyMMIO(rinfo_fvdi, xdir, ydir, 3, 0xffffffff, -1);
-	RADEONSubsequentScreenToScreenCopyMMIO(rinfo_fvdi, (int)src_x, (int)src_y, (int)dst_x, (int)dst_y, (int)w, (int)h);
-	radeonfb_sync(rinfo_fvdi->info);
-#ifdef SEMAPHORE
-	xSemaphoreGiveRADEON();
-#endif
+	int xdir = (int)(src_x - dst_x);
+	int ydir = (int)(src_y - dst_y);
+	if(info_fvdi->screen_mono != NULL)
+		return(0);
+	info_fvdi->fbops->SetupForScreenToScreenCopy(info_fvdi, xdir, ydir, 3, 0xffffffff, -1);
+	info_fvdi->fbops->SubsequentScreenToScreenCopy(info_fvdi, (int)src_x, (int)src_y, (int)dst_x, (int)dst_y, (int)w, (int)h);
+	info_fvdi->fbops->fb_sync(info_fvdi);
 	return(1);
 }
 
@@ -241,12 +190,14 @@ long print_screen(char *character_source, long x, long y, long w, long h, long c
 	static char buffer[256*16]; /* maximum width 2048 pixels, 256 characters, height 16 */
 	static long pos_x, pos_y, length, height, foreground, background, old_timer;
 	char *ptr;
-	if(character_source == (char *)-1)
+	if(info_fvdi->screen_mono != NULL)
+		return(0);
+	if(character_source == (char *)-1) /* init */
 	{
 		pos_x = -1;
 		old_timer = *_hz_200;
 	}
-	else if(character_source)
+	else if(character_source != NULL)
 	{
 		if((pos_x >= 0) && ((pos_y != y) /* if line is different  => flush buffer */
 		 || (*_hz_200 != old_timer)))
@@ -295,7 +246,7 @@ long print_screen(char *character_source, long x, long y, long w, long h, long c
 			}
 		}
 	}
-	else if(pos_x >= 0)   /* if character < ' ' => flush buffer */
+	else if(pos_x >= 0)   /* flush buffer */
 	{
 		ptr = &buffer[pos_x];
 		pos_x <<= 3;
@@ -313,24 +264,120 @@ static unsigned long mul32(unsigned long a, unsigned long b) // GCC Colfire bug 
 	return(a * b);
 }
 
-void display_atari_logo()
+void display_atari_logo(void)
 {
 #define WIDTH_LOGO 96
 #define HEIGHT_LOGO 86
-	unsigned long base_addr = (unsigned long)Physbase();
-	struct fb_info *info = rinfo_fvdi->info;
+#ifndef TOS_ATARI_LOGO
+	static unsigned short logo[] = 
+	{
+		0x0000,0x0000,0x79FF,0x3C00,0x0000,0x0000,
+		0x0000,0x0000,0x79FF,0x3C00,0x0000,0x0000,
+		0x0000,0x0000,0x79FF,0x3C00,0x0000,0x0000,
+		0x0000,0x0000,0x79FF,0x3C00,0x0000,0x0000,
+		0x0000,0x0000,0x79FF,0x3C00,0x0000,0x0000,
+		0x0000,0x0000,0x79FF,0x3C00,0x0000,0x0000,
+		0x0000,0x0000,0x79FF,0x3C00,0x0000,0x0000,
+		0x0000,0x0000,0x79FF,0x3C00,0x0000,0x0000,
+		0x0000,0x0000,0x79FF,0x3C00,0x0000,0x0000,
+		0x0000,0x0000,0x79FF,0x3C00,0x0000,0x0000,
+		0x0000,0x0000,0x79FF,0x3C00,0x0000,0x0000,
+		0x0000,0x0000,0x79FF,0x3C00,0x0000,0x0000,
+		0x0000,0x0000,0x79FF,0x3C00,0x0000,0x0000,
+		0x0000,0x0000,0x79FF,0x3C00,0x0000,0x0000,
+		0x0000,0x0000,0x79FF,0x3C00,0x0000,0x0000,
+		0x0000,0x0000,0x79FF,0x3C00,0x0000,0x0000,
+		0x0000,0x0000,0xF9FF,0x3E00,0x0000,0x0000,
+		0x0000,0x0000,0xF9FF,0x3E00,0x0000,0x0000,
+		0x0000,0x0000,0xF9FF,0x3E00,0x0000,0x0000,
+		0x0000,0x0000,0xF9FF,0x3E00,0x0000,0x0000,
+		0x0000,0x0000,0xF9FF,0x3E00,0x0000,0x0000,
+		0x0000,0x0000,0xF9FF,0x3E00,0x0000,0x0000,
+		0x0000,0x0001,0xF9FF,0x3F00,0x0000,0x0000,
+		0x0000,0x0001,0xF9FF,0x3F00,0x0000,0x0000,
+		0x0000,0x0001,0xF9FF,0x3F00,0x0000,0x0000,
+		0x0000,0x0001,0xF9FF,0x3F00,0x0000,0x0000,
+		0x0000,0x0003,0xF9FF,0x3F80,0x0000,0x0000,
+		0x0000,0x0003,0xF9FF,0x3F80,0x0000,0x0000,
+		0x0000,0x0003,0xF9FF,0x3F80,0x0000,0x0000,
+		0x0000,0x0007,0xF1FF,0x1FC0,0x0000,0x0000,
+		0x0000,0x0007,0xF1FF,0x1FC0,0x0000,0x0000,
+		0x0000,0x000F,0xF1FF,0x1FE0,0x0000,0x0000,
+		0x0000,0x000F,0xF1FF,0x1FE0,0x0000,0x0000,
+		0x0000,0x001F,0xE1FF,0x0FF0,0x0000,0x0000,
+		0x0000,0x003F,0xE1FF,0x0FF8,0x0000,0x0000,
+		0x0000,0x003F,0xE1FF,0x0FF8,0x0000,0x0000,
+		0x0000,0x007F,0xC1FF,0x07FC,0x0000,0x0000,
+		0x0000,0x00FF,0xC1FF,0x07FE,0x0000,0x0000,
+		0x0000,0x01FF,0x81FF,0x03FF,0x0000,0x0000,
+		0x0000,0x03FF,0x81FF,0x03FF,0x8000,0x0000,
+		0x0000,0x07FF,0x01FF,0x01FF,0xC000,0x0000,
+		0x0000,0x0FFE,0x01FF,0x00FF,0xE000,0x0000,
+		0x0000,0x1FFE,0x01FF,0x00FF,0xF000,0x0000,
+		0x0000,0x7FFC,0x01FF,0x007F,0xFC00,0x0000,
+		0x0000,0xFFF8,0x01FF,0x003F,0xFE00,0x0000,
+		0x0003,0xFFF0,0x01FF,0x001F,0xFF80,0x0000,
+		0x001F,0xFFE0,0x01FF,0x000F,0xFFF0,0x0000,
+		0x00FF,0xFFC0,0x01FF,0x0007,0xFFFE,0x0000,
+		0x00FF,0xFF80,0x01FF,0x0003,0xFFFE,0x0000,
+		0x00FF,0xFF00,0x01FF,0x0001,0xFFFE,0x0000,
+		0x00FF,0xFC00,0x01FF,0x0000,0x7FFE,0x0000,
+		0x00FF,0xF800,0x01FF,0x0000,0x3FFE,0x0000,
+		0x00FF,0xE000,0x01FF,0x0000,0x0FFE,0x0000,
+		0x00FF,0x8000,0x01FF,0x0000,0x03FE,0x0000,
+		0x00FC,0x0000,0x01FF,0x0000,0x007E,0x0000,
+		0x00E0,0x0000,0x01FF,0x0000,0x000E,0x0000,
+		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
+		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
+		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
+		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
+		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
+		0x0000,0xC07F,0xFE03,0x0007,0xC01E,0x0700,
+		0x0001,0xE07F,0xFE07,0x801F,0xF81E,0x18C0,
+		0x0003,0xE07F,0xFE0F,0x803F,0xFC1E,0x1740,
+		0x0003,0xF07F,0xFE0F,0xC03F,0xFE1E,0x2520,
+		0x0003,0xF07F,0xFE0F,0xC03F,0xFE1E,0x2620,
+		0x0007,0xF803,0xC01F,0xE03C,0x1F1E,0x2520,
+		0x0007,0xF803,0xC01F,0xE03C,0x0F1E,0x1540,
+		0x0007,0xF803,0xC01F,0xE03C,0x0F1E,0x18C0,
+		0x000F,0x7C03,0xC03D,0xF03C,0x0F1E,0x0700,
+		0x000F,0x3C03,0xC03C,0xF03C,0x0F1E,0x0000,
+		0x000F,0x3C03,0xC03C,0xF03C,0x1E1E,0x0000,
+		0x001E,0x3E03,0xC078,0xF83C,0x7E1E,0x0000,
+		0x001E,0x1E03,0xC078,0x783D,0xFC1E,0x0000,
+		0x001E,0x1E03,0xC078,0x783D,0xF81E,0x0000,
+		0x003E,0x1F03,0xC0F8,0x7C3D,0xE01E,0x0000,
+		0x003F,0xFF03,0xC0FF,0xFC3D,0xE01E,0x0000,
+		0x003F,0xFF03,0xC0FF,0xFC3D,0xE01E,0x0000,
+		0x007F,0xFF83,0xC1FF,0xFE3C,0xF01E,0x0000,
+		0x007F,0xFF83,0xC1FF,0xFE3C,0xF81E,0x0000,
+		0x0078,0x0783,0xC1E0,0x1E3C,0x781E,0x0000,
+		0x00F8,0x07C3,0xC3E0,0x1F3C,0x3C1E,0x0000,
+		0x00F0,0x07C3,0xC3C0,0x1F3C,0x3E1E,0x0000,
+		0x00F0,0x03C3,0xC3C0,0x0F3C,0x1E1E,0x0000,
+		0x01F0,0x03E3,0xC7C0,0x0FBC,0x1F1E,0x0000,
+		0x01E0,0x01E3,0xC780,0x07B8,0x0F1E,0x0000
+};
+#endif /* TOS_ATARI_LOGO */
+	unsigned long base_addr = (unsigned long)physbase();
+	struct fb_info *info = info_fvdi;
 	unsigned char *buf_tex = NULL;
 	unsigned long *ptr32 = NULL;
 	unsigned short *ptr16 = NULL;
 	unsigned char *ptr8 = NULL;
 	int i, j, k, cnt = 1;
 	int bpp = info->var.bits_per_pixel;
-	unsigned short val, color = 0, r, g, b;
-	unsigned long color2 = 0, r2, g2, b2;
-	unsigned long incr = mul32(info->var.xres_virtual, bpp >> 3);
+	unsigned short val, color = 0;
+	unsigned long color2 = 0, r, g, b;
+	unsigned long incr = mul32(info->var.xres_virtual, bpp >> 3); // line above not works on CF ?!?!
 //	unsigned long incr = (unsigned long)(info->var.xres_virtual * (bpp >> 3));
-#ifndef TEST_NOPCI
-	if(bpp >= 16)
+	if(info->screen_mono != NULL) /* VBL monochrome emulation */
+	{
+		bpp = 1;
+		incr = (unsigned long)(info->var.xres_virtual >> 3);
+	}
+#ifdef RADEON_RENDER
+	if(video_found && (info->screen_mono == NULL) && (bpp >= 16) && (info->fbops->SetupForCPUToScreenTexture != NULL))
 	{
 		buf_tex = (char *)Malloc(HEIGHT_LOGO * WIDTH_LOGO * 4);
 		if(buf_tex != NULL)
@@ -345,27 +392,33 @@ void display_atari_logo()
 		base_addr += (incr * 4); // line 4
 	while(--cnt >= 0)
 	{
+#ifdef TOS_ATARI_LOGO
 		unsigned short *logo_atari = (unsigned short *)0xE49434; /* logo ATARI monochrome inside TOS 4.04 */
-#ifndef TEST_NOPCI
+#else
+		unsigned short *logo_atari = logo;
+#endif
+#ifdef RADEON_RENDER
 		if(buf_tex != NULL)
 			base_addr = (unsigned long)buf_tex;
 #endif
 		g = 3;
-		g2 = 3;
 		for(i = 0; i < 86; i++) // lines
 		{
 			switch(bpp)
 			{
+				case 1:
+					ptr16 = (unsigned short *)base_addr;
+					break;
 				case 16:
 					if(i < 56)
 					{
-						r = (unsigned short)((63 - i) >> 1) & 0x1F;
+						r = (unsigned long)((63 - i) >> 1) & 0x1F;
 						if(i < 28)
 							g++;
 						else
 							g--;
-						b = (unsigned short)((i + 8) >> 1) & 0x1F;
-						color = (r << 11) + (g << 6) + b;
+						b = (unsigned long)((i + 8) >> 1) & 0x1F;
+						color = (unsigned short)((r << 11) + (g << 6) + b);
 					}
 					else
 						color = 0;
@@ -374,19 +427,19 @@ void display_atari_logo()
 				case 32:
 					if(i < 56)
 					{
-						r2 = (unsigned long)(63 - i) & 0x3F;
+						r = (unsigned long)(63 - i) & 0x3F;
 						if(i < 28)
-							g2++;
+							g++;
 						else
-							g2--;
-						b2 = (unsigned long)(i + 8) & 0x3F;
+							g--;
+						b = (unsigned long)(i + 8) & 0x3F;
 						if((buf_tex != NULL) && cnt)
 						{
-							color2 = ((r2 << 15) & 0xFF0000) + (g2 << 8) + ((b2 >> 1) & 0xFF);
+							color2 = ((r << 15) & 0xFF0000) + (g << 8) + ((b >> 1) & 0xFF);
 							color2 |= 0xE0E0E0;
 						}
 						else
-							color2 = (r2 << 18) + (g2 << 11) + (b2 << 2);
+							color2 = (r << 18) + (g << 11) + (b << 2);
 					}
 					else
 					{
@@ -407,6 +460,9 @@ void display_atari_logo()
 			{
 				switch(bpp)
 				{
+					case 1:
+						*ptr16++ = *logo_atari++;
+						break;
 					case 8:
 						val = *logo_atari++;
 						for(k = 0x8000; k; k >>= 1)
@@ -441,7 +497,7 @@ void display_atari_logo()
 			}
 			base_addr += incr;
 		}
-#ifndef TEST_NOPCI
+#ifdef RADEON_RENDER
 		if(buf_tex != NULL)
 		{
 			if(cnt)
@@ -451,7 +507,9 @@ void display_atari_logo()
 		}
 #endif
 	}
-#ifndef TEST_NOPCI
+	if(info->screen_mono != NULL) /* VBL monochrome emulation */
+		info->update_mono = 1;
+#ifdef RADEON_RENDER
 	if(buf_tex != NULL)
 		Mfree(buf_tex);
 #endif
@@ -527,9 +585,11 @@ void display_ati_logo(void)
 		0x01FF,0xFFFF,0xFFFF,0xFFFF,0xFFFF,0xFFFF,
 		0x01FF,0xFFFF,0xFFFF,0xFFFF,0xFFFF,0xFFFF };
 	long dst_y = 0, w = WIDTH_ATI_LOGO - 8, h = HEIGHT_ATI_LOGO, src_wrap = WIDTH_ATI_LOGO / 8;
-	struct fb_info *info = rinfo_fvdi->info;
+	struct fb_info *info = info_fvdi;
 	long foreground, background;
 	long dst_x = (long)info->var.xres - w;
+	if(info->screen_mono != NULL)
+		return;
 	switch(info->var.bits_per_pixel)
 	{
 		case 8: foreground = 1; background = 7; break; /* red & grey */
@@ -540,21 +600,138 @@ void display_ati_logo(void)
 #endif
 }
 
+const struct fb_videomode *get_db_from_modecode(long modecode)
+{
+	const struct fb_videomode *db;
+	long devID = GET_DEVID(modecode);
+	if(devID < VESA_MODEDB_SIZE)
+		db = &vesa_modes[devID];		
+	else
+	{
+		devID -= VESA_MODEDB_SIZE;
+		if(devID < total_modedb)
+			db = &modedb[devID];
+#if defined(COLDFIRE) && defined(MCF547X) /* FIREBEE */
+		else if(!video_found) /* Videl */
+		{
+			extern struct fb_videomode *videl_modedb;
+			extern unsigned long videl_modedb_len;
+			devID -= total_modedb;
+			if(devID < videl_modedb_len)
+				db = &videl_modedb[devID];
+			else
+				return(NULL);
+		}
+#endif /* defined(COLDFIRE) && defined(MCF547X) */
+		else if(video_found == 1) /* Radeon */
+		{
+			struct radeonfb_info *rinfo = info_fvdi->par;
+			devID -= total_modedb;
+			if(devID < rinfo->mon1_dbsize)
+				db = &rinfo->mon1_modedb[devID];
+			else
+				return(NULL);
+		}
+		else if(video_found == 2) /* Lynx */
+		{
+			struct radeonfb_info *smiinfo = info_fvdi->par;
+			devID -= total_modedb;
+			if(devID < smiinfo->mon1_dbsize)
+				db = &smiinfo->mon1_modedb[devID];
+			else
+				return(NULL);
+		}	
+		else
+			return(NULL);
+	}
+	return(db);
+}
+
+long get_modecode_from_screeninfo(struct fb_var_screeninfo *var)
+{
+	const struct fb_videomode *db = NULL;
+	long modecode, i, nb = 0;
+#ifndef COLDFIRE
+	if(info_fvdi->screen_mono)
+		modecode = BPS1; /* VBL mono emulation */
+	else
+#endif
+	{
+		switch(var->bits_per_pixel)
+		{
+			case 16: modecode = BPS16; break;
+			case 32: modecode = BPS32; break;
+			default: modecode = BPS8; break;
+		}
+	}
+#if defined(COLDFIRE) && defined(MCF547X) /* FIREBEE */
+	if(!video_found) /* Videl */
+	{
+		extern struct fb_videomode *videl_modedb;
+		extern unsigned long videl_modedb_len;
+		if((nb = videl_modedb_len) != 0)
+			db = videl_modedb;
+	}
+	else
+#endif /* defined(COLDFIRE) && defined(MCF547X) */
+	if(video_found == 1) /* Radeon */
+	{
+		struct radeonfb_info *rinfo = info_fvdi->par;
+		if((nb = rinfo->mon1_dbsize) != 0)
+			db = rinfo->mon1_modedb;
+	}
+	else if(video_found == 2) /* Lynx */
+	{
+		struct radeonfb_info *smiinfo = info_fvdi->par;
+		if((nb = smiinfo->mon1_dbsize) != 0)
+			db = smiinfo->mon1_modedb;
+	}
+	if(db != NULL)
+	{
+		for(i = 0; i < nb; i++)
+		{
+			if(((unsigned long)db->xres == var->xres) && ((unsigned long)db->yres == var->yres) && ((unsigned long)db->refresh == var->refresh))
+				return(SET_DEVID(i + VESA_MODEDB_SIZE + total_modedb) + modecode);
+			db++;
+		}
+	}
+	db = modedb;
+	for(i = 0; i < total_modedb; i++)
+	{
+		if(((unsigned long)db->xres == var->xres) && ((unsigned long)db->yres == var->yres) && ((unsigned long)db->refresh == var->refresh))
+			return(SET_DEVID(i + VESA_MODEDB_SIZE) + modecode);
+		db++;
+	}
+	db = vesa_modes;
+	for(i = 0; i < VESA_MODEDB_SIZE; i++)
+	{
+		if(((unsigned long)db->xres == var->xres) && ((unsigned long)db->yres == var->yres) && ((unsigned long)db->refresh == var->refresh))
+			return(SET_DEVID(i) + modecode);
+		db++;
+	}
+	return(-1);
+}
+
 void init_screen_info(SCREENINFO *si, long modecode)
 {
 	char buf[16];
 	long flags = 0;
-	struct fb_info *info;
-	info = rinfo_fvdi->info;
+	struct fb_info *info = info_fvdi;
 	switch(modecode & NUMCOLS)
 	{
-		case BPS32:
-			si->scrPlanes = 32;
-			si->scrColors = 16777216;
-			si->redBits = 0xFF0000;                 /* mask of red bits */
-			si->greenBits = 0xFF00;                 /* mask of green bits */
-			si->blueBits = 0xFF;                    /* mask of blue bits */
-			si->unusedBits = 0xFF000000;            /* mask of unused bits */
+#ifndef COLDFIRE
+		case BPS1: /* VBL mono emulation */
+			si->scrPlanes = 1;
+			si->scrColors = 2;
+			si->redBits = si->greenBits = si->blueBits = 255;
+			si->unusedBits = 0;
+			break;
+#endif
+		case BPS8:
+			si->scrPlanes = 8;
+			si->scrColors = 256;
+			si->redBits = si->greenBits = si->blueBits = 255;
+			si->unusedBits = 0;
 			break;
 		case BPS16:
 			si->scrPlanes = 16;
@@ -564,11 +741,13 @@ void init_screen_info(SCREENINFO *si, long modecode)
 			si->blueBits = 0x1F;                     /* mask of blue bits */
 			si->unusedBits = 0;                      /* mask of unused bits */
 			break;
-		case BPS8:
-			si->scrPlanes = 8;
-			si->scrColors = 256;
-			si->redBits = si->greenBits = si->blueBits = 255;
-			si->unusedBits = 0;
+		case BPS32:
+			si->scrPlanes = 32;
+			si->scrColors = 16777216;
+			si->redBits = 0xFF0000;                 /* mask of red bits */
+			si->greenBits = 0xFF00;                 /* mask of green bits */
+			si->blueBits = 0xFF;                    /* mask of blue bits */
+			si->unusedBits = 0xFF000000;            /* mask of unused bits */
 			break;
 		default:
 			si->scrFlags = 0;
@@ -581,6 +760,10 @@ void init_screen_info(SCREENINFO *si, long modecode)
 		{
 			case (VERTFLAG+VGA):                      /* 320 * 240 */
 			case 0:
+#if defined(COLDFIRE) && defined(MCF547X) /* FIREBEE */
+				if(!video_found)
+					break;
+#endif 
 				si->scrWidth = 320;
 				si->scrHeight = 240;
 				break;
@@ -627,32 +810,32 @@ void init_screen_info(SCREENINFO *si, long modecode)
 	}
 	else /* bits 11-3 used for devID */
 	{
-		const struct fb_videomode *db;
-		long devID = GET_DEVID(modecode);
-		if(devID < 34)
-			db = &vesa_modes[devID];		
-		else
+		const struct fb_videomode *db = get_db_from_modecode(modecode);
+		if(db == NULL)
 		{
-			devID -= 34;
-			if(devID < total_modedb)
-				db = &modedb[devID];
-			else
-			{
-      	devID -= total_modedb;
-      	if(devID < rinfo_fvdi->mon1_dbsize)
-					db = &rinfo_fvdi->mon1_modedb[devID];
-      	else
-				{
-					si->scrFlags=0;
-					return;
-				}
-			}
+			si->scrFlags = 0;
+			return;
 		}
+#if defined(COLDFIRE) && defined(MCF547X) /* FIREBEE */
+		if(!video_found && ((db->vmode & (FB_VMODE_DOUBLE | FB_VMODE_INTERLACED))
+/*		 || ((db->sync & (FB_SYNC_VERT_HIGH_ACT | FB_SYNC_HOR_HIGH_ACT)) != (FB_SYNC_VERT_HIGH_ACT | FB_SYNC_HOR_HIGH_ACT)) */ ))
+		{
+			si->scrFlags = 0;
+			return;
+		}
+#endif
 		si->scrWidth = (long)db->xres;
 		si->scrHeight = (long)db->yres;
-    si->refresh = (long)db->refresh;
+		si->refresh = (long)db->refresh;
 		si->pixclock = (long)db->pixclock;
 		flags = (long)db->flag;
+	}
+	if((si->scrPlanes == 1)
+	 && ((os_magic == 1) || (si->scrWidth > MAX_WIDTH_EMU_MONO) || (si->scrHeight > MAX_HEIGHT_EMU_MONO)
+	  || (modecode & VIRTUAL_SCREEN))) /* limit size for the VBL mono emulation */
+	{
+		si->scrFlags = 0;
+		return;
 	}
 	if(modecode & VIRTUAL_SCREEN)
 	{
@@ -712,54 +895,22 @@ void init_screen_info(SCREENINFO *si, long modecode)
 	si->pagemem = vgetsize(modecode);
 	if(!si->devID)
 	{
-		si->refresh = info->var.refresh;
-		si->pixclock = info->var.pixclock;
+		if(info->var.refresh)
+			si->refresh = info->var.refresh;
+		if(info->var.pixclock)
+			si->pixclock = info->var.pixclock;
 		si->devID = modecode;
 	}
 	si->scrFlags = SCRINFO_OK;
 }
 
-#else /* TEST_NOPCI */
-
-long clear_screen(long bg_color, long x, long y, long w, long h)
+static long update_modecode(long modecode)
 {
-	if(bg_color);
-  if(x);
-  if(y);
-  if(w);
-  if(h);
-  return(0);
-}
-
-long move_screen(long src_x, long src_y, long dst_x, long dst_y, long w, long h)
-{
-	if(src_x);
-	if(src_y);
-	if(dst_x);
-	if(dst_y);
-	if(w);
-	if(h);
-	return(0);
-}
-
-long print_screen(char *car, long x, long y, long w, long h, long fg_color, long bg_color)
-{
-	if(car);
-	if(x);
-	if(y);
-	if(h);
-	if(fg_color);
-	if(bg_color);
-	return(0);
-}
-
-#endif /* TEST_NOPCI */
-
-unsigned long physbase(void)
-{
-	struct fb_info *info;
-	info=rinfo_fvdi->info;
-	return((unsigned long)info->screen_base + rinfo_fvdi->fb_offset);
+	if(os_magic == 1)
+		modecode_magic = (short)modecode;
+	else
+		Modecode = (short)modecode;
+	return(modecode);
 }
 
 void init_screen(void)
@@ -778,15 +929,23 @@ void init_screen(void)
 
 void init_resolution(long modecode)
 {
+	long Mode;
+	if(os_magic == 1)
+		Mode = (long)modecode_magic & 0xFFFF;
+	else
+		Mode = (long)Modecode & 0xFFFF;
+//	board_printf("init_resolution modecode %04X (%04X)\r\n", modecode, Mode);
 	switch(modecode & NUMCOLS)
 	{
-		case BPS32: resolution.bpp = 32; break;
-		case BPS16: resolution.bpp = 16; break;
-		default: resolution.bpp = 8; break;
+		case BPS1: 
+			if(os_magic == 1)
+				break;
+			resolution.flags = MODE_EMUL_MONO_FLAG; resolution.bpp = 1; break;
+		case BPS16: resolution.flags = 0; resolution.bpp = 16; break;
+		case BPS32: resolution.flags = 0; resolution.bpp = 32; break;
+		default: resolution.flags = 0; resolution.bpp = 8; break;
 	}
-#ifndef TEST_NOPCI
 	if(!(modecode & DEVID)) /* modecode normal */
-#endif
 	{
 		if(modecode & OVERSCAN)
 		{
@@ -802,7 +961,6 @@ void init_resolution(long modecode)
 			else
 				resolution.freq = 56;
 		}
-		resolution.vesa = 0;
 		switch(modecode & (VERTFLAG2|VESA_768|VESA_600|HORFLAG2|HORFLAG|VERTFLAG|STMODES|VGA|COL80))
 		{
 			case (VERTFLAG+VGA):                      /* 320 * 240 */
@@ -815,7 +973,6 @@ void init_resolution(long modecode)
 				resolution.width = 640;
 				resolution.height = 480;
 				break;
-#ifndef TEST_NOPCI
 			case (VESA_600+HORFLAG2+VGA+COL80):       /* 800 * 600 */
 				resolution.width = 800;
 				resolution.height = 600;
@@ -827,56 +984,193 @@ void init_resolution(long modecode)
 			case (VERTFLAG2+HORFLAG+VGA+COL80):       /* 1280 * 960 */
 				resolution.width = 1280;
 				resolution.height = 960;
-				resolution.vesa = 1;
+				resolution.flags |= MODE_VESA_FLAG;
 				break;
 			case (VERTFLAG2+VESA_600+HORFLAG2+HORFLAG+VGA+COL80): /* 1600 * 1200 */
 				resolution.width = 1600;
 				resolution.height = 1200;
 				break;
-#endif
-			default: 
-				init_resolution((long)((unsigned long)Modecode));
+			default:
+				init_resolution((long)validmode(Mode));
 			 	break;
 		}
 	}
-#ifndef TEST_NOPCI
 	else /* bits 11-3 used for devID */
 	{
 		const struct fb_videomode *db;
 		long devID = GET_DEVID(modecode);
-		if(devID < 34)
+		if(devID < VESA_MODEDB_SIZE)
 		{
 			db = &vesa_modes[devID];
-			resolution.vesa = 1;
+			resolution.flags |= MODE_VESA_FLAG;
 		}
 		else
 		{
-			devID -= 34;
-			resolution.vesa = 0;
+			devID -= VESA_MODEDB_SIZE;
 			if(devID < total_modedb)
 				db = &modedb[devID];
-			else
+#if defined(COLDFIRE) && defined(MCF547X) /* FIREBEE */
+			else if(!video_found) /* Videl */
 			{
-      	devID -= total_modedb;
-      	if(devID < rinfo_fvdi->mon1_dbsize)
-					db = &rinfo_fvdi->mon1_modedb[devID];
-      	else
+				extern struct fb_videomode *videl_modedb;
+				extern unsigned long videl_modedb_len;
+				devID -= total_modedb;
+				if(devID < videl_modedb_len)
+					db = &videl_modedb[devID];
+				else
 				{
-					init_resolution((long)((unsigned long)Modecode));
+					init_resolution(Mode);
 					return;
 				}
+			}
+#endif /* defined(COLDFIRE) && defined(MCF547X) */
+			else if(video_found == 1) /* Radeon */
+			{
+				struct radeonfb_info *rinfo = info_fvdi->par;
+				devID -= total_modedb;
+				if(devID < rinfo->mon1_dbsize)
+					db = &rinfo->mon1_modedb[devID];
+				else
+				{
+					init_resolution(Mode);
+					return;
+				}
+			}
+			else if(video_found == 2) /* Lynx */
+			{
+				struct smifb_info *smiinfo = info_fvdi->par;
+				devID -= total_modedb;
+				if(devID < smiinfo->mon1_dbsize)
+					db = &smiinfo->mon1_modedb[devID];
+				else
+				{
+					init_resolution(Mode);
+					return;
+				}
+			}
+			else
+			{
+				init_resolution(Mode);
+				return;
 			}
 		}
 		resolution.width = (short)db->xres;
 		resolution.height = (short)db->yres;
 		resolution.freq = (short)db->refresh;
 	}
-#endif /* TEST_NOPCI */
 }
 
-short vsetscreen(long logaddr, long physaddr, long rez, long modecode, long init_vdi)
+void vsetrgb(long index, long count, long *array)
 {
-#ifndef TEST_NOPCI
+	short i;
+	unsigned red,green,blue;
+	struct fb_info *info = info_fvdi;
+	for(i = index; i < (count + index); i++)
+	{
+		bios_colors[i] = *array;
+		if(video_found && (info->var.bits_per_pixel <= 8))
+		{
+			red = (*array>>16) & 0xFF;
+			green = (*array>>8) & 0xFF;
+			blue = *array & 0xFF;
+			info->fbops->fb_setcolreg((unsigned)i, red << 8, green << 8, blue << 8, 0, info);
+		}
+#ifdef COLDFIRE
+		else if(!video_found)
+		{
+			long type = 1; /* FALCON */
+			if((Modecode & STMODES) && (((Modecode & NUMCOLS) == BPS2) || ((Modecode & NUMCOLS) == BPS4)))
+				type = 0; /* ST */
+			else if((unsigned long)info->screen_base >= 0x1000000)
+				type = 2; /* FIREBEE */
+			if((Modecode & NUMCOLS) <= BPS8)
+				setrgb_videl(i, *array, type);
+		}
+#endif		
+		array++;
+	}
+}
+
+void vgetrgb(long index, long count, long *array)
+{
+	short i;
+	for(i = index; i < (count + index); i++)
+		*array++ = bios_colors[i];
+}
+
+unsigned long physbase(void)
+{
+	struct fb_info *info = info_fvdi;
+	long physaddr;
+	if(video_found == 1) /* Radeon */
+	{
+		struct radeonfb_info *rinfo = info->par;
+		if(info->screen_mono != NULL)
+			physaddr = (unsigned long)info->screen_mono;
+		else
+			physaddr = (unsigned long)info->screen_base + rinfo->fb_offset;
+	}
+	else if(video_found == 2) /* Lynx */
+	{
+		struct smifb_info *smiinfo = info->par;
+		if(info->screen_mono != NULL)
+			physaddr = (unsigned long)info->screen_mono;
+		else
+			physaddr = (unsigned long)info->screen_base + smiinfo->fb_offset;
+	}
+#if defined(COLDFIRE) && defined(MCF547X)
+	else if(!video_found && ((unsigned long)info->screen_base < 0x1000000)) /* Videl */
+	{
+		physaddr = (unsigned long)(*(unsigned char *)0xFFFF8201); /* video screen memory position, high byte */
+		physaddr <<= 8;
+		physaddr |= (unsigned long)(*(unsigned char *)0xFFFF8203); /* mid byte */
+		physaddr <<= 8;
+		physaddr |= (unsigned long)(*(unsigned char *)0xFFFF820D); /* low byte */
+	}
+#endif
+	else
+		physaddr = (unsigned long)info->screen_base;
+//	board_printf("physbase => %08X\r\n", physaddr);
+	return(physaddr);
+}
+
+long getrez(void)
+{
+
+	long Mode;
+	if(os_magic == 1)
+		Mode = (long)modecode_magic & 0xFFFF;
+	else
+		Mode = (long)Modecode & 0xFFFF;
+	if(!(Mode & DEVID)) /* modecode normal */
+	{
+		switch(Mode & (VERTFLAG2|VESA_768|VESA_600|HORFLAG2|HORFLAG|VERTFLAG|VGA|COL80))
+		{
+			case (VERTFLAG+VGA):                      /* 320 * 240 */
+			case 0:
+				return(0);
+			case (VGA+COL80):                         /* 640 * 480 */
+			case (VERTFLAG+COL80):
+				return(4);
+			default:
+				return(6);
+		}
+	}
+	else /* bits 11-3 used for devID */
+	{
+		const struct fb_videomode *db = get_db_from_modecode(Mode);
+		if(db == NULL)
+			return(0);
+		if((db->xres <= 320) && (db->yres <= 240))
+			return(0);
+		if((db->xres <= 640) && (db->yres <= 480))
+			return(4);
+		return(6);
+	}
+}
+
+long vsetscreen(long logaddr, long physaddr, long rez, long modecode, long init_vdi)
+{
 	static unsigned short tab_16_col_ntc[16] = {
 		0xFFDF,0xF800,0x07C0,0xFFC0,0x001F,0xF81F,0x07DF,0xB596,
 		0x8410,0xA000,0x0500,0xA500,0x0014,0xA014,0x0514,0x0000 };
@@ -884,31 +1178,50 @@ short vsetscreen(long logaddr, long physaddr, long rez, long modecode, long init
 		0xFFFFFF,0xFF0000,0x00FF00,0xFFFF00,0x0000FF,0xFF00FF,0x00FFFF,0xB0B0B0,
 		0x808080,0x8F0000,0x008F00,0x8F8F00,0x00008F,0x8F008F,0x008F8F,0x000000 };
 	long y, color = 0, test = 0;
-#endif /* TEST_NOPCI */
-	struct fb_info *info;
-	struct radeonfb_info *rinfo;
+	struct fb_info *info = info_fvdi;
 	struct fb_var_screeninfo var;
-	info = rinfo_fvdi->info;
-	rinfo = rinfo_fvdi;
+	int milan_mode = 0;
+	short dup_handle = -1, log_handle = -1, save_debug = debug;
+	long Mode;
+	if(os_magic == 1)
+		Mode = (long)modecode_magic & 0xFFFF;
+	else
+		Mode = (long)Modecode & 0xFFFF;
+//	board_printf("vsetscreen logaddr %08X phyaddr %08X rez %04X modecode %04X (%04X)\r\n", logaddr, physaddr, rez, modecode, Mode);
 	switch((short)rez)
 	{
-#ifndef TEST_NOPCI
+		case 0x4D49: /* 'MI' (Milan Vsetscreen) */
+			milan_mode = 1;
 		case 0x564E: /* 'VN' (Vsetscreen New) */
 			switch((short)modecode)
 			{
 				case CMD_GETMODE:
-					*((long *)physaddr) = (long)((unsigned long)Modecode);
+					*((long *)physaddr) = Mode;
 					return(0);
 				case CMD_SETMODE:
 					modecode = physaddr;
 					rez = 3;
 					logaddr = physaddr = 0;
-					if(((modecode & NUMCOLS) != BPS8)
-					 && ((modecode & NUMCOLS) != BPS16)
-					 && ((modecode & NUMCOLS) != BPS32))
-						return(0);
-					init_resolution(modecode);
-					Modecode = (short)modecode;
+					switch(modecode & NUMCOLS)
+					{
+#ifndef COLDFIRE
+						case BPS1:
+							if(os_magic == 1)
+								return(0);
+							init_resolution(modecode);
+							if((resolution.width > MAX_WIDTH_EMU_MONO) || (resolution.height > MAX_HEIGHT_EMU_MONO))
+								return(0);
+							break;
+#endif
+						case BPS8:
+						case BPS16:
+						case BPS32:
+							init_resolution(modecode);
+							break;
+						default:
+							return(0);
+					}
+					Mode = update_modecode(modecode);
 					break;
 				case CMD_GETINFO:
 					{
@@ -916,11 +1229,12 @@ short vsetscreen(long logaddr, long physaddr, long rez, long modecode, long init
 						if(si->devID)
 							modecode = si->devID;
 						else
-							modecode = (long)((unsigned long)Modecode);
+							modecode = Mode;
 						init_screen_info(si, modecode);
 					}
-          return(0);
+					return(0);
 				case CMD_ALLOCPAGE:
+					if(video_found)
 					{
 						long addr, addr_aligned;
 						long wrap = info->var.xres_virtual * (info->var.bits_per_pixel >> 3);
@@ -931,7 +1245,7 @@ short vsetscreen(long logaddr, long physaddr, long rez, long modecode, long init
 								*((long *)logaddr) = second_screen_aligned;
 							return(0);
 						}
-						addr_aligned = addr = radeon_offscreen_alloc(rinfo_fvdi,vgetsize(modecode)+wrap);
+						addr_aligned = addr = offscreen_alloc(info, vgetsize(modecode)+wrap);
 						if(addr)
 						{
 							addr_aligned = addr - (long)info->screen_base;
@@ -955,30 +1269,33 @@ short vsetscreen(long logaddr, long physaddr, long rez, long modecode, long init
 					}
 					return(0);
 				case CMD_FREEPAGE:
-					if((logaddr == -1) || (logaddr == second_screen_aligned))
-						logaddr = second_screen;
-					else
-						logaddr = 0;
-					if(logaddr)
+					if(video_found)
 					{
-						radeon_offscreen_free(rinfo_fvdi, logaddr);
-						if(logaddr == second_screen_aligned)
+						if((logaddr == -1) || (logaddr == second_screen_aligned))
+							logaddr = second_screen;
+						else
+							logaddr = 0;
+						if(logaddr)
 						{
-							if(second_screen_aligned == (long)physbase())
+							offscreen_free(info, logaddr);
+							if(logaddr == second_screen_aligned)
 							{
-								logaddr = physaddr = (long)info->screen_base;
-								rez = -1; /* switch back to the first if second page active */
-								init_vdi = 0;
-								second_screen = second_screen_aligned = 0;
-								break;
-							}								
-							else				
-								second_screen = second_screen_aligned = 0;							
+								if(second_screen_aligned == (long)physbase())
+								{
+									logaddr = physaddr = (long)info->screen_base;
+									rez = -1; /* switch back to the first if second page active */
+									init_vdi = 0;
+									second_screen = second_screen_aligned = 0;
+									break;
+								}								
+								else				
+									second_screen = second_screen_aligned = 0;							
+							}
 						}
 					}
 					return(0);
 				case CMD_FLIPPAGE:
-					if(!second_screen)
+					if(!video_found || !second_screen)
 						return(0);
 					if(second_screen_aligned == (long)physbase())
 						logaddr = physaddr = (long)info->screen_base;
@@ -996,7 +1313,7 @@ short vsetscreen(long logaddr, long physaddr, long rez, long modecode, long init
 						{	
 							int bpp = info->var.bits_per_pixel >> 3;
 							blk->blk_len = (long)(info->var.xres_virtual * bpp) * blk->blk_h;
-							blk->blk_start = radeon_offscreen_alloc(rinfo_fvdi, blk->blk_len);
+							blk->blk_start = offscreen_alloc(info, blk->blk_len);
 							if(blk->blk_start)
 								blk->blk_status = BLK_OK;
 							else
@@ -1011,7 +1328,7 @@ short vsetscreen(long logaddr, long physaddr, long rez, long modecode, long init
 				case CMD_FREEMEM:
 					{
 						SCRMEMBLK *blk	= (SCRMEMBLK *)physaddr;
-						radeon_offscreen_free(rinfo_fvdi,blk->blk_start);
+						offscreen_free(info, blk->blk_start);
 						blk->blk_status = BLK_CLEARED;
 					}
 					return(0);
@@ -1022,24 +1339,28 @@ short vsetscreen(long logaddr, long physaddr, long rez, long modecode, long init
 					{
 						long (*enumfunc)(SCREENINFO *inf, long flag) = (void *)physaddr;
 						SCREENINFO si;
-						long mode;
+						long index, mode;
 						si.size = sizeof(SCREENINFO);
-						for(mode = 0; mode < 65536; mode++)
+						for(index = 0; index < 65536; index++)
 						{
+							mode = index;
+							if(!video_found && (mode & VIRTUAL_SCREEN))
+								continue;
 							if(!(mode & DEVID)) /* modecode normal */
 							{
 								if(mode & STMODES)
 									continue;
-								mode |= VGA;
+								if(!(mode & VGA))
+									continue;
 								mode &= (VIRTUAL_SCREEN|VERTFLAG2|VESA_768|VESA_600|HORFLAG2|HORFLAG|VERTFLAG|OVERSCAN|PAL|VGA|COL80|NUMCOLS);
-								if(mode == (long)(Modecode & (VIRTUAL_SCREEN|VERTFLAG2|VESA_768|VESA_600|HORFLAG2|HORFLAG|VERTFLAG|OVERSCAN|PAL|VGA|COL80|NUMCOLS)))
+								if(mode == (Mode & (VIRTUAL_SCREEN|VERTFLAG2|VESA_768|VESA_600|HORFLAG2|HORFLAG|VERTFLAG|OVERSCAN|PAL|VGA|COL80|NUMCOLS)))
 									si.devID = 0;
 								else
 									si.devID = mode;
 							}
 							else /* bits 11-3 used for devID */
 							{
-								if(mode == ((long)Modecode & 0xFFFF))
+								if(mode == Mode)
 									si.devID = 0;
 								else
 									si.devID = mode;
@@ -1048,28 +1369,47 @@ short vsetscreen(long logaddr, long physaddr, long rez, long modecode, long init
 						  si.devID = mode;
 						  if(si.scrFlags == SCRINFO_OK)
 						  {
-								if(!(*enumfunc)(&si, 1 /* ??? */))
+								if(!call_enumfunc(enumfunc, &si, 1 /* ??? */)) /* for Pure C user */
 									break;
 							}
 						}
 					}
-					return(0);
+					if(milan_mode)
+						return(0);
+					return((long)info); /* trick for get sructure */
 				case CMD_TESTMODE:
-					debug = 0;
+					if(milan_mode)
+						return(0);
 					modecode = physaddr;
 					logaddr = physaddr = 0;
 					rez = 3;
 					init_vdi = 0;
 					test = 1;
-					if(((modecode & NUMCOLS) != BPS8)
-					 && ((modecode & NUMCOLS) != BPS16)
-					 && ((modecode & NUMCOLS) != BPS32))
-						return(0);
-					init_resolution(modecode);
-					Modecode = (short)modecode;			
+					switch(modecode & NUMCOLS)
+					{
+#ifndef COLDFIRE
+						case BPS1:
+							if(os_magic == 1)
+								return(0);
+							init_resolution(modecode);
+							if((resolution.width > MAX_WIDTH_EMU_MONO) || (resolution.height > MAX_HEIGHT_EMU_MONO))
+								return(0);
+							break;
+#endif
+						case BPS8:
+						case BPS16:
+						case BPS32:
+							init_resolution(modecode);
+							break;
+						default:
+							return(0);
+					}
+					Mode = update_modecode(modecode);
 					break;
 				case CMD_COPYPAGE:
-					if(second_screen)
+					if(milan_mode)
+						return(0);					
+					if(video_found && second_screen)
 					{
 						long src_x, src_y, dst_x, dst_y;
 						int bpp = info->var.bits_per_pixel >> 3;
@@ -1090,71 +1430,178 @@ short vsetscreen(long logaddr, long physaddr, long rez, long modecode, long init
 					}
 					return(0);
 				case -1:
-				default: return(0);
+				default:
+					return(0);
 			}
 			break;
-#endif /* TEST_NOPCI */
-/*
-		case 0:	
-			resolution.width = 320;
-			resolution.height = 200;
-			resolution.bpp = 8;
-			resolution.freq = 70;
-			if(Modecode & VGA)
-				modecode = VERTFLAG|STMODES|VGA|BPS4;
-			else
-				modecode = STMODES|BPS4;
+#if 0 // actually the fVDI driver works only with packed pixels in 256 / 65K / 16M colors and VBL mono emulation
+		case 0:	/* ST-LOW */
+			if(!video_found)
+			{
+				resolution.width = 320;
+				resolution.height = 200;
+				resolution.bpp = 4;
+				resolution.freq = 60;
+				resolution.flags = 0;
+				modecode = VERTFLAG|STMODES|PAL|VGA|BPS4;
+				Mode = update_modecode(modecode);
+				break;
+			}
+			return(Mode);
+		case 1: /* ST-MED */
+			if(!video_found)
+			{
+				resolution.width = 640;
+				resolution.height = 200;
+				resolution.bpp = 2;
+				resolution.freq = 60;
+				resolution.flags = 0;
+				modecode = VERTFLAG|STMODES|PAL|VGA|COL80|BPS2;
+				Mode = update_modecode(modecode);
+				break;
+			}
+			return(Mode);
+#endif
+#ifndef COLDFIRE
+		case 2: /* ST-HIG */
+			if(os_magic == 1)
+				return(Mode);
+			resolution.width = 640;
+			resolution.height = 400;
+			resolution.bpp = 1;
+			resolution.freq = 60;
+			resolution.flags = MODE_EMUL_MONO_FLAG;
+			modecode = STMODES|PAL|VGA|COL80|BPS1;
+			Mode = update_modecode(modecode);
 			break;
-*/
+#endif
 		case 3:
-			if(((modecode & NUMCOLS) != BPS8)
-			 && ((modecode & NUMCOLS) != BPS16)
-			 && ((modecode & NUMCOLS) != BPS32))
-				return(Modecode);
-			init_resolution(modecode);
-			Modecode = (short)modecode;
+			switch(modecode & NUMCOLS)
+			{
+#ifndef COLDFIRE
+				case BPS1:
+					init_resolution(modecode);
+					if((resolution.width > MAX_WIDTH_EMU_MONO) || (resolution.height > MAX_HEIGHT_EMU_MONO))
+						return(Mode);
+					break;
+#endif
+				case BPS8:
+				case BPS16:
+				case BPS32:
+					init_resolution(modecode);
+					break;
+				default:
+#if 0
+					modecode = Mode;  /* previous modecode */
+					init_resolution(modecode);
+					break;
+#else
+					return(Mode);
+#endif
+			}
+			Mode = update_modecode(modecode);
 			break;
 		default:
-			return(Modecode);
+#if 0
+			modecode = Mode; /* previous modecode */
+			init_resolution(modecode);
+			break;
+#else
+			return(Mode);
+#endif
 	}
 	if(modecode & VIRTUAL_SCREEN)
 		virtual=1;
 	else
 		virtual=0;
-	if(!logaddr && !physaddr && (rez >= 0))
+	if(((!logaddr && !physaddr) || ((logaddr == -1) && (physaddr == -1))) && (rez >= 0))
 	{
-#ifdef TEST_NOPCI
-		if(&var);
-		if(Modecode & COL80)
-		{
-			*((char **)_v_bas_ad) = info->screen_base = (char *)Screalloc(640*480*2);
-			init_videl_640_480_65K((unsigned short *)info->screen_base);
-		}
-		else
-		{
-			*((char **)_v_bas_ad) = info->screen_base = (char *)Screalloc(320*240*2);
-			init_videl_320_240_65K((unsigned short *)info->screen_base);		
-		}
-		info->var.xres = info->var.xres_virtual = resolution.width;
-		info->var.yres = info->var.yres_virtual = resolution.height;
-		rinfo_fvdi->bpp = info->var.bits_per_pixel = resolution.bpp;
-		if(init_vdi)
-		{
-			init_var_linea();
-			init_screen();
-		}
-#else /* !TEST_NOPCI */
 		resolution.used = 1;
+#if defined(DEBUG) && defined(COLDFIRE) && defined(NETWORK) && defined(LWIP)
 		if(init_vdi)
+			board_printf("Setscreen mode 0x%04X %dx%d-%d@%d\r\n", Mode, resolution.width, resolution.height, resolution.bpp, resolution.freq);
+#endif
+#ifdef COLDFIRE
+		if(!video_found)
 		{
-			DPRINTVALHEX("Setscreen mode ", (long)Modecode & 0xFFFF);
-			DPRINTVAL(" ", resolution.width);
-			DPRINTVAL("x", resolution.height);
-			DPRINTVAL("-", resolution.bpp);
-			DPRINTVAL("@", resolution.freq);
-			DPRINT("\r\n");
+			long addr = init_videl((long)resolution.width, (long)resolution.height, (long)resolution.bpp, (long)resolution.freq, 1);
+     	if(addr)
+     	{
+				*((char **)_v_bas_ad) = info->screen_base = (char *)addr;
+				info->var.xres = info->var.xres_virtual = (int)resolution.width;
+				info->var.yres = info->var.yres_virtual = (int)resolution.height;
+				info->var.bits_per_pixel = (int)resolution.bpp;
+				if(info->var.bits_per_pixel == 8)
+					vsetrgb(0, 256, (long *)0xE1106A); /* default TOS 4.04 palette */
+				if(init_vdi)
+				{
+					init_var_linea((long)video_found);
+					init_screen();
+				}
+				else if(test)
+				{
+					int color = 0;
+					for(y = 0; y < info->var.yres_virtual; y += 16)
+					{
+						long size = ((info->var.bits_per_pixel * info->var.xres_virtual) >> 3) << 4;
+						memset((void *)addr, color, size); 
+						addr += size;
+						switch(info->var.bits_per_pixel)
+						{
+							case 16: 
+							case 32: color += 0x11; break;
+							default: color = (y >> 4) & 15; break;
+						}
+					}
+				}
+			}
+			else if(!test) /* error */
+			{
+				long addr;
+#if defined(DEBUG) && defined(COLDFIRE) && defined(NETWORK) && defined(LWIP)
+				board_printf("Setscreen init_videl error mode 0x%04X %dx%d-%d@%d, try to use default 640x480\r\n", Mode, resolution.width, resolution.height, resolution.bpp, resolution.freq);
+#endif
+				resolution.width = 640;
+				resolution.height = 480;
+				resolution.bpp = 16;
+				resolution.freq = 60;
+				Mode = PAL | VGA | COL80 | BPS16;
+				addr = init_videl((long)resolution.width, (long)resolution.height, (long)resolution.bpp, (long)resolution.freq, 0);
+	     	if(addr)
+	     	{
+					*((char **)_v_bas_ad) = info->screen_base = (char *)addr;
+					info->var.xres = info->var.xres_virtual = (int)resolution.width;
+					info->var.yres = info->var.yres_virtual = (int)resolution.height;
+					info->var.bits_per_pixel = (int)resolution.bpp;
+					if(info->var.bits_per_pixel == 8)
+						vsetrgb(0, 256, (long *)0xE1106A); /* default TOS 4.04 palette */
+					if(init_vdi)
+					{
+						init_var_linea((long)video_found);
+						init_screen();
+					}
+				}
+			}
+			return(Mode);
 		}
-		radeon_check_modes(rinfo_fvdi, &resolution);
+#endif /* COLDFIRE */
+		if(test)
+			debug = 0;
+		if(!test && drive_ok && video_log)
+		{
+			dup_handle = Fdup(1); /* stdout */
+			if(dup_handle >= 0)
+			{
+				log_handle = Fcreate("C:\\screen.log", 0);
+				if(log_handle >= 0)
+				{
+					Fforce(1, log_handle); /* stdout */
+					debug = 1;  /* force debug to file */
+				}
+			}
+		}
+		info->update_mono = 0; /* stop VBL redraw if monochrome emulation */
+		info->fbops->fb_check_modes(info, &resolution);
 		memcpy(&var, &info->var, sizeof(struct fb_var_screeninfo));
 		if(virtual)
 		{
@@ -1166,12 +1613,12 @@ short vsetscreen(long logaddr, long physaddr, long rez, long modecode, long init
 				var.yres_virtual = 2048;
 		}
 		var.activate = (FB_ACTIVATE_FORCE|FB_ACTIVATE_NOW);
-		rinfo_fvdi->asleep = 0;
-		if(!fb_set_var(info, &var))
+//		rinfo->asleep = 0;
+		print_screen(NULL, 0, 0, 0, 0, 0, 0, 0); /* flush characters */
+    if(!fb_set_var(info, &var))
 		{
 			int i, red = 0, green = 0, blue = 0;
-			*((char **)_v_bas_ad) = info->screen_base;
-			switch(rinfo_fvdi->bpp)
+			switch(info->var.bits_per_pixel)
 			{
 				case 16:
 					for(i = 0; i < 64; i++)
@@ -1182,7 +1629,7 @@ short vsetscreen(long logaddr, long physaddr, long rez, long modecode, long init
 							green = 65535;
 						if(blue > 65535)
 							blue = 65535;
-						radeonfb_setcolreg((unsigned)i,red,green,blue,0,info);
+						info->fbops->fb_setcolreg((unsigned)i,red,green,blue,0,info);
 						green += 1024;   /* 6 bits */
 						red += 2048;     /* 5 bits */
 						blue += 2048;    /* 5 bits */
@@ -1197,121 +1644,208 @@ short vsetscreen(long logaddr, long physaddr, long rez, long modecode, long init
 							green = 65535;
 						if(blue > 65535)
 							blue = 65535;
-						radeonfb_setcolreg((unsigned)i,red,green,blue,0,info);
+						info->fbops->fb_setcolreg((unsigned)i,red,green,blue,0,info);
 						green += 256;   /* 8 bits */
 						red += 256;     /* 8 bits */
 						blue += 256;    /* 8 bits */
 					}
 					break;
 				default:
-					vsetrgb(0,256,(long *)0xE1106A); /* default TOS 4.04 palette */
+					vsetrgb(0, 256, (long *)0xE1106A); /* default TOS 4.04 palette */
 					break;
 			}
-			if(init_vdi)
+			if((info->var.xres != (unsigned long)resolution.width) || (info->var.yres != (unsigned long)resolution.height))
+			{ /* fix modecode if the driver choice another screen */
+				modecode = get_modecode_from_screeninfo(&info->var);
+				init_resolution(modecode);
+				Mode = update_modecode(modecode);
+			}
+			if(resolution.flags & MODE_EMUL_MONO_FLAG)
 			{
-				radeon_offscreen_init(rinfo_fvdi);
-				init_var_linea();
-				init_screen();
+#ifndef COLDFIRE /* normal to VBL nono emulation => update fVDI accel functions */
+				extern Driver *me;
+				extern void *default_text;
+//				extern void *default_line, *default_fill;
+				extern void *line, *fill;
+				Virtual *vwk = me->default_vwk;
+				Workstation *wk = vwk->real_address;
+//				wk->r.line = &default_line;
+//				wk->r.fill = &default_fill;
+				wk->r.line = &line;
+				wk->r.fill = &fill;
+				wk->r.fillpoly = NULL; 
+				wk->r.text = &default_text;				
+#endif
+				info->screen_mono = (char *)Srealloc((info->var.xres_virtual * info->var.yres_virtual) >> 3);
+				if(info->screen_mono != NULL)
+					memset(info->screen_mono, 0, (info->var.xres_virtual * info->var.yres_virtual) >> 3);
+			}
+			else if(info->screen_mono != NULL)  /* VBL nono emulation to normal => update fVDI accel functions */
+			{
+					extern Driver *me;
+					extern void *c_line, *c_text, *c_fill, *c_fillpoly;
+					Virtual *vwk = me->default_vwk;
+					Workstation *wk = vwk->real_address;
+					info->update_mono = 0; /* stop VBL redraw */
+					info->screen_mono = NULL;
+					wk->r.line = &c_line;
+					wk->r.fill = &c_fill;
+					wk->r.fillpoly = &c_fillpoly; 
+					wk->r.text = &c_text;
+			}
+			if(info->screen_mono != NULL)
+				*((char **)_v_bas_ad) = info->screen_mono;
+			else
+				*((char **)_v_bas_ad) = info->screen_base;
+			if(init_vdi) /* Vsetscreen, Vsetmode not change linea variables */
+			{
+				offscreen_init(info);
+				init_var_linea((long)video_found);
+				switch(info->var.bits_per_pixel)
+				{
+					case 16: color = (unsigned long)tab_16_col_ntc[15]; break;
+					case 32: color = tab_16_col_tc[15]; break;
+					default: color = 15; break;
+				}
+				clear_screen(color, 0, 0, info->var.xres_virtual, info->var.yres_virtual); /* black screen */
+				init_screen(); /* it's possible than fVDI not clear latest lines (modulo 16) */				
 			}
 			else if(test)
 			{
-				for(y = 0; y < info->var.yres_virtual; y += 16)
+				if(info->screen_mono == NULL)
 				{
-					switch(rinfo_fvdi->bpp)
+					for(y = 0; y < info->var.yres_virtual; y += 16)
 					{
-						case 16: color = (unsigned long)tab_16_col_ntc[(y >> 4) & 15]; break;
-						case 32: color = tab_16_col_tc[(y >> 4) & 15]; break;
-						default: color = (unsigned long)((y >> 4) & 15); break;
+						switch(info->var.bits_per_pixel)
+						{
+							case 16: color = (unsigned long)tab_16_col_ntc[(y >> 4) & 15]; break;
+							case 32: color = tab_16_col_tc[(y >> 4) & 15]; break;
+							default: color = (unsigned long)((y >> 4) & 15); break;
+						}
+						clear_screen(color, 0, y, info->var.xres_virtual, info->var.yres_virtual-y >= 16 ? 16 : info->var.yres_virtual - y);
 					}
-					clear_screen(color, 0, y, info->var.xres_virtual, info->var.yres_virtual-y >= 16 ? 16 : info->var.yres_virtual - y);
-				}				
+				}
+				else /* VBL mono emulation */
+				{
+					unsigned char *buffer = (unsigned char *)info->screen_mono;
+					int size  = (info->var.xres_virtual >> 3) << 4;
+					for(y = 0; y < info->var.yres_virtual; y += 16)
+					{
+						memset(buffer, (y >> 4) & 1 ? -1 : 0, size);
+						buffer += size;
+					}
+					info->update_mono = 1;
+				}
 			}
-			Modecode = (short)modecode;
+			Mode = update_modecode(modecode);		
 		}
-#endif /* TEST_NOPCI */
+		if(log_handle >= 0)
+			Fclose(log_handle);
+		if(dup_handle >= 0)
+			Fforce(1, dup_handle); /* stdout */
+		debug = save_debug;
 	}
 	else
 	{
-		if(logaddr && (logaddr != -1))
+		if(logaddr && (logaddr != -1) && (info->screen_mono != NULL))
 			*((char **)_v_bas_ad) = (char *)logaddr;
 		if(physaddr && (physaddr != -1))
 		{
-#ifndef TEST_NOPCI
-			int bpp = info->var.bits_per_pixel >> 3;
-			physaddr -= (long)info->screen_base;
-			if(physaddr < 0
-			 || (physaddr >= (info->var.xres_virtual * 8192 * bpp)))
-				return(Modecode);
-			memcpy(&var, &info->var, sizeof(struct fb_var_screeninfo));			
-			var.xoffset = (physaddr % (info->var.xres_virtual * bpp)) / bpp;
-			var.yoffset = physaddr / (info->var.xres_virtual * bpp);
-			if(var.yoffset < 8192)
+			if((video_found) && (info->screen_mono == NULL))
 			{
-#ifdef SEMAPHORE
-				xSemaphoreTakeRADEON();
-#endif
-				fb_pan_display(info, &var);
-#ifdef SEMAPHORE
-				xSemaphoreGiveRADEON();
-#endif
+				int bpp = info->var.bits_per_pixel >> 3;
+				physaddr -= (long)info->screen_base;
+				if(physaddr < 0
+				 || (physaddr >= (info->var.xres_virtual * 8192 * bpp)))
+					return(Mode);
+				memcpy(&var, &info->var, sizeof(struct fb_var_screeninfo));			
+				var.xoffset = (physaddr % (info->var.xres_virtual * bpp)) / bpp;
+				var.yoffset = physaddr / (info->var.xres_virtual * bpp);
+				if(var.yoffset < 8192)
+					fb_pan_display(info, &var);
 			}
-#endif /* TEST_NOPCI */
+			else if((info->screen_mono != NULL) && (physaddr < *phystop)) /* VBL mono emulation */
+				info->screen_mono = (char *)physaddr;
 		}
 	}
-	return(Modecode);
+	return(Mode);
 }
 
 short vsetmode(long modecode)
 {
+	long Mode;
+	if(os_magic == 1)
+		Mode = (long)modecode_magic & 0xFFFF;
+	else
+		Mode = (long)Modecode & 0xFFFF;
+//	board_printf("vsetmode modecode %04X (%04X)\r\n", modecode, Mode);
 	if(modecode == -1)
-		return(Modecode);
+		return(Mode);
 	vsetscreen(0, 0 , 3, modecode & 0xFFFF, 0);
-	return(Modecode);
+	return(Mode);
 }
 
 short montype(void)
 {
-	switch(rinfo_fvdi->mon1_type)
+	if(video_found == 1) /* Radeon */
 	{
-		case MT_STV: return(1); /* S-Video out */
-		case MT_CRT: return(2); /* VGA */
-		case MT_CTV: return(3); /* TV / composite */
-		case MT_LCD: return(4);	/* LCD */
-		case MT_DFP: return(5); /* DVI */
-		default: return(2);     /* VGA */
+		struct radeonfb_info *rinfo = info_fvdi->par;
+		switch(rinfo->mon1_type)
+		{
+			case MT_STV: return(1); /* S-Video out */
+			case MT_CRT: return(2); /* VGA */
+			case MT_CTV: return(3); /* TV / composite */
+//			case MT_LCD: return(4);	/* LCD */
+//			case MT_DFP: return(5); /* DVI */
+			default: return(2);     /* VGA */
+		}
 	}
+	else if(video_found == 2) /* Lynx */
+	{
+		struct smifb_info *smiinfo = info_fvdi->par;
+		/* 0:none 1:LCD 2:CRT 3:CRT/LCD 4:TV 5:TV/LCD */
+		switch(smiinfo->videoout)
+		{
+			case 2: return(2); /* VGA */
+			case 4: return(3); /* TV / composite */
+			case 1:
+			case 3:
+			case 5:
+				return(4);	/* LCD */
+			default: return(2);     /* VGA */
+		}	
+	}
+	return(2);
 }
 
 long vgetsize(long modecode)
 {
-	long size = 0;
-	struct fb_info *info;
-	info = rinfo_fvdi->info;
-	if((short)modecode == Modecode)
+	long size = 0, Mode;
+	struct fb_info *info = info_fvdi;
+	if(os_magic == 1)
+		Mode = (long)modecode_magic & 0xFFFF;
+	else
+		Mode = (long)Modecode & 0xFFFF;
+	if((short)modecode == Mode)
+	{
+		if(info->screen_mono != NULL)
+			return((info->var.xres_virtual * info->var.yres_virtual) >> 3);
 		return(info->var.xres_virtual * info->var.yres_virtual * (info->var.bits_per_pixel >> 3));
-#ifndef TEST_NOPCI
+	}
 	if(!(modecode & DEVID)) /* modecode normal */
-#endif
 	{
 		if(modecode & STMODES)
-		{
-			switch(modecode & NUMCOLS)
-			{
-				case BPS4: return(320 * 200);
-				default: return(640 * 400);
-			}
-		}	
+			return(32000);
 		switch(modecode & (VESA_768|VESA_600|HORFLAG2|HORFLAG|VERTFLAG|OVERSCAN|VGA|COL80))
-		{
-			case (VERTFLAG+VGA):                      /* 320 * 240 */
+		{		
+			case (VERTFLAG|VGA):                      /* 320 * 240 */
 			case 0:
 				size = 320 * 240;
 				break;
 			case (VGA+COL80):                         /* 640 * 480 */
-			case (VERTFLAG+COL80):
+			case (VERTFLAG|COL80):
 				size = 640 * 480;
 				break;
-#ifndef TEST_NOPCI
 			case (VESA_600+HORFLAG2+VGA+COL80):       /* 800 * 600 */
 				size = 800 * 600;
 				break;
@@ -1325,41 +1859,21 @@ long vgetsize(long modecode)
 			default:
 				size = 1600 * 1200;
 				break;
-#else
-			default:
-				size = 640 * 480;
-				break;
-#endif
 		}
 	}
-#ifndef TEST_NOPCI
 	else /* bits 11-3 used for devID */
 	{
-		const struct fb_videomode *db;
-		long devID = GET_DEVID(modecode);
-		if(devID < 34)
-			db = &vesa_modes[devID];		
-		else
-		{
-			devID -= 34;
-			if(devID < total_modedb)
-				db = &modedb[devID];
-			else
-			{
-      	devID -= total_modedb;
-      	if(devID < rinfo_fvdi->mon1_dbsize)
-					db = &rinfo_fvdi->mon1_modedb[devID];
-      	else
-					return(0);
-			}
-		}
+		const struct fb_videomode *db = get_db_from_modecode(modecode);
+		if(db == NULL)
+			return(0);
 		size = db->xres * db->yres;
 	}
-#endif /* TEST_NOPCI */
 	switch(modecode & NUMCOLS)
 	{
-		case BPS32: size <<= 2; break;
+		case BPS1: size >>= 3; break;
+		case BPS8: break;
 		case BPS16: size <<= 1; break;
+		case BPS32: size <<= 2; break;
 		default: break;
 	}
 	if(modecode & VIRTUAL_SCREEN)
@@ -1367,83 +1881,195 @@ long vgetsize(long modecode)
 	return(size);
 }
 
+long find_best_mode(long modecode)
+{
+	switch(video_found)
+	{
+#if defined(COLDFIRE) && defined(MCF547X) /* FIREBEE */
+		case 0: /* Videl */
+			{
+				extern struct fb_videomode *videl_modedb;
+				extern unsigned long videl_modedb_len;
+				const struct fb_videomode *db;
+				long i = 0;
+				while(i < videl_modedb_len)
+				{
+					db = &videl_modedb[i];
+					if(db->flag & FB_MODE_IS_FIRST)
+					{
+						modecode = SET_DEVID(i + VESA_MODEDB_SIZE + total_modedb);
+						break;
+					}
+					i++;
+				}
+			}
+			break;
+#endif /* defined(COLDFIRE) && defined(MCF547X) */
+		case 1: /* Radeon */
+			{
+				struct radeonfb_info *rinfo = info_fvdi->par;
+				const struct fb_videomode *db;
+				long i = 0;
+				while(i <  rinfo->mon1_dbsize)
+				{
+					db = &rinfo->mon1_modedb[i];
+					if(db->flag & FB_MODE_IS_FIRST)
+					{
+						modecode = SET_DEVID(i + VESA_MODEDB_SIZE + total_modedb);
+						break;
+					}
+					i++;
+				}
+			}
+			break;
+		case 2: /* Lynx */
+			{
+				struct radeonfb_info *smiinfo = info_fvdi->par;
+				const struct fb_videomode *db;
+				long i = 0;
+				while(i <  smiinfo->mon1_dbsize)
+				{
+					db = &smiinfo->mon1_modedb[i];
+					if(db->flag & FB_MODE_IS_FIRST)
+					{
+						modecode = SET_DEVID(i + VESA_MODEDB_SIZE + total_modedb);
+						break;
+					}
+					i++;
+				}
+			}
+			break;
+	}
+	return(modecode);
+}
+
 short validmode(long modecode)
 {
-#ifndef TEST_NOPCI
+	long Mode;
+	if(os_magic == 1)
+		Mode = (long)modecode_magic & 0xFFFF;
+	else
+		Mode = (long)Modecode & 0xFFFF;
+//	board_printf("validmode modecode %04X fix %d\r\n", modecode, fix_modecode);
 	if((unsigned short)modecode != 0xFFFF)
 	{
+#ifndef COLDFIRE
+		if((os_magic != 1) && ((modecode & NUMCOLS) == BPS1)) /* VBL mono emulation */
+			modecode &= ~VIRTUAL_SCREEN; /* limit size */
+		else
+#endif
 		if(((modecode & NUMCOLS) < BPS8) || ((modecode & NUMCOLS) > BPS32))
 		{
 			modecode &= ~NUMCOLS;
-			modecode |= BPS16;
+			modecode = find_best_mode(modecode) | BPS16;
 		}
 		if(!(modecode & DEVID)) /* modecode normal */
 		{
-			modecode |= VGA;
+			modecode |= (PAL|VGA);
 			if(modecode & STMODES)
 			{
-				modecode &= (VERTFLAG|VGA|COL80);
+				modecode &= (VERTFLAG|STMODES|OVERSCAN|COL80);
 				modecode |= BPS16;
 			}
 			else if(fix_modecode < 0)
 			{
-				modecode &= (VERTFLAG|VGA|COL80|NUMCOLS);
-				modecode |= ((long)Modecode & (VIRTUAL_SCREEN|VERTFLAG2|VESA_768|VESA_600|HORFLAG2|HORFLAG));
+				modecode &= (VERTFLAG|PAL|VGA|COL80|NUMCOLS);
+				modecode |= (Mode & (VIRTUAL_SCREEN|VERTFLAG2|VESA_768|VESA_600|HORFLAG2|HORFLAG));
 			}
+			if((modecode & VGA) && !(modecode & COL80))
+				modecode |= VERTFLAG;
 		}
 		else /* bits 11-3 used for devID */
 		{
 			if(fix_modecode < 0)
 			{
 			 	modecode &= NUMCOLS;
-			 	modecode |= ((long)Modecode & ~NUMCOLS);
+			 	modecode |= (Mode & ~NUMCOLS);
 			}
-			if(GET_DEVID(modecode) >= (34 + total_modedb + rinfo_fvdi->mon1_dbsize))
+#if defined(COLDFIRE) && defined(MCF547X) /* FIREBEE */
+			if(!video_found) /* Videl */
 			{
-				modecode &= NUMCOLS;
-				modecode |= (VGA|COL80);
+				extern unsigned long videl_modedb_len;
+				if(GET_DEVID(modecode) >= (VESA_MODEDB_SIZE + total_modedb + videl_modedb_len))
+				{
+					modecode &= NUMCOLS;
+					modecode |= (PAL|VGA|COL80);
+				}
+			}
+			else
+#endif /* defined(COLDFIRE) && defined(MCF547X) */
+			if(video_found == 1) /* Radeon */
+			{
+				struct radeonfb_info *rinfo = info_fvdi->par;
+				if(GET_DEVID(modecode) >= (VESA_MODEDB_SIZE + total_modedb + rinfo->mon1_dbsize))
+				{
+					modecode &= NUMCOLS;
+					modecode |= (PAL|VGA|COL80);
+				}
+			}
+			else if(video_found == 2) /* Lynx */
+			{
+				struct smifb_info *smiinfo = info_fvdi->par;
+				if(GET_DEVID(modecode) >= (VESA_MODEDB_SIZE + total_modedb + smiinfo->mon1_dbsize))
+				{
+					modecode &= NUMCOLS;
+					modecode |= (PAL|VGA|COL80);
+				}
+			}
+			else
+			{
+				if(GET_DEVID(modecode) >= (VESA_MODEDB_SIZE + total_modedb))
+				{
+					modecode &= NUMCOLS;
+					modecode |= (PAL|VGA|COL80);
+				}		
 			}
 		}
 	}
 	if(fix_modecode != 1)
 		fix_modecode = -1;
-#endif /* TEST_NOPCI */
+//	board_printf(" => modecode %04X\r\n", modecode);
 	return((short)modecode);
 }
 
 long vmalloc(long mode, long value)
 {
-#ifndef TEST_NOPCI
-	switch(mode)
+	if(video_found)
 	{
-		case 0:
-			if(value)
-				return(radeon_offscreen_alloc(rinfo_fvdi,value));
-			break;
-		case 1:
-			return(radeon_offscreen_free(rinfo_fvdi,value));
-		case 2:
-			if(value > 0)
-				rinfo_fvdi = (struct radeonfb_info *)value; 
-			radeon_offscreen_init(rinfo_fvdi);
-			return(0);
-			break;
+		switch(mode)
+		{
+			case 0:
+				if(value)
+					return(offscreen_alloc(info_fvdi, value));
+				break;
+			case 1:
+				return(offscreen_free(info_fvdi, value));
+			case 2:
+				if(value > 0)
+					info_fvdi = (struct fb_info *)value;
+				offscreen_init(info_fvdi);
+				return(0);
+				break;
+		}
 	}
-#endif
 	return(-1);
 }
 
-long InitVideo(void)
+long InitVideo(void) /* test for Video input */
 {
-#if 0 // #ifndef TEST_NOPCI
-	RADEONInitVideo(rinfo_fvdi);
-	Cconin();	
-	RADEONPutVideo(rinfo_fvdi, 0, 0, 720, 576, 0, 0, 640, 512);
-	Cconin();
-	RADEONStopVideo(rinfo_fvdi, 1);	
-	Cconin();
-	RADEONShutdownVideo(rinfo_fvdi);
-	Cconin();	
+#if 0 /* todo */
+	if(video_found == 1) /* Radeon */
+	{
+		struct radeonfb_info *rinfo = info_vdi->par;
+		RADEONInitVideo(rinfo);
+		Cconin();	
+		RADEONPutVideo(rinfo, 0, 0, 720, 576, 0, 0, 640, 512);
+		Cconin();
+		RADEONStopVideo(rinfo, 1);	
+		Cconin();
+		RADEONShutdownVideo(rinfo);
+		Cconin();	
+	}
 #endif
 	return(0);
 }
@@ -1457,7 +2083,7 @@ long InitVideo(void)
 #define DEBUG
 
 #ifdef MCF547X
-#define AC97_DEVICE 2 /* COLDARI */
+#define AC97_DEVICE 2 /* FIREBEE */
 #else /* MCF548X */
 #define AC97_DEVICE 3 /* M5484LITE */
 #endif /* MCF547X */
@@ -1716,7 +2342,7 @@ long soundcmd(long mode, unsigned long data)
 				return(record_source);			
 			record_source = data & (ADCRT | ADCLT | 0x3ffc);
 			if(data & ADCRT) /* Right channel input */
-				val2 = RECORD_SOURCE_AUX; /* (Coldari PSG) */
+				val2 = RECORD_SOURCE_AUX; /* (Firebee PSG) */
 			else
 				val2 = RECORD_SOURCE_MIC;
 			if(data & ADCLT) /* Left channel input */
@@ -1759,7 +2385,7 @@ long soundcmd(long mode, unsigned long data)
 					val2 = RECORD_SOURCE_VIDEO;
 				if(!(data & 0x200)) /* Video left */
 					val1 = RECORD_SOURCE_VIDEO;
-				if(!(data & 0x400)) /* Aux right (Coldari PSG)  */
+				if(!(data & 0x400)) /* Aux right (Firebee PSG)  */
 					val2 = RECORD_SOURCE_AUX;
 				if(!(data & 0x800)) /* Aux left */
 					val1 = RECORD_SOURCE_AUX;

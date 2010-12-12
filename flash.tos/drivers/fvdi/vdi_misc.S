@@ -11,6 +11,7 @@
 #include "macros.inc"
 
 	.xdef	setup_plot
+	.xref	__background
 
 	.data
 	
@@ -24,12 +25,17 @@
 *	a4	get pixel function
 */
 setup_plot:
+	move.l	d0,-(a7)
 	move.l	vwk_real_address(a0),a1
 	move.l	wk_r_set_pixel(a1),a3
 	move.l	wk_r_get_pixel(a1),a4
-	lea	mode_routines,a1
-	move.l	d0,-(a7)
 	moveq	#0,d0
+	move.w	wk_screen_mfdb_bitplanes(a1),d0
+	lea	mode_routines,a1
+	cmp.l	#32,d0
+	bne.s	.not_tc32
+	lea	mode_routines32,a1
+.not_tc32:
 	move.w	8(a7),d0
 	lsl.l	#2,d0; *4
 	add.l	d0,a1
@@ -56,6 +62,17 @@ p_replace:
 	swap	d0
 	jsr	(a3)
 	swap	d0
+	rts
+	
+p_replace32:
+	bcc	.background32
+	jsr	(a3)
+	rts
+.background32:
+	move.l	d0,-(a7)
+	move.l	__background,d0  // for TC32
+	jsr	(a3)
+	move.l	(a7)+,d0
 	rts
 
 /*  - Internal function
@@ -97,4 +114,7 @@ p_revtransp:
 
 mode_routines:
 	dc.l	p_replace,p_transp,p_xor,p_revtransp
+
+mode_routines32:
+	dc.l	p_replace32,p_transp,p_xor,p_revtransp
 

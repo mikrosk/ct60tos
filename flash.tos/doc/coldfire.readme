@@ -8,7 +8,7 @@ M5484LITE tested (Coldfire v4e 200 MHz) and use:
  - CAN for IKBD with a special version of Eiffel
  - Ethernet 10/100
  - USB device
- - PCI
+ - PCI: USB / Radeon (USB support mouse & keyboard, mass storage not works)
  - CompactFlash
  - DMA
  - MMU
@@ -18,34 +18,32 @@ M54455EVB untested (Coldfire v4m 266 MHz) and use:
  - Serial port
  - Serial port for Atari IKBD
  - Ethernet 10/100
- - PCI
+ - PCI: USB / Radeon
  - ATA
  - DMA
  - MMU
 (Makefile: -DCOLDFIRE -DMCF5445X)
-COLDARI untested (Coldfire V4e 266 MHz) and use:
+FIREBEE (Coldfire V4e 266 MHz) and use:
  - Timers
  - Serial port
  - Serial port for IKBD with Eiffel
+ - ACIA for original IKBD (FPGA emulation)
  - Ethernet 10/100
- - PCI
- - Atari Falcon IDE / SCSI (FPGA emulation)
+ - PCI: USB / Radeon (USB support mouse & keyboard, mass storage not works)
+ - CompactFlash
+ - Atari Falcon IDE / SCSI (FPGA emulation, SCSI not tested)
  - DMA
  - MMU
  - PSG (YAMAHA - FPGA emulation)
- - Atari Floppy (FPGA emulation)
+ - Atari Floppy (FPGA emulation, only reading works)
+ - RTC (PIC & FPGA emulation)
+ - Videl ACP extended modes with EDID probing (monitor detection)
+- AC97 Sound, only for M5484LITE/M5485EVB and FIREBEE targets, is actually in debug state and not works.
 (Makefile: -DCOLDFIRE -DMCF547X)
- 
-- AC97 Sound, only for M5484LITE/M5485EVB and COLDARI targets, is actually in debug state and not works.
 
 
-Build TOS
-=========
-
-- Inside TOS sources #define DEBUG inside some files (xxxxx2.S) send debug output to the serial port.
-  => sometines there are redirection of the keyboard to serial input.
-
-- #define DEBUG is global for pci drivers, inside config.h (pci directory).
+Load TOS
+========
 
 - For load firetos_m5484lite.hex (the TOS) with an host TFTP server with dBUG cmds:
  The 1st time, set TFTP vars (for example):
@@ -57,11 +55,34 @@ Build TOS
  * set baud 19200
  After just use:
  * dn -o 1000000
- * fl w ff900000 b00000 f0000
+ * fl w ff900000 900000 f0000
  * go ff900000 (or go)
  or if jou want preserve flash:
  * dn -o 1000000
  * go 900000 (or go)
+ 
+- For load firetos_firebee.hex (the TOS) with an host TFTP server with dBUG cmds:
+ The 1st time, set TFTP vars (for example):
+ * set server 192.168.1.1 (host IP server)
+ * set client 192.168.1.2 (FIREBEE IP)
+ * set filename /home/firetos_firebee.hex
+ * set filetype S-Record
+ And also: 
+ * set baud 19200
+ After just use:
+ * dn -o 20000000
+ * fl w E0400000 400000 f0000
+ * go E0400000 (or go)
+ or if jou want preserve flash:
+ * dn -o 20000000
+ * go 4000000 (or go)
+ 
+ NOTE: In the current state because the network part use dBUG settings, ethernet not works if the BAS start the TOS.
+ WARNING: The ethernet part of dBUG need a clock on the PHY, so if the FLASH above 0xE7000000 is destroyed ethernet can't work! 
+
+ 
+Build config
+============
 
 - pci/include/config.h:
 #define LWIP:
@@ -188,7 +209,7 @@ OFF             OFF             0       0       GPT0 Int(126)
 => By default TOS interrupts not works without CF68KLIB (excepted the TOS himself),
    so these interrupts are disabled out of the TOS task:
    MCF5484: PSC0 (serial) CAN1 (ikbd) and GPT timers (MFP).
-   MCF5474: PSC0 (serial) PSC3 (ikbd) and GPT timers (MFP).
+   MCF5474: PSC0 (serial) PSC1 (ikbd) and GPT timers (MFP).
    
 LWIP socket cookie 'SOCK':
 --------------------------
@@ -273,21 +294,22 @@ Note: The driver select the nearest mode selected by the XBIOS if this mode not 
  * 5 for DVI
 
 
-COLDARI Notes (M5484LITE/M5485EVB comparison)
+FIREBEE Notes (M5484LITE/M5485EVB comparison)
 =============================================
-- Booting changes with the M5484LITE/M5485EVB target are (sdram.S):
+- Booting changes with the M5484LITE/M5485EVB target are (boot2.S):
   * FEC1 removed.
   * GPIO lines.
-  * Flash AMD 8MB device AM29LV640D.
-  * SDRAM 8 x K4H510438 (512Mbits) ........todo...
-  * FBCS1/2/3 for the FPGA (ATARI hardware emulation) ........timmings to change...
+  * Flash AMD/MX 8MB device AM29LV640D.
+  * SDRAM 8 x K4H510438 (512Mbits).
+  * FBCS1/2/3 for the FPGA (ATARI hardware emulation)
   * Clock at 266 MHz (fire.h)
 - 2 x SRAM base location unchanged (0x20000000, cf68klib.S).
 - MMU mapping (pmmu.C).
-- Atari hardware F030 IDE/SCSI are available inside the TOS (sdram.S).
+- Atari hardware F030 IDE/SCSI are available inside the TOS (boot2.S).
 - CT60 flash parameters (xbios.S).
-- PSC3 for Eiffel (CAN1 on M5484LITE/M5485EVB, xbios.S)
-- PCI Devices numbers, AD17 is the USB Controller ISP1563, AD18, AD19, AD20 actually for slots (4 maxi actually, pci_bios.S).
+- PSC1 for Eiffel (CAN1 on M5484LITE/M5485EVB, xbios.S)
+- PCI Devices numbers, AD17 is the NEC USB Controller, AD18, AD19, AD20... actually for slots
+  (7 maxi actually, pci_bios.S).
 - Original XBIOS TOS functions available (xbios.S):
   * Floprd
   * Flopwr
@@ -302,10 +324,17 @@ COLDARI Notes (M5484LITE/M5485EVB comparison)
 - Driver for the AM79C874 10/100 Ethernet PHY (lwip/am79c874.c, lwip/fec.c).
 - Second network interface (FEC1) removed (lwip/init.c).
 - USB Slave Mass Storage Driver removed (lwip/init.c).
+- Videl fVDI driver (without Blitter) with a 65K colors 640x480 or extendend modes in 
+  256/65K/16M start if no Radeon is detected on PCI. 
 
-=> TOS Mapped to the latest MB of the flash, so actually it need a new rebuild
+=> Compressed TOS Mapped between 0xE0400000-0xE04FFFFF inside the flash, 
+   and need to be called by the boot at 0xE0400000.
+   The TOS unpacked by himself is finally between 0xE00000-0xEFFFFF and 0xFC0000-0xFEFFFF.
    of DBUG for start the TOS at 0xFF700000 (flash begins at 0xFF000000).
-   Idea: DBUG can test a switch and start himself the TOS. 
+   Idea: We can put DBUG at 0xE0000000 and it can test a switch and start himself the TOS. 
+
+- CT60CONF.CPX / flash parameters allows to swap IDE port (CompactFlash at 0xFFF00000 and IDE 
+  at 0xFFF00040) and change the boot order on drives.
  
 
 Ram-disk & TFTP notes
@@ -377,7 +406,12 @@ M5484LITE/M5485EVB CompactFlash notes
 M54455EVB IDE notes
 ===================
 
-- sdram.S contains code for MCF54455 ATA interface, but this target isn't tested.
+- boot2.S contains code for MCF54455 ATA interface, but this target isn't tested.
+
+
+USB driver notes
+================
+- USB ohci (1.1) support mouse, keyboard and mass-storage. Actually not in the same time.
 
 
 Video driver notes
@@ -385,10 +419,8 @@ Video driver notes
 
 - Radeon bugs to fix ?
  * force_measure_pll fVDI parameter not works with my card, the driver use default values.
- * probe screen not works with my monitor (I2C), the driver use his big list of video modes.
- * mirror fVDI parameter is not tested.
- * doublescan video modes not works (320x240 for the XBIOS), maybe something is bad inside the VGA BIOS
-   and some registers have bad settings. I have also tried VGA modes with INT #0x10 without success.
+
+- Lynx driver for M5485EVB (if no radeon is found) is actually untested.
 
 
 fVDI TOS notes
@@ -396,11 +428,6 @@ fVDI TOS notes
 
 - The fVDI part inside the TOS is normally 100% compatible with the TOS and use his variables.
   So for example bezier lines, true type fonts are not supported.
-- Bugs to fix:
-  ------------
- * Actually v_clswk() fails because mfree used inside the fVDI part crash the system.
-   There are problem with malloc because ram-disk is destroyed during the screen
-   change called by the desktop.
 
 
 radeon(_cf).sys notes
@@ -436,7 +463,8 @@ Coldfire notes
 - M5484LITE/M5485EVB MMU Mapping:
  00000000 - 00DF0000 : STRAM 14 MB (cache in writethrough)
  00E00000 - 00EFFFFF : TOS404 1 MB (write protected)
- 00F00000 - 00F9FFFF : invalid (bus error)
+ 00F00000 - 00F0FFFF : invalid (bus error)
+ 00F10000 - 00F9FFFF : USB descriptors memory, DMA from PCI (no cache) 
  00FA0000 - 00FBFFFF : PSEUDO-CARTRIDGE 128K (write protected)
  00FC0000 - 00FEFFFF : TOS404 192 KB (write protected)
  00FF0000 - 00FFFFFF : invalid (bus error)
@@ -485,33 +513,33 @@ Coldfire notes
  FFF02000 - FFFFDFFF : invalid (bus error)
  FFFFE000 - FFFFFFFF : SRAM 8192 bytes for fix bus errors with emulated instructions remapped with MMU from 80007000
 
-- COLDARI MMU Mapping:
- 00000000 - 00DF0000 : STRAM 14 MB (cache in writethrough)
+- FIREBEE MMU Mapping:
+ 00000000 - 00CF0000 : STRAM 13 MB (cache in writethrough)
+ 00D00000 - 00DFFFFF : Mirror FPGA 1MB VIDEO RAM (cache in writethrough)
  00E00000 - 00EFFFFF : TOS404 1 MB (write protected)
  00F00000 - 00F01FFF : Mirror FPGA - ATARI IDE (8K)
- 00F02000 - 00F9FFFF : invalid (bus error)
- 00FA0000 - 00FBFFFF : Mirror FPGA - ATARI CARTRIDGE 128K (write protected)
+ 00F02000 - 00F0FFFF : invalid (bus error)
+ 00F10000 - 00F9FFFF : USB descriptors memory, DMA from PCI (no cache)
+ 00FA0000 - 00FBFFFF : invalid (bus error)
  00FC0000 - 00FEFFFF : TOS404 192 KB (write protected)
  00FF0000 - 00FF7FFF : invalid (bus error) 
  00FF8000 - 00FFFFFF : Mirror FPGA - ATARI I/O (32K - no cache)
  01000000 - 1FFFFFFF : SDRAM 496 MB (cache in copyback)
- 20000000 - 7FFFFFFF : invalid (bus error)
+ 20000000 - 3FFFFFFF : invalid (bus error)
+ 40000000 - 7FFFFFFF : FPGA FBCS4 VIDEO RAM
  80000000 - BFFFFFFF : PCI MEM (1024 MB)
  C0000000 - CFFFFFFF : invalid (bus error)
  D0000000 - DFFFFFFF : PCI I/O (256 MB)
- E0000000 - FEFFFFFF : invalid (bus error) 
- FF000000 - FF7FFFFF : flash 8 MB (flash parameters at 0xFF7F0000)
- FF800000 - FF81FFFF : MBAR coldfire (no cache)
- FF820000 - FF83FFFF : invalid (bus error) 
- FF840000 - FF84FFFF : MMU_BASE coldfire (no cache)
- FF850000 - FFEFFFFF : invalid (bus error) 
- FFF00000 - FFF01FFF : FPGA PBCS1 - ATARI IDE (8K - no cache) 
- FFF02000 - FFF0FFFF : invalid (bus error) - FPGA PBCS1 
- FFF10000 - FFF9FFFF : invalid (bus error)
- FFFA0000 - FFFBFFFF : FPGA PBCS2 - ATARI CARTRIDGE (128K - no cache)
- FFFC0000 - FFFEFFFF : invalid (bus error)
- FFFF0000 - FFFF7FFF : invalid (bus error) - FPGA FBCS3
- FFFF8000 - FFFFFFFF : FPGA FBCS3 - ATARI I/O (32K - no cache)
+ E0000000 - E07FFFFF : FBCS0 flash 8 MB (flash parameters at 0xE04F0000)
+ E0800000 - EFFFFFFF : invalid (bus error) 
+ F0000000 - F7FFFFFF : FPGA FBCS2 ACP I/O
+ F8000000 - FBFFFFFF : FPGA FBCS3 SRAM
+ FC000000 - FEFFFFFF : invalid (bus error) 
+ FF000000 - FF01FFFF : MBAR coldfire (no cache)
+ FF020000 - FF03FFFF : invalid (bus error) 
+ FF040000 - FF04FFFF : MMU_BASE coldfire (no cache)
+ FF050000 - FFEFFFFF : invalid (bus error) 
+ FFF00000 - FFFFFFFF : FPGA FBCS1 - ATARI IDE - ATARI I/O (1MB - no cache) 
  
 
 Compile MiNT 1.16.1

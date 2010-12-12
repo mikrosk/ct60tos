@@ -7,6 +7,12 @@
 
 extern unsigned short offset_port;
 
+#ifdef COLDFIRE
+#ifndef PCI_XBIOS
+#define PCI_XBIOS // else sometimes system is locked ???
+#endif
+#endif
+
 int pcibios_handler()
 {
 	int ret = 0;

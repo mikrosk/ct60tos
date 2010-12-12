@@ -213,7 +213,7 @@ uint32 usb_get_desc_size(void);
 *********************************************************************/
 
 /* The following functions are provided in usb.c */
-void usb_init(void);
+void usb_device_init(void);
 void usb_intc_init(void);
 portBASE_TYPE usb_core_isr(void);
 portBASE_TYPE usb_general_isr(void);

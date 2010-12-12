@@ -1,4 +1,4 @@
-/* TOS 4.04 COLDARI flash programming
+/* TOS 4.04 FIREBEE flash programming
  * Didier Mequignon 2009, e-mail: aniplay@wanadoo.fr
  *
  * This file is free software; you can redistribute it and/or modify
@@ -205,7 +205,7 @@ unsigned long EraseFlash(unsigned long begin, unsigned long end)
   vuint32 address, size;
   vuint32 device = GetFlashDevice();
   unsigned long base = MCF_FBCS0_CSAR & 0xFFFF0000;
-	vuint16 status;
+  vuint16 status;
   int i = 0;
   while(supported_devices[i].sectors != NULL)
   {
@@ -232,13 +232,13 @@ unsigned long EraseFlash(unsigned long begin, unsigned long end)
       while(!((status = *(vuint16 *)address) & 0x00A0)); // wait
       if((status & 0x0020) && !(*(vuint16 *)address & 0x0080))
       {
-			  ResetFlash();
+        ResetFlash();
         return(FAIL); // erase error
       }
     }    
     address += size;
-	  sectors++;
-  }	
+    sectors++;
+  }
   return(ResetFlash());
 }
 
@@ -251,12 +251,12 @@ unsigned long ResetFlash(void)
 
 unsigned long ProgFlash(unsigned long begin, unsigned long end, void *code)
 {
-	vuint16 *data = (vuint16 *)code;  
+  vuint16 *data = (vuint16 *)code;  
   t_sector *sectors = NULL;
   vuint32 address, size;
   vuint32 device = GetFlashDevice();
   unsigned long base = MCF_FBCS0_CSAR & 0xFFFF0000;
-	vuint16 status, flag;
+  vuint16 status, flag;
   int i = 0;
   while(supported_devices[i].sectors != NULL)
   {
@@ -292,7 +292,7 @@ unsigned long ProgFlash(unsigned long begin, unsigned long end, void *code)
         while(--j > 0); // retry
         if((j < 0) || (*(vuint16 *)address != *data)) // verify
         {
-  	      ResetFlash();
+          ResetFlash();
           return(FAIL); // write error
         }
         address += 2;

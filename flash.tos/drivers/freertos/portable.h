@@ -47,9 +47,9 @@
  * the order that the port expects to find them.
  */
 #if( HAVE_USP == 1 )
-portSTACK_TYPE *pxPortInitialiseStack( portSTACK_TYPE *pxTopOfStack, pdTASK_CODE pxCode, void *pvParameters, portSTACK_TYPE *Context, unsigned portBASE_TYPE uxSuper, portSTACK_TYPE * pxTopOfUserStack);
+portSTACK_TYPE *pxPortInitialiseStack( portSTACK_TYPE *pxTopOfStack, pdTASK_CODE pxCode, void *pvParameters, portSTACK_TYPE *Context, unsigned portBASE_TYPE uxSuper, portSTACK_TYPE * pxTopOfUserStack, unsigned portBASE_TYPE uxMaskIntLevel );
 #else
-portSTACK_TYPE *pxPortInitialiseStack( portSTACK_TYPE *pxTopOfStack, pdTASK_CODE pxCode, void *pvParameters, portSTACK_TYPE *Context );
+portSTACK_TYPE *pxPortInitialiseStack( portSTACK_TYPE *pxTopOfStack, pdTASK_CODE pxCode, void *pvParameters, portSTACK_TYPE *Context, unsigned portBASE_TYPE uxMaskIntLevel );
 #endif
 
 /*

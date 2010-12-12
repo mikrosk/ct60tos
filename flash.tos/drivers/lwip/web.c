@@ -20,6 +20,9 @@
 #include <string.h>
 #include <math.h>
 #include "m68k_disasm.h"
+#define Colour ColourFvdi
+#include "fb.h"
+#undef Colour
 
 /* ------------------------ FreeRTOS includes ----------------------------- */
 #include "../freertos/FreeRTOS.h"
@@ -129,6 +132,7 @@ typedef struct http_status_struct
 } http_status;
 
 extern short colours[];
+extern short video_found;
 extern int errno;
 extern void conout_debug(int c);
 extern void conws_debug(char *buf);
@@ -784,10 +788,11 @@ static char menu[] =
     "border:2px solid black;'>\n"
     "Il a quelques navigateurs o&ugrave; les bulles ne fonctionnent pas...</div>\n"  
     "<p><center><font color=blue size=5><i><b>M5484LITE</b></i></font><br>\n<i>Boot version ";
-static char menu1[] =
+static char menu0[] =
     "</i><br><hr size=1 color=blue><br></center>\n"
     "<p><h3>Menu :</h3>\n"
-    "<form action='/mem.html' method='get'>\n"
+    "<form action='/mem.html' method='get'>\n";
+static char menu1[] =
     "<p><script language='javascript'>\n"
     "<!-- \n"
     "  var message1 = \"Allows to see memory from a type of size with a refresh rate of 1 to 99 seconds. \"; \n"
@@ -979,7 +984,18 @@ static char mem_back[] =
     "<input type='button' value='BACK' name='RETOUR' onClick='history.back()'>\n"
     "</form>\n";  
 static char mem_end[] = "</body></html>";
-
+static char screen_html[] =
+    "<html><head><title>M5484LITE - Screen</title>\n"
+    "<meta http-equiv='refresh' content='1'>\n"
+    "</head>\n"
+    "<body bgcolor=black>\n"
+    "<p><center>\n"
+    "<p><script language='javascript'>\n"
+    "<!-- \n"
+    "document.write(\"<img src='/gif/screen.gif?\" + new Date().getTime() + \"' name='screen' width=640 height=480>\");\n"
+    "// --> \n"
+    "</script>\n"
+    "</body></html>";
 #ifndef WEB_LIGHT
 static char curve_html[] =
     "<html><head><title>M5484LITE - Curve</title>\n";
@@ -1053,7 +1069,6 @@ static char file_end[] = "</body></html>";
 static xQueueHandle mbox; 
 
 #ifndef WEB_LIGHT
-static int UseCurve;
 static unsigned long HeureMes,HeureTrig;
 static float *Pts, *latch_Pts;
 static int PosBuf[NB_COURBES];
@@ -1070,6 +1085,10 @@ static unsigned char CS;       /* checksum */
 static char sbuf[256];
 static char *sbuf_ptr;
 static unsigned long lowest_address, hight_address, Mem_Data;
+
+static int UseCurve;
+static char *BufPic, *BufGif, *SecondBufGif;
+int SizeGif;
 
 #ifndef WEB_LIGHT
 
@@ -1107,9 +1126,6 @@ static float table_echelle[] =
   200000.0/NB_LIGNES, 400000.0/NB_LIGNES, 1000000.0/NB_LIGNES,
   2000000.0/NB_LIGNES, 4000000.0/NB_LIGNES, 10000000.0/NB_LIGNES
 };
-
-static char *BufPic, *BufGif, *SecondBufGif;
-int SizeGif;
 
 #endif
 
@@ -1794,6 +1810,10 @@ static void handle_menu(sock_conn *conn, char *request)
   a2p(conn, menu);
   ltoa(buf, VERSION, 16);
   a2p(conn, buf);
+  a2p(conn, menu0);
+  if(!video_found
+   || ((info_fvdi->var.bits_per_pixel == 16) && (info_fvdi->var.xres_virtual <= PICTURE_WIDTH) && (info_fvdi->var.yres_virtual <= PICTURE_HEIGHT)))
+    a2p(conn, "<p><input type='button' value='View Screen' onClick='document.location.href=\"/screen.html\"'>\n");
   a2p(conn, menu1);
   add_types(conn);
   a2p(conn, menu2);
@@ -2460,6 +2480,139 @@ static void show_green_led(sock_conn *conn, char *request)
   add_block(conn, green_led_gif, sizeof(green_led_gif));
 }
 
+static void handle_screen(sock_conn *conn, char *req)
+{
+  a2p(conn, screen_html);
+}
+
+static void show_screen(sock_conn *conn, char *request)
+{
+  extern struct fb_info *info_fvdi;
+  unsigned char *input[PICTURE_HEIGHT];
+  char *output = BufGif;
+  Gif *gif;
+  GifPalette *cmap;
+  GifPicture *pic;
+  GifBlock *block;
+  static Colour col[256];
+  int level, size, i, j;
+//	long mes = get_slice_timer();
+  if(request);
+  if((info_fvdi->var.bits_per_pixel != 16) || (info_fvdi->var.xres_virtual > PICTURE_WIDTH) || (info_fvdi->var.yres_virtual > PICTURE_HEIGHT))
+  {
+    add_block(conn, red_led_gif, sizeof(red_led_gif));
+    return;    
+  }  
+  if((BufGif != NULL) && (BufPic != NULL))
+  {
+    if(UseCurve)
+    {
+      if(SizeGif && (SecondBufGif != NULL))
+      {
+        level = asm_set_ipl(7);          /* mask interrupts for other tasks */
+        add_block(conn, SecondBufGif, SizeGif);
+        asm_set_ipl(level);  
+      }
+      else
+        add_block(conn, red_led_gif, sizeof(red_led_gif));
+      return;  
+    }  
+    UseCurve = 1;
+    for(i = 0; i < info_fvdi->var.yres_virtual; i++)
+    {
+      unsigned short *src = (unsigned short *)&info_fvdi->screen_base[info_fvdi->var.xres_virtual * sizeof(short) * i];
+      unsigned char *dst = (unsigned char *)&BufPic[info_fvdi->var.xres_virtual * i];
+      input[i] = dst;
+      /* fast rgb565 to rgb332 conv */
+      for(j = info_fvdi->var.xres_virtual - 1; j >= 0; j--)
+      {
+        unsigned long rgb = (unsigned long)*src++;
+        unsigned long r = (rgb >> 8) & 0xE0;
+        unsigned long g = (rgb >> 6) & 0x1C;
+        unsigned long b = (rgb >> 3) & 0x03;
+        *dst++ = (unsigned char)(r + g + b);
+      }
+    }
+    /* Create a blank Gif: */
+    gif = new_gif();
+    if(gif != NULL)
+    {
+      /* Set the screen information: */
+      gif->screen->width = info_fvdi->var.xres_virtual;
+      gif->screen->height = info_fvdi->var.yres_virtual;
+      gif->screen->has_cmap = 1;
+      gif->screen->color_res = 8;
+      gif->screen->cmap_depth = 8;
+      /* Fill the colour map: */
+      cmap = gif->screen->cmap;
+      cmap->length = 256;
+      cmap->colours = gif_alloc(cmap->length * sizeof(Colour));
+      for(i=0; i < cmap->length; i++)
+      {
+        /* Append the colour: */
+        col[i].alpha = 0;
+        col[i].red = (char)((unsigned)i & 0xE0);
+        col[i].green = (char)(((unsigned)i & 0x1C) << 3);
+        col[i].blue = (char)(((unsigned)i & 3) << 6);
+        cmap->colours[i] = col[i];
+      }
+      /* Create a new GifPicture: */
+      pic = new_gif_picture();
+      pic->width = info_fvdi->var.xres_virtual;
+      pic->height = info_fvdi->var.yres_virtual;
+      pic->interlace = 0; /* 0=no interlace, 1=interlace */
+      pic->has_cmap = 0;
+      pic->cmap_depth = 8; /* must be depth, despite not writing it */
+      /* Link GifPicture data to supplied pixels: */
+      pic->data = input;
+      /* Link the GifPicture to the Gif: */
+      block = new_gif_block();
+      block->intro = 0x2C;
+      block->pic = pic;
+      /* Append the block: */
+      size = ++gif->block_count;
+      if(gif->blocks)
+      {
+        void *buf = gif->blocks;
+        gif->blocks = (GifBlock **)pvPortMalloc2(size * sizeof(GifBlock *));
+        memcpy(gif->blocks, buf, (size-1) * sizeof(GifBlock *));
+        vPortFree2(buf);
+      }
+      else
+        gif->blocks = (GifBlock **)pvPortMalloc2(size * sizeof(GifBlock *));
+      gif->blocks[size-1] = block;
+      /* Write the Gif file: */
+      write_gif(&output, gif);
+      /* Unlink the pixel data and clean up: */
+      pic->data = NULL;
+      del_gif(gif);
+      size = (int)(output - BufGif);
+      add_block(conn, BufGif, size);
+#if 0
+      board_printf("gif size %d bytes %ld us\r\n", size, (mes - get_slice_timer()) / 100UL);
+      {
+        long file_w;
+			  if((file_w = Fcreate("screen.gif", 0)) >= 0)
+        {
+          Fwrite(file_w, size, BufGif);
+          Fclose(file_w);
+        }
+      }
+#endif      
+      if(SecondBufGif != NULL)
+      {
+        level = asm_set_ipl(7);         /* mask interrupts for other tasks */
+        memcpy(SecondBufGif, BufGif, size);
+        SizeGif = size;
+        asm_set_ipl(level);  
+      }
+      UseCurve = 0;
+      return;
+    }
+    UseCurve = 1;
+  }
+}
+
 #ifndef WEB_LIGHT
 
 static void handle_curve(sock_conn *conn, char *req)
@@ -2861,7 +3014,6 @@ static void show_curve(sock_conn *conn, char *request)
     for(i=0;i<PICTURE_HEIGHT;i++)
       input[i] = (unsigned char *)&BufPic[PICTURE_WIDTH*i];
     memset(BufPic, 0, PICTURE_WIDTH*PICTURE_HEIGHT);
-//    vTaskDelay(1);  
     step = PICTURE_WIDTH/NB_COLONNES;
     /* tableau de couleurs RVB dans images.h */
     for(x=step;x<PICTURE_WIDTH;x+=step)  /* quadrillage vertical */
@@ -2974,7 +3126,6 @@ static void show_curve(sock_conn *conn, char *request)
         j += PICTURE_WIDTH;
       }
     }
-//    vTaskDelay(1);  
     /* Create a blank Gif: */
     gif = new_gif();
     if(gif != NULL)
@@ -3263,6 +3414,8 @@ static http_list m_http_list[] = {
   { "GET", "/mem.html", handle_mem, "text/html" },
   { "GET", "/gif/red_led.gif", show_red_led, "image/gif" },
   { "GET", "/gif/green_led.gif", show_green_led, "image/gif" },
+  { "GET", "/screen.html", handle_screen, "text/html" },
+  { "GET", "/gif/screen.gif", show_screen, "image/gif" },
 #ifndef WEB_LIGHT
   { "GET", "/curve.html", handle_curve, "text/html" },
   { "GET", "/gif/curve.gif", show_curve, "image/gif" },
@@ -3526,9 +3679,9 @@ static void HTTP_mesure(void *pvParameters)
                 {
                   time = (long)timer - (long)ptimer;  /* delta uS */
                   if((time % 10) < 5)
-                  	time /= 10;
+                    time /= 10;
                   else
-                  	time = (time / 10) + 1;
+                    time = (time / 10) + 1;
                   timer = ptimer;
                   ptimer = buffer_trace[--len];
                   ptask = buffer_trace[--len];
@@ -3552,15 +3705,15 @@ static void HTTP_mesure(void *pvParameters)
                     --len2;
                     if(buffer_trace[--len2] == ptick)
                     {
-                    	long total = 0;
+                      long total = 0;
                       while(len2 > 0)
                       {
                         time = (long)timer - (long)ptimer2;
-			                  if((time % 10) < 5)
-			                  	time /= 10;
-			                  else
-			                  	time = (time / 10) + 1;
-                  			total += time;
+                        if((time % 10) < 5)
+                          time /= 10;
+                        else
+                          time = (time / 10) + 1;
+                        total += time;
                         timer = ptimer2;
                         ptimer2 = buffer_trace[--len2];
                         --len2;
@@ -3692,6 +3845,10 @@ void vBasicWEBServer(void *pvParameters)
   int i, task;
   if(pvParameters);
   if(i);
+  SizeGif = 0;
+  BufPic = gif_alloc(PICTURE_WIDTH*PICTURE_HEIGHT);
+  BufGif = gif_alloc((PICTURE_WIDTH*PICTURE_HEIGHT)/2);
+  SecondBufGif = gif_alloc((PICTURE_WIDTH*PICTURE_HEIGHT)/2);
 #ifndef WEB_LIGHT
   UseCurve = 0;
   ValeurMini = -1000.0;
@@ -3707,10 +3864,6 @@ void vBasicWEBServer(void *pvParameters)
   table_min_max = pvPortMalloc2(sizeof(def_table_min_max));
   Pts = pvPortMalloc2(NB_COURBES*PICTURE_WIDTH*NB_IMAGES*sizeof(float));
   latch_Pts = pvPortMalloc2(NB_COURBES*PICTURE_WIDTH*sizeof(float));
-  SizeGif = 0;
-  BufPic = gif_alloc(PICTURE_WIDTH*PICTURE_HEIGHT);
-  BufGif = gif_alloc((PICTURE_WIDTH*PICTURE_HEIGHT)/2);
-  SecondBufGif = gif_alloc((PICTURE_WIDTH*PICTURE_HEIGHT)/2);
   if((Pts != NULL) && (latch_Pts != NULL) && (table_min_max != NULL))
   {
     memset(Pts,0,NB_COURBES*PICTURE_WIDTH*NB_IMAGES*sizeof(float));

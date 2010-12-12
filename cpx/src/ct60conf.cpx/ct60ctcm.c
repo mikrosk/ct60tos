@@ -1,5 +1,5 @@
 /* CT60 programmable clock module */
-/* Didier MEQUIGNON - March 2005 */
+/* Didier MEQUIGNON - March 2005 / July 2010 */
 
 #include <tos.h>
 #include <mt_aes.h>
@@ -15,7 +15,7 @@ extern int ct60_read_info_clock(unsigned char *buffer);
 extern long ct60_rw_clock(int mode,int address,int data);
 
 long ct60_read_clock(void);
-int ct60_configure_clock(unsigned long frequency,int mode);
+int ct60_configure_clock(unsigned long frequency,int mode,int divider);
 void tempo_20ms(void);
 
 long ct60_read_clock(void)
@@ -126,7 +126,7 @@ long ct60_read_clock(void)
 	return((long)frequency);
 }
 
-int ct60_configure_clock(unsigned long frequency,int mode)
+int ct60_configure_clock(unsigned long frequency,int mode,int divider)
 
 {
 	int i,adr,mux,dac,offset;
@@ -135,12 +135,11 @@ int ct60_configure_clock(unsigned long frequency,int mode)
 	unsigned long p,q,pll;
 	static unsigned char tab_cy_reg[] = { /* Cypress CY27EE16     */
 		CLKOE,0x69,    /* clocks 1, 4, 5, 6                       */
-		DIV1N,0x06,    /* post divider /6                         */
 		PINCTRL,0x50,  /* output enable pin                       */
 		OSCDRV,0x28,   /* clock REF                               */
 		INLOAD,0x6B,   /* capacity load                           */
 		ADCREG,0x00,
-		MATRIX1,0xB6,  /* clocks 1 to 4 DIV2CLK/2                 */
+		MATRIX1,0xB6,  /* clocks 1 to 3 DIV2CLK/2                 */
 		DIV2N,0x08,    /* post divider /8                         */
 		WPREG,0x1C,    /* write protect soft on, in last position */
 		0,0 };
@@ -158,10 +157,10 @@ int ct60_configure_clock(unsigned long frequency,int mode)
 				frequency<<=1;
 			if(frequency<MIN_FREQ_DALLAS || frequency>MAX_FREQ_DALLAS)
 				return(CT60_CALC_CLOCK_ERROR);
-			/* MUX : PDN0/1 = 0, SEL0 = 1, EN0 = 0, 0M = 1, 1M = 0, DIV1 = 1  */
-			mux=0x1240;
-			if(frequency>51000)
-				mux|=0x80; /* 1M = 1 => /2 */
+			/* MUX : PDN0/1 = 0, SEL0 = 1, EN0 = 0, 0M = 1, 1M = 0, DIV1 = 0  */
+			mux=0x1200;
+			if((frequency<=66000)||(divider<2))
+				divider=2;
 			dac=(int)((((long)frequency-DEF_FREQ)/DAC_STEP)+DAC_DEF);
 			if(dac<0 || dac>1023)
 			{
@@ -193,7 +192,10 @@ int ct60_configure_clock(unsigned long frequency,int mode)
 				if((error=ct60_rw_clock(CT60_CLOCK_WRITE_RAM|DALLAS,MUXWORD,mux))>=0)
 				{
 					if((error=ct60_rw_clock(CT60_CLOCK_WRITE_RAM|DALLAS,DACWORD,dac<<6))>=0)
-						error=ct60_rw_clock(CT60_CLOCK_WRITE_RAM|DALLAS,OFFSET,offset);
+					{
+						if((error=ct60_rw_clock(CT60_CLOCK_WRITE_RAM|DALLAS,OFFSET,offset))>=0)
+							error=ct60_rw_clock(CT60_CLOCK_WRITE_RAM|DALLAS,DIVWORD,(divider-2)<<6);
+					}
 				}
 			}
 			if(error>=0 && mode==CT60_CLOCK_WRITE_EEPROM)
@@ -235,20 +237,21 @@ int ct60_configure_clock(unsigned long frequency,int mode)
 			chargep|=0x0C;
 		else if(p>=800)
 			chargep|=0x10;
-		if(frequency>77000)
+		if(frequency<=66000)
 		{
 			matrix2=0xDF;
 			matrix3=0xB7;   /* clocks 5 & 6 DIV2CLK/4 */
-		}
-		else if(frequency>51000 && frequency<=77000)
-		{
-			matrix2=0xDE;
-			matrix3=0xDF;   /* clocks 5 & 6 DIV1CLK/3 */
-		}
+			divider=6;      /* post divider */
+		}		
 		else
 		{
-			matrix2=0xDF;
-			matrix3=0x6F;   /* clocks 5 & 6 DIV2CLK/2 */
+			matrix2=0xDE;
+			matrix3=0x4F;   /* clocks 5 & 6 DIV1CLK/DIV1N */
+			divider<<=1;    /* post divider */
+			if(divider<4)
+				divider=4;
+			if(divider>127)
+				divider=127;
 		}
 #ifndef NO_GEM
 		graf_mouse(BUSYBEE,(MFORM*)0);
@@ -262,38 +265,44 @@ int ct60_configure_clock(unsigned long frequency,int mode)
 		}
 		if(error>=0)
 		{
-			error=ct60_rw_clock(mode|CYPRESS,MATRIX2,(int)matrix2);
+			error=ct60_rw_clock(mode|CYPRESS,DIV1N,(int)divider);
 			if(error>=0)
 			{
 				if(mode==CT60_CLOCK_WRITE_EEPROM)
-					tempo_20ms();
-				error=ct60_rw_clock(mode|CYPRESS,MATRIX3,(int)matrix3);
+						tempo_20ms();
+				error=ct60_rw_clock(mode|CYPRESS,MATRIX2,(int)matrix2);
 				if(error>=0)
 				{
 					if(mode==CT60_CLOCK_WRITE_EEPROM)
 						tempo_20ms();
-					error=ct60_rw_clock(mode|CYPRESS,CHARGEP,(int)chargep);
+					error=ct60_rw_clock(mode|CYPRESS,MATRIX3,(int)matrix3);
 					if(error>=0)
 					{
 						if(mode==CT60_CLOCK_WRITE_EEPROM)
 							tempo_20ms();
-						error=ct60_rw_clock(mode|CYPRESS,PBCOUNTER,(int)(((p>>1)-4) & 0xFF));
+						error=ct60_rw_clock(mode|CYPRESS,CHARGEP,(int)chargep);
 						if(error>=0)
 						{
 							if(mode==CT60_CLOCK_WRITE_EEPROM)
 								tempo_20ms();
-							error=ct60_rw_clock(mode|CYPRESS,QCOUNTER,(int)((((p & 1)<<7)+q-2) & 0xFF));
+							error=ct60_rw_clock(mode|CYPRESS,PBCOUNTER,(int)(((p>>1)-4) & 0xFF));
 							if(error>=0)
 							{
 								if(mode==CT60_CLOCK_WRITE_EEPROM)
 									tempo_20ms();
-								i=error=0;
-								while((tab_cy_reg[i] || tab_cy_reg[i+1]) && error>=0)
+								error=ct60_rw_clock(mode|CYPRESS,QCOUNTER,(int)((((p & 1)<<7)+q-2) & 0xFF));
+								if(error>=0)
 								{
-								 	error=ct60_rw_clock(mode|CYPRESS,tab_cy_reg[i],tab_cy_reg[i+1]);
 									if(mode==CT60_CLOCK_WRITE_EEPROM)
 										tempo_20ms();
-									i+=2;
+									i=error=0;
+									while((tab_cy_reg[i] || tab_cy_reg[i+1]) && error>=0)
+									{
+									 	error=ct60_rw_clock(mode|CYPRESS,tab_cy_reg[i],tab_cy_reg[i+1]);
+										if(mode==CT60_CLOCK_WRITE_EEPROM)
+											tempo_20ms();
+										i+=2;
+									}
 								}
 							}
 						}

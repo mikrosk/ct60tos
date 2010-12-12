@@ -27,20 +27,20 @@
 
 extern long get_color(long index);
 extern long pixelread(long x, long y);
-extern long end_pts(Virtual * vwk, long x, long y, short *xleftout, short *xrightout, int seed_type, long search_color);
+extern long end_pts(Virtual *vwk, long x, long y, short *xleftout, short *xrightout, int seed_type, long search_color);
 
 
 /* Global variables */
-long search_color;       /* the color of the border      */
+static long search_color;       /* the color of the border      */
 
 
 /* some kind of stack for the segments to fill */
-short queue[QSIZE];       /* storage for the seed points  */
-short qbottom;            /* the bottom of the queue (zero)   */
-short qtop;               /* points top seed +3           */
-short qptr;               /* points to the active point   */
-short qtmp;
-short qhole;              /* an empty space in the queue */
+static short queue[QSIZE];       /* storage for the seed points  */
+static short qbottom;            /* the bottom of the queue (zero)   */
+static short qtop;               /* points top seed +3           */
+static short qptr;               /* points to the active point   */
+static short qtmp;
+static short qhole;              /* an empty space in the queue */
 
 /*
  * crunch_queue - move qtop down to remove unused seeds
@@ -56,9 +56,9 @@ void crunch_queue(void)
 /*
  * get_seed - put seeds into Q, if (xin,yin) is not of search_color
  */
-short get_seed(Virtual * vwk, short xin, short yin, short *xleftout, short *xrightout, int seed_type)
+short get_seed(Virtual *vwk, short xin, short yin, short *xleftout, short *xrightout, int seed_type)
 {
-    if (end_pts(vwk, xin, ABS(yin), xleftout, xrightout, seed_type, search_color)) {
+    if (end_pts(vwk, (long)xin, (long)ABS(yin), xleftout, xrightout, seed_type, search_color)) {
         /* false if of search_color */
         for (qtmp = qbottom, qhole = EMPTY; qtmp < qtop; qtmp += 3) {
             /* see, if we ran into another seed */
@@ -78,7 +78,7 @@ short get_seed(Virtual * vwk, short xin, short yin, short *xleftout, short *xrig
 #if 0
                 arb_corner(&rect);
 #endif
-                fill_area(vwk, rect.x1, rect.y1, rect.x2, rect.y2, vwk->fill.colour.foreground);
+                fill_area(vwk, (long)rect.x1, (long)rect.y1, (long)rect.x2, (long)rect.y2, vwk->fill.colour.foreground);
 
                 queue[qtmp] = EMPTY;
                 if ((qtmp + 3) == qtop)
@@ -106,7 +106,7 @@ short get_seed(Virtual * vwk, short xin, short yin, short *xleftout, short *xrig
     return 0;           /* we didnt put a seed in the Q */
 }
 
-void contourfill(Virtual * vwk, long color, short *coords)
+void contourfill(Virtual *vwk, long color, short *coords)
 {  
     short newxleft;              /* ends of line at oldy +       */
     short newxright;             /* the current direction        */
@@ -128,20 +128,19 @@ void contourfill(Virtual * vwk, long color, short *coords)
         oldy < vwk->clip.rectangle.y1  || oldy > vwk->clip.rectangle.y2)
         return;
 
-    /* Range check the color and convert the index to a pixel value */
-    if (color >= (unsigned long)wk->screen.palette.size)
-        return;
-
     search_color = pixelread((long)xleft,(long)oldy);
-        
+    
     if (color < 0) {
         seed_type = 1;
     } else {
+				/* Range check the color and convert the index to a pixel value */
+				if (color >= (unsigned long)wk->screen.palette.size)
+						return;
 				search_color = get_color(color);
         seed_type = 0;
     }
 
-    notdone = end_pts(vwk, xleft, oldy, &oldxleft, &oldxright, seed_type, search_color);
+    notdone = end_pts(vwk, (long)xleft, (long)oldy, &oldxleft, &oldxright, seed_type, search_color);
 
     qptr = qbottom = 0;
     qtop = 3;                   /* one above highest seed point */
@@ -155,28 +154,24 @@ void contourfill(Virtual * vwk, long color, short *coords)
             RECT16 rect;
 
             direction = (oldy & DOWN_FLAG) ? 1 : -1;
-            gotseed = get_seed(vwk, oldxleft, (oldy + direction),
-                               &newxleft, &newxright, seed_type);
+            gotseed = get_seed(vwk, oldxleft, (oldy + direction), &newxleft, &newxright, seed_type);
 
             if ((newxleft < (oldxleft - 1)) && gotseed) {
                 xleft = oldxleft;
                 while (xleft > newxleft) {
                     --xleft;
-                    get_seed(vwk, xleft, oldy ^ DOWN_FLAG,
-                             &xleft, &xright, seed_type);
+                    get_seed(vwk, xleft, oldy ^ DOWN_FLAG, &xleft, &xright, seed_type);
                 }
             }
             while (newxright < oldxright) {
                 ++newxright;
-                gotseed = get_seed(vwk, newxright, oldy + direction,
-                                   &xleft, &newxright, seed_type);
+                gotseed = get_seed(vwk, newxright, oldy + direction, &xleft, &newxright, seed_type);
             }
             if ((newxright > (oldxright + 1)) && gotseed) {
                 xright = oldxright;
                 while (xright < newxright) {
                     ++xright;
-                    get_seed(vwk, xright, oldy ^ DOWN_FLAG,
-                             &xleft, &xright, seed_type);
+                    get_seed(vwk, xright, oldy ^ DOWN_FLAG, &xleft, &xright, seed_type);
                 }
             }
 
@@ -206,7 +201,7 @@ void contourfill(Virtual * vwk, long color, short *coords)
 #if 0
             arb_corner(&rect);
 #endif
-            fill_area(vwk, rect.x1, rect.y1, rect.x2, rect.y2, vwk->fill.colour.foreground);
+            fill_area(vwk, (long)rect.x1, (long)rect.y1, (long)rect.x2, (long)rect.y2, vwk->fill.colour.foreground);
         }
     }
 }                               /* end of fill() */

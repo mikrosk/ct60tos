@@ -42,7 +42,7 @@
 
 #define SDRAM_BASE            0x00000000
 #define SDRAM_SIZE            0x10000000   // 256MB
-#define SDRAM_RESERVED        0x00500000   // 4MB + 1MB
+#define SDRAM_RESERVED        0x00600000   // 4MB + 1MB + 1MB
 #define SRAM_BASE             0x80000000   // 32KB
 #define SRAM_SIZE             0x00004000   // 16KB normal, 16KB remapped by the MMU
 #define PHYSICAL_OFFSET_SDRAM 0x40000000   // remapped for TOS to 0
@@ -317,45 +317,125 @@
 
 #else /* MCF547X - MCF548X */
 
-#ifdef MCF547X /* COLDARI */
+#ifdef MCF547X /* FIREBEE */
 
 #define USE_ATARI_IO          // IDE, SCSI
 
-#define __MBAR                0xFF800000  // - 0xFF81FFFF 128KB (256KB if SEC)
-
-#define __MMU_BASE            0xFF840000  // 64KB
-
-#define BOOT_FLASH_BASE       0xFF000000
-#define BOOT_FLASH_SIZE       0x00800000  // 8MB
-#define FLASH_TOS_FIRE_ENGINE 0xFF700000  // last 1MB
-
-/*
- * Flash 
- * Sectors 0 through 127 are 32 KBytes
- */
-#define FLASH_UNLOCK1 (FLASH_TOS_FIRE_ENGINE-BOOT_FLASH_BASE+FLASH_SIZE-PARAM_SIZE)
-#define FLASH_UNLOCK2 (FLASH_TOS_FIRE_ENGINE-BOOT_FLASH_BASE+FLASH_SIZE-PARAM_SIZE)
-
-#define FPGA_CS1_BASE  0xFFF00000
-#define FPGA_CS1_SIZE  0x00010000
-#define FPGA_CS1_ACCESS (MCF_FBCS_CSCR_ASET(1) + MCF_FBCS_CSCR_PS_32)
-#define FPGA_CS2_BASE  0xFFFA0000
-#define FPGA_CS2_SIZE  0x00020000
-#define FPGA_CS2_ACCESS (MCF_FBCS_CSCR_ASET(1) + MCF_FBCS_CSCR_PS_32)
-#define FPGA_CS3_BASE  0xFFFF0000
-#define FPGA_CS3_SIZE  0x00010000
-#define FPGA_CS3_ACCESS (MCF_FBCS_CSCR_ASET(1) + MCF_FBCS_CSCR_PS_32)
-
-
-#else /* Fire Engine (M5484LITE/M5485EVB) only */
-
-#define __MBAR                0xFF000000  // - 0xFF01FFFF 128KB (256KB if SEC)
+#define __MBAR                0xFF000000  // - 0xFF81FFFF 128KB (256KB if SEC)
 
 #define __MMU_BASE            0xFF040000  // 64KB
 
-#define BOOT_FLASH_BASE       0xFF800000
-#define BOOT_FLASH_SIZE       0x00200000  // 2MB (the M5484LITE has 4MB)
-#define FLASH_TOS_FIRE_ENGINE 0xFF900000  // one 1MB (last MB on M5485EVB who has 2MB, the M5484LITE has 4MB)
+#define BOOT_FLASH_BASE       0xE0000000
+#define BOOT_FLASH_SIZE       0x00800000  // 8MB
+#define FLASH_TOS_FIRE_ENGINE 0xE0400000  // 1MB
+
+#define DATA_FPGA             0xE0700000
+#define SIZE_FPGA             0x00100000
+
+/*
+ * Flash 
+ * Sectors 0 through 7 are 8 KBytes
+ * Sectors 8 through 134 are 64 KBytes
+ */
+#define FLASH_UNLOCK1 (0xAAA)
+#define FLASH_UNLOCK2 (0x554)
+
+/* FALCON I/O 1MB */
+#define FPGA_CS1_BASE  0xFFF00000
+#define FPGA_CS1_SIZE  0x00100000
+#define FPGA_CS1_ACCESS (MCF_FBCS_CSCR_AA + MCF_FBCS_CSCR_RDAH(1)	+ MCF_FBCS_CSCR_WS(16) + MCF_FBCS_CSCR_PS_16)
+/* ACP I/O 128MB */ 
+#define FPGA_CS2_BASE  0xF0000000
+#define FPGA_CS2_SIZE  0x08000000
+#define FPGA_CS2_ACCESS (MCF_FBCS_CSCR_AA + MCF_FBCS_CSCR_RDAH(1) + MCF_FBCS_CSCR_WS(4) + MCF_FBCS_CSCR_PS_32)
+/* SRAM 256Kx16 */
+#define FPGA_CS3_BASE  0xF8000000
+#define FPGA_CS3_SIZE  0x04000000
+#define FPGA_CS3_ACCESS (MCF_FBCS_CSCR_AA + MCF_FBCS_CSCR_RDAH(1) + MCF_FBCS_CSCR_WS(0) + MCF_FBCS_CSCR_PS_16)
+/* VIDEO RAM 128MB */ 
+#define FPGA_CS4_BASE  0x40000000
+#define FPGA_CS4_SIZE  0x40000000
+#define FPGA_CS4_ACCESS (MCF_FBCS_CSCR_BSTW + MCF_FBCS_CSCR_BSTR + MCF_FBCS_CSCR_PS_32)
+
+#define ACP_VIDEO_RAM          (FPGA_CS4_BASE)
+#define ACP_VIDEO_CFG          (FPGA_CS4_BASE + 0x20000000)
+#define ACP_VIDEO_CLUT         (FPGA_CS2_BASE)
+#define ACP_VIDEO_CONTROL      (FPGA_CS2_BASE + 0x400)
+#define ACP_VIDEO_BORDER_COLOR (FPGA_CS2_BASE + 0x404)
+#define ACP_BORDER_ON          0x02000000
+#define ACP_FIFO_ON            0x01000000
+#define ACP_CONFIG_ON          0x00080000
+#define ACP_REFRESH_ON         0x00040000
+#define ACP_VCS                0x00020000
+#define ACP_VCKE               0x00010000
+#define ACP_CLK25              0x00000000
+#define ACP_CLK33              0x00000100
+#define ACP_CLK_PLL            0x00000200
+// old hardware
+#define ACP_CLK48              0x00000200
+#define ACP_CLK55              0x00000300
+#define ACP_CLK60              0x00000400
+#define ACP_CLK69              0x00000500
+#define ACP_CLK75              0x00000600
+#define ACP_CLK83              0x00000700
+#define ACP_CLK92              0x00001000
+#define ACP_CLK100             0x00001100
+#define ACP_CLK109             0x00001200
+#define ACP_CLK120             0x00001300
+#define ACP_CLK137             0x00001400
+#define ACP_CLK150             0x00001500
+#define ACP_CLK166             0x00001600
+// end old hardware
+#define ACP_ST_SHIFT_MODE      0x00000080
+#define ACP_FALCON_SHIFT       0x00000040
+#define ACP_COLOR_1            0x00000020
+#define ACP_COLOR_8            0x00000010
+#define ACP_COLOR_16           0x00000008
+#define ACP_COLOR_24           0x00000004
+#define ACP_VIDEO_DAC_ON       0x00000002
+#define ACP_VIDEO_ON           0x00000001
+#define ACP_VIDEO_PLL_CONFIG   (FPGA_CS2_BASE + 0x600)
+#define ACP_VIDEO_PLL_CLK      (FPGA_CS2_BASE + 0x604)
+#define ACP_VIDEO_PLL_RECONFIG (FPGA_CS2_BASE + 0x800)
+#define ACP_INTERRUPT_CONTROL  (FPGA_CS2_BASE + 0x10000)
+#define ACP_INTERRUPT_ENABLE   (FPGA_CS2_BASE + 0x10004)
+#define ACP_INTERRUPT_CLEAR    (FPGA_CS2_BASE + 0x10008)
+#define ACP_INTERRUPT_PENDING  (FPGA_CS2_BASE + 0x1000C)
+#define ACP_INT_IRQ7           0x80000000
+#define ACP_INT_MFP_IRQ6       0x40000000
+#define ACP_INT_ACP_IRQ5       0x20000000
+#define ACP_INT_VSYNC_IRQ4     0x10000000
+#define ACP_INT_CTR0_IRQ3      0x08000000
+#define ACP_INT_HSYNC_IRQ2     0x04000000
+#define ACP_INT_HSYNC          0x00000200
+#define ACP_INT_VSYNC          0x00000100
+#define ACP_INT_DSP            0x00000080
+#define ACP_INT_PCI_INTD       0x00000040
+#define ACP_INT_PCI_INTC       0x00000020
+#define ACP_INT_PCI_INTB       0x00000010
+#define ACP_INT_PCI_INTA       0x00000008
+#define ACP_INT_DVI            0x00000004
+#define ACP_INT_ETHERNET       0x00000002
+#define ACP_INT_PIC            0x00000001
+#define ACP_MFP_INTACK_VECTOR  (FPGA_CS2_BASE + 0x20000)
+#define ACP_DMA_MODE           (FPGA_CS2_BASE + 0x20100)
+#define ACP_DMA_ADDRESS        (FPGA_CS2_BASE + 0x20104)
+#define ACP_DMA_COUNTER        (FPGA_CS2_BASE + 0x20108)
+#define ACP_DMA_CONTROL        (FPGA_CS2_BASE + 0x2010C)
+#define ACP_FIFO_PSEUDO_DMA    (FPGA_CS2_BASE + 0x20110)
+#define ACP_CONFIG             (FPGA_CS2_BASE + 0x40000)
+#define ACP_CF_IDE             0xC0000000
+#define ACP_DD_HD              0x20000000
+
+#else /* Fire Engine (M5484LITE/M5485EVB) only */
+
+#define __MBAR                 0xFF000000  // - 0xFF01FFFF 128KB (256KB if SEC)
+
+#define __MMU_BASE             0xFF040000  // 64KB
+
+#define BOOT_FLASH_BASE        0xFF800000
+#define BOOT_FLASH_SIZE        0x00200000  // 2MB (the M5484LITE has 4MB)
+#define FLASH_TOS_FIRE_ENGINE  0xFF900000  // one 1MB (last MB on M5485EVB who has 2MB, the M5484LITE has 4MB)
 
 /*
  * Flash Boot M5484LITE
@@ -411,14 +491,14 @@
 #else /* MCF548X */
 #define SDRAM_SIZE                0x04000000 // 64MB
 #endif /* MCF547X */
-#define SDRAM_RESERVED            0x00500000 // 4MB + 1MB
+#define SDRAM_RESERVED            0x00600000 // 4MB + 1MB + 1MB
                             
 #ifdef MCF547X
 
-#define SRAM_BASE                 0x21000000 // 4096
-#define SRAM_BASE2                0x21001000 // 4096
+#define SRAM_BASE                 0xFF100000 // 4096
+#define SRAM_BASE2                0xFF101000 // 4096
 
-#define SYSTEM_CLOCK  133   // system bus frequency in MHz
+#define SYSTEM_CLOCK  132   // system bus frequency in MHz
 #define SYSTEM_PERIOD_X10 75   // system bus period in nS * 10
 #define SDRAM_TWR  2        // clocks
 #define SDRAM_CASL 5        // clocks * 2
@@ -427,10 +507,10 @@
 #define SDRAM_TRFC 75       // nS
 #define SDRAM_TREFI 7800    // nS
 
-#else /* MCF547X */
+#else /* MCF548X */
 
-#define SRAM_BASE                 0xFFF00000 // 4096
-#define SRAM_BASE2                0xFFFFF000 // 4096
+#define SRAM_BASE                 0xFFF00000 // 4096 IDE F030
+#define SRAM_BASE2                0xFFFFF000 // 4096 some I/O F030
 
 #define SYSTEM_CLOCK 100    // system bus frequency in MHz
 #define SYSTEM_PERIOD 10    // system bus period in nS
@@ -441,7 +521,7 @@
 #define SDRAM_TRFC 75       // nS
 #define SDRAM_TREFI 7800    // nS
 
-#endif /* MCF548X */
+#endif /* MCF547X */
 
 #define CF_CACR_DEC         (0x80000000) /* Data Cache Enable                */
 #define CF_CACR_DW          (0x40000000) /* Data default Write-protect       */
@@ -498,6 +578,8 @@
 #include "mcf548x_pci.h"    // PCI Bus Controller
 #include "mcf548x_pciarb.h" // PCI Arbiter Module
 #include "mcf548x_intc.h"   // Interrupt Controller
+#include "mcf548x_i2c.h"    // I2C
+#include "mcf548x_pll.h"    // PLL
 
 #endif /* MCF5445X */
 

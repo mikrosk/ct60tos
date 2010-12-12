@@ -4,7 +4,7 @@
 !title   Documentation de la
 !programimage ..\img\ct60.img
 !program CT60
-!version Version 1.04
+!version Version 2.00
 !date    (!today)
 !author  Didier MEQUIGNON
 !street  25, rue de l'Ascenseur
@@ -50,8 +50,8 @@ Ne mettez pas votre Falcon … la retraite !
 !begin_itemize
 
 !item  SUR SUPPORT : 
-68060 FULL(AVEC COPRO & PMMU) ou LC (SANS COPRO) ou EC(SANS COPRO & PMMU) 
-… 66 MHz (masque 1F43G) ou 100 MHz (masque 1E41J).  
+68060 FULL(AVEC COPRO & PMMU) ou LC (SANS COPRO) … 66 MHz (masque 
+1F43G) ou 100 MHz (masque 1E41J).
 
 !item Bus CT60 … 66 MHz ou 100 MHz (accŠs SDRAM, BUS 060).
 
@@ -82,9 +82,11 @@ Bus … 20 MHz.
 Dans sa version FULL, le MC68060, comme le MC68040, int‚gre un 
 Coprocesseur bien plus performant que le 68882. 
 
-Dans sa version LC, le 060 n'a pas de Copro.
+Dans sa version LC, le 060 n'a pas de Copro, ce processeur n'est plus 
+support‚ depuis le boot 2.00.
 
-Dans sa version EC, le 060 n'a ni de Copro, ni de PMMU.
+Dans sa version EC, le 060 n'a ni de Copro, ni de PMMU, ce processeur n'est 
+plus support‚ depuis le boot 2.00.
 
 Le 060 fait rˆver et la premiŠre raison est sa puissance colossale face … 
 ses pr‚d‚cesseurs :
@@ -119,6 +121,7 @@ s'en ressentent fortement :
 !begin_table [|l|l|l|l|l|l|] !hline
 PRODUIT        !! BUS      !! RAM   !! LECTURE	  !! ECRITURE   !! FACTEUR
 !hline
+CT60-95-CTPCI  !!  95 MHz  !! SDRAM !!  92,9 Mo/s !!  91,6 Mo/S !! 20.4 - 16.6
 CT60-100       !! 100 MHz  !! SDRAM !! 104,4 Mo/s !! 102,8 Mo/s !! 22,9 - 18,7
 CT60           !! 66 MHz   !! SDRAM !!  73,8 Mo/s !!  72,6 Mo/s !! 16,2 - 13,2
 HADES60 FPM    !! 29,5 MHz !! FPM   !!  43,0 Mo/s !!  33,5 Mo/s !! 9,5 - 6,1
@@ -134,7 +137,7 @@ FALCON(VGA16c) !! 16 MHz   !! FPM   !!  4,55 Mo/s !!  5,5 Mo/s  !! 1,00 - 1,00
 !hline
 !end_table
 
-TESTS REALISES AVEC NEMBENCH 2.1
+TESTS REALISES AVEC NEMBENCH 2.1 en 2003 et 2010 pour la CTPCI
 
 
 !subnode Overclocking de la carte m‚re du FALCON !
@@ -468,28 +471,21 @@ Synoptique
 
 !item CLK2 et CLK 3 sont inhib‚s.
  
-!item CLK5 et CLK6 peuvent ˆtre utilis‚s pour l'horloge DSP ou le VIDEL, 
-mais il y a toujours un lien avec l'horloge CT60 comme ceci :
+!item CLK5 et CLK6 peuvent ˆtre utilis‚s pour une horloge utilisateur, 
+mais il y a toujours un lien avec l'horloge CT60 avec un diviseur de 2 
+… 6 except‚ pour une fr‚quence <= 66 MHz : 
 
 !end_itemize
 
 !begin_table [|c|c|c|] !hline
-Horloge CT60 (MHz) !! CLK5/6 (MHz) !! Facteur
+Horloge CT60 (MHz) !! CLK5/6 (MHz) !! Diviseur
 !hline
-      50.000       !!   50.000     !!  2/2
-      51.000       !!   51.000     !!  2/2
+      50.000       !!   25.000     !!  /2
+      66.000       !!   33.000     !!  /2
 !hline         
-      51.125       !!   34.083     !!  2/3
-      60.000       !!   40.000     !!  2/3
-      66.625       !!   44.416     !!  2/3
-      75.000       !!   50.000     !!  2/3
-      77.000       !!   51.333     !!  2/3
-!hline
-      77.125       !!   38.562     !!  2/4
-      80.000       !!   40.000     !!  2/4
-      90.000       !!   45.000     !!  2/4
-     100.000       !!   50.000     !!  2/4
-     110.000       !!   55.000     !!  2/4
+      66.600       !!   16.650     !!  /4
+      66.000       !!   33.000     !!  /2
+      99.000       !!   33.000     !!  /3
 !hline
 !end_table
 
@@ -587,21 +583,26 @@ Synoptique
 … 1 la plage va de 33 … 66 MHz (pont coup‚). Si l'entr‚e CTRL0 est … 0 la 
 plage va de 66 … 110 MHz (pont mis).
 
-!item OUT1 peut ˆtre utilis‚ pour l'horloge VIDEL, mais il y a toujours 
-un lien avec l'horloge CT60 comme ceci : 
+(!B)ATTENTION ! Le boot 2.0 ne supporte plus le pont parceque l'horloge de 
+la CTCM n'est pas stable (pas de PLL) et qu'il n'est pas possible de tester 
+l'‚tat du pont.(!b) Aussi la plage de fr‚quence est de 66 … 110 MHz (le 
+DALLAS utilis‚ sur la CTCM n'est pas certifi‚ pour fonctionner en dessous 
+de 66 MHz).
+
+!item OUT1 peut ˆtre utilis‚ pour unde horloge utilisateur, mais il y a 
+toujours un lien avec l'horloge CT60 avec un diviseur de 2 … 6 except‚ pour
+une fr‚quence <= 66 MHz : 
 
 !end_itemize
 
 !begin_table [|c|c|c|] !hline
-Horloge CT60 (MHz) !! OUT1 (MHz) !! Facteur
+Horloge CT60 (MHz) !! OUT1 (MHz) !! Diviseur
 !hline
-      50.000       !!   50.000    !!  /1
-      51.000       !!   51.000    !!  /1
+      66.000       !!   33.000   !!  /2
 !hline         
-      51.050       !!   25.025    !!  /2
-      66.600       !!   33.300    !!  /2
-     100.000       !!   50.000    !!  /2
-     110.000       !!   55.000    !!  /2
+      66.600       !!   16.650   !!  /4
+      66.000       !!   33.000   !!  /2
+      99.000       !!   33.000   !!  /3     
 !hline
 !end_table
 
@@ -629,14 +630,18 @@ l'horloge de la CT60 (voir la partie 'Horloge CT60-100').
 
 !subnode Technique
 
-C'est un TOS 4.04 patch‚, dans l'ordre il contient :
+C'est un TOS 4.04 patch‚ par le boot (2.0+), dans l'ordre il contient :
 
 !begin_itemize
 !item Le passage en mode superscalaire du 68060 (PCR).
 !item L'initialisation des registres de translation (tous modŠles de 
 68060), la zone m‚moire de 0 … $7FFFFFFF en copyback except‚ pour la 
-zone de 0 … $FFFFFF en writethrough, et la zone de $80000000 … $FFFFFFFF 
+zone de 0 … $FFFFFF en writethrough, et la zone de $40000000 … $FFFFFFFF 
 en cache inhib‚.
+!item La lecture et l'affichage du type de SDRAM via sa EEPROM. 
+!item La copie du TOS en SDRAM aprŠs avoir appliqu‚ les patches.
+!item L'initialisation de l'arbre PMMU. Toute la ST-RAM est en writethrough 
+et la SDRAM d‚clar‚e en copyback.
 !item L'installation des cookies '_CPU', '_FPU', 'CT60', mais aussi '_FRQ' 
 (horloge interne) et 'FRE' (horloge externe) si le videl a besoin d'une 
 horloge externe 32 MHz pour les moniteurs RVB. Le cookie CT60 peut 
@@ -655,13 +660,9 @@ en ROM est un 4.02).
 !item Une image en 65K couleurs affich‚e pendant 2 secondes.
 !item Contr“le et correction du modecode obtenu de la NVM.
 !item Contr“le et initialisation d'une horloge programmable s‚rielle (port I2C).
+!item Lancement du PCI BIOS et des drivers (si drivers.hex est charg‚).
 !item L'affichage du type de 68060 (r‚vision, masque et fr‚quence).
 !item La modification du PCR pour les modŠles bugg‚s r‚vision 1.
-!item La lecture et l'affichage du type de SDRAM via sa EEPROM. 
-!item L'initialisation de l'arbre PMMU (sauf 68060 EC ou LC), et la 
-cr‚ation ‚ventuelle du cookie 'PMMU'. Toute la ST-RAM est en writethrough 
-et la SDRAM d‚clar‚e en copyback.
-!item La copie ‚ventuelle du TOS en SDRAM (sauf 68060 EC ou LC). 
 !item La d‚claration de la SDRAM au TOS.
 !item L'initialisation de la SDRAM, et l'affichage du nombre de Mo/S en 
 ‚criture.
@@ -850,29 +851,14 @@ SI VOUS VOUS ENGAGEZ, C'EST A VOTRE PROPRE RISQUE !
 SINON UTILISEZ -V.
 !end_verbatim
 
+Si les Radeon/CTPCI sont utilis‚s, il est possible d'‚viter que le kernel 
+utilise le Videl, par exemple avec bootargs :
 
-!subnode 68060 EC
+-V 0x4303 -k vmlinuz root=/dev/hda9 video=atafb:external:1920;1080;8;p;0x40000000 
 
-MalgrŠs l'absence de PMMU (Memory Management Unit), les performances sont 
-les mˆmes, voici les diff‚rences au niveau du TOS :
-
-!begin_itemize
-!item La zone m‚moire de la carte m‚re du FALCON est d‚clar‚e avec un 
-cache en writethrough (0 … $FFFFFF, bus sur 24 bits), donc la ST-RAM.
-!item La zone m‚moire de $80000000 … $FFFFFFFF est sans cache, donc les 
-entr‚es/sorties, except‚ le port cartouche (en $00FAxxxx - $00FBxxxx) !
-!item La zone m‚moire de $01000000 … $7FFFFFFF est d‚clar‚e avec un cache 
-en copyback, donc la SDRAM (voir ‚galement la partie 'Cache').
-!item Le cookie 'PMMU' n'existe pas.
-!item Il n'y a pas d'‚mulation des instructions manquantes FPU.
-!item Il n'y a pas de 'S‚lection TOS en RAM'. 
-!end_itemize
-
-
-!subnode 68060 LC
-
-Il est impossible de faire la diff‚rence entre un 68060 LC et un 68060 EC, 
-aussi pour l'instant le 68060 LC est g‚r‚ comme un EC.
+0x4303 ‚tant le modecode pour le driver Radeon (Vsetscreen) utilis‚ dans Ataboot.
+external servant … passer les infos au kernel (0x40000000 ‚tant l'adresse de l'‚cran,
+'p' pour packed pixels, 't' pour true color).
 
 
 !subnode Reconnaissance SDRAM
@@ -897,9 +883,6 @@ d‚lais au boot … 60 secondes.
 !item Eteignez la machine.
 !item Basculer en mode turbo.
 !item Remettez sous tension le FALCON.
-!item DŠs que l'image du boot apparait, appuyez en mˆme temps sur les 
-touches CTRL et SHIFT gauche, cela a pour effet de d‚marrer la machine
-sans l'arbre PMMU en SDRAM (comme un 68060 EC).
 !item AprŠs l'initialisation de la SDRAM (… 0), commence le test ST-RAM 
 puis celui de la TT-RAM (la SDRAM ici), si a la place des '-' vous voyez 
 des 'X', la SDRAM est d‚fectueuse.
@@ -933,6 +916,11 @@ La fin anormale de ces tests entraine une perte de donn‚es :
 !item IDE.
 !item SCSI.
 !end_itemize
+
+(!U)
+Si vous avez une CTPCI at que vous avez charg‚ drivers.hex, les diagnostiques
+ne sont plus disponibles.
+(!u)
 
 
 !subnode Principales Touches
@@ -1473,19 +1461,28 @@ EE SDRAM refresh rate error. This SDRAM not works on the CT60.
 !end_verbatim
 
 La tache principale de ce programme est de mettre une image binaire du 
-TOS (.BIN) dans la flash. Il est possible ‚galement de mettre … jour la 
-flash depuis le 68060 (mode turbo), mais dans ce cas il est pr‚f‚rable de 
-choisir la 'S‚lection TOS en RAM' (risque de plantage quand cette option 
-n'est pas active).
+TOS (.BIN) ou des fichier Srecord (.HEX) dans la flash. Il est possible 
+‚galement de mettre … jour la flash depuis le 68060 (mode turbo).
+
+Depuis le BOOT v2.0, il est possible de charger s‚par‚ment les fichier pour le 
+TOS404, le boot et les drivers PCI pour la CTPCI:
+!begin_itemize
+!item CT60TOS.BIN: contient BOOT + TOS404 + Atari Diagnostics (doit disparaitre).
+!item BOOT.HEX: contient le BOOT.
+!item DIAG.HEX: contient Atari Diagnostics.
+!item DRIVERS.HEX: contient les drivers PCI (GPL licence, ‚crase DIAG.HEX).
+!item TOS404.BIN (pas dans l'archive): juste pour mettre le TOS en flash, dans 
+ce le cas ou CT60TOS.BIN n'est pas utilis‚.
+!end_itemize
 
 !image ..\img\flash2.img
 !begin_verbatim
 
 !end_verbatim
 
-La deuxiŠme tache est de mettre … jour la partie hard de la CT60 avec deux 
-fichiers jedec (.JED) pour les composants ABE60 et SDR60 (XILINX XC95144XL 
-CPLD). 
+La deuxiŠme tache est de mettre … jour la partie hard de la CT60 avec les 
+fichiers jedec (.JED) pour les composants ABE60, SDR60 et CTPCI (XILINX 
+XC95144XL / XC95288XL CPLD). 
 
 !begin_itemize
 
@@ -1649,6 +1646,8 @@ Sur cette page vous pouvez changer :
 double-cliquant sur ce seuil (offset TLV). 
 !end_itemize
 
+Remarque: Sur CT63, le niveau de temp‚rature reste … 0 (pont‚ par Rodolphe).
+
 
 !subnode M‚moire / uP
 
@@ -1676,6 +1675,8 @@ le microprocesseur.
 
 !item Eventuellement changer la fr‚quence de la CT60.
 
+!item Eventuellement changer la division de la fr‚quence utilisateur de 2 … 6. 
+
 !item Eventuellement voir la vitesse du ventilateur ou de la pompe (si 
 watercooling) avec de la connectique 3 fils :
 
@@ -1695,8 +1696,8 @@ Avec le curseur de la page 'M‚moire / uP' du CPX de configuration, il est
 ‚ventuellement possible de changer la fr‚quence de la CT60.
 
 Pour cela un module g‚n‚rateur d'horloge programmable utilisant un 
-CY27EE16 ou un DS1085Z-50 doit ˆtre connect‚ sur le port I2C de la CT60 
-via quelques fils (voir aussi pour plus d'informations la partie 
+CY27EE16 ou un DALLAS DS1085Z-50 doit ˆtre connect‚ sur le port I2C de 
+la CT60 via quelques fils (voir aussi pour plus d'informations la partie 
 'G‚n‚rateur d'horloge programmable').  
 
 Le r‚glage se fait par pas de 125 KHz de 50 … 110 MHz pour le CY27EE16 
@@ -1705,6 +1706,9 @@ DS1085Z-50 (module CTCM), il est pris en compte en RAM pour essai aprŠs
 'OK'. Le TOS lors du boot pendant l'apparition du logo Atari envoi 
 ‚galement cette valeur … l'horloge mais en en cas de problŠme il est 
 possible de rester sur la fr‚quence d'origine en appuyant CTRL ou ALT.
+
+Une horloge utilisateur est disponible, c'est la fr‚quence de la CT60 divis‚e 
+de 2 … 6.
 
 (!U)
 ATTENTION !
@@ -1752,6 +1756,12 @@ le (!B) module CTCM (!b) sur le port MODEM 2 via un cable de liaison HE10
 SUBD et de reprogrammer en mode 030 la EEPROM du module avec le bouton 
 'Sauve'.
 
+(!B)ATTENTION ! Le boot 2.0 ne supporte plus le pont parceque l'horloge de 
+la CTCM n'est pas stable (pas de PLL) et qu'il n'est pas possible de tester 
+l'‚tat du pont.(!b) Aussi la plage de fr‚quence est de 66 … 110 MHz (le 
+DALLAS utilis‚ sur la CTCM n'est pas certifi‚ pour fonctionner en dessous 
+de 66 MHz).
+
 !image ..\img\modem2.img
 !begin_verbatim
 
@@ -1776,14 +1786,21 @@ Sur cette page vour pouvez :
 besoin de beaucoup de temps si vous voulez tester la ST-RAM et la SDRAM).
 !item Changer la vitesse du blitter.
 !item S‚lectionner le transfert du TOS 4.0x en RAM avec utilisation de la 
-PMMU.
+PMMU (obsolŠte).
 !item Sous TOS, couper les caches pendant 5 secondes lors du lancement 
 d'un programme ou supprimer la boite d'alerte copyback.
 !item Rediriger l'affichage des programmes du dossier AUTO vers un fichier boot.log.
+!item Avec une Radeon/CTPCI avoir un debug dans un fichier video.log:
+!image cpx4_pci.img
+!item Avec une CTPCI inverser les deux ports IDE (CTPCI et FALCON).
 !end_itemize
 
 
-!subsubnode S‚lection TOS en RAM
+!subsubnode S‚lection TOS en RAM (obsolŠte)
+
+(!B)The option est seulement disponible si la version du boot est inf‚rieure
+… 2.00.(!b) En effet ce dernier ex‚cute les patches sur le TOS et le copie 
+en SDRAM.
 
 Quand cette option est activ‚e, le TOS est copi‚ en SDRAM de $E00000 … 
 $EEFFFF (le dernier secteur de la flash de $EE0000 … $EFFFFF est 
@@ -1857,6 +1874,35 @@ Sur cette page vous pouvez :
 utiliser l'horloge IKBD au lieu du RTC. Cette possibilit‚ est la pour 
 corriger les problŠmes occasionn‚s par la pile us‚e.
 !end_itemize
+
+!image cpx7_pci.img
+!begin_verbatim
+
+!end_verbatim
+
+Si l'affichage se fait via les Radeon/CTPCI vous pouvez :
+
+!begin_itemize
+!item S‚lectionner au d‚marrage la r‚solution de l'‚cran, si le mode vid‚o 
+pr‚f‚r‚ du moniteur est touv‚ il est ajout‚ … la liste.
+!item S‚lectionner au d‚marrage le nombre de couleurs (256/65K/16M).
+!item S‚lectionner au d‚marrage la configuration des moniteurs (MON.1,MON.2) :
+!begin_itemize
+!item DEFAULT (mode automatique)
+!item CRT,NONE
+!item CRT,CRT
+!item CRT,TMDS
+!item TMDS,CRT
+!item TMDS,TMDS
+!end_itemize
+!item S‚lectionner l'utilisation du DMA pour acc‚l‚rer l'affichage (ATTENTION !
+Actuellement parfois cette option peut geler votre systŠme - hardware bug). 
+!item Remplacer la lecture NVRAM par les valeurs TOS sauv‚s en Flash et 
+utiliser l'horloge IKBD au lieu du RTC. Cette possibilit‚ est la pour 
+corriger les problŠmes occasionn‚s par la pile us‚e.
+!end_itemize
+
+Remarque: Le mode pour les Radeon/CTPCI n'‚crase pas le mode Videl.
 
 
 !subnode CT60TEMP.APP
@@ -2092,14 +2138,21 @@ avant d'utiliser MagiC.
 Vous devez installez CT60XBIO.PRG et DSPXBIOS.PRG dans le dossier 
 AUTO.
 
+Si vous avez les Radeon/CTPCI et drivers.hex charg‚, le VDI et le XBIOS 
+du TOS sont utilis‚s pour l'affichage.
+
 
 !subnode Solutions
 
 !begin_table [|l|l|l|] !hline
 (!B)Logiciel(!b) !! (!B)ProblŠme(!b)  !! (!B)Solution(!b)
 !hline
-Port cartouche   !! Ne fonctionne pas !! Acheter un 68060 full.
+Boot >= 2.00     !! Ne fonctionne pas !! Acheter un 68060 full.
 et 68060 EC      !!                   !!
+!hline
+TOS drivers      !! Delais trop long  !! Les 15-20 secondes en plus au
+Radeon/CTPCI     !! au boot           !! boot servent … initialiser la
+                 !!                   !! carte via un ‚mulateur X86.
 !hline
 HD Driver 8 et   !! Plante avec choix !! Mettre … jour ABE060 
 disques SCSI ou  !! "SCSI Processeur  !! vers v5K ou plus.
@@ -2110,11 +2163,29 @@ HD Driver 8 et   !! ProblŠmes quand   !! Mettre … jour HD Driver
 le bug IO7 MFP 1 !! SDMA fonctionne   !! (8.13 ou plus).
                  !! avec le D2D       !!
 !hline
-MagiC            !! Ne fonctionne pas !! Patcher MAGIC.RAM et utiliser
+SpeedoGDOS 5     !! Plante            !! Utiliser le lanceur SPDGDOS.PRG
+                 !!                   !! pour couper les caches pendant
+                 !!                   !! l'ex‚cution du vrai SPDGDOS.PRG.
+!hline
+SpeedoGDOS 5     !! Instable          !! Utiliser NVDI.
+!hline
+fVDI/radeon.sys  !! Plus lent que le  !! Utiliser NVDI.
+                 !! TOS               !!
+!hline
+fVDI/radeon.sys  !! Sans remplissage  !! v_contourfill pas impl‚ment‚e
+                 !! dans les prog.    !! dans fVDI. Utiliser NVDI.
+                 !! de dessin         !!
+!hline
+NVDI 5           !! Ne fonctionne pas !! Renommer tous les NVDIDRV*.SYS
+                 !! sur Radeon/CTPCI  !! NVDIDRV*.SY (par exemple). 
+!hline
+MagiC 6          !! Ne fonctionne pas !! Patcher MAGIC.RAM et utiliser
                  !!                   !! le nouveau MAGXBOOT.PRG.
                  !!                   !! Installer CT60XBIO.PRG et 
                  !!                   !! DSPXBIOS.PRG dans le dossier
-                 !!                   !! AUTO aprŠs MAGXBOOT.PRG. 
+                 !!                   !! AUTO aprŠs MAGXBOOT.PRG.
+!hline
+MagiC 3-4-5      !! Ne fonctionne pas !! Utiliser MagiC 6.
 !hline
 Cubase Audio     !! Ne fonctionne pas !! Patcher CAF_20x.PRG d‚compact‚
                  !!                   !! par NEW DEPACK et utiliser 
@@ -2138,7 +2209,7 @@ Xcontrol         !! Plante            !! Utiliser la version patch‚e.
 !begin_table [|l|l|l|] !hline
 (!B)Hard(!b) !! (!B)ProblŠme(!b) !! (!B)Solution(!b)
 !hline
-F030/DSP     !! Erreurs DSP      !! Ne pas utiliser l'hologe CT60 (fil trop
+F030/DSP     !! Erreurs DSP      !! Ne pas utiliser l'horloge CT60 (fil trop
              !!                  !! long) et placer un oscillateur de 50 MHz
              !!                  !! sur le 32 MHz d'origine … cot‚ du DSP.
 !hline
@@ -2159,6 +2230,22 @@ Ethernec     !! Lent et/ou       !! Installer les drivers CT60 (sans movep).
 Eclipse      !! Ne fonctionne    !! Couper la piste entre les pins 20 et 22.
              !! pas              !! Mettre … jour ABE060 vers v5I ou plus.
              !!                  !! Essayer seulement … 16/32 MHz.
+!hline
+CTPCI        !! Ne fonctionne    !! Mettre … jour ABE/SDR060 vers v7 ou plus.
+             !! pas              !!
+!hline
+CTPCI        !! Pas de cartes    !! Controler le 3V3 et les nappes 2x80 fils.
+             !! PCI d‚tect‚es    !!
+!hline
+CTPCI        !! Erreur de parit‚ !! R‚duire la longueur des nappes 2x80 fils.
+             !!                  !! Contacter Rodolphe.
+!hline
+CTPCI        !! Les cartes PCI   !! Attendre une mise … jour hard de Rodolphe.
+             !! USB/Ethernet ne  !!
+             !! fonctionnent pas !!
+!hline
+Radeon       !! Ne fonctionne    !! Utiliser une Radeon pour PC. Le TOS utilise
+pour MAC     !! pas              !! un ‚mulateur X86 poour initialiser la carte.
 !hline
 !end_table
 
@@ -3356,11 +3443,13 @@ Pin Carte !! Signal !! Commentaire
 !subnode Raccourcis clavier TOS
 
 !begin_verbatim
-CTRL:          Boot sans dossier AUTO et ACC.
-ALT:           Supprime le cache si appuy‚ avant l'init SDRAM.
+CTRL:          Si appuy‚ avant le logo Atari, saute l'initialisation du
+               g‚n‚rateur d'horloge (CTCM) et le BIOS PCI (CTPCI).
+               Boot sans dossier AUTO et ACC.
+ALT:           Si appuy‚ avant le logo Atari, saute l'initialisation du
+               g‚n‚rateur d'horloge (CTCM) et le BIOS PCI (CTPCI).
+               Supprime le cache si appuy‚ avant l'init SDRAM.
                Boot sans disque si appuy‚ aprŠs.
-CTRL-SHIFL:    Boot sans arbre PMMU comme un 68060 EC si appuy‚ avant le 
-               logo Atari.
 SHIFTL-SHIFTR: Boot sans SDRAM si appuy‚ avant le logo Atari.
 SHIFTL:        Affiche les informations sur le module SDRAM.
 CTRL-ALT-UNDO: Init NVM et ParamŠtres en Flash si appuy‚ pendant le test 
@@ -3368,7 +3457,7 @@ CTRL-ALT-UNDO: Init NVM et ParamŠtres en Flash si appuy‚ pendant le test
                d‚lais au boot … 60 secondes avec le CPX de configuration.
 CTRL-ALT-
 SHIFTR-SHIFTL: Lance les Diagnostiques Atari si appuy‚ avant le logo 
-               Atari.  
+               Atari (si non ‚cras‚ par drivers.hex).  
 !end_verbatim
 
 
@@ -3379,10 +3468,6 @@ Hardware :
 Rodolphe CZUBA
 rodolphe.czuba@free.fr
 http://www.czuba-tech.com
-
-Flash ttp, systŠme :
-Xavier JOUBERT
-xavier.joubert@free.fr
 
 Flash Tool, Configuration, et systŠme :
 Didier MEQUIGNON

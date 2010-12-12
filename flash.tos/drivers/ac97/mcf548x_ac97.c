@@ -1452,7 +1452,7 @@ static int mcf548x_ac97_hwinit(struct mcf548x_ac97_priv *priv)
 			save_imrh &= ~MCF_INTC_IMRH_INT_MASK35; // for all tasks
 #endif
 			break;
-		case 1: /* => used by serial 1 !!! */
+		case 1: /* used by IKBD (Eiffel) */
 			MCF_PSC1_RFAR = MCF_PSC_RFAR_ALARM(0xFFFF) - MCF_PSC_RFAR_ALARM(AC97_SLOTS * AC97_SAMPLES_BY_FIFO * 4);
 			MCF_PSC1_TFAR = MCF_PSC_TFAR_ALARM(0xFFFF) - MCF_PSC_TFAR_ALARM(AC97_SLOTS * AC97_SAMPLES_BY_FIFO * 4);
 			MCF_GPIO_PAR_PSC1 = MCF_GPIO_PAR_PSC1_PAR_CTS1_BCLK | MCF_GPIO_PAR_PSC1_PAR_RTS1_RTS | MCF_GPIO_PAR_PSC1_PAR_RXD1 | MCF_GPIO_PAR_PSC1_PAR_TXD1;
@@ -1474,7 +1474,7 @@ static int mcf548x_ac97_hwinit(struct mcf548x_ac97_priv *priv)
 			save_imrh &= ~MCF_INTC_IMRH_INT_MASK33; // for all tasks 
 #endif
 			break;
-		case 3: /* used by IKBD (Eiffel) */
+		case 3:
 			MCF_PSC3_RFAR = MCF_PSC_RFAR_ALARM(0xFFFF) - MCF_PSC_TFAR_ALARM(AC97_SLOTS * AC97_SAMPLES_BY_FIFO * 4);
 			MCF_PSC3_TFAR = MCF_PSC_TFAR_ALARM(AC97_SLOTS * 4);
 //			MCF_PSC3_RFAR = MCF_PSC_RFAR_ALARM(0xFFFF) - MCF_PSC_RFAR_ALARM(AC97_SLOTS * AC97_SAMPLES_BY_FIFO * 4);

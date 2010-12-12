@@ -1,5 +1,5 @@
 /* TOS4.04 Video Modes for the Radeon board
- * Didier Mequignon 2009, e-mail: aniplay@wanadoo.fr
+ * Didier Mequignon 2009-2010, e-mail: aniplay@wanadoo.fr
  *
  * This file is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -19,11 +19,12 @@
 #include "config.h"
 #include <mint/osbind.h>
 #include <mint/falcon.h>
-#include <sysvars.h>
+#include <mint/sysvars.h>
 #include <string.h>
 #define MFDB MFDBX
-#include "radeon/fb.h"
+#include "fb.h"
 #include "radeon/radeonfb.h"
+#include "lynx/smi.h"
 #undef MFDB
 #include "gemform.h"
 #include "ct60.h"
@@ -182,9 +183,9 @@ OBJECT rs_object_rom[] =
 	{ 14,-1,-1,G_BOXCHAR,TOUCHEXIT,NORMAL,{0x2ff1100L},24,7,2,1 },								/*  */
 	{ 15,-1,-1,G_IMAGE,TOUCHEXIT,NORMAL,{0L},28,4,4,3 },											/* logo */
 	{ 16,-1,-1,G_STRING,NONE,NORMAL,{22L},1,8,31,1 },												/* mesures frequency  */
-	{ 17,-1,-1,G_BUTTON,SELECTABLE|DEFAULT|EXIT|FL3DIND|FL3DBAK,NORMAL,{23L},3,11,8,1 },					/* Change */
-	{ 18,-1,-1,G_BUTTON,SELECTABLE|EXIT|FL3DIND|FL3DBAK,NORMAL,{24L},23,11,8,1 },			/* Cancel */
-	{ 19,-1,-1,G_BUTTON,SELECTABLE|EXIT|FL3DIND|FL3DBAK,NORMAL,{25L},13,11,8,1 },			/* Test */
+	{ 17,-1,-1,G_BUTTON,SELECTABLE|DEFAULT|EXIT|FL3DACT,NORMAL,{23L},3,11,8,1 },					/* Change */
+	{ 18,-1,-1,G_BUTTON,SELECTABLE|EXIT|FL3DACT,NORMAL,{24L},23,11,8,1 },			/* Cancel */
+	{ 19,-1,-1,G_BUTTON,SELECTABLE|EXIT|FL3DACT,NORMAL,{25L},13,11,8,1 },			/* Test */
 	{ 0,-1,-1,G_BUTTON,LASTOB|TOUCHEXIT,SHADOWED,{26L},27,7,6,1 },										/* popup modes */
 };
 
@@ -218,7 +219,7 @@ OBJECT rs_object_menu2_rom[] =
 #define SWF 7
 #define SWG 8
 
-#define MAX_RES 200
+#define MAX_RES 300
 
 #define MODES_XBIOS 0
 #define MODES_VESA 1
@@ -260,7 +261,6 @@ void display_rez(GRECT *work);
 void change_string_colors(int choice_color);
 void init_list_rez(int choice_color);
 int current_rez(int modecode, int *vert_freq, int *pixel_clock);
-int find_radeon(void);
 long tempo_5S(void);
 void my_ltoa(char *buf, long n, int digits);
 extern COOKIE *get_cookie(long id);
@@ -270,19 +270,23 @@ extern COOKIE *get_cookie(long id);
 extern struct pci_device_id radeonfb_pci_table[]; /* radeon_base */
 extern unsigned short d_rezword;
 extern long fix_modecode; /* xbios.c */
-extern struct radeonfb_info *rinfo_fvdi;
+extern struct fb_info *info_fvdi;
 extern long total_modedb;
 OBJECT *rs_object, *rs_object_menu, *rs_object_menu2;
 TEDINFO *rs_tedinfo;
 char **rs_strings;
 LISTE_RES liste_rez[MAX_RES];
 int offset_select, nb_res, sel_color, type_modes;
+#if defined(COLDFIRE) && defined(MCF547X) /* FIREBEE */
+extern unsigned long videl_modedb_len;
+#endif
 
 /* global variables VDI & AES */
 
 short vdi_handle, work_in[11] = {1,1,1,1,1,1,1,1,1,1,2}, work_out[57], work_extend[57];
 short gr_hwchar, gr_hhchar, gr_hwbox, gr_hhbox;
 int start_lang;
+extern short video_found;
 
 short set_video(void)
 {
@@ -302,7 +306,9 @@ short set_video(void)
 	rs_object = rs_object_menu = rs_object_menu2 = NULL;
 	rs_tedinfo = NULL;
 	rs_strings = NULL;
-	if(!find_radeon())
+	if(get_cookie('_PCI') == NULL)
+		return(-1);
+	if(!video_found && (Physbase() < (void *)0x01000000))
 		return(-1);
 	vdi_handle = graf_handle(&gr_hwchar, &gr_hhchar, &gr_hwbox, &gr_hhbox);
 	if(!init_rsc())
@@ -319,11 +325,19 @@ short set_video(void)
 		type_modes = MODES_XBIOS;
 	else
 	{
+		struct radeonfb_info *rinfo = info_fvdi->par;
+		struct smifb_info *smiinfo = info_fvdi->par;
 		if(GET_DEVID(modecode) < 34)
 			type_modes = MODES_VESA;
 		else if(GET_DEVID(modecode) < (34 + total_modedb))
 			type_modes = MODES_RADEON;
-		else if(!rinfo_fvdi->mon1_dbsize)
+#if defined(COLDFIRE) && defined(MCF547X) /* FIREBEE */
+		else if(!video_found && videl_modedb_len)
+			type_modes = MODES_MON1;
+#endif
+		else if((video_found == 1) && rinfo->mon1_dbsize)
+			type_modes = MODES_MON1;
+		else if((video_found == 2) && smiinfo->mon1_dbsize)
 			type_modes = MODES_MON1;
 		else
 			type_modes = MODES_XBIOS;
@@ -332,7 +346,6 @@ short set_video(void)
 	rs_object[VIDEOBCOUL].ob_state &= ~DISABLED;
 	choice_color = (int)modecode & NUMCOLS;
 	init_list_rez(choice_color);
-	offset_select = 0;
 	choice_rez = current_rez(modecode, &vert_freq, &pixel_clock);	/* search curent rez inside the list */
 	for(i = VIDEOCHOIX1; i <= VIDEOCHOIX6; i++)
 	{
@@ -341,7 +354,7 @@ short set_video(void)
 		else
 			rs_object[i].ob_state &= ~SELECTED;
 	}
-	display_rez(NULL);
+	display_rez(NULL); /* init tedinfos without display */
 	change_string_colors(choice_color);
 	rs_object[VIDEOBMODE].ob_spec.free_string = strings_modes[type_modes];
 	p = rs_object[VIDEOINFO].ob_spec.free_string;
@@ -362,7 +375,8 @@ short set_video(void)
 		rs_object[VIDEOBCHANGE].ob_state |= DISABLED;
 	}
 	end = 0;
-	redraw = 1;
+//	redraw = 1;
+	redraw = 2;
 	while(!end)
 	{
 		if(redraw)
@@ -371,6 +385,8 @@ short set_video(void)
 			form_center(rs_object, &box.g_x, &box.g_y, &box.g_w, &box.g_h);
 			form_dial(FMD_START, box.g_x, box.g_y, box.g_w, box.g_h, box.g_x, box.g_y, box.g_w, box.g_h);
 			objc_draw(rs_object, VIDEOBOX, MAX_DEPTH, box.g_x, box.g_y, box.g_w, box.g_h);
+			if(redraw == 2)
+				display_rez(&box); // bug when box opened (1st line) ???
 			redraw = 0;
 		}
 		double_clic = 0;
@@ -488,7 +504,7 @@ short set_video(void)
 			case VIDEOBBAS:
 				if((i = nb_res - 6) < 0)
 					i = 0;
-				if(offset_select!=i)
+				if(offset_select != i)
 				{
 					ob_change(rs_object, VIDEOBBAS, 0, &box, SELECTED, 1);
 					offset_select++;
@@ -551,7 +567,7 @@ change:
 				rect.g_h = work_out[1];
 				graf_mouse(M_OFF, (MFORM *)0);
 				form_dial(FMD_START, rect.g_x, rect.g_y, rect.g_w, rect.g_h, rect.g_x, rect.g_y, rect.g_w, rect.g_h);
-				screen = (void *)Malloc((work_out[0] + 1) * (work_out[1] + 1) * (work_extend[4] >> 3));
+				screen = (void *)Mxalloc((work_out[0] + 1) * (work_out[1] + 1) * (work_extend[4] >> 3), 3);
 				target.fd_addr = 0;                 /* screen */
 				if(screen == NULL)                  /* save menu */
 				{
@@ -581,7 +597,7 @@ change:
 				}
 				vro_cpyfm(vdi_handle, S_ONLY, xy, &target, &source); /* save menu */
 				cur_mode = Vsetmode(-1);            /* save curent video mode */
-				Vsetscreen(-1, choice_rez >= 0 ? (liste_rez[choice_rez].modecode & ~VIRTUAL_SCREEN) : (modecode & ~VIRTUAL_SCREEN), 'VN', CMD_TESTMODE);
+				temp = Vsetscreen(-1, choice_rez >= 0 ? (liste_rez[choice_rez].modecode & ~VIRTUAL_SCREEN) : (modecode & ~VIRTUAL_SCREEN), 'VN', CMD_TESTMODE);
 				Supexec(tempo_5S);                  /* delay */
 				ret = Vsetmode(cur_mode);           /* restore video mode */
 				vro_cpyfm(vdi_handle, S_ONLY, xy, &source, &target);	/* redraw menu */
@@ -647,13 +663,15 @@ change:
 
 int init_rsc(void)
 {
+	struct radeonfb_info *rinfo = info_fvdi->par;
+	struct smifb_info *smiinfo = info_fvdi->par; 
 	COOKIE *p;
 	int i;
-	rs_object = (OBJECT *)Malloc(sizeof(rs_object_rom));
+	rs_object = (OBJECT *)Mxalloc(sizeof(rs_object_rom), 3);
 	if(rs_object == NULL)
 		return(0);
 	memcpy(rs_object, rs_object_rom, sizeof(rs_object_rom));
-	rs_tedinfo = (TEDINFO *)Malloc(sizeof(rs_tedinfo_rom));
+	rs_tedinfo = (TEDINFO *)Mxalloc(sizeof(rs_tedinfo_rom), 3);
 	if(rs_tedinfo == NULL)
 	{
 		free_rsc();
@@ -664,7 +682,7 @@ int init_rsc(void)
 	 && (((p->v.l >> 8) == FRA) || ((p->v.l >> 8) == SWF)))
 	{
 		start_lang = 0;
-		rs_strings = (char **)Malloc(sizeof(rs_strings_fr));
+		rs_strings = (char **)Mxalloc(sizeof(rs_strings_fr), 3);
 		if(rs_strings == NULL)
 		{
 			free_rsc();
@@ -673,7 +691,7 @@ int init_rsc(void)
 		memset(rs_strings, 0, sizeof(rs_strings_fr));
 		for(i = 0; i < sizeof(rs_strings_fr) / sizeof(char *); i++)
 		{
-			if((rs_strings[i] = (char *)Malloc(strlen(rs_strings_fr[i]+1))) == NULL)
+			if((rs_strings[i] = (char *)Mxalloc(strlen(rs_strings_fr[i])+1, 3)) == NULL)
 			{
 				free_rsc();
 				return(0);
@@ -684,7 +702,7 @@ int init_rsc(void)
 	else
 	{
 		start_lang = 1;
-		rs_strings = (char **)Malloc(sizeof(rs_strings_en));
+		rs_strings = (char **)Mxalloc(sizeof(rs_strings_en), 3);
 		if(rs_strings == NULL)
 		{
 			free_rsc();
@@ -693,7 +711,7 @@ int init_rsc(void)
 		memset(rs_strings, 0, sizeof(rs_strings_en));
 		for(i = 0; i < sizeof(rs_strings_en) / sizeof(char *); i++)
 		{
-			if((rs_strings[i] = (char *)Malloc(strlen(rs_strings_en[i]+1))) == NULL)
+			if((rs_strings[i] = (char *)Mxalloc(strlen(rs_strings_en[i])+1, 3)) == NULL)
 			{
 				free_rsc();
 				return(0);
@@ -717,6 +735,7 @@ int init_rsc(void)
 				rs_object[i].ob_spec.free_string = rs_strings[rs_object[i].ob_spec.index];
 				break;
 			case G_TEXT:
+			case G_BOXTEXT:
 			case G_FTEXT:
 			case G_FBOXTEXT:
 				rs_object[i].ob_spec.tedinfo = &rs_tedinfo[rs_object[i].ob_spec.index];
@@ -741,7 +760,7 @@ int init_rsc(void)
 	rs_object[VIDEOLOGO].ob_spec.bitblk = rs_bitblk;
 	rs_object[VIDEOINFO].ob_y += 4;
 	rs_object[VIDEOBMODE].ob_y -= 4;
-	rs_object_menu = (OBJECT *)Malloc(sizeof(rs_object_menu_rom));
+	rs_object_menu = (OBJECT *)Mxalloc(sizeof(rs_object_menu_rom), 3);
 	if(rs_object_menu == NULL)
 	{
 		free_rsc();
@@ -763,7 +782,7 @@ int init_rsc(void)
 		rs_object_menu[i].ob_height *= gr_hhchar;
 	}
 	while(!(rs_object_menu[i++].ob_flags & LASTOB));
-	rs_object_menu2 = (OBJECT *)Malloc(sizeof(rs_object_menu2_rom));
+	rs_object_menu2 = (OBJECT *)Mxalloc(sizeof(rs_object_menu2_rom), 3);
 	if(rs_object_menu2 == NULL)
 	{
 		free_rsc();
@@ -785,8 +804,23 @@ int init_rsc(void)
 		rs_object_menu2[i].ob_height *= gr_hhchar;
 	}
 	while(!(rs_object_menu2[i++].ob_flags & LASTOB));
-	if(!rinfo_fvdi->mon1_dbsize)
-		rs_object_menu2[MODMON1].ob_state |= DISABLED;
+	switch(video_found)
+	{
+		case 1:
+		 	if(!rinfo->mon1_dbsize)
+		 		rs_object_menu2[MODMON1].ob_state |= DISABLED;
+		 	break;	
+		case 2:
+		 	if(!smiinfo->mon1_dbsize)
+		 		rs_object_menu2[MODMON1].ob_state |= DISABLED;
+		 	break;
+		default:
+#if defined(COLDFIRE) && defined(MCF547X) /* FIREBEE */
+			if(!videl_modedb_len)
+#endif
+				rs_object_menu2[MODMON1].ob_state |= DISABLED;
+			break;
+	}		
 	return(1);
 }
 
@@ -866,7 +900,7 @@ void init_slider(void)
 
 void select_normal_rez(GRECT *work)
 {
-	register int i;
+	int i;
 	for(i = VIDEOCHOIX1; i <= VIDEOCHOIX6; i++)
 	{
 		if(rs_object[i].ob_state & SELECTED)
@@ -877,13 +911,13 @@ void select_normal_rez(GRECT *work)
 void display_rez(GRECT *work)
 {
 	TEDINFO *t_edinfo;
-	int i, j;
+	int i, j = offset_select;
 	if(work != NULL)
 	{
 		display_slider(work);
 		select_normal_rez(work);
 	}
-	for(i = VIDEOCHOIX1, j = offset_select; i <= VIDEOCHOIX6; i++, j++)
+	for(i = VIDEOCHOIX1; i <= VIDEOCHOIX6; i++)
 	{
 		t_edinfo = rs_object[i].ob_spec.tedinfo;
 		if(j < nb_res)
@@ -900,10 +934,25 @@ void display_rez(GRECT *work)
 		}
 		if(work != NULL)
 			objc_draw(rs_object, (short)i, MAX_DEPTH, work->g_x, work->g_y, work->g_w, work->g_h);
+		j++;
 	}
 }
 
-long enumfunc(SCREENINFO *inf, long flag)
+void change_string_colors(int choice_color)
+{
+	char *p = rs_object[VIDEOBCOUL].ob_spec.free_string;
+	switch(choice_color)
+	{
+		case 0: strcpy(p,"2"); break;
+		case 1: strcpy(p,"4"); break;
+		case 2: strcpy(p,"16"); break;
+		case 3: strcpy(p,"256"); break;
+		case 4: strcpy(p,"65536"); break;
+		default: strcpy(p,"16M"); break;
+	}
+}
+
+static long enumfunc(SCREENINFO *inf, long flag)
 {
 	int i;
 	if(flag);
@@ -933,27 +982,14 @@ long enumfunc(SCREENINFO *inf, long flag)
 	return(0);
 }
 
-void change_string_colors(int choice_color)
-{
-	char *p = rs_object[VIDEOBCOUL].ob_spec.free_string;
-	switch(choice_color)
-	{
-		case 0: strcpy(p,"2"); break;
-		case 1: strcpy(p,"4"); break;
-		case 2: strcpy(p,"16"); break;
-		case 3: strcpy(p,"256"); break;
-		case 4: strcpy(p,"65536"); break;
-		default: strcpy(p,"16M"); break;
-	}
-}
-
 void init_list_rez(int choice_color)
 {
 	int i, j, temp;
+	long ret;
 	char buf_temp[24];
 	nb_res = 0;
 	sel_color = (long)choice_color;
-	Vsetscreen(-1, &enumfunc, 'VN', CMD_ENUMMODES);
+	ret = Vsetscreen(-1, &enumfunc, 'VN', CMD_ENUMMODES);
 	for(i = 0; i < nb_res; i++)		/* sort */
 	{
 		for(j = 0; j < nb_res; j++)
@@ -964,16 +1000,16 @@ void init_list_rez(int choice_color)
 				temp = liste_rez[i].modecode;
 				liste_rez[i].modecode = liste_rez[j].modecode;
 				liste_rez[j].modecode = temp;		
-				temp=liste_rez[i].width_screen;
+				temp = liste_rez[i].width_screen;
 				liste_rez[i].width_screen = liste_rez[j].width_screen;
 				liste_rez[j].width_screen = temp;
-				temp=liste_rez[i].height_screen;
+				temp = liste_rez[i].height_screen;
 				liste_rez[i].height_screen = liste_rez[j].height_screen;
 				liste_rez[j].height_screen = temp;
-				temp=liste_rez[i].vert_freq;
+				temp = liste_rez[i].vert_freq;
 				liste_rez[i].vert_freq = liste_rez[j].vert_freq;
 				liste_rez[j].vert_freq = temp;
-				temp=liste_rez[i].pixel_clock;
+				temp = liste_rez[i].pixel_clock;
 				liste_rez[i].pixel_clock = liste_rez[j].pixel_clock;
 				liste_rez[j].pixel_clock = temp;
 				strcpy(buf_temp ,liste_rez[i].name);
@@ -1002,39 +1038,6 @@ int current_rez(int modecode, int *vert_freq, int *pixel_clock)
 	return(choice_rez);
 }
 
-int find_radeon(void)
-{
-	unsigned long temp;
-	short index;
-	long handle, err;
-	struct pci_device_id *radeon;
-	if(get_cookie('_PCI') == NULL)
-		return(0);
-	index = 0;
-	do
-	{
-		handle = find_pci_device(0x0000FFFFL, index++);
-		if(handle >= 0)
-		{
-			err = read_config_longword(handle, PCIIDR, &temp);
-			/* test Radeon ATI devices */
-			if(err >= 0)
-			{
-				radeon = radeonfb_pci_table; /* compare table */
-				while(radeon->vendor)
-				{
-					if((radeon->vendor == (temp & 0xFFFF))
-					 && (radeon->device == (temp >> 16)))
-						return(1);
-					radeon++;
-				}
-			}
-		}
-	}
-	while(handle >= 0);
-	return(0);
-}	
-
 long tempo_5S(void)
 {
 	unsigned long start_time;
@@ -1045,19 +1048,18 @@ long tempo_5S(void)
 
 void my_ltoa(char *buf, long n, int digits)
 {
-	unsigned long un;
+	unsigned long un = (unsigned long)n;
 	char *tmp, ch;
-	un = n;
 	if(n < 0)
 	{
 		*buf++ = '-';
-		un = -n;
+		un = (unsigned long)-n;
 	}
 	tmp = buf;
 	do
 	{
-		ch = un % 10;
-		un = un / 10;
+		ch = (char)(un % 10);
+		un /= 10;
 		if(ch <= 9)
 			ch += '0';
 		else

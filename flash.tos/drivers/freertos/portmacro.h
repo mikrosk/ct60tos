@@ -309,8 +309,11 @@
 
 #define portDISABLE_INTERRUPTS() \
     do { ( void )portSET_IPL( portIPL_MAX ); } while( 0 )
+
+#if 0 // incompatible with tasks working with different level of interrupts
 #define portENABLE_INTERRUPTS() \
     do { ( void )portSET_IPL( 0 ); } while( 0 )
+#endif
 
 #define portNOP()                                                            \
     asm volatile ("nop\n\t")

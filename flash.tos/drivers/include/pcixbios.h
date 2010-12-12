@@ -104,6 +104,7 @@ typedef struct                       /* structure of address conversion     */
 /*                      Flags used in Resource-Descriptor                     */
 /******************************************************************************/
 #define FLG_IO        0x4000         /* Ressource in IO range               */
+#define FLG_ROM       0x2000         /* Expansion ROM */
 #define FLG_LAST      0x8000         /* last ressource                      */
 #define FLG_8BIT      0x0100         /* 8 bit accesses allowed              */
 #define FLG_16BIT     0x0200         /* 16 bit accesses allowed             */
@@ -136,6 +137,10 @@ typedef struct                       /* structure of address conversion     */
 /******************************************************************************/
 /*                              Functions                                     */
 /******************************************************************************/
+#ifndef OSBIND_CLOBBER_LIST
+#define OSBIND_CLOBBER_LIST "d0", "d1", "d2", "a0", "a1", "a2", "memory"
+#endif
+
 #ifndef trap_14_wlw
 #define trap_14_wlw(n, a, b)	\
 __extension__	\

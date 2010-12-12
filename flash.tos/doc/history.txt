@@ -231,15 +231,17 @@ and init_par.S).
 
 2009-09-09 alpha 1.04
 ---------------------
+- sdram.S now is boot2.S.
 - Add bypass SDRAM test with memvalid, memval2, memval3 before PMMU 
-init (file sdram.S).
+init (file boot2.S).
 - Add PCI BIOS (files pci_bios.S and xbios2.S).
 - Add PCI drivers call, there are a test of the code '_PCI' at 
 0x00ED0000 for call the init of PCI devices at 0x00ED0004 (128KB), but 
 also at 0x00EC0000 (192KB) and 0x00EB0000 (256KB).
+- Add LZ compression for PCI drivers.
 - Add Bconout in 256 colors for PCI graphic card (file conout.S).
 - Add boot order menu if 'c' key is pressed after the Atari logo 
-(file sdram.S).
+(file boot2.S).
 - Add dump function with key 'm' after a crash, it's possible to add other
   functions in C with a call entry to the PCI drivers (file debug2.S).
 - Removed Atari logo when PCI graphic card is used (file blitter2.S).
@@ -251,10 +253,10 @@ the CT60CONF.CPX).
 function crash the TOS with the SDRAM and the copyback cache (file 
 cache.S).
 - Add COLDFIRE target(s):
-  * CPU test and init (sdram.S).
-  * cf68klib (sdram.S, cf68klib.S).
+  * CPU test and init (boot2.S).
+  * cf68klib (boot2.S, cf68klib.S).
   * Cache (xbios2.S, xbios2.S, gemdos2.S, magxboot.S).
-  * PMMU (pmmu.S, pmmu2.c, sdram.S).
+  * PMMU (pmmu.S, pmmu2.c, boot2.S).
   * Cookies _CPU, _SND, _FPU, _SWI (cookies.S).
   * PCI BIOS (pci_bios.S, xbios2.S, xbios2.S).
   * Timers GPT (xbios2.S, xbios2.S).
@@ -270,14 +272,39 @@ cache.S).
   * Virtual screen 640 x 400 x 2 (xbios2.S, xbios2.S).
   * Videl mode code test (videl.S, videl2.S).
   * HD vectors, removed floppy disk (boot.S).
-  * Compact Flash booting and interface (sdram.S).
+  * Compact Flash booting and interface (boot2.S).
   * Debug (debug2.S).
   * Bios vectors auxistat, auxin, auxostat, auxout... (bios.S).
   * Conout serial redirection (bios2.S, conout.S).
   * Blitter and VDI removed (blitter2.S, xbios2.S).
-  * Linux ataboot removed (sdram.S and link). 
+  * Linux ataboot removed (boot2.S and link). 
   * Minors changes inside aes.S, aes2.S, gemdos.S, movep2.S.
-- Add CTPCI IDE selection (sdram.S).
-- Removed CTCM half clock (sdram.S).
+- Add CTPCI IDE selection (boot2.S).
+- Removed CTCM half clock (boot2.S).
 - Add entry point to the PCI drivers for replace set_video inside the AES (aes2.S).
 
+2010-25-09 2.00
+---------------
+- Moved debug2.S to vectors2.S.
+- Moved fan, i2c, params, temp, ide and scsi routines from boot2.S to 
+fan.S, i2c.S, params2.S, temp.S, and ide_scsi.S.
+- All patches now runs inside boot when Flash is copied to SDRAM 
+(boot2.S and patches subdirectory).
+- Now It's possible to load separate files for the TOS404, the boot 
+and the PCI drivers:
+  * CT60TOS.BIN: contains BOOT + TOS404 + Atari Diagnostics
+    (must disappear).
+  * BOOT.HEX: contains the BOOT.
+  * DRIVERS.HEX: contains the PCI drivers (GPL licence).
+- Removed hardware ABE/SDR version parameters.
+- Add hardware tests: ABE/SDR7+, CTCPI_1E+, Ethernat and Supervidel 
+(files pci_bios.S and boot2.S).
+- Automatic PCI mapping for MEM and I/O PCI zones reduced to 2 x  
+512KB if Ethernat or Supervidel is found, else it's 2 x 1GB zones 
+(pci_bios.S).
+- Add CTCM user clock divider parameter.
+- Writing the CT60 frequency to the CTCM programmable clock generator 
+before to start the PCI drivers (boot2.S).
+- Add a 2nd CTPCI test before apply patches and copy TOS in SDRAM 
+because later when the PCI BIOS start, the CTPCI seems always 
+detected ??? (boot2.S)

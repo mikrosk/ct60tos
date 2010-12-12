@@ -77,12 +77,9 @@
 #ifdef DBUG
 
 #define M68K_DISASM_C
+#include <string.h>
 #include <stdio.h>
 #include "m68k_disasm.h"
-
-extern long length(const char *text);
-extern void copy(const char *src, char *dest);
-extern char *strchr( const char *s, int c);
 
 void get_modregstr (dis_buffer_t *, int, int, int, int);
 void get_immed (dis_buffer_t *, int);
@@ -233,12 +230,12 @@ m68k_word *M68k_Disassemble(struct DisasmPara_68k *dp)
 
   if ((s = strchr(asm_buffer,'\t'))!=NULL) {
     *s++ = '\0';
-    copy(s,dp->operands);
+    strcpy(dp->operands, s);
   }
   else {
     *dp->operands = '\0';
   }
-  copy(asm_buffer,dp->opcode);
+  strcpy(dp->opcode, asm_buffer);
 
 #if 0  /* Symbol information ? */
   printf("\t%s",asm_buffer);
@@ -3103,7 +3100,7 @@ void prints(dis_buffer_t *dbuf, int val, int sz)
   else 
     prints_wb(dbuf, (long)val, sz, db_radix);
   
-  dbuf->casm = &dbuf->casm[length(dbuf->casm)];
+  dbuf->casm = &dbuf->casm[strlen(dbuf->casm)];
 }
 
 
@@ -3119,7 +3116,7 @@ void iprints(dis_buffer_t *dbuf, int val, int sz)
   else 
     iprints_wb(dbuf, (long)val, sz, db_radix);
   
-  dbuf->cinfo = &dbuf->cinfo[length(dbuf->cinfo)];
+  dbuf->cinfo = &dbuf->cinfo[strlen(dbuf->cinfo)];
 }
 
 
@@ -3134,7 +3131,7 @@ void printu(dis_buffer_t *dbuf, u_int val, int sz)
     printu_wb(dbuf, (u_short)val, sz, db_radix);
   else 
     printu_wb(dbuf, (u_long)val, sz, db_radix);
-  dbuf->casm = &dbuf->casm[length(dbuf->casm)];
+  dbuf->casm = &dbuf->casm[strlen(dbuf->casm)];
 }
 
 
@@ -3149,7 +3146,7 @@ void iprintu(dis_buffer_t *dbuf, u_int val, int sz)
     iprintu_wb(dbuf, (u_short)val, sz, db_radix);
   else 
     iprintu_wb(dbuf, (u_long)val, sz, db_radix);
-  dbuf->cinfo = &dbuf->cinfo[length(dbuf->cinfo)];
+  dbuf->cinfo = &dbuf->cinfo[strlen(dbuf->cinfo)];
 }
 
 

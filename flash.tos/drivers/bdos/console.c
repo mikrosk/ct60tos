@@ -150,7 +150,7 @@ static void conbrk(short h)
                     glbkbchar[h][add[h]++ & KBBUFMASK] = ch;
                 }
                 else {
-                    Bconout(h, 7);
+//                    Bconout(h, 7);
                 }
             }
         } while (stop);

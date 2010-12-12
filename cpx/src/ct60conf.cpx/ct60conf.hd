@@ -4,7 +4,7 @@
 
 flags bootinit resident
 cpxid CT60
-cpxversion 1.0
+cpxversion 2.0
 itext TURBO >>>
 icon
 11111111111111111111111111111110

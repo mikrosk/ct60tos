@@ -663,6 +663,8 @@ _flush_cache_pexec:
 	move.w #rw_parameter,-(SP)
 	trap #14
 	lea 12(SP),SP
+	cmp.l #-1,D0
+	beq.s .normal
 	btst #0,D0
 	beq.s .normal
 	jsr 0xE0085A                                        // caches off
@@ -783,7 +785,7 @@ memset_purec:
 _old_trap2:
 	.ds.l   1                       // old TRAP #2 handler
 
-	.ds.w   1000
+	.ds.w   4096 // was 1000
 fstrt:
 	.ds.l   1
 

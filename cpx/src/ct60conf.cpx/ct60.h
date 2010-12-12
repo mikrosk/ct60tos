@@ -14,8 +14,8 @@
 #define VIRTUAL_SCREEN 0x8000 /* width * 2 and height * 2, 2048 x 2048 max */
 #define BPS32 5
 
-#define GET_DEVID(x) ((x & DEVID) ? ((x & 0x3FF8) >> 3) : -1)
-#define SET_DEVID(x) (((x << 3) & 0x3FF8) | DEVID)  
+#define GET_DEVID(x) (((x) & DEVID) ? ((x & 0x3FF8) >> 3) : -1)
+#define SET_DEVID(x) ((((x) << 3) & 0x3FF8) | DEVID)  
 
 /* Vsetscreen New modes */
 /* Vsetscreen(void *par1, void *par2, short rez, short command) */
@@ -108,7 +108,7 @@ typedef struct _scrblk
 #define CT60_FARENHEIT 1
 #define CT60_MODE_READ 0
 #define CT60_MODE_WRITE 1
-#define CT60_PARAM_TOSRAM 0L
+#define CT60_PARAM_TOSRAM 0L /* obsolete for boot >= 2.00, but the CPX is backward compatible */
 #define CT60_BLITTER_SPEED 1L
 #define CT60_CACHE_DELAY 2L
 #define CT60_BOOT_ORDER 3L
@@ -119,8 +119,8 @@ typedef struct _scrblk
 #define CT60_SAVE_NVRAM_2 8L
 #define CT60_SAVE_NVRAM_3 9L
 #define CT60_PARAM_OFFSET_TLV 10L
-#define CT60_ABE_CODE 11L
-#define CT60_SDR_CODE 12L
+#define CT60_SERIAL_SPEED 11L
+#define CT60_USER_DIV_CLOCK 12L
 #define CT60_CLOCK 13L
 #define CT60_PARAM_CTPCI 14L
 /* 15 is reserved - do not use */

@@ -1,6 +1,8 @@
 Note sur CT60CONF.CPX:
 ----------------------
 S‚lection TOS en RAM :
+Cette option n'existe plus depuis le boot 2.00, le TOS ‚tant toujours 
+en RAM, et le cookie cookie 'PMMU' n'existe plus.
 Quand cette option est activ‚e, le TOS est copi‚ en SDRAM de $E00000 … 
 $EEFFFF (le dernier secteur de la flash de $EE0000 … $EFFFFF est 
 utilis‚ pour sauver 16 paramŠtres).
@@ -18,6 +20,11 @@ n'y a pas de problŠmes sous TOS parceque le XBIOS est contenu en FLASH
 mais sous MagiC si vous utilisez ce CPX vous devez installer 
 CT60XBIO.PRG dans le dossier AUTO. Ce programme installe le XBIOS 
 pour la CT60 si le cookie 'CT60' n'est pas trouv‚.
+
+Note sur FSOUND.CPX:
+--------------------
+Le FSOUND.CPX par d‚faut plante avec les ‚crans de grande taille 
+(comme 1920x1080x32), ce CPX repousse les limites.
 
 Note sur XCONTROL, ZCONTROL, COPS, et la SDRAM en copyback:
 -----------------------------------------------------------

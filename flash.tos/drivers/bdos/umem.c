@@ -18,8 +18,8 @@
 
 
 #define  _MINT_OSTRUCT_H
-#include <osbind.h>
-#include <sysvars.h>
+#include <mint/osbind.h>
+#include <mint/sysvars.h>
 #include "config.h"
 #include "portab.h"
 #include "fs.h"
@@ -135,7 +135,8 @@ long xsrealloc(long amount)
 {
     if(screen_addr)
        xmfree(screen_addr);
-    return(screen_addr = xmxalloc(amount, MX_STRAM));
+    screen_addr = xmxalloc(amount, MX_STRAM);
+    return(screen_addr);
 }
 
 /*

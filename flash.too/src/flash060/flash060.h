@@ -28,7 +28,7 @@
 #define FILE     29  /* BOXTEXT dans l'arbre FORM1 */
 #define DATE_FILE 30  /* TEXT dans l'arbre FORM1 */
 #define VERSION_FI 31  /* BOXTEXT dans l'arbre FORM1 */
-#define VERSION_FILE 32  /* TEXT dans l'arbre FORM1 */
+#define VERSION_FILE 32  /* FTEXT dans l'arbre FORM1 */
 #define CODE_VERSION_FI 33  /* BOXTEXT dans l'arbre FORM1 */
 
 #define FORM2    1   /* Formulaire/Dialogue */
@@ -80,6 +80,8 @@
 
 #define ALERT_SREC 22  /* Chaine d'alerte */
 
-#define TITLE_BIN_JED 23  /* Chaine libre */
+#define ALERT_NVDI 23  /* Chaine d'alerte */
 
-#define TITLE_JED 24  /* Chaine libre */
+#define TITLE_BIN_JED 24  /* Chaine libre */
+
+#define TITLE_JED 25  /* Chaine libre */

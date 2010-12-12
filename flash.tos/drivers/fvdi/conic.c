@@ -123,7 +123,7 @@ void col_pat(Virtual *vwk, Fgbg *fill_colour, Fgbg *border_colour, short **patte
 		fill_colour->background = vwk->fill.colour.foreground;
 		fill_colour->foreground = vwk->fill.colour.background;
 	}
-
+	
 	if (interior == 4)
 		*pattern = vwk->fill.user.pattern.in_use;
 	else {

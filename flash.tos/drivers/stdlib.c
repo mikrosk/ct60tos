@@ -588,7 +588,7 @@ void ftoa(float f, int max, char *buf)
 /****************************************************************/
 char *strchr(const char *s, int c)
 {
-  while(*s && *s!=(char)c)
+  while(*s && (*s != (char)c))
     s++;
   return(*s ? (char *)s : NULL);
 }
@@ -618,6 +618,7 @@ static int str_cmp(const char* s1, const char *s2)
   return(0);
 }
 
+/****************************************************************/
 char *strstr(const char *s1, const char *s2)
 {
   char *p = (char *)s1;

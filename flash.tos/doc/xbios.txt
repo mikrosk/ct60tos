@@ -57,14 +57,7 @@ CacheCtrl()                  XBIOS Function 160.
           CT60_MODE_WRITE 1
           The value is write.
 
-  type_param:
-          CT60_PARAM_TOSRAM 0
-          If the value is set to 1, TOS is copied to SDRAM during boot 
-          (PMMU is used and the PMMU cookie is created).
-          If the value is set to 0, TOS in the flash eprom is used.
-          Has no effect on the CTPCI, the TOS runs always in SDRAM if 
-          the board is detected.
-          
+  type_param:     
           CT60_BLITTER_SPEED 1
           If the value is set to 0, the blitter runs at 8/10 MHz.
           If the value is set to 1, the blitter runs at 16/20 MHz.          
@@ -109,6 +102,9 @@ CacheCtrl()                  XBIOS Function 160.
           CT60_BOOT_LOG 5
           If the bit 0 is cleared, the stdout output of the AUTO 
           folder files is writed inside a boot.log on the boot drive.
+          If the bit 1 is cleared, the stdout debug output of the 
+          internal fVDI driver is selected and writed inside a 
+          video.log on the boot drive.
 
           CT60_VMODE 6 
           Boot extended modecode for CTPCI graphic card:
@@ -129,12 +125,18 @@ CacheCtrl()                  XBIOS Function 160.
           Value contains a signed offset in points.  A point is equal 
           to 2.8 øC.
 
-          CT60_ABE_CODE 11
-          CT60_SDR_CODE 12
-          Reserved for save ABE/SDR versions, do not use.
+          CT60_USER_DIV_CLOCK 12
+          CTCM secondary user clock divider (2-6). The clock frequency  
+          on the secondary user clock is the clock frequency / divider.
+          For example for create a new PCI clock or a Videl external 
+          clock.
+          If the value is invalid, the TOS calculate a value for get a 
+          secondary clock <= 33000 KHz.
+          If CT60_CLOCK parameter value is <= 66000 the TOS set the 
+          divider to 2.
 
           CT60_CLOCK 13
-          CTPCM boot clock frequency in KHz (65000-110000)
+          CTCM boot clock frequency in KHz (65000-110000)
           WARNING, if you increase frequency !!!
          
           CT60_PARAM_CTPCI 14
@@ -268,7 +270,15 @@ CacheCtrl()                  XBIOS Function 160.
 #define VERTFLAG2      0x2000 /* double height */
 #define DEVID          0x4000 /* bits 11-3 used for devID */
 #define VIRTUAL_SCREEN 0x8000 /* width * 2 and height * 2, 2048 x 2048 max */
-#define BPS32 5 
+#define BPS32 5
+
+OVERSCAN and PAL flags are used for select refresh frequency:
+ OVERSCAN | PAL | Freq
+ ---------+-----+-----
+        0 |  0  | 56
+        0 |  1  | 60
+        1 |  0  | 70
+        1 |  1  | 85 
 
   par1: used or not by each command.   
 

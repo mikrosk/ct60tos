@@ -1,7 +1,8 @@
 /* Video Modes for Radeon / PURE C */
-/* Didier MEQUIGNON - v1.00 - November 2006 / September 2009 */
+/* Didier MEQUIGNON - v1.00 - November 2006 / September 2009 / July 2010 */
 
 #include <portab.h>
+#include <string.h>
 #include <tos.h>
 #include <vdi.h>
 #include <mt_aes.h>
@@ -56,7 +57,7 @@ char *rs_strings[] = {
 	"Test",
 	"XIOS",
 
-	"Radeon Vid‚o Modes V1.0 Septembre 2009","","",
+	"Radeon Vid‚o Modes V1.0 Mai 2010","","",
 	"Ce CPX et systŠme:","","",
 	"Didier MEQUIGNON","","",
 	"aniplay@wanadoo.fr","","",
@@ -81,7 +82,7 @@ char *rs_strings_en[] = {
 	"Test",
 	"XBIOS",
 
-	"Radeon Video Modes V1.0 September 2009","","",
+	"Radeon Video Modes V1.0 Mai 2010","","",
 	"This CPX and system:","","",
 	"Didier MEQUIGNON","","",
 	"aniplay@wanadoo.fr","","",
@@ -280,8 +281,6 @@ UWORD pic_logo[]={
 #define MODES_VESA 1
 #define MODES_RADEON 2
 
-#define ID (long)'_PCI'
-
 typedef struct
 {
 	long ident;
@@ -377,6 +376,7 @@ void init_slider(void);
 void select_normal_rez(GRECT *work);
 void display_rez(int flag,GRECT *work);
 CPXNODE* get_header(long id);
+int modif_sys(LISTE_RES *rez);
 int modif_inf(int modecode);
 int read_hexa(char *p);
 int ascii_hexa(char *p);
@@ -384,6 +384,9 @@ void write_hexa(int val,char *p);
 void hexa_ascii(int val,char *p);
 void display_error(int err);
 int get_MagiC_ver(unsigned long *crdate);
+COOKIE *fcookie(void);
+COOKIE *ncookie(COOKIE *p);
+COOKIE *get_cookie(long id);
 int find_radeon(void);
 int copy_string(char *p1,char *p2);
 int long_deci(char *p,int *lg);
@@ -391,6 +394,7 @@ int val_string(char *p);
 long tempo_5S(void);
 void reboot(void);
 void (*reset)(void);
+/* short detect_pixel_format(void); */
 
 /* variables globales */
 
@@ -420,26 +424,33 @@ int CDECL cpx_call(GRECT *work)
 	static char *spec_sauve_change[2] = {"Sauve/change","Save/change"};
 	static char *spec_sauve_reboot[2] = {"Sauve/reset","Save/reset"};
 	MX_KERNEL *mx_kernel;
+	COOKIE *p;
 	int xy[8];
 	MFDB source,target;
 	GRECT menu,rect,r;
 	OBJECT *info_tree;
 	TEDINFO *t_edinfo;	
 	EVNTDATA mouse;
-	long value,temp;
+	long temp;
 	unsigned long magic_date=0L;
 	int mesag[8];
 	char cmde[32];
-	int ret,mint,magic,double_clic,fin,redraw,modecode,new_mode,cur_mode,choice_color,choice_rez,vert_freq,pixel_clock,l,h;
+	int ret,fvdi,mint,magic,double_clic,fin,redraw,modecode,new_mode,cur_mode,test_mode,choice_color,choice_rez,vert_freq,pixel_clock,l,h;
 	register int i,j;
 	init_rsc();
-	if((*Xcpb->get_cookie)('MiNT',&value))
+	if(get_cookie('fVDI') != NULL)
+		fvdi=1;
+	else
+		fvdi=0;
+	if(get_cookie('MiNT') != NULL)
 		mint=1;
 	else
 		mint=0;
 	magic_date=0L;
 	magic=get_MagiC_ver(&magic_date);
-	if(!((*Xcpb->get_cookie)('_MCH',&value)) || value!=0x30000L)
+	if((head=get_header('ATIC')) == NULL)
+		return(0);
+	if(((p = get_cookie('_MCH')) == NULL) || (p->v.l != 0x30000L))
 	{
 		if(!start_lang)
 			form_alert(1,"[1][Cette machine|n'est pas un FALCON][Annuler]");
@@ -447,22 +458,21 @@ int CDECL cpx_call(GRECT *work)
 			form_alert(1,"[1][This computer isn't|a FALCON][Cancel]");
 		return(0);
 	}
-	if(!(*Xcpb->get_cookie)(ID,&value) || !find_radeon())
+	if(!find_radeon())
 	{
 		if(!start_lang)
-			form_alert(2,"[1][Pas de Radeon PCI install‚][Annuler]");
+			form_alert(1,"[1][Pas de Radeon|PCI install‚e][Annuler]");
 		else
-			form_alert(2,"[1][No Radeon PCI installed][Cancel]");
+			form_alert(1,"[1][No Radeon PCI|installed][Cancel]");
 		return(0);
 	}
-	if((head=get_header('ATIC'))==0)
-		return(0);
-	if((vdi_handle=Xcpb->handle)<=0)
+	if((vdi_handle=Xcpb->handle) <= 0)
 		return(0);
 	v_opnvwk(work_in,&vdi_handle,work_out);
-	if(vdi_handle<=0)
+	if(vdi_handle <= 0)
 		return(0);
 	vq_extnd(vdi_handle,1,work_extend);
+/*	detect_pixel_format(); */
 	modecode=Vsetmode(-1);
 	if(!(modecode & DEVID))
 		type_modes = MODES_XBIOS;
@@ -592,11 +602,27 @@ int CDECL cpx_call(GRECT *work)
 				rs_object[VIDEOBCHANGE].ob_flags |= (SELECTABLE|EXIT);
 				if(double_clic)
 				{
+					static char mess_alert[256];
+					LISTE_RES *r = &liste_rez[choice_rez];
 					objc_change(rs_object,VIDEOBCHANGE,0,work,SELECTED,1);
-					goto change;
+					if(!start_lang)
+					{
+						static char alert[] = "[2][Changer la r‚solution en";
+						static char end_alert[] = "][Annuler|Changer]";
+						sprintf(mess_alert,"%s|%dx%dx%d@%d ?|modecode: 0x%04X (%u)%s",
+						 alert,r->width_screen,r->height_screen,1<<(r->modecode & NUMCOLS),r->vert_freq,(unsigned int)r->modecode,(unsigned int)r->modecode,end_alert);
+					}
+					else
+					{
+						static char alert[] = "[2][Change the screen in";
+						static char end_alert[] = "][Cancel|Change]";
+						sprintf(mess_alert,"%s|%dx%dx%d@%d ?|modecode: 0x%04X (%u)%s",
+						 alert,r->width_screen,r->height_screen,1<<(r->modecode & NUMCOLS),r->vert_freq,(unsigned int)r->modecode,(unsigned int)r->modecode,end_alert);
+					}	
+					if(form_alert(1,mess_alert)!=1)
+						goto change;
 				}
-				else
-					objc_change(rs_object,VIDEOBCHANGE,0,work,NORMAL,1);
+				objc_change(rs_object,VIDEOBCHANGE,0,work,NORMAL,1);
 			}
 			break;
 		case VIDEOBHAUT:
@@ -686,6 +712,20 @@ change:
 			if(choice_rez>=0)
 			{
 				new_mode=liste_rez[choice_rez].modecode;
+				if(fvdi)
+				{
+					if(!start_lang)
+					{
+						if(form_alert(1,"[2][Voulez-vous sauver|la r‚solution|dans FVDI.SYS ?][Annuler|Sauver]")!=1)
+							modif_sys(&liste_rez[choice_rez]);
+							
+					}
+					else
+					{
+						if(form_alert(1,"[2][Do you want save the|screen selected|inside FVDI.SYS ?][Cancel|Save]")!=1)
+							modif_sys(&liste_rez[choice_rez]);
+					}	
+				}
 				if(mint || magic)
 				{
 					modif_inf(new_mode);			/* modification modecode NEWDESK.INF */
@@ -756,9 +796,14 @@ change:
 			xy[3]=xy[7]=r.g_y-1;                /* y2 */
 			vro_cpyfm(vdi_handle,S_ONLY,xy,&target,&source); /* save menu */
 			cur_mode=Vsetmode(-1);              /* save curent video mode */
-			Vsetscreen(-1,choice_rez>=0 ? (liste_rez[choice_rez].modecode & ~VIRTUAL_SCREEN) : (modecode & ~VIRTUAL_SCREEN),'VN',CMD_TESTMODE);
+			if(choice_rez>=0) 
+				test_mode = liste_rez[choice_rez].modecode & ~VIRTUAL_SCREEN;
+			else
+				test_mode = modecode & ~VIRTUAL_SCREEN;
+			Vsetscreen(-1,test_mode,'VN',CMD_TESTMODE);
+			ret=Vsetmode(-1);
 			Supexec(tempo_5S);                  /* delay */
-			ret=Vsetmode(cur_mode);             /* restore video mode */
+			if(Vsetmode(cur_mode));             /* restore video mode */
 			xy[0]=xy[1]=xy[4]=xy[5]=0;          /* x1,y1 */
 			xy[2]=xy[6]=r.g_w-1;                /* x2 */
 			xy[3]=xy[7]=r.g_y-1;                /* y2 */
@@ -771,6 +816,33 @@ change:
 			graf_mouse(ARROW,(MFORM *)0);
 			wind_update(END_UPDATE);
 			objc_change(rs_object,VIDEOBTEST,0,work,NORMAL,1);
+			if(ret != test_mode)
+			{
+				static char mess_alert[256];
+				register int i;
+				for(i=0;i<nb_res;i++)	/* search modecode really used (nearest ?) inside the list */
+				{
+					if(liste_rez[i].modecode==ret)
+					{
+						if(!start_lang)
+						{
+							static char alert[] = "[1][La plus proche r‚solution est";
+							static char end_alert[] = "][OK]";
+							sprintf(mess_alert,"%s|%dx%dx%d@%d|modecode: 0x%04X (%u)%s",
+							 alert,liste_rez[i].width_screen,liste_rez[i].height_screen,1<<(ret & NUMCOLS),liste_rez[i].vert_freq,(unsigned int)ret,(unsigned int)ret,end_alert);
+						}
+						else
+						{
+							static char alert[] = "[1][Nearest screen possible is";
+							static char end_alert[] = "][OK]";
+							sprintf(mess_alert,"%s|%dx%dx%d@%d|modecode: 0x%04X (%u)%s",
+							 alert,liste_rez[i].width_screen,liste_rez[i].height_screen,1<<(ret & NUMCOLS),liste_rez[i].vert_freq,(unsigned int)ret,(unsigned int)ret,end_alert);
+						}	
+						form_alert(1,mess_alert);
+						break;
+					}
+				}
+			}
 			break;
 		case VIDEOBMODE:
 			objc_offset(rs_object,VIDEOBMODE,&menu.g_x,&menu.g_y);
@@ -828,11 +900,11 @@ void init_rsc(void)
 {
 	OBJECT *info_tree;
 	BITBLK *b_itblk;
+	COOKIE *p;
 	register int i;
 	char **rs_str;
-	long value;
-	if((*Xcpb->get_cookie)('_AKP',&value)
-	 && ((value>>8)==FRA) || ((value>>8)==SWF))
+	if(((p = get_cookie('_AKP')) != NULL)
+	 && ((p->v.l >> 8) == FRA) || ((p->v.l >> 8) == SWF))
 	{
 		start_lang=0;
 		rs_str=rs_strings;
@@ -899,7 +971,7 @@ int hndl_form(OBJECT *tree,int objc)
 			flag_exit=1;
 	}
 	while(!(tree[i++].ob_flags & LASTOB));
-	if(((*Xcpb->get_cookie)('MagX',&value)) && flag_exit)
+	if((get_cookie('MagX') != NULL) && flag_exit)
 	{									/* MagiC dialog */ 
 		form_xdial(FMD_START,&kl_rect,&rect,&flyinf);
 		objc_draw(tree,0,MAX_DEPTH,&rect);
@@ -1083,22 +1155,105 @@ CPXNODE* get_header(long id)
 	return(0L);
 }
 
+int modif_sys(LISTE_RES *r)
+{
+	static char path_fvdi[]="C:\\fvdi.sys";
+	static char choice[64];
+	static char line[256];
+	void *sauve_ssp;
+	char *buffer,*p,*p2;
+	register int handle;
+	register long err;
+	long size,offset,i;
+	int ok=0;
+	sprintf(choice,"%dx%dx%d@%d",r->width_screen,r->height_screen,1<<(r->modecode & NUMCOLS),r->vert_freq);
+	graf_mouse(HOURGLASS,(MFORM*)0);
+	sauve_ssp=(void *)Super(0L);
+	path_fvdi[0]=(char)*(int *)0x446+'A';		/* boot drive */
+	Super(sauve_ssp);
+	if((err=(long)(handle=Fopen(path_fvdi,FO_RW)))>=0)
+	{
+		if((err=size=Fseek(0L,handle,2))>=0
+		 && (err=Fseek(0L,handle,0))>=0)
+		{
+			if((err=(long)(buffer=Malloc(size+1)))>=0)
+			{
+				buffer[size]='\0';
+				if((err=Fread(handle,size,buffer))>=0)
+				{
+					p=strstr(buffer," radeon.sys");
+					if(p!=NULL)
+					{
+						p+=11;
+						p2=strchr(p,'\n');
+						if(p2==NULL)
+							p2=strchr(p,'\r');
+						if((p2!=NULL) && ((long)(p2-p) < 256L))
+						{
+							long length=(long)(p2-p);
+							memcpy(line,p,length); /* radeon.sys parameters */
+							line[length]='\0';
+							p2=strstr(line," mode ");
+							if(p2!=NULL)
+							{
+								p2+=6;
+								while(*p2==' ');
+									p2++;
+								p2--;
+								offset=(long)(p2-line);
+								if((err=Fseek((long)(p-buffer)+offset,handle,0))>=0)
+								{
+									long len=0;
+									long new_len=strlen(choice);
+									while((*p2!=' ') && (*p2!='\r') && (*p2!='\n'))
+									{
+										p2++;
+										offset++;
+										len++;
+									}
+									for(i=new_len;i<len;choice[i++]=' ');
+									choice[i]='\0';
+									p+=offset;
+									if((err=Fwrite(handle,strlen(choice),choice))>=0)
+									{
+										if((err=Fwrite(handle,size-(long)(p-buffer),p))>=0)
+											ok=1;
+									}
+								}
+							}
+						}
+					}
+				}
+				Mfree(buffer);
+			}
+		}
+		if(err<0)
+			Fclose(handle);
+		else
+			err=(long)Fclose(handle);
+	}
+	if(err<0)
+		display_error((int)err);
+	graf_mouse(ARROW,(MFORM*)0);
+	return(ok);
+}
+
 int modif_inf(int modecode)
 {
-	static char path_desk[]="C:\\NEWDESK.INF";
-	static char path_magic[]="C:\\MAGX.INF";
-	static char path_myaes[]="C:\\GEMSYS\\MYAES\\MYAES.CNF";
+	static char path_desk[]="C:\\newdesk.inf";
+	static char path_magic[]="C:\\magx.inf";
+	static char path_myaes[]="C:\\gemsys\\myaes\\maes.cnf";
 	static char path_inf[16];
-	static char chaine[8];
+	static char string[16];
 	void *sauve_ssp,*buffer;
 	char *p;
 	register int handle,i;
-	register long err,longueur;
+	register long err,size;
 	long value;
-	int ok,old_modecode,magic,myaes,lg;
+	int ok,old_modecode,magic,myaes,lg=0;
 	ok=0;
 	graf_mouse(HOURGLASS,(MFORM*)0);
-	if((*Xcpb->get_cookie)('MAS2',&value))
+	if(get_cookie('MAS2') != NULL)
 	{
 		myaes=1;
 		magic=0;
@@ -1107,7 +1262,7 @@ int modif_inf(int modecode)
 	else
 	{
 		myaes=0;
-		if((*Xcpb->get_cookie)('MagX',&value))
+		if(get_cookie('MagX') != NULL)
 		{
 			magic=1;
 			copy_string(path_magic,path_inf);
@@ -1123,34 +1278,37 @@ int modif_inf(int modecode)
 	Super(sauve_ssp);
 	if((err=(long)(handle=Fopen(path_inf,FO_RW)))>=0)
 	{
-		if((err=longueur=Fseek(0L,handle,2))>=0
+		if((err=size=Fseek(0L,handle,2))>=0
 		 && (err=Fseek(0L,handle,0))>=0)
 		{
-			if((err=(long)(buffer=Malloc(longueur)))>=0)
+			if((err=(long)(buffer=Malloc(size)))>=0)
 			{
-				if((err=Fread(handle,longueur,buffer))>=0)
+				if((err=Fread(handle,size,buffer))>=0)
 				{
 					p=(char *)buffer;
 					if(myaes)
 					{
-						while(p<(char *)((long)buffer+longueur)
+						while(p<(char *)((long)buffer+size)
 						 && !(p[0]=='M' && p[1]=='Y' && p[2]=='A' && p[3]=='E' && p[4]=='S' && p[5]=='_' && p[6]=='V'
 						  && p[7]=='s' && p[8]=='e' && p[9]=='t' && p[10]=='M' && p[11]=='o' && p[12]=='d' && p[13]=='e' && p[14]=='='))
 							p++;					/* search screen descriptor */
-						if(p<(char *)((long)buffer+longueur))
+						if(p<(char *)((long)buffer+size))
 						{
 							p+=15;
 							if((err=Fseek((long)(p-buffer),handle,0))>=0)
 							{
 								old_modecode=val_string(p);
+								sprintf(string,"%d",modecode);
 								if(modecode!=old_modecode)
 								{
-									long_deci(p,&lg);	/* modecode */
-									p+=lg;
-									sprintf(chaine,"%d",modecode);
-									if((err=Fwrite(handle,long_deci(chaine,&lg),chaine))>=0)
+									int new_len = strlen(string);
+									int len = long_deci(p,&lg);	/* modecode */
+									for(i=new_len;i<len;string[i++]=' ');
+									string[i]='\0';
+									p+=len;
+									if((err=Fwrite(handle,strlen(string),string))>=0)
 									{
-										if((err=Fwrite(handle,longueur-(long)(p-buffer),p))>=0)
+										if((err=Fwrite(handle,size-(long)(p-buffer),p))>=0)
 											ok=1;
 									}
 								}
@@ -1166,10 +1324,10 @@ int modif_inf(int modecode)
 					}
 					else if(magic)
 					{
-						while(p<(char *)((long)buffer+longueur)
+						while(p<(char *)((long)buffer+size)
 						 && !(p[0]=='_' && p[1]=='D' && p[2]=='E' && p[3]=='V'))
 							p++;					/* search screen descriptor */
-						if(p<(char *)((long)buffer+longueur))
+						if(p<(char *)((long)buffer+size))
 						{
 							p+=4;
 							if((err=Fseek((long)(p-buffer),handle,0))>=0)
@@ -1183,10 +1341,10 @@ int modif_inf(int modecode)
 									p+=lg;
 									if((err=Fwrite(handle,3," 5 "))>=0)
 									{
-										sprintf(chaine,"%d",modecode);
-										if((err=Fwrite(handle,long_deci(chaine,&lg),chaine))>=0)
+										sprintf(string,"%d",modecode);
+										if((err=Fwrite(handle,long_deci(string,&lg),string))>=0)
 										{
-											if((err=Fwrite(handle,longueur-(long)(p-buffer),p))>=0)
+											if((err=Fwrite(handle,size-(long)(p-buffer),p))>=0)
 												ok=1;
 										}
 									}
@@ -1203,10 +1361,10 @@ int modif_inf(int modecode)
 					}
 					else
 					{
-						while(p<(char *)((long)buffer+longueur)
+						while(p<(char *)((long)buffer+size)
 						 && !(p[0]=='#' && p[1]=='E'))
 							p++;					/* search screen descriptor */
-						if(p<(char *)((long)buffer+longueur))
+						if(p<(char *)((long)buffer+size))
 						{
 							p+=3;					/* 1st data hexa */
 							for(i=0;i<4 && p[-1]==' ' && read_hexa(p)!=-1;i++,p+=3);
@@ -1220,7 +1378,7 @@ int modif_inf(int modecode)
 									write_hexa(modecode,p);
 									if((err=Fseek(0L,handle,0))>=0)
 									{
-										if((err=Fwrite(handle,longueur,buffer))>=0)
+										if((err=Fwrite(handle,size,buffer))>=0)
 											ok=1;
 									}
 								}
@@ -1309,10 +1467,11 @@ int get_MagiC_ver(unsigned long *crdate)
 {
 	long value;
 	AESVARS *av;
-	if(!(*Xcpb->get_cookie)('MagX',&value))
+	COOKIE *p;
+	if((p = get_cookie('MagX')) == NULL)
 		return(0);
-	av=((MAGX_COOKIE *)value)->aesvars;
-	if(!av)
+	av = ((MAGX_COOKIE *)p->v.l)->aesvars;
+	if(av == NULL)
 		return(0);
 	if(crdate)
 	{
@@ -1323,30 +1482,76 @@ int get_MagiC_ver(unsigned long *crdate)
 	return(av->version);
 }
 
+
+COOKIE *fcookie(void)
+{
+	COOKIE *p;
+	long stack;
+	stack=Super(0L);
+	p=*(COOKIE **)0x5a0;
+	Super((void *)stack);
+	if(!p)
+		return((COOKIE *)0);
+	return(p);
+}
+
+COOKIE *ncookie(COOKIE *p)
+{
+	if(!p->ident)
+		return(0);
+	return(++p);
+}
+
+COOKIE *get_cookie(long id)
+{
+	COOKIE *p;
+	p=fcookie();
+	while(p)
+	{
+		if(p->ident==id)
+			return p;
+		p=ncookie(p);
+	}
+	return((COOKIE *)0);
+}
+
+long physbase_videl(void)
+{
+	unsigned long physaddr = (unsigned long)(*(unsigned char *)0xFFFF8201); /* video screen memory position, high byte */
+	physaddr <<= 8;
+	physaddr |= (unsigned long)(*(unsigned char *)0xFFFF8203); /* mid byte */
+	physaddr <<= 8;
+	physaddr |= (unsigned long)(*(unsigned char *)0xFFFF820D); /* low byte */
+	return((long)physaddr);
+}
+
 int find_radeon(void)
 {
 	unsigned long temp;
 	short index;
 	long handle,err;
+	unsigned long physaddr;
 	struct pci_device_id *radeon;
-	long value;
-	if(!(*Xcpb->get_cookie)('_PCI',&value))
+	if(get_cookie('_PCI') == NULL)
+		return(0);
+	physaddr = (unsigned long)Physbase();
+	if((physaddr < 0x1000000UL) && (physaddr == (unsigned long)Supexec(physbase_videl)))
 		return(0);
 	index=0;
 	do
 	{
-		handle=find_pci_device(0x0000FFFFL,index++);
-		if(handle>=0)
+		handle = find_pci_device(0x0000FFFFL,index++);
+		if(handle >= 0)
 		{
-			err=read_config_longword(handle,PCIIDR,&temp);
+			err = read_config_longword(handle,PCIIDR,&temp);
 			/* test Radeon ATI devices */
-			if(err>=0)
+			if(err >= 0)
 			{
-				radeon=radeonfb_pci_table; /* compare table */
+				radeon = radeonfb_pci_table; /* compare table */
 				while(radeon->vendor)
 				{
-					if((radeon->vendor==(temp & 0xFFFF))
-					 && (radeon->device==(temp>>16)))
+					if((radeon->vendor == (temp & 0xFFFF))
+					 && (radeon->device == (temp >> 16)))
 						return(1);
 					radeon++;
 				}
@@ -1411,3 +1616,185 @@ void reboot(void)
 	reset=(void (*)())*(void **)0x4;		/* reset vector */
 	(*reset)();								/* reset system */
 }
+
+#if 0
+#define HAVE_VS_COLOR
+
+short detect_pixel_format(void)
+{
+	short ret = 8;	/* generic */
+
+	if(work_extend[4] > 8)
+	{
+		MFDB scr, dst;
+#ifdef HAVE_VS_COLOR
+		short srgb[3], rgb[3];
+#endif
+		short pxy[8];
+		union { unsigned short w[64]; unsigned long l[32];} b;
+
+		vswr_mode(vdi_handle, MD_REPLACE);
+		vsl_type(vdi_handle, 1);
+		vsl_ends(vdi_handle, 0, 0);
+		vsl_width(vdi_handle, 1);
+#ifdef HAVE_VS_COLOR
+		printf("detect_pixel: using vs_color\r\n");
+		vq_color(vdi_handle, 0, 1, srgb);
+		rgb[0] = 1000;
+		rgb[1] = 1000;
+		rgb[2] = 0;
+		vs_color(vdi_handle, 0, rgb);
+		vsl_color(vdi_handle, 0);
+		pxy[0] = 0;
+		pxy[1] = 0;
+		pxy[2] = 0;
+		pxy[3] = 0;
+		v_pline(vdi_handle, 2, pxy);
+#else
+		{
+		pxy[0] = pxy[1] = 0;
+		pxy[2] = work_out[0];
+		pxy[3] = work_out[1];
+		printf("detect_pixel: using vsf_color");
+		vsf_color(vdi_handle, 6); /* yellow */
+		v_bar(vdi_handle, pxy);
+		}
+#endif
+		scr.fd_addr = NULL;
+
+		dst.fd_addr = &b;
+		dst.fd_w = 1;
+		dst.fd_h = 1;
+		dst.fd_wdwidth = 1;
+		dst.fd_stand = 1;
+		dst.fd_nplanes = work_extend[4];
+		dst.fd_r1 = dst.fd_r2 = dst.fd_r3 = 0;
+
+		pxy[0] = 0;
+		pxy[1] = 0;
+		pxy[2] = 0;
+		pxy[3] = 0;
+		pxy[4] = 0;
+		pxy[5] = 0;
+		pxy[6] = 0;
+		pxy[7] = 0;
+		vro_cpyfm(vdi_handle, S_ONLY, pxy, &scr, &dst);
+
+#ifdef HAVE_VS_COLOR
+		vs_color(vdi_handle, 0, srgb);
+#endif
+		switch(work_extend[4])
+		{
+			/* pixelformat E07F */
+			/* 12345678.12345678 */
+			case 15:
+			{
+				unsigned short pix = b.w[0];
+				printf("%d bit pixel %x", work_extend[4], pix);
+				if(pix == (unsigned short)((31 << 2) | (7 << 13) | 3))		/* gggbbbbb.0rrrrrgg */
+				{
+					ret = 1;
+					printf(" is intel format\r\n");
+				}
+				else if(pix == (unsigned short)((31 << 11) | (31 << 6))) 	/* rrrrrggg.ggobbbbb */
+				{
+					ret = 0;
+					printf(" is moto format\r\n");
+				}
+				else
+				{
+					ret = -1;
+					printf(" unknown format\r\n");
+				}
+				break;
+			}
+			case 16:
+			{
+				unsigned short pix = b.w[0];
+				printf("%d bit pixel %x", work_extend[4], pix);
+				if(pix == (unsigned short)((31 << 3) | (7 << 13) | 7))		/* gggbbbbb.rrrrrggg */
+				{
+					ret = 1;
+					printf(" is intel format");
+				}
+				else if(pix == (unsigned short)((31 << 11) | (63 << 5)))	/* rrrrrggg.gggbbbbb */
+				{
+					ret = 0;
+					printf(" is moto format");
+				}
+				else if(pix == (unsigned short)((31 << 11) | (31 << 6)))	/* rrrrrggg.ggobbbbb */
+				{
+					ret = 2;
+					printf(" is falcon (motorola) 15 bit");
+				}
+				else if(pix == (unsigned short)((31 << 2) | (7 << 13) | 3))	/* gggbbbbb.0rrrrrgg */
+				{
+					ret = 3;
+					printf(" is a intel 15 bit");
+				}
+				else
+				{
+					ret = -1;
+					printf(" unknown format!");
+				}
+				break;
+			}
+			case 24:
+			{
+				unsigned long pix = b.l[0];
+				printf("%d bit pixel %lx", work_extend[4], pix);
+				pix >>= 8;
+				if(pix == 0xffff00L)			/* rrrrrrrr.gggggggg.bbbbbbbb  Moto */
+				{
+					ret = 0;
+					printf(" is moto format\r\n");
+				}
+				else if(pix == 0xffffL)		/* gggggggg.rrrrrrrrbbbbbbbb */
+				{
+					ret = 1;
+					printf(" is intel format\r\n");
+				}
+				else
+				{
+					ret = -1;
+					printf(" unknown format!\r\n");
+				}
+				break;
+			}
+			case 32:
+			{
+				unsigned long pix = b.l[0];
+				printf("%d bit pixel %lx\r\n", work_extend[4], pix);
+				if(pix == 0xffff00L)			/* 00000000.rrrrrrrr.gggggggg.bbbbbbbb */
+				{
+					ret = 0;
+					printf(" is moto format\r\n");
+				}
+				else if(pix == 0xffff0000L)		/* rrrrrrrr.gggggggg.bbbbbbbb.00000000 */
+				{
+					ret = 1;
+					printf(" is intel format\r\n");
+				}
+				else if(pix == 0x0000ffffL)		/* 00000000.bbbbbbbb.gggggggg.rrrrrrrr */
+				{
+					ret = 2;
+					printf(" is intel byteswapped format\r\n");
+				}
+				else
+				{
+					ret = -1;
+					printf(" unknown format!\r\n");
+				}
+				break;
+			}
+			default:
+			{
+				printf("unsupported color depth!\r\n");
+				ret = -2;
+				break;
+			}
+		}
+	}
+	return ret;
+}
+#endif

@@ -106,6 +106,8 @@ extern struct perf lwip_perfs[PERFS_MAX];
 
 #else /* MCF548X */
 
+#define DIVIDER_TIMER (configCPU_CLOCK_HZ/2000000UL)
+
 #define PERF_STOP(x) do { \
   int i = 0; \
   SYS_ARCH_DECL_PROTECT(level); \
@@ -113,7 +115,7 @@ extern struct perf lwip_perfs[PERFS_MAX];
   while((lwip_perfs[i].func != NULL) && (i < PERFS_MAX)) { \
     if(lwip_perfs[i].func == (s8_t *)__FUNCTION__) { \
       lwip_perfs[i].name = (s8_t *)x; \
-      lwip_perfs[i].used = (lwip_perfs[i].start - sys_read_timer()) / 100; \
+      lwip_perfs[i].used = (lwip_perfs[i].start - sys_read_timer()) / DIVIDER_TIMER; \
       if(lwip_perfs[i].used > lwip_perfs[i].max) \
         lwip_perfs[i].max = lwip_perfs[i].used; \
       break; } \
@@ -126,7 +128,7 @@ extern struct perf lwip_perfs[PERFS_MAX];
   while((lwip_perfs[i].func != NULL) && (i < PERFS_MAX)) { \
     if(lwip_perfs[i].func == (s8_t *)__FUNCTION__) { \
       lwip_perfs[i].name = (s8_t *)x; \
-      lwip_perfs[i].used = (lwip_perfs[i].start - sys_read_timer()) / 100; \
+      lwip_perfs[i].used = (lwip_perfs[i].start - sys_read_timer()) / DIVIDER_TIMER; \
       if(lwip_perfs[i].used > lwip_perfs[i].max) \
         lwip_perfs[i].max = lwip_perfs[i].used; \
       break; } \

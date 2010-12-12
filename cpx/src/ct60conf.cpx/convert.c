@@ -12,7 +12,7 @@ int binhex(const char *source, const char *destination, const char *name);
 int main()
 
 {
-	binhex("ct60temp.app", "ct60temp.hex", "CT60TEMP");
+	binhex("ct60temp.app", "ct60temp.h", "CT60TEMP");
 	return(0);
 }
 

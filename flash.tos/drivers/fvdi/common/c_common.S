@@ -34,12 +34,14 @@
 	.xref		_fallback_line,_fallback_text,_fallback_fill
 	.xref		_fallback_fillpoly,_fallback_expand,_fallback_blit
 	.xref		clip_line
+	
+	.xref		_video_found
 
 
 	.text
 
-	.asciz		"set_pixel"
-	.align		2
+//	.asciz		"set_pixel"
+//	.align		2
 *---------
 * Set a coloured pixel
 * c_write_pixel(Virtual *vwk, MFDB *mfdb, long x, long y, long colour)
@@ -50,14 +52,20 @@
 *---------
 _c_set_pixel:
 c_set_pixel:
-#ifdef TEST_NOPCI
+#if defined(COLDFIRE) && defined(DRIVER_IN_ROM)
+#ifdef COLDFIRE
+	tst.w		_video_found
+	bne		.csp4
+	lea		-28(a7),a7
+	movem.l		d0-d3/a0-a2,(a7)
+#else
 	movem.l		d0-d3/a0-a2,-(a7)
+#endif
 	ext.l		d1
-	add.l		d1,d1
 	movem.l		(a0),a0-a1
 	move.l		a0,d3
 	btst		#0,d3
-	bne.s		.csp1
+	bne		.csp1
 	move.l		vwk_real_address(a0),a2
 	move.l		a1,d3
 	beq.s		.csp2
@@ -67,23 +75,88 @@ c_set_pixel:
 	bne.s		.csp3
 .csp2:
 	mulu		wk_screen_wrap(a2),d2
-	add.l		d1,d2
 	move.l		wk_screen_mfdb_address(a2),a1
-	move.w		d0,(a1,d2.l)
+	moveq		#0,d3
+	move.w		wk_screen_mfdb_bitplanes(a2),d3
+	cmp.l		#16,d3
+	beq.s		.csp5
+	bhi.s		.csp6
+	add.l		d1,d2
+	move.b		d0,(a1,d2.l)
+#ifdef COLDFIRE
+	movem.l		(a7),d0-d3/a0-a2
+	lea		28(sp),sp
+#else
 	movem.l		(a7)+,d0-d3/a0-a2
+#endif
 	rts	
+.csp5:
+	add.l		d1,d1
+	add.l		d1,d2
+	move.w		d0,(a1,d2.l)
+#ifdef COLDFIRE
+	movem.l		(a7),d0-d3/a0-a2
+	lea		28(sp),sp
+#else
+	movem.l		(a7)+,d0-d3/a0-a2
+#endif
+	rts
+.csp6:
+	asl.l		#2,d1
+	add.l		d1,d2
+	move.l		d0,(a1,d2.l)
+#ifdef COLDFIRE
+	movem.l		(a7),d0-d3/a0-a2
+	lea		28(sp),sp
+#else
+	movem.l		(a7)+,d0-d3/a0-a2
+#endif
+	rts
 .csp3:
 	move.w		mfdb_wdwidth(a1),d3
-	add.w		d3,d3
+	add.l		d3,d3
 	mulu		mfdb_bitplanes(a1),d3
 	mulu		d2,d3
-	add.l		d1,d3
 	move.l		mfdb_address(a1),a1
-	move.w		d0,(a1,d3.l)
-.csp1:
-	movem.l		(a7)+,d0-d3/a0-a2
-	rts
+	moveq		#0,d2
+	move.w		mfdb_bitplanes(a1),d2
+	cmp.l		#16,d2
+	beq.s		.csp7
+	bhi.s		.csp8
+	add.l		d1,d3
+	move.b		d0,(a1,d3.l)
+#ifdef COLDFIRE
+	movem.l		(a7),d0-d3/a0-a2
+	lea		28(sp),sp
 #else
+	movem.l		(a7)+,d0-d3/a0-a2
+#endif
+	rts
+.csp7:
+	add.l		d1,d1
+	add.l		d1,d3
+	move.w		d0,(a1,d3.l)
+#ifdef COLDFIRE
+	movem.l		(a7),d0-d3/a0-a2
+	lea		28(sp),sp
+#else
+	movem.l		(a7)+,d0-d3/a0-a2
+#endif
+	rts
+.csp8:
+	asl.l		#2,d1
+	add.l		d1,d3
+	move.l		d0,(a1,d3.l)
+.csp1:
+#ifdef COLDFIRE
+	movem.l		(a7),d0-d3/a0-a2
+	lea		28(sp),sp
+#else
+	movem.l		(a7)+,d0-d3/a0-a2
+#endif
+	rts
+.csp4:
+#endif /* defined(COLDFIRE) && defined(DRIVER_IN_ROM) */
 #ifdef COLDFIRE
 	lea		-24(a7),a7
 	movem.l		d0-d2/a0-a2,(a7)
@@ -142,10 +215,9 @@ c_set_pixel:
 	movem.l		(a7)+,d0-d2/a0-a2
 #endif
 	rts
-#endif
 
-	.asciz		"get_pixel"
-	.align		2
+//	.asciz		"get_pixel"
+//	.align		2
 *---------
 * Get a coloured pixel
 * c_read_pixel(Virtual *vwk, MFDB *mfdb, long x, long y)
@@ -156,10 +228,16 @@ c_set_pixel:
 *---------
 _c_get_pixel:
 c_get_pixel:
-#ifdef TEST_NOPCI
+#if defined(COLDFIRE) && defined(DRIVER_IN_ROM)
+#ifdef COLDFIRE
+	tst.w		_video_found
+	bne		.cgp3
+	lea		-24(a7),a7
+	movem.l		d1-d3/a0-a2,(a7)
+#else
 	movem.l		d1-d3/a0-a2,-(a7)
+#endif
 	ext.l		d1
-	add.l		d1,d1
 	movem.l		(a0),a0-a1
 	move.l		vwk_real_address(a0),a2
 	move.l		a1,d3
@@ -167,27 +245,94 @@ c_get_pixel:
 	move.l		mfdb_address(a1),d3
 	beq.s		.cgp2
 	cmp.l		wk_screen_mfdb_address(a2),d3
-	bne.s		.cgp1
+	bne		.cgp1
 .cgp2:
 	mulu		wk_screen_wrap(a2),d2
-	add.l		d1,d2
 	move.l		wk_screen_mfdb_address(a2),a1
+	moveq		#0,d3
+	move.w		wk_screen_mfdb_bitplanes(a2),d3
+	cmp.l		#16,d3
+	beq.s		.cgp5
+	bhi.s		.cgp6
+	add.l		d1,d2
+	moveq		#0,d0
+	move.b		(a1,d2.l),d0
+#ifdef COLDFIRE
+	movem.l		(a7),d1-d3/a0-a2
+	lea		24(a7),a7
+#else
+	movem.l		(a7)+,d1-d3/a0-a2
+#endif
+	rts
+.cgp5:
+	add.l		d1,d1
+	add.l		d1,d2
 	moveq		#0,d0
 	move.w		(a1,d2.l),d0
+#ifdef COLDFIRE
+	movem.l		(a7),d1-d3/a0-a2
+	lea		24(a7),a7
+#else
 	movem.l		(a7)+,d1-d3/a0-a2
+#endif
 	rts	
+.cgp6:
+	asl.l		#2,d1
+	add.l		d1,d2
+	move.l		(a1,d2.l),d0
+#ifdef COLDFIRE
+	movem.l		(a7),d1-d3/a0-a2
+	lea		24(a7),a7
+#else
+	movem.l		(a7)+,d1-d3/a0-a2
+#endif
+	rts
 .cgp1:
 	move.w		mfdb_wdwidth(a1),d3
-	add.w		d3,d3
+	add.l		d3,d3
 	mulu		mfdb_bitplanes(a1),d3
 	mulu		d2,d3
-	add.l		d1,d3
 	move.l		mfdb_address(a1),a1
+	moveq		#0,d2
+	move.w		mfdb_bitplanes(a1),d2
+	cmp.l		#16,d2
+	beq.s		.cgp7
+	bhi.s		.cgp8
+	add.l		d1,d3
+	moveq		#0,d0
+	move.b		(a1,d3.l),d0
+#ifdef COLDFIRE
+	movem.l		(a7),d1-d3/a0-a2
+	lea		24(a7),a7
+#else
+	movem.l		(a7)+,d1-d3/a0-a2
+#endif
+	rts
+.cgp7:
+	add.l		d1,d1
+	add.l		d1,d3
 	moveq		#0,d0
 	move.w		(a1,d3.l),d0
-	movem.l		(a7)+,d1-d3/a0-a2
-	rts
+#ifdef COLDFIRE
+	movem.l		(a7),d1-d3/a0-a2
+	lea		24(a7),a7
 #else
+	movem.l		(a7)+,d1-d3/a0-a2
+#endif
+	rts
+.cgp8:
+	asl.l		#2,d1
+	add.l		d1,d3
+	move.l		(a1,d3.l),d0
+#ifdef COLDFIRE
+	movem.l		(a7),d1-d3/a0-a2
+	lea		24(a7),a7
+#else
+	movem.l		(a7)+,d1-d3/a0-a2
+#endif
+	rts
+.cgp3:
+#endif /* defined(COLDFIRE) && defined(DRIVER_IN_ROM) */
 #ifdef COLDFIRE
 	lea		-20(a7),a7
 	movem.l		d1-d2/a0-a2,(a7)
@@ -215,10 +360,9 @@ c_get_pixel:
 	movem.l		(a7)+,d1-d2/a0-a2
 #endif
 	rts
-#endif
 
-	.asciz		"line"
-	.align		2
+//	.asciz		"line"
+//	.align		2
 *---------
 * Draw a colored line between 2 points
 * c_draw_line(Virtual *vwk, long x1, long y1, long x2, long y2, long pattern, long colour, long mode)
@@ -246,7 +390,6 @@ old_api_line:
 #else
 	movem.l		d0-d2/a0-a2,-(a7)
 #endif
-
 	move.l		d6,-(a7)
 	move.l		d0,-(a7)
 	move.l		d5,-(a7)
@@ -334,7 +477,7 @@ old_api_line:
 	move.l		32+16+4(a7),a2
 	movem.w		(a2),d1-d4
 	move.l		0(a7),a0
-	bsr		clip_line
+	jsr		clip_line
 	bvs		.no_draw
 	move.l		d1,4(a7)
 	move.l		d2,8(a7)
@@ -431,8 +574,8 @@ new_api_line:
 	rts
 
 
-	.asciz		"expand"
-	.align		2
+//	.asciz		"expand"
+//	.align		2
 /*--------
 * Expand a monochrome area to multiple bitplanes
 * c_expand_area(Virtual *vwk, MFDB *src, long src_x, long src_y, MFDB *dst, long dst_x, long dst_y, long w, long h, long operation, long colour)
@@ -502,8 +645,8 @@ c_expand:
 	rts
 
 
-	.asciz		"fill"
-	.align		2
+//	.asciz		"fill"
+//	.align		2
 /*--------
 * Fill a multiple bitplane area using a monochrome pattern
 * c_fill_area(Virtual *vwk, long x, long y, long w, long h, short *pattern, long colour, long mode, long interior_style)
@@ -622,8 +765,8 @@ c_fill:
 	rts
 
 
-	.asciz		"fillpoly"
-	.align		2
+//	.asciz		"fillpoly"
+//	.align		2
 /*---------
 * Fill a multiple bitplane polygon using a monochrome pattern
 * c_fill_polygon(Virtual *vwk, short points[], long n, short index[], long moves, short *pattern, long colour, long mode, long interior_style)
@@ -690,8 +833,8 @@ c_fillpoly:
 	rts
 
 
-	.asciz		"blit"
-	.align		2
+//	.asciz		"blit"
+//	.align		2
 /*--------
 * Blit an area
 * c_blit_area(Virtual *vwk, MFDB *src, long src_x, long src_y, MFDB *dst, long dst_x, long dst_y, long w, long h, long operation)
@@ -759,8 +902,8 @@ c_blit:
 	rts
 
 
-	.asciz		"text"
-	.align		2
+//	.asciz		"text"
+//	.align		2
 /*--------
 * Draw some text
 * c_text_area(Virtual *vwk, short *text, long length, long dst_x, long dst_y, short *offsets)
@@ -816,8 +959,8 @@ c_text:
 	rts
 
 
-	.asciz		"mouse"
-	.align		2
+//	.asciz		"mouse"
+//	.align		2
 /*--------
 * Draw the mouse
 * c_mouse_draw(Workstation *wk, long x, long y, Mouse *mouse)
@@ -847,8 +990,8 @@ c_mouse:
 	rts
 
 
-	.asciz		"set_palette"
-	.align		2
+//	.asciz		"set_palette"
+//	.align		2
 /*--------
 * Set palette colours
 * c_set_colours(Virtual *vwk, long start, long entries, short requested[3][], Colour palette[])
@@ -932,8 +1075,8 @@ new_api_set_palette:
 	rts
 
 
-	.asciz		"colour"
-	.align		2
+//	.asciz		"colour"
+//	.align		2
 /*--------
 * Get colour
 * c_get_colour(Virtual *vwk, long colours)
@@ -970,8 +1113,8 @@ c_colour:
 	rts
 
   .ifne	1
-	.asciz		"initialize_palette"
-	.align		2
+//	.asciz		"initialize_palette"
+//	.align		2
 /*---------
 * Set palette colours
 * initialize_palette(Virtual *vwk, long start, long entries, short requested[][3], Colour palette[])

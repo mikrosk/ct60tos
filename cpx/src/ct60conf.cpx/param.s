@@ -1,5 +1,5 @@
 ;  Flashing parameters for the CT60 board
-;  Didier Mequignon 2003 January / 2004 May, e-mail: aniplay@wanadoo.fr
+;  Didier Mequignon 2003-2010, e-mail: aniplay@wanadoo.fr
 ;  Based on the flash tool Copyright (C) 2000 Xavier Joubert
 ;
 ;  This program is free software; you can redistribute it and/or modify
@@ -15,9 +15,6 @@
 ;  You should have received a copy of the GNU General Public License
 ;  along with this program; if not, write to the Free Software
 ;  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
-;
-;  To contact author write to Xavier Joubert, 5 Cour aux Chais, 44 100 Nantes,
-;  FRANCE or by e-mail to xavier.joubert@free.fr.
 
 FLASH_ADR equ $FFE00000; under 060 write moves.w in ALT3 cpu space works only at $FFExxxxx 
 FLASH_SIZE equ $100000
@@ -38,7 +35,35 @@ MAX_PARAM_FLASH equ 16
 NB_BLOCK_PARAM equ (PARAM_SIZE/(MAX_PARAM_FLASH*4))
 SIZE_BLOCK_PARAM equ (PARAM_SIZE/NB_BLOCK_PARAM) 
 
+	.export get_version_flash
 	.export ct60_rw_param
+
+get_version_flash:
+
+	move.w SR,-(SP)
+	or #0x700,SR                                        ; lock interrupts
+	moveq #0,D0
+	lea.l .no_flash(PC),A0
+	move.l 8,A1                                         ; bus error
+	move.l A0,8
+	move.l SP,A2
+	moveq #3,D1
+	movec.l D1,SFC                                      ; CPU space 3
+	movec.l D1,DFC
+	moveq #0,D1
+	move.w FLASH_ADR+0x80000,D1                         ; Boot version
+	cmp.w #60,0x59E
+	beq.s .end_read_version
+	moves.w 0xE80000,D1                                 ; Boot version
+.end_read_version:
+	move.l D1,D0
+	bne.s .no_flash
+	moveq #-1,D0
+.no_flash:
+	move.l A1,8
+	move.l A2,SP
+	move.w (SP)+,SR
+	rts
 
 ct60_rw_param: ; D0.W: mode, D1.L: type_param, D2.L: value	
 

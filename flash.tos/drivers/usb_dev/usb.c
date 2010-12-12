@@ -26,7 +26,7 @@ static uint32 hs; /* High-Speed */
 int debug_usb;
 #endif
 
-void usb_init(void)
+void usb_device_init(void)
 {
 	uint32 i, j, DescSize, StringSize;
 	uint8 *pDevDesc;

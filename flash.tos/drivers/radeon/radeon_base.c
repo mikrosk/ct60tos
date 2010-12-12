@@ -49,39 +49,26 @@
  *
  */
 
-
 #define RADEON_VERSION "0.2.0"
 
 #include <mint/errno.h>
-#include <string.h>
-#include <sysvars.h>
 #include "fb.h"
 #include "i2c.h"
 #include "radeonfb.h"
 #include "edid.h"
 #include "ati_ids.h"
-#include "../../include/fire.h"
-
-typedef struct
-{
-	long xbra;
-	long ident;
-	long old_address;
-	short jump[3];
-} XBRA;
 
 #ifdef DRIVER_IN_ROM
 extern void run_bios(struct radeonfb_info *rinfo);
 #endif
+extern void mdelay(long msec);
+extern void udelay(long usec);
 
 #define MAX_MAPPED_VRAM	(2048*2048*4)
 #define MIN_MAPPED_VRAM	(1024*768*4)
 
 #define CHIP_DEF(id, family, flags)					\
 	{ PCI_VENDOR_ID_ATI, id, PCI_ANY_ID, PCI_ANY_ID, 0, 0, (flags) | (CHIP_FAMILY_##family) }
-
-extern struct mode_option resolution; /* fVDI */
-extern struct radeonfb_info *rinfo_fvdi;
 
 struct pci_device_id radeonfb_pci_table[] = {
 	/* Mobility M6 */
@@ -231,241 +218,7 @@ static reg_val common_regs[] = {
 	{ CAP1_TRIG_CNTL, 0 },
 };
 
-/*
- * globals
- */
-char monitor_layout[256];
-#ifdef DRIVER_IN_ROM
-short default_dynclk;
-short ignore_edid;
-short mirror;
-short virtual;
-short force_measure_pll;
-short zoom_mouse;
-#else
-short default_dynclk=-2;
-short ignore_edid=0;
-short mirror=0;
-short virtual=0;
-short force_measure_pll=0;
-short zoom_mouse=1;
-#endif
-
-long time_out;
-
-#ifdef COLDFIRE
-
-#ifdef MCF5445X
-
-void udelay(long usec)
-{
-	long dcnt1=*((volatile long *)MCF_DTIM_DTCN1);
-	while((*((volatile long *)MCF_DTIM_DTCN1)-dcnt1)<usec);
-}
-
-long get_slice_timer(void)
-{
-	return(*(volatile long *)MCF_DTIM_DTCN1);
-}
-
-void start_timeout(void)
-{
-	time_out=get_slice_timer();
-}
-
-int end_timeout(long msec)
-{
-	msec*=1000;
-	return(((get_slice_timer()-time_out) < msec) ? 0 : 1);
-}
-
-void mdelay(long msec)
-{
-	long val;
-	msec*=1000;
-	val=get_slice_timer();
-	while((get_slice_timer()-val) < msec);
-}
-
-#else /* MCF548X */
-
-void udelay(long usec)
-{
-	long scnt1;
-	usec*=100;
-	scnt1=*((volatile long *)MCF_SLT_SCNT1);
-	while((scnt1 - *((volatile long *)MCF_SLT_SCNT1)) < usec);
-}
-
-long get_slice_timer(void)
-{
-	return(*(volatile long *)MCF_SLT_SCNT1);
-}
-
-void start_timeout(void)
-{
-	time_out=get_slice_timer();
-}
-
-int end_timeout(long msec)
-{
-	msec*=100000;
-	return(((time_out-get_slice_timer()) < msec) ? 0 : 1);
-}
-
-void mdelay(long msec)
-{
-	long val;
-	msec*=100000;
-	val=get_slice_timer();
-	while((val-get_slice_timer()) < msec);
-}
-
-#endif /* MCF5445X */
-
-#else /* ATARI */
-
-void udelay(long usec)
-{
-	unsigned char tcdr;
-	while(usec>0)
-	{
-		tcdr=*((volatile unsigned char *)0xFFFFFA23);
-		while(*((volatile unsigned char *)0xFFFFFA23)==tcdr); /* 26 uS timer C MFP */
-		usec-=26;
-	}
-}
-
-long get_timer_c(void)
-{
-	register long retvalue __asm__("d0");
-	__asm__ volatile ( \
-		"move.l D1,-(SP)\n" \
-		"move.w SR,-(SP)\n" \
-		"or.w #0x700,SR\n"       /* no interrupts	*/ \
-		"move.l 0x4BA,D0\n"      /* _hz_200 */ \
-		"asl.l #8,D0\n" \
-		"moveq #0,D1\n" \
-		"move.b 0xFFFFFA23,D1\n" /* TCDR timer C MFP */	\
-		"subq.b #1,D1\n"         /* 0-191 */ \
-		"asl.l #8,D1\n"	         /* *256  */ \
-		"divu #192,D1\n"         /* 0-255 */ \
-		"not.b D1\n" \
-		"move.b D1,D0\n" \
-		"move.w (SP)+,SR\n" \
-		"move.l (SP)+,D1\n" \
-		: "=r"(retvalue) \
-	);
-	return(retvalue);	
-}
-
-void start_timeout(void)
-{
-	time_out=get_timer_c();
-}
-
-int end_timeout(long msec)
-{
-	msec<<=8;
-	msec/=5;
-	return(((get_timer_c()-time_out) < msec) ? 0 : 1);
-}
-
-void mdelay(long msec)
-{
-	msec<<=8;
-	msec/=5;
-	long val;
-	val=get_timer_c();
-	while((get_timer_c()-val) < msec);
-}
-
-#endif /* COLDFIRE */
-
-void debug_print(const char *string)
-{
-	if(debug)
-		Funcs_puts(string);
-}
-
-void debug_print_value(const char *string, long val)
-{
-	static char buf[16];
-	if(debug)
-	{
-		Funcs_puts(string);
-		Funcs_ltoa(buf,val,10);
-		Funcs_puts(buf);
-	}	
-}
-
-void debug_print_value_hex(const char *string, long val)
-{
-	static char buf[16];
-	if(debug)
-	{
-		Funcs_puts(string);
-		Funcs_puts("0x");		
-		Funcs_ltoa(buf,val,16);
-		Funcs_puts(buf);
-	}	
-}
-
-void debug_print_value_hex_byte(const char *string, unsigned char val)
-{
-	static char buf[16];
-	if(debug)
-	{
-		Funcs_puts(string);
-		if(val & 0xF0)
-			Funcs_ltoa(buf,(unsigned long)val,16);
-		else
-		{
-			val += 0x10;
-			Funcs_ltoa(buf,(unsigned long)val,16);
-			buf[0]='0';
-		}
-		Funcs_puts(buf);
-	}	
-}
-
-void debug_print_value_hex_word(const char *string, unsigned short val)
-{
-	static char buf[16];
-	if(debug)
-	{
-		Funcs_puts(string);
-		if(val & 0xF000)
-			Funcs_ltoa(buf,(unsigned long)val,16);
-		else
-		{
-			val += 0x1000;
-			Funcs_ltoa(buf,(unsigned long)val,16);
-			buf[0]='0';
-		}
-		Funcs_puts(buf);
-	}	
-}
-
-void debug_print_value_hex_long(const char *string, unsigned long val)
-{
-	static char buf[16];
-	if(debug)
-	{
-		Funcs_puts(string);
-		if(val & 0xF0000000)
-			Funcs_ltoa(buf,val,16);
-		else
-		{
-			val += 0x10000000;
-			Funcs_ltoa(buf,val,16);
-			buf[0]='0';
-		}
-		Funcs_puts(buf);
-	}	
-}
-
-#define rinfo rinfo_fvdi
+#define rinfo ((struct radeonfb_info *)info_fvdi->par)
 
 static unsigned long inreg(unsigned long addr)
 {
@@ -522,7 +275,7 @@ void radeon_pll_errata_after_data(struct radeonfb_info *rinfo)
 	if(rinfo->errata & CHIP_ERRATA_PLL_DELAY)
 	{
 		/* we can't deal with posted writes here ... */
-		_radeon_msleep(rinfo, 5);
+		radeon_msleep(5);
 	}
 	if(rinfo->errata & CHIP_ERRATA_R300_CG)
 	{
@@ -708,22 +461,10 @@ static int radeon_probe_pll_params(struct radeonfb_info *rinfo)
 	asm("move.w SR,save_d0");
 	asm("or.w #0x700,SR");   /* disable interrupts */
 #endif
-#ifdef COLDFIRE
-	start_tv = get_slice_timer();
-#else
-	start_tv = get_timer_c();
-#endif
+	start_tv = get_timer();
 	while(read_vline_crnt(rinfo) != 0)
 	{
-#ifdef COLDFIRE
-#ifdef MCF5445X
-		if((get_slice_timer()-start_tv) > 10000000UL)           /* 10 sec */
-#else /* MCF548X */
-		if((start_tv-get_slice_timer()) > 1000000000UL)         /* 10 sec */
-#endif
-#else
-		if((get_timer_c()-start_tv) > ((10000000UL*256)/5000))  /* 10 sec */
-#endif
+		if((get_timer() - start_tv) > US_TO_TIMER(10000000UL))    /* 10 sec */
 		{
 			timeout=1;
 			break;
@@ -731,22 +472,10 @@ static int radeon_probe_pll_params(struct radeonfb_info *rinfo)
 	}
 	if(!timeout)
 	{
-#ifdef COLDFIRE
-		start_tv = get_slice_timer();
-#else
-		start_tv = get_timer_c();
-#endif
+		start_tv = get_timer();
 		while(read_vline_crnt(rinfo) == 0)
 		{
-#ifdef COLDFIRE
-#ifdef MCF5445X
-			if((get_slice_timer()-start_tv) > 1000000UL)          /* 1 sec */
-#else /* MCF548X */
-			if((start_tv-get_slice_timer()) > 100000000UL)        /* 1 sec */
-#endif
-#else
-			if((get_timer_c()-start_tv) > ((1000000UL*256)/5000)) /* 1 sec */
-#endif
+			if((get_timer() - start_tv) > US_TO_TIMER(1000000UL))   /* 1 sec */
 			{
 				timeout=1;
 				break;
@@ -756,15 +485,7 @@ static int radeon_probe_pll_params(struct radeonfb_info *rinfo)
 		{
 			while(read_vline_crnt(rinfo) != 0)
 			{
-#ifdef COLDFIRE
-#ifdef MCF5445X
-				if((get_slice_timer()-start_tv) > 10000000UL)           /* 10 sec */
-#else /* MCF548X */
-				if((start_tv-get_slice_timer()) > 1000000000UL)         /* 10 sec */
-#endif
-#else
-				if((get_timer_c()-start_tv) > ((10000000UL*256)/5000))  /* 10 sec */
-#endif
+				if((get_timer() - start_tv) > US_TO_TIMER(10000000UL))    /* 10 sec */
 				{
 					timeout=1;
 					break;
@@ -772,26 +493,20 @@ static int radeon_probe_pll_params(struct radeonfb_info *rinfo)
 			}
 		}
 	}
+	stop_tv = get_timer();
 #ifdef COLDFIRE
-	stop_tv = get_slice_timer();
 	asm("move.w D0,-(SP)");
 	asm("move.w save_d0,D0");
 	asm("move.w D0,SR");
 	asm("move.w (SP)+,D0");
 	if(timeout)  /* 10 sec */
 		return -1; /* error */
-#ifdef MCF5445X
-	hz = 1000000.0/(double)(stop_tv-start_tv);
-#else /* MCF548X */
-	hz = 100000000.0/(double)(start_tv-stop_tv);
-#endif
 #else
-	stop_tv = get_timer_c();
 	asm("move.w save_d0,SR");
 	if(timeout)  /* 10 sec */
 		return -1; /* error */
-	hz = 1000000.0/(((double)(start_tv-stop_tv)*5000.0)/256.0);
 #endif
+	hz = US_TO_TIMER(1000000.0) / (double)(stop_tv - start_tv);
   DPRINTVAL("radeonfb: radeon_probe_pll_params hz ", (long)hz);
 	hTotal = ((INREG(CRTC_H_TOTAL_DISP) & 0x1ff) + 1) * 8;
 	vTotal = ((INREG(CRTC_V_TOTAL_DISP) & 0x3ff) + 1);
@@ -1186,10 +901,6 @@ int radeonfb_ioctl(unsigned int cmd, unsigned long arg, struct fb_info *info)
 			if(CRTC_CRT_ON & tmp)
 				value |= 0x02;
 			return 0;
-		case FBIO_ALLOC:
-			return(radeon_offscreen_alloc(rinfo,(long)arg));
-		case FBIO_FREE:
-			return(radeon_offscreen_free(rinfo,(long)arg));
 		default:
 			return -EINVAL;
 	}
@@ -1223,7 +934,8 @@ int radeon_screen_blank(struct radeonfb_info *rinfo, int blank, int mode_switch)
 			break;
 		case FB_BLANK_UNBLANK:
 		default:
-		unblank = 1;
+			unblank = 1;
+			break;
 	}
 	OUTREG(CRTC_EXT_CNTL, val);
 	switch(rinfo->mon1_type)
@@ -1494,12 +1206,12 @@ static void radeon_write_pll_regs(struct radeonfb_info *rinfo, struct radeon_reg
 
 static void radeon_timer_func(void)
 {
+	struct fb_info *info = info_fvdi;
+	struct radeonfb_info *rinfo = info->par;
 	static long start_timer;
 	struct fb_var_screeninfo var;
 	unsigned long x, y;
 	int chg, disp;
-	struct radeonfb_info *rinfo = rinfo_fvdi;
-	struct fb_info *info = rinfo_fvdi->info;
 	/* delayed LVDS panel power up/down */
 	if(rinfo->lvds_timer)
 	{
@@ -1516,6 +1228,29 @@ static void radeon_timer_func(void)
 		start_timer = 0;
 	if(rinfo->RenderCallback != NULL)
 		rinfo->RenderCallback(rinfo);
+	if((info->screen_mono != NULL) && info->update_mono)
+	{
+		long foreground = 255, background = 0;
+		unsigned char *src_buf = (unsigned char *)info->screen_mono;
+		int skipleft = ((int)src_buf & 3) << 3;
+		int dst_x = 0;
+		int w = (int)info->var.xres_virtual;
+		int h = (int)info->var.yres_virtual;
+//		info->fbops->SetClippingRectangle(info,0,0,w-1,h-1);
+		src_buf = (unsigned char*)((long)src_buf & ~3);
+		dst_x -= (long)skipleft;
+		w += (long)skipleft;
+		info->fbops->SetupForScanlineCPUToScreenColorExpandFill(info,(int)foreground,(int)background,3,0xffffffff);
+		info->fbops->SubsequentScanlineCPUToScreenColorExpandFill(info,(int)dst_x,0,w,h,skipleft);
+		while(--h >= 0)
+		{
+			info->fbops->SubsequentScanline(info, (unsigned long *)src_buf);
+			src_buf += (info->var.xres_virtual >> 3);
+		}
+//		info->fbops->DisableClipping(info);
+		if(info->update_mono > 0)
+			info->update_mono = 0;
+	}
 	if((info->var.xres_virtual != info->var.xres)
 	 || (info->var.yres_virtual != info->var.yres))
 	{
@@ -1563,10 +1298,10 @@ static void radeon_timer_func(void)
 			var.yoffset = y;
 			disp = rinfo->cursor_show;
 			if(disp)
-				RADEONHideCursor(rinfo);
+				RADEONHideCursor(info);
 			fb_pan_display(info,&var);
 			if(disp)
-				RADEONShowCursor(rinfo);
+				RADEONShowCursor(info);
 		}
 #ifdef COLDFIRE
 		asm("move.l D0,-(SP)");
@@ -1648,8 +1383,7 @@ void radeon_write_mode(struct radeonfb_info *rinfo, struct radeon_regs *mode, in
 /*
  * Calculate the PLL values for a given mode
  */
-static void radeon_calc_pll_regs(struct radeonfb_info *rinfo, struct radeon_regs *regs,
-				 unsigned long freq)
+static void radeon_calc_pll_regs(struct radeonfb_info *rinfo, struct radeon_regs *regs, unsigned long freq)
 {
 	static const struct {
 		int divider;
@@ -2002,12 +1736,66 @@ int radeonfb_set_par(struct fb_info *info)
 	return 0;
 }
 
+static void radeonfb_check_modes(struct fb_info *info, struct mode_option *resolution)
+{
+	struct radeonfb_info *rinfo = info->par;
+	radeon_check_modes(rinfo, resolution);
+}
+
+static struct fb_ops radeonfb_ops =
+{
+	.fb_check_var = radeonfb_check_var,
+	.fb_setcolreg = radeonfb_setcolreg,
+	.fb_set_par = radeonfb_set_par,
+	.fb_pan_display = radeonfb_pan_display,
+	.fb_blank = radeonfb_blank,
+	.fb_sync = radeonfb_sync,
+	.fb_ioctl = radeonfb_ioctl,
+	.fb_check_modes = radeonfb_check_modes,
+	.SetupForSolidFill = RADEONSetupForSolidFillMMIO,
+	.SubsequentSolidFillRect = RADEONSubsequentSolidFillRectMMIO,
+	.SetupForSolidLine = RADEONSetupForSolidLineMMIO,
+	.SubsequentSolidHorVertLine = RADEONSubsequentSolidHorVertLineMMIO,
+	.SubsequentSolidTwoPointLine = RADEONSubsequentSolidTwoPointLineMMIO,
+	.SetupForDashedLine = RADEONSetupForDashedLineMMIO,
+	.SubsequentDashedTwoPointLine = RADEONSubsequentDashedTwoPointLineMMIO,
+	.SetupForScreenToScreenCopy = RADEONSetupForScreenToScreenCopyMMIO,
+	.SubsequentScreenToScreenCopy = RADEONSubsequentScreenToScreenCopyMMIO,
+	.ScreenToScreenCopy = RADEONScreenToScreenCopyMMIO,
+	.SetupForMono8x8PatternFill = RADEONSetupForMono8x8PatternFillMMIO,
+	.SubsequentMono8x8PatternFillRect = RADEONSubsequentMono8x8PatternFillRectMMIO,
+	.SetupForScanlineCPUToScreenColorExpandFill = RADEONSetupForScanlineCPUToScreenColorExpandFillMMIO,
+	.SubsequentScanlineCPUToScreenColorExpandFill = RADEONSubsequentScanlineCPUToScreenColorExpandFillMMIO,
+	.SubsequentScanline = RADEONSubsequentScanlineMMIO,	
+	.SetupForScanlineImageWrite = RADEONSetupForScanlineImageWriteMMIO,
+	.SubsequentScanlineImageWriteRect = RADEONSubsequentScanlineImageWriteRectMMIO,
+	.SetClippingRectangle = RADEONSetClippingRectangleMMIO,
+	.DisableClipping = RADEONDisableClippingMMIO,
+#ifdef RADEON_RENDER
+	.SetupForCPUToScreenAlphaTexture = RADEONSetupForCPUToScreenAlphaTextureMMIO,
+	.SetupForCPUToScreenTexture = RADEONSetupForCPUToScreenTextureMMIO,
+	.SubsequentCPUToScreenTexture = RADEONSubsequentCPUToScreenTextureMMIO,
+#else
+	.SetupForCPUToScreenAlphaTexture = NULL,
+	.SetupForCPUToScreenTexture = NULL,
+	.SubsequentCPUToScreenTexture = NULL,
+#endif /* RADEON_RENDER */
+	.SetCursorColors = RADEONSetCursorColors,
+	.SetCursorPosition = RADEONSetCursorPosition,
+	.LoadCursorImage = RADEONLoadCursorImage,
+	.HideCursor = RADEONHideCursor,
+	.ShowCursor = RADEONShowCursor,
+	.CursorInit = RADEONCursorInit,
+};
+
 static int radeon_set_fbinfo(struct radeonfb_info *rinfo)
 {
 	struct fb_info *info = rinfo->info;
 	info->par = rinfo;
-	info->screen_base = rinfo->fb_base;
+	info->fbops = &radeonfb_ops;
+	info->ram_base = info->screen_base = rinfo->fb_base;
 	info->screen_size = rinfo->mapped_vram;
+	info->ram_size = rinfo->mapped_vram;
 	if(info->screen_size > MAX_MAPPED_VRAM)
 		info->screen_size = MAX_MAPPED_VRAM;
 	else if(info->screen_size > MIN_MAPPED_VRAM)
@@ -2141,23 +1929,19 @@ int radeonfb_pci_register(long handle, const struct pci_device_id *ent)
 	struct fb_info *info;
 	struct radeonfb_info *rinfo;
 	PCI_RSC_DESC *pci_rsc_desc;
-	PCI_CONV_ADR pci_conv_adr;
 #ifndef PCI_XBIOS
   PCI_COOKIE *bios_cookie;
 #endif
-	XBRA *xbra;
-	int i;
-	void (**func_vbl)(void);
 
-	info = framebuffer_alloc(sizeof(struct radeonfb_info));
+	info_fvdi = info = framebuffer_alloc(sizeof(struct radeonfb_info));
 	if(!info)
 		return(-ENOMEM);
-	rinfo_fvdi = rinfo = info->par;
+	rinfo = info->par;
 	rinfo->info = info;
 	rinfo->handle = handle;
-	Funcs_copy("ATI Radeon XX ",rinfo->name);
-	rinfo->name[11] = ent->device >> 8;
-	rinfo->name[12] = ent->device & 0xFF;
+	Funcs_copy("ATI Radeon XX ", rinfo->name);
+	rinfo->name[11] = (char)(ent->device >> 8);
+	rinfo->name[12] = (char)ent->device;
 	rinfo->family = ent->driver_data & CHIP_FAMILY_MASK;
 	rinfo->chipset = ent->device;
 	rinfo->has_CRTC2 = (ent->driver_data & CHIP_HAS_CRTC2) != 0;
@@ -2173,27 +1957,30 @@ int radeonfb_pci_register(long handle, const struct pci_device_id *ent)
 #ifdef PCI_XBIOS
 	pci_rsc_desc = (PCI_RSC_DESC *)get_resource(handle);
 #else
-	bios_cookie = (PCI_COOKIE *)Funcs_get_cookie("_PCI",0);
-	if(bios_cookie == NULL)   /* faster than XBIOS calls */
-		return(-EIO);	
+	bios_cookie = (PCI_COOKIE *)Funcs_get_cookie("_PCI",Super(1));
+	if(bios_cookie == (void *)-1)   /* faster than XBIOS calls */
+		return(-EIO);
 	tab_funcs_pci = &bios_cookie->routine[0];
 	pci_rsc_desc = (PCI_RSC_DESC *)Get_resource(handle);
 #endif
-	if((long)pci_rsc_desc>=0)
+	if((long)pci_rsc_desc >= 0)
 	{
 		unsigned short flags;
 		do
 		{
-//			DPRINTVALHEX("radeonfb: flags ", pci_rsc_desc->flags);
-//			DPRINTVALHEX(" offset ", pci_rsc_desc->offset + pci_rsc_desc->start);
-//			DPRINTVALHEX(" length ", pci_rsc_desc->length);
-//			DPRINT("\r\n");
+			DPRINTVALHEX("radeonfb: flags ", pci_rsc_desc->flags);
+			DPRINTVALHEX(" start ", pci_rsc_desc->start);
+			DPRINTVALHEX(" offset ", pci_rsc_desc->offset);
+			DPRINTVALHEX(" length ", pci_rsc_desc->length);
+			DPRINT("\r\n");
 			if(!(pci_rsc_desc->flags & FLG_IO))
 			{
 				if((rinfo->fb_base_phys == 0xFFFFFFFF) && (pci_rsc_desc->length >= 0x100000))
 				{
+					rinfo->fb_base = (void *)(pci_rsc_desc->offset + pci_rsc_desc->start);
 					rinfo->fb_base_phys = pci_rsc_desc->start;
 					rinfo->mapped_vram = pci_rsc_desc->length;
+//					rinfo->dma_offset = pci_rsc_desc->dmaoffset;
 					if((pci_rsc_desc->flags & FLG_ENDMASK) == ORD_MOTOROLA)
 					{
 						rinfo->big_endian = 0; /* host bridge make swapping intel -> motorola */
@@ -2212,7 +1999,7 @@ int radeonfb_pci_register(long handle, const struct pci_device_id *ent)
 					{
 						rinfo->bios_seg_phys = pci_rsc_desc->start;
 						if(BIOS_IN16(0) == 0xaa55)
-							rinfo->bios_seg  = (void *)(pci_rsc_desc->offset + pci_rsc_desc->start);
+							rinfo->bios_seg = (void *)(pci_rsc_desc->offset + pci_rsc_desc->start);
 						else
 							rinfo->bios_seg_phys = 0;
 					}
@@ -2253,16 +2040,6 @@ int radeonfb_pci_register(long handle, const struct pci_device_id *ent)
 	DPRINTVALHEX("radeonfb: radeonfb_pci_register: io_base_phys ", rinfo->io_base_phys);
 	DPRINTVALHEX(" io_base ", (unsigned long)rinfo->io_base);
 	DPRINT("\r\n");
-
-	rinfo->fb_base = NULL;
-#ifdef PCI_XBIOS
-	if(bus_to_virt(handle,rinfo->fb_base_phys,&pci_conv_adr) >= 0)
-#else
-	if(Bus_to_virt(handle,rinfo->fb_base_phys,&pci_conv_adr) >= 0)
-#endif
-		rinfo->fb_base=(void *)pci_conv_adr.adr;
-	else
-		DPRINT("radeonfb: radeonfb_pci_register: bus_to_virt error");
 	DPRINTVALHEX("radeonfb: radeonfb_pci_register: fb_base_phys ", rinfo->fb_base_phys);
 	DPRINTVALHEX(" fb_base ", (unsigned long)rinfo->fb_base);
 	DPRINT("\r\n");
@@ -2293,10 +2070,13 @@ int radeonfb_pci_register(long handle, const struct pci_device_id *ent)
 	radeon_map_ROM(rinfo);
 
 #ifdef DRIVER_IN_ROM
-		/* Run VGA BIOS */
+	/* Run VGA BIOS */
+	if(rinfo->bios_seg != NULL)
+	{
+		Cconws("Run VGA BIOS, please wait...\r\n");
 		DPRINT("radeonfb: radeonfb_pci_register: run VGA BIOS\r\n");
-		if(rinfo->bios_seg != NULL)
-			run_bios(rinfo);
+		run_bios(rinfo);
+	}
 #endif
 
 #if 1
@@ -2335,7 +2115,7 @@ int radeonfb_pci_register(long handle, const struct pci_device_id *ent)
 	/* Register I2C bus */
 	DPRINT("radeonfb: radeonfb_pci_register: register I2C bus\r\n");
 	radeon_create_i2c_busses(rinfo);
-#endif
+#endif /* CONFIG_FB_RADEON_I2C */
 
 	/* set all the vital stuff */
 	DPRINT("radeonfb: radeonfb_pci_register: set all the vital stuff\r\n");
@@ -2343,13 +2123,13 @@ int radeonfb_pci_register(long handle, const struct pci_device_id *ent)
 
 	/* set offscreen memory descriptor */
 	DPRINT("radeonfb: radeonfb_pci_register: set offscreen memory descriptor\r\n");
-	radeon_offscreen_init(rinfo);
+	offscreen_init(info);
 	
 	/* Probe screen types */
 	DPRINT("radeonfb: radeonfb_pci_register: probe screen types, monitor_layout: ");
 	DPRINT(monitor_layout);
 	DPRINT("\r\n");
-	radeon_probe_screens(rinfo, monitor_layout, ignore_edid);
+	radeon_probe_screens(rinfo, monitor_layout, (int)ignore_edid);
 
 	/* Build mode list, check out panel native model */
 	DPRINT("radeonfb: radeonfb_pci_register: build mode list\r\n");
@@ -2368,45 +2148,13 @@ int radeonfb_pci_register(long handle, const struct pci_device_id *ent)
 
 	DPRINT("radeonfb: radeonfb_pci_register: install VBL timer\r\n");
 	rinfo->lvds_timer = 0;
-	i = (int)*nvbls;
-	func_vbl = *_vblqueue;
-	func_vbl += 2; /* 2 first vectors are used by the VDI cursors mouse and text */
-	i-=2;
-	while(--i >= 0)
-	{
 #ifndef DRIVER_IN_ROM
-	  if(*func_vbl != NULL)
-	  {
-			xbra = (XBRA *)((long)*func_vbl - 12);
-			if((xbra->xbra == 'XBRA') && (xbra->ident == '_PCI'))
-				*func_vbl = NULL;		/* remove old vector */	
-	  }
+	install_vbl_timer(radeon_timer_func, 1); /* remove old vector */ 
+#else
+	install_vbl_timer(radeon_timer_func, 0);
 #endif
-	  if(*func_vbl == NULL)
-	  {
-			xbra = (XBRA *)Mxalloc(sizeof(XBRA),3);
-			if(xbra != NULL)
-			{
-				xbra->xbra = 'XBRA';
-				xbra->ident = '_PCI';
-				xbra->jump[0] = 0x4EF9; /* JMP */
-				*(long *)&xbra->jump[1] = (long)radeon_timer_func;
-#ifdef COLDFIRE
-				asm("	.chip 68060");
-#endif
-				asm(" cpusha BC");
-#ifdef COLDFIRE
-				asm("	.chip 5200");
-#endif
-				*func_vbl = (void(*)())&xbra->jump[0];
-				xbra->old_address = 0;
-			}
-     	break;
-		}
-		func_vbl++;
-	}	
-	rinfo->RageTheatreCrystal=rinfo->RageTheatreTunerPort=rinfo->RageTheatreCompositePort=rinfo->RageTheatreSVideoPort=-1;
-	rinfo->tunerType=-1;
+	rinfo->RageTheatreCrystal = rinfo->RageTheatreTunerPort=rinfo->RageTheatreCompositePort = rinfo->RageTheatreSVideoPort = -1;
+	rinfo->tunerType = -1;
 	return(0);
 }
 
@@ -2414,24 +2162,10 @@ int radeonfb_pci_register(long handle, const struct pci_device_id *ent)
 
 void radeonfb_pci_unregister(void)
 {
-	struct fb_info *info;
-	struct radeonfb_info *rinfo = rinfo_fvdi;
-	void (**func_vbl)(void);
-	info = rinfo_fvdi->info;
-	int i;
+	struct fb_info *info = info_fvdi;
+	struct radeonfb_info *rinfo = info->par;
 //	radeonfb_pm_exit(rinfo);
-	i = (int)*nvbls;
-	func_vbl = *_vblqueue;
-	while(--i > 0)
-	{
-	  if(*func_vbl != NULL)
-	  {
-			if(*func_vbl == radeon_timer_func)
-				*func_vbl = NULL;
-     	break;
-		}
-	  func_vbl++;
-	}	
+	uninstall_vbl_timer(radeon_timer_func);
 	if(rinfo->mon1_EDID!=NULL)
 		Funcs_free(rinfo->mon1_EDID);
 	if(rinfo->mon2_EDID!=NULL)

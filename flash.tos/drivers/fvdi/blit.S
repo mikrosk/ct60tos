@@ -16,7 +16,8 @@
 
 	.xref	clip_rect
 	.xref	expand_area
-
+	.xref	setup_plot
+	
 	.xdef	_default_fill
 
 	.xdef	lib_vr_trn_fm
@@ -51,14 +52,24 @@ _default_fill:
 #else
 	movem.l	d1-d7/a0-a2,-(a7)
 #endif
-
+#ifdef COLDFIRE
+	move.l	a0,d7
+	and.l	#1,d7
+	sub.l	d7,a0
+#else
 	move.w	a0,d7
 	and.w	#1,d7
 	sub.w	d7,a0
+#endif
 
 	move.l	d5,a2
 
+#ifdef COLDFIRE
+	ext.l	d6
+	cmp.l	#1,d6
+#else
 	cmp.w	#1,d6			// Not replace?
+#endif
 	bne	.pattern
 
 	move.l	a2,a1
@@ -67,8 +78,16 @@ _default_fill:
 .check_pattern:
 	move.l	(a1)+,d6		// All ones?
 	addq.l	#1,d6
+#ifdef COLDFIRE
+	bne.s	.end_check_pattern
+	subq.l	#1,d5
+	bpl.s	.check_pattern
+	bra	.no_pattern
+.end_check_pattern:
+#else
 	dbne	d5,.check_pattern
 	beq	.no_pattern
+#endif
 	move.l	(a7)+,d6
 	bra	.pattern
 .no_pattern:
@@ -80,17 +99,36 @@ _default_fill:
 	cmp.l	#_default_line,a1	// No real acceleration?
 	beq	.pattern
 
+#ifdef COLDFIRE
+	tst.l	d7
+#else
 	tst.w	d7
+#endif
 	bne	.table_lfill
 
+#ifdef COLDFIRE
+	ext.l	d2
+	ext.l	d4
+	move.l	d4,d7
+#else
 	move.w	d4,d7
+#endif
 	moveq	#0,d6
 	move.w	vwk_mode(a0),d6
 .loopy_sl:
+#ifdef COLDFIRE
+	move.l	d2,d4
+#else
 	move.w	d2,d4
+#endif
 	jsr	(a1)
+#ifdef COLDFIRE
+	addq.l	#1,d2
+	cmp.l	d7,d2
+#else
 	addq.w	#1,d2
 	cmp.w	d7,d2
+#endif
 	ble	.loopy_sl
 
 .end_default_fill:
@@ -107,7 +145,12 @@ _default_fill:
 	bne	.end_default_fill	// Only y/x1/x2 spans available so far
 	move.l	d2,d6
 	swap	d6
+#ifdef COLDFIRE
+	ext.l	d6
+	subq.l	#1,d6	
+#else
 	subq.w	#1,d6
+#endif
 	blt	.end_default_fill
 	move.l	d1,a2
 .tlfill_loop:
@@ -118,7 +161,12 @@ _default_fill:
 	move.w	(a2)+,d1
 	move.w	(a2)+,d3
 	jsr	(a1)
+#ifdef COLDFIRE
+	subq.l	#1,d6
+	bpl.s	.tlfill_loop
+#else
 	dbra	d6,.tlfill_loop
+#endif
 	bra	.end_default_fill
 
 /* Call:	a0	VDI struct, 0 (destination MFDB)
@@ -128,7 +176,14 @@ _default_fill:
 *	a3-a4	Set/get pixel
 */
 .pattern:
+#ifdef COLDFIRE
+	move.l	a3,-(a7)
+	move.l	a4,-(a7)
+	ext.l	d3
+	ext.l	d4
+#else
 	movem.l	a3-a4,-(a7)
+#endif
 
 	move.l	vwk_real_address(a0),a1
 	move.l	wk_r_get_colour(a1),a1	// Index to real colour
@@ -142,30 +197,81 @@ _default_fill:
 	move.l	a0,-(a7)
 	move.l	a7,a0			// a0 no longer -> VDI struct!
 
+#ifdef COLDFIRE
+	tst.l	d7
+#else
 	tst.w	d7
+#endif
 	bne	.table_pfill
 
+#ifdef COLDFIRE
+	ext.l	d1
+	ext.l	d2
+	move.l	d1,d6
+#else
 	move.w	d1,d6
+#endif
 .loopy_pp:
 	move.w	d6,d1			// x
 	move.w	d2,d5
+#ifdef COLDFIRE
+	move.l	d0,-(a7)
+	and.l	#0x000f,d5
+	add.l	d5,d5
+	move.w	0(a2,d5.l),d5
+	moveq	#15,D0
+	and.l	d1,d0
+	asl.l	d0,d5
+	move.l	d5,d0
+	clr.w	d0
+	swap	d0
+	or.l	d0,d5
+	move.l	(a7)+,d0
+.loopx_pp:
+	move.l	d0,-(a7)
+	move.l	d2,-(a7)
+	moveq	#0,d2
+	move.w	d5,d2
+	add.l	d2,d2
+	move.l	d2,d0
+	swap	d0
+	or.l	d2,d0
+	move.w	d0,d5
+	move.l	(a7)+,d2
+	move.l	(a7)+,d0
+	move	d5,ccr
+#else
 	and.w	#0x000f,d5
 	add.w	d5,d5
 	move.w	0(a2,d5.w),d5
 	rol.w	d1,d5
 .loopx_pp:
 	rol.w	#1,d5
+#endif
 	jsr	(a1)
+#ifdef COLDFIRE
+	addq.l	#1,d1
+	cmp.l	d3,d1
+	ble	.loopx_pp
+	addq.l	#1,d2
+	cmp.l	d4,d2
+#else
 	addq.w	#1,d1
 	cmp.w	d3,d1
 	ble	.loopx_pp
 	addq.w	#1,d2
 	cmp.w	d4,d2
+#endif
 	ble	.loopy_pp
 .end_pfill:
 	move.l	(a7),a0
 	addq.l	#8,a7
+#ifdef COLDFIRE
+	move.l	(a7)+,a4
+	move.l	(a7)+,a3
+#else
 	movem.l	(a7)+,a3-a4
+#endif
 	bra	.end_default_fill
 
 .table_pfill:
@@ -173,7 +279,12 @@ _default_fill:
 	bne	.end_pfill		// Only y/x1/x2 spans available so far
 	move.l	d2,d6
 	swap	d6
+#ifdef COLDFIRE
+	ext.l	d6
+	subq.l	#1,d6	
+#else
 	subq.w	#1,d6
+#endif
 	blt	.end_pfill
 
 	move.l	a5,-(a7)
@@ -186,17 +297,53 @@ _default_fill:
 	move.w	(a5)+,d3
 
 	move.w	d2,d5
+#ifdef COLDFIRE
+	move.l	d0,-(a7)
+	and.l	#0x000f,d5
+	add.l	d5,d5
+	move.w	0(a2,d5.l),d5
+	moveq	#15,D0
+	and.l	d1,d0
+	asl.l	d0,d5
+	move.l	d5,d0
+	clr.w	d0
+	swap	d0
+	or.l	d0,d5
+	move.l	(a7)+,d0
+.tploopx_pp:
+	move.l	d0,-(a7)
+	move.l	d2,-(a7)
+	moveq	#0,d2
+	move.w	d5,d2
+	add.l	d2,d2
+	move.l	d2,d0
+	swap	d0
+	or.l	d2,d0
+	move.w	d0,d5
+	move.l	(a7)+,d2
+	move.l	(a7)+,d0
+	move	d5,ccr
+#else
 	and.w	#0x000f,d5
 	add.w	d5,d5
 	move.w	0(a2,d5.w),d5
 	rol.w	d1,d5
 .tploopx_pp:
 	rol.w	#1,d5
+#endif
 	jsr	(a1)
+#ifdef COLDFIRE
+	addq.l	#1,d1
+	cmp.l	d3,d1
+	ble	.tploopx_pp
+	subq.l	#1,d6
+	bpl	.tploopy_pp
+#else
 	addq.w	#1,d1
 	cmp.w	d3,d1
 	ble	.tploopx_pp
 	dbra	d6,.tploopy_pp
+#endif
 	move.l	(a7)+,a5
 	bra	.end_pfill
 

@@ -3,6 +3,7 @@
 
 #define LITTLE_ENDIAN_LANE_SWAPPED
 #define CHECK_PARITY
+#undef SAME_CPU_PCI_MEM_ADDR // for fix DMA problems with some drivers
 
 #ifdef COLDFIRE
 #include "fire.h"
@@ -15,59 +16,85 @@
 #define PCI_MAXLAT 32
 #endif
 
-#define PCI_BIOS_REV         0x10000
+#define PCI_BIOS_REV          0x10000
 
 #ifdef COLDFIRE
+#undef PCI_DYNAMIC_MAPPING
 #define PCI_LOCAL_CONFIG  MCF_PCI_PCIIDR
 #ifdef MCF5445X
 #define PCI_IRQ_BASE_VECTOR    (64+INT1_HI_PCI_SCR+64+OFFSET_INT_CF68KLIB)
-#define PCI_MEMORY_OFFSET  0xA0000000
-#define PCI_MEMORY_SIZE    0x10000000   /* 256 MB */ 
-#define PCI_IO_OFFSET      0xB0000000
-#define PCI_IO_SIZE        0x10000000   /* 256 MB */
+#define PCI_MEMORY_OFFSET   0xA0000000
+#define PCI_MEMORY_SIZE     0x10000000   /* 256 MB */ 
+#define PCI_IO_OFFSET       0xB0000000
+#define PCI_IO_SIZE         0x10000000   /* 256 MB */
 #else /* MCF548X */
 #define PCI_IRQ_BASE_VECTOR    (64+41+OFFSET_INT_CF68KLIB)
-#define PCI_MEMORY_OFFSET  0x80000000
-#define PCI_MEMORY_SIZE    0x40000000   /* 1024 MB */ 
-#define PCI_IO_OFFSET      0xD0000000
-#define PCI_IO_SIZE        0x10000000   /* 256 MB */
+#define PCI_MEMORY_OFFSET   0x80000000
+#define PCI_MEMORY_SIZE     0x40000000   /* 1024 MB */ 
+#define PCI_IO_OFFSET       0xD0000000
+#define PCI_IO_SIZE         0x10000000   /* 256 MB */
 #endif /* MCF5445X */ 
 #else /* ATARI - CTPCI */
+#define PCI_DYNAMIC_MAPPING
 /* note: Ethernat use 0x80000000-0x8000003F space and interrupts vectors 0xC4-0xC5 */
-#define PCI_IRQ_BASE_VECTOR      0xC9   /* offset 0x9:LINT - 0xA:INT#A - 0xB:INT#B - 0xC:INT#C - 0xD:INT#D */
-#define PCI_CTPCI_CONFIG   0xE0000000   /* CTPCI PLX registers */
+/*       Supervidel registers are at 0x80010000                                    */
+#define PCI_IRQ_BASE_VECTOR       0xC9   /* offset 0x9:LINT - 0xA:INT#A - 0xB:INT#B - 0xC:INT#C - 0xD:INT#D */
+#define PCI_CTPCI_CONFIG    0xE0000000   /* CTPCI registers */
+#define PCI_CTPCI_CONFIG_PEND   (PCI_CTPCI_CONFIG+0)
+#define PCI_CTPCI_CONFIG_ENABI  (PCI_CTPCI_CONFIG+1)
+#define PCI_CTPCI_CONFIG_VECTOR (PCI_CTPCI_CONFIG+3)
+#define PCI_CTPCI_CONFIG_RESET  (PCI_CTPCI_CONFIG+0x20)
+#define ITF                 2            /* IDE Fast Timming for 75-100 MHz */
 /* B0:INTON B4-B7:VE4-VE7 */
-#define PCI_LOCAL_CONFIG   0xE8000000   /* CT60 bus slot - no cache - reserved */
-#define PCI_MEMORY_OFFSET  0x40000000   /* CT60 bus slot - cache */
-#ifdef CTPCI_1GB                        /* without Ethernat */
-#define PCI_MEMORY_SIZE    0x40000000   /* 1 GB */ 
-#define PCI_IO_OFFSET      0x80000000   /* CT60 bus slot - no cache */
-#define PCI_IO_SIZE        0x40000000   /* 1 GB */
-#else /* !CTPCI_1GB */
-#define PCI_MEMORY_SIZE    0x20000000   /* 512 MB */ 
-#define PCI_IO_OFFSET      0xC0000000   /* CT60 bus slot - no cache */
-#define PCI_IO_SIZE        0x20000000   /* 512 MB */
-#endif /* CTPCI_1GB */
-#define PCI_DRIVERS_OFFSET 0x21000000   /* RAM for drivers in flash */
-#define PCI_DRIVERS_SIZE   0x00010000   /* => also in pci.lk !!!    */
+#define PCI_LOCAL_CONFIG    0xE8000000   /* CT60 bus slot - no cache - reserved */
+#ifdef PCI_DYNAMIC_MAPPING
+#define PCI_MEMORY_OFFSET_1 0x40000000   /* CT60 bus slot - cache */
+#define PCI_MEMORY_SIZE_1   0x20000000   /* 512 MB */ 
+#define PCI_IO_OFFSET_1     0xC0000000   /* CT60 bus slot - no cache */
+#define PCI_IO_SIZE_1       0x20000000   /* 512 MB */
+#define PCI_MEMORY_OFFSET_2 0x40000000   /* CT60 bus slot - cache */
+#define PCI_MEMORY_SIZE_2   0x40000000   /* 1 GB */ 
+#define PCI_IO_OFFSET_2     0x80000000   /* CT60 bus slot - no cache */
+#define PCI_IO_SIZE_2       0x40000000   /* 1 GB */
+#if PCI_MEMORY_SIZE_1 != PCI_IO_SIZE_1
+#error PLX need MEM and I/O with the same size
+#endif
+#if PCI_MEMORY_SIZE_2 != PCI_IO_SIZE_2
+#error PLX need MEM and I/O with the same size
+#endif
+#else /* !PCI_DYNAMIC_MAPPING */
+#define PCI_MEMORY_OFFSET   0x40000000   /* CT60 bus slot - cache */
+#define PCI_MEMORY_SIZE     0x20000000   /* 512 MB */ 
+#define PCI_IO_OFFSET       0xC0000000   /* CT60 bus slot - no cache */
+#define PCI_IO_SIZE         0x20000000   /* 512 MB */
 #if PCI_MEMORY_SIZE != PCI_IO_SIZE
 #error PLX need MEM and I/O with the same size
 #endif
+#endif /* PCI_DYNAMIC_MAPPING */
+#define PCI_DRIVERS_OFFSET  0x21000000   /* RAM for drivers in flash */
+#define PCI_DRIVERS_SIZE    0x00050000   /* => also in pci.lk !!!    */
 #endif /* COLDFIRE */
-#define GRAPHIC_CARD_SIZE  0x10000000
+#define GRAPHIC_CARD_SIZE   0x10000000
 
-#define PCI_MAX_HANDLE              5  /* 4 slots on the CTPCI + host bridge PLX9054 */
-#define PCI_MAX_FUNCTION            4	 /* 4 functions per PCI slot */
+#define PCI_NOBODYHOME          0xFFFF
 
-#define PCI_NOBODYHOME         0xFFFF
+#define PCI_MAX_FUNCTION             4  /* 4 functions per PCI slot */
 
 #ifdef COLDFIRE
+
+#ifdef MCF547X                         /* FIREBEE */
+#define PCI_MAX_HANDLE           (7+1) /* 7 slots on the Firebee + host bridge MCF547X */
+#else /* MCF548X - MCF5445X */   
+#define PCI_MAX_HANDLE           (4+1) /* 4 slots on the M5484LITE/M5485EVB/M54455EVB + host bridge MCF548X/MCF5445X */
+#endif /* MCF547X */
 
 #define LAST_LOCAL_REGISTER  0x40
 
 #define LOCAL_REGISTERS_BIG // local registers are in Big Endian on the Coldfire
 
 #else /* PLX9054 */
+
+#define PCI_MAX_HANDLE              5  /* 4 slots on the CTPCI + host bridge PLX9054 */
 
 /* PLX9054 ID */
 #define PLX9054            0x905410B5
@@ -414,6 +441,7 @@
 
 /* Flags used in Resource Descriptor */
 #define FLG_IO              0x4000   /* Resource in IO range                */
+#define FLG_ROM             0x2000   /* Expansion ROM */
 #define FLG_LAST            0x8000   /* last resource                       */
 #define FLG_8BIT            0x0100   /* 8 bit accesses allowed              */
 #define FLG_16BIT           0x0200   /* 16 bit accesses allowed             */
@@ -444,7 +472,8 @@
 #define PCI_COOKIE_SIZE          ((4*PCI_COOKIE_MAX_ROUTINES)+PCI_COOKIE_ROUTINE)
 #define PCI_RSC_HANDLESTOTALSIZE (PCI_RSC_DESC_TOTALSIZE*PCI_MAX_HANDLE*PCI_MAX_FUNCTION)
 #define PCI_DEV_HANDLESTOTALSIZE (PCI_DEV_DES_SIZE*PCI_MAX_HANDLE*PCI_MAX_FUNCTION)
-#define PCI_COOKIE_TOTALSIZE     (PCI_COOKIE_SIZE+PCI_RSC_HANDLESTOTALSIZE+PCI_DEV_HANDLESTOTALSIZE)
+#define PCI_INT_HANDLESTOTALSIZE (PCI_MAX_HANDLE*PCI_MAX_FUNCTION)
+#define PCI_COOKIE_TOTALSIZE     (PCI_COOKIE_SIZE+PCI_RSC_HANDLESTOTALSIZE+PCI_DEV_HANDLESTOTALSIZE+PCI_INT_HANDLESTOTALSIZE)
 
 /* Error codes */
 #define PCI_SUCCESSFUL           0   /* everything's fine         */
@@ -462,6 +491,6 @@
 #define PCI_NO_MORE_MEM_BELOW_1MB -102 /* no more memory space below 1 MB      */
 #define PCI_NEED_MORE_THAN_4GB    -103 /* device requests more than 4GB memory */
 #define PCI_UNKNOW_MEMORY_TYPE    -104 /* device requests unknown memory type  */
-#define PCI_PARITY_ERROR          -105 /* parity error */
+#define PCI_PARITY_ERROR          -105 /* parity error                         */
 
 #endif /* _PCI_BIOS_H_ */

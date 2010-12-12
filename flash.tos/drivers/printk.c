@@ -15,11 +15,6 @@
 #define TRUE        (1)
 #define NULL        (0)
 
-#ifdef NETWORK
-#ifdef LWIP
-
-extern void board_putchar(char c);
-
 /********************************************************************/
 
 typedef struct
@@ -72,7 +67,20 @@ typedef struct
 #define IS_FMT_p(a)     (a & FMT_p)
 #define IS_FMT_n(a)     (a & FMT_n)
 
-#ifdef DBUG
+extern void direct_conout(char c);
+
+#if defined(COLDFIRE) && defined(NETWORK) && defined(LWIP)
+
+extern void board_putchar(char c);
+
+#else
+
+static void board_putchar(char c)
+{
+    direct_conout(c);
+}
+
+#endif /* defined(COLDFIRE) && defined(NETWORK) && defined(LWIP) */
 
 /********************************************************************/
 static void printk_putc(char c, int *count, PRINTK_INFO *info)
@@ -190,7 +198,7 @@ int printk(PRINTK_INFO *info, const char *fmt, va_list ap)
     char *p;
     char c;
 
-    char vstr[33];
+    static char vstr[33];
     char *vstrp;
     int vlen;
 
@@ -573,6 +581,25 @@ int printk(PRINTK_INFO *info, const char *fmt, va_list ap)
 }
 
 /********************************************************************/
+void kprint(const char *fmt, ...)
+{
+    va_list ap;
+    int rvalue;
+    PRINTK_INFO info;
+    info.dest = DEST_CONSOLE;
+    info.func = &direct_conout;
+    /*
+     * Initialize the pointer to the variable length argument list.
+     */
+    va_start(ap, fmt);
+    rvalue = printk(&info, fmt, ap);
+    /*
+     * Cleanup the variable length argument list.
+     */
+    va_end(ap);
+}
+
+/********************************************************************/
 int printD(const char *fmt, ...)
 {
     va_list ap;
@@ -618,19 +645,14 @@ int sprintD(char *s, const char *fmt, ...)
 /********************************************************************/
 void puts(const char *text)
 {
-  printD(text);
-  board_putchar('\r');  
-  board_putchar('\n');    
+    printD(text);
+    board_putchar('\r');  
+    board_putchar('\n');    
 }
 
 /********************************************************************/
 void putchar(char c)
 {
-  board_putchar(c);
+    board_putchar(c);
 }
-
-#endif /* DBUG */
-
-#endif /* LWIP */
-#endif /* NETWORK */
 

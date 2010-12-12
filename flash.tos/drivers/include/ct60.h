@@ -1,5 +1,5 @@
 /* TOS 4.04 Xbios for the CT60 board
-*  Didier Mequignon 2002-2006, e-mail: aniplay@wanadoo.fr
+*  Didier Mequignon 2002-2010, e-mail: aniplay@wanadoo.fr
 *
 *  This library is free software; you can redistribute it and/or
 *  modify it under the terms of the GNU Lesser General Public
@@ -32,8 +32,8 @@
 #define VIRTUAL_SCREEN 0x8000 /* width * 2 and height * 2, 2048 x 2048 max */
 #define BPS32 5
 
-#define GET_DEVID(x) ((x & DEVID) ? ((x & 0x3FF8) >> 3) : -1)
-#define SET_DEVID(x) (((x << 3) & 0x3FF8) | DEVID)  
+#define GET_DEVID(x) (((x) & DEVID) ? (((x) & 0x3FF8) >> 3) : -1)
+#define SET_DEVID(x) ((((x) << 3) & 0x3FF8) | DEVID)  
 
 /* Vsetscreen New modes */
 /* Vsetscreen(void *par1, void *par2, short rez, short command) */

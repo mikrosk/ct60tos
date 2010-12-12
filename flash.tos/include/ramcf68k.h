@@ -24,12 +24,12 @@
 #define CF68KLIB              0x00E90000
 
 #ifdef MCF5445X
-#define RAM_BASE_CF68KLIB     0x4FF00000 /* last MB of 256MB */
+#define RAM_BASE_CF68KLIB     0x4FE00000 /* last MB of 256MB - 1MB */
 #else
 #ifdef MCF547X
-#define RAM_BASE_CF68KLIB     0x1FF00000 /* last MB of 512MB */
+#define RAM_BASE_CF68KLIB     0x1FE00000 /* last MB of 512MB -1MB */
 #else /* MCF548X */
-#define RAM_BASE_CF68KLIB     0x03F00000 /* last MB of 64MB */
+#define RAM_BASE_CF68KLIB     0x03E00000 /* last MB of 64MB - 1MB */
 #endif /* MCF547X */
 #endif /* MCF5445X */
 #define ZONE_CF68KLIB         0x00010000
@@ -53,6 +53,7 @@
 #define old_cacr              RAM_BASE_CF68KLIB+0x45C // 4 bytes
 #define counter_1ms           RAM_BASE_CF68KLIB+0x460 // 4 bytes
 #define fire_engine_hw_rev    RAM_BASE_CF68KLIB+0x464 // 1 byte, for IDE test
+#define psg_save_port_a       RAM_BASE_CF68KLIB+0x465 // 1 byte
 // #define save_ide_registers    RAM_BASE_CF68KLIB+0x464 // 8 bytes
 #define old_access_error      RAM_BASE_CF68KLIB+0x46C // 4 bytes
 #define save_registers        RAM_BASE_CF68KLIB+0x470 // 60 bytes

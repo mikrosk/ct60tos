@@ -1,18 +1,27 @@
+#define RINFO_ONLY
 #include "../../radeon/radeonfb.h"
-#include <osbind.h>
-#include <sysvars.h>
+#include <mint/osbind.h>
+#include <mint/sysvars.h>
 #include <string.h>
 #include <pcixbios.h>
 #include <x86emu/x86emu.h>
+#include "../../include/pci_bios.h" /* for LITTLE_ENDIAN_LANE_SWAPPED */
 // #include "vgatables.h"
 
 #define USE_SDRAM
 
 #ifdef COLDFIRE
+#ifdef LITTLE_ENDIAN_LANE_SWAPPED /* PCI BIOS */
+#define DIRECT_ACCESS
+#endif
 #ifndef PCI_XBIOS
 #define PCI_XBIOS // else sometimes system is locked ???
 #endif
+#else /* !COLDFIRE */
+#ifdef LITTLE_ENDIAN_LANE_SWAPPED /* PCI BIOS */
+#define DIRECT_ACCESS
 #endif
+#endif /* COLDFIRE */
 
 #define MEM_WB(where, what) wrb(where, what)
 #define MEM_WW(where, what) wrw(where, what)
@@ -26,6 +35,11 @@
 #define PCI_RAM_IMAGE_START     0xD0000
 #define SYS_BIOS                0xF0000
 #define SIZE_EMU               0x100000
+
+#ifdef DIRECT_ACCESS
+extern u16 swap_short(u16 val);
+extern u32 swap_long(u32 val);
+#endif
 
 typedef struct
 {
@@ -65,11 +79,14 @@ struct pci_data
 };
 
 struct radeonfb_info *rinfo_biosemu;
-u32 config_address_reg;
 u16 offset_port;
+u32 offset_mem;
+static u32 offset_io;
+static u32 config_address_reg;
 
 extern int pcibios_handler();
 extern COOKIE *get_cookie(long id);
+extern short restart, os_magic;
 
 /* general software interrupt handler */
 u32 getIntVect(int num)
@@ -104,10 +121,14 @@ u8 inb(u16 port)
 #ifdef DEBUG_X86EMU_PCI
 		DPRINTVALHEX("inb(", port);
 #endif
-#ifdef PCI_XBIOS
-		val = fast_read_io_byte(rinfo_biosemu->handle,rinfo_biosemu->io_base_phys+(u32)port-(u32)offset_port);
+#ifdef DIRECT_ACCESS
+		val = *(u8 *)(offset_io+(u32)port);
 #else
-		val = Fast_read_io_byte(rinfo_biosemu->handle,rinfo_biosemu->io_base_phys+(u32)port-(u32)offset_port);
+#ifdef PCI_XBIOS
+		val = fast_read_io_byte(rinfo_biosemu->handle,offset_io+(u32)port);
+#else
+		val = Fast_read_io_byte(rinfo_biosemu->handle,offset_io+(u32)port);
+#endif
 #endif
 #ifdef DEBUG_X86EMU_PCI
 		DPRINTVALHEX(") = ", val);
@@ -125,10 +146,14 @@ u16 inw(u16 port)
 #ifdef DEBUG_X86EMU_PCI
 		DPRINTVALHEX("inw(", port);
 #endif
-#ifdef PCI_XBIOS
-		val = fast_read_io_word(rinfo_biosemu->handle,rinfo_biosemu->io_base_phys+(u32)port-(u32)offset_port);
+#ifdef DIRECT_ACCESS
+		val = swap_short(*(u16 *)(offset_io+(u32)port));
 #else
-		val = Fast_read_io_word(rinfo_biosemu->handle,rinfo_biosemu->io_base_phys+(u32)port-(u32)offset_port);
+#ifdef PCI_XBIOS
+		val = fast_read_io_word(rinfo_biosemu->handle,offset_io+(u32)port);
+#else
+		val = Fast_read_io_word(rinfo_biosemu->handle,offset_io+(u32)port);
+#endif
 #endif
 #ifdef DEBUG_X86EMU_PCI
 		DPRINTVALHEX(") = ", val);
@@ -146,10 +171,14 @@ u32 inl(u16 port)
 #ifdef DEBUG_X86EMU_PCI
 		DPRINTVALHEX("inl(", port);
 #endif
-#ifdef PCI_XBIOS
-		val = fast_read_io_longword(rinfo_biosemu->handle, rinfo_biosemu->io_base_phys+(u32)port-(u32)offset_port);
+#ifdef DIRECT_ACCESS
+		val = swap_long(*(u32 *)(offset_io+(u32)port));
 #else
-		val = Fast_read_io_longword(rinfo_biosemu->handle, rinfo_biosemu->io_base_phys+(u32)port-(u32)offset_port);
+#ifdef PCI_XBIOS
+		val = fast_read_io_longword(rinfo_biosemu->handle, offset_io+(u32)port);
+#else
+		val = Fast_read_io_longword(rinfo_biosemu->handle, offset_io+(u32)port);
+#endif
 #endif
 #ifdef DEBUG_X86EMU_PCI
 		DPRINTVALHEX(") = ", val);
@@ -197,10 +226,14 @@ void outb(u8 val, u16 port)
 		DPRINTVALHEX(") = ", val);
 		DPRINT("\r\n");
 #endif
-#ifdef PCI_XBIOS
-		write_io_byte(rinfo_biosemu->handle,rinfo_biosemu->io_base_phys+(u32)port-(u32)offset_port,(u16)val);
+#ifdef DIRECT_ACCESS
+		*(u8 *)(offset_io+(u32)port) = val;
 #else
-		Write_io_byte(rinfo_biosemu->handle,rinfo_biosemu->io_base_phys+(u32)port-(u32)offset_port,(u16)val);
+#ifdef PCI_XBIOS
+		write_io_byte(rinfo_biosemu->handle,offset_io+(u32)port,(u16)val);
+#else
+		Write_io_byte(rinfo_biosemu->handle,offset_io+(u32)port,(u16)val);
+#endif
 #endif
 	}
 }
@@ -214,25 +247,36 @@ void outw(u16 val, u16 port)
 		DPRINTVALHEX(") = ", val);
 		DPRINT("\r\n");
 #endif
-#if 0 // write_io_word sometimes lock the system on the Coldfire ????
-#ifdef PCI_XBIOS
-		write_io_word(rinfo_biosemu->handle,rinfo_biosemu->io_base_phys+(u32)port-(u32)offset_port,val);
+#ifdef DIRECT_ACCESS
+#ifndef COLDFIRE // write_io_word sometimes lock the system on the Coldfire ????
+		*(u16 *)(offset_io+(u32)port) = swap_short(val);
 #else
-		Write_io_word(rinfo_biosemu->handle,rinfo_biosemu->io_base_phys+(u32)port-(u32)offset_port,val);
-#endif
-#else
-#ifdef PCI_XBIOS
-		write_io_byte(rinfo_biosemu->handle,rinfo_biosemu->io_base_phys+(u32)port-(u32)offset_port,(u16)val & 0xFF);
+		*(u8 *)(offset_io+(u32)port) = val;
 		port++;
 		val>>=8;
-		write_io_byte(rinfo_biosemu->handle,rinfo_biosemu->io_base_phys+(u32)port-(u32)offset_port,(u16)val & 0xFF);	
+		*(u8 *)(offset_io+(u32)port) = val;
+#endif /* COLDFIRE */
+#else /* !DIRECT_ACCESS */
+#ifndef COLDFIRE // write_io_word sometimes lock the system on the Coldfire ????
+#ifdef PCI_XBIOS
+		write_io_word(rinfo_biosemu->handle,offset_io+(u32)port,val);
 #else
-		Write_io_byte(rinfo_biosemu->handle,rinfo_biosemu->io_base_phys+(u32)port-(u32)offset_port,(u16)val & 0xFF);
+		Write_io_word(rinfo_biosemu->handle,offset_io+(u32)port,val);
+#endif
+#else /* !COLDFIRE */
+#ifdef PCI_XBIOS
+		write_io_byte(rinfo_biosemu->handle,offset_io+(u32)port,(u16)val & 0xFF);
 		port++;
 		val>>=8;
-		Write_io_byte(rinfo_biosemu->handle,rinfo_biosemu->io_base_phys+(u32)port-(u32)offset_port,(u16)val & 0xFF);	
+		write_io_byte(rinfo_biosemu->handle,offset_io+(u32)port,(u16)val & 0xFF);	
+#else
+		Write_io_byte(rinfo_biosemu->handle,offset_io+(u32)port,(u16)val & 0xFF);
+		port++;
+		val>>=8;
+		Write_io_byte(rinfo_biosemu->handle,offset_io+(u32)port,(u16)val & 0xFF);	
 #endif
-#endif
+#endif /* COLDFIRE */
+#endif /* DIRECT_ACCESS */
 	}
 }
 
@@ -243,12 +287,15 @@ void outl(u32 val, u16 port)
 #ifdef DEBUG_X86EMU_PCI
 		DPRINTVALHEX("outl(", port);
 		DPRINTVALHEX(") = ", val);
-		DPRINT("\r\n");
 #endif
-#ifdef PCI_XBIOS
-		write_io_longword(rinfo_biosemu->handle,rinfo_biosemu->io_base_phys+(u32)port-(u32)offset_port,val);
+#ifdef DIRECT_ACCESS
+		*(u32 *)(offset_io+(u32)port) = swap_long(val);
 #else
-		Write_io_longword(rinfo_biosemu->handle,rinfo_biosemu->io_base_phys+(u32)port-(u32)offset_port,val);
+#ifdef PCI_XBIOS
+		write_io_longword(rinfo_biosemu->handle,offset_io+(u32)port,val);
+#else
+		Write_io_longword(rinfo_biosemu->handle,offset_io+(u32)port,val);
+#endif
 #endif
 	}
 	else if(port == 0xCF8)
@@ -256,7 +303,6 @@ void outl(u32 val, u16 port)
 #ifdef DEBUG_X86EMU_PCI
 		DPRINTVALHEX("outl(", port);
 		DPRINTVALHEX(") = ", val);
-		DPRINT("\r\n");
 #endif
 		config_address_reg = val;
 	}
@@ -269,7 +315,6 @@ void outl(u32 val, u16 port)
 #ifdef DEBUG_X86EMU_PCI
 			DPRINTVALHEX("outl(", port);
 			DPRINTVALHEX(") = ", val);
-			DPRINT("\r\n");
 #endif
 #ifdef PCI_XBIOS
 			write_config_longword(rinfo_biosemu->handle, config_address_reg & 0xFC, val);
@@ -278,6 +323,9 @@ void outl(u32 val, u16 port)
 #endif
 		}
 	}
+#ifdef DEBUG_X86EMU_PCI
+	DPRINT("\r\n");
+#endif
 }
 
 /* Interrupt multiplexer */
@@ -612,14 +660,30 @@ void run_bios(struct radeonfb_info *rinfo)
 	unsigned long addr;
 	unsigned short initialcs;
 	unsigned short initialip;
-	unsigned short devfn = (unsigned short)(rinfo->handle << 3); // dev->bus->secondary << 8 | dev->path.u.pci.devfn;
+	unsigned short devfn = (unsigned short)(rinfo->handle << 3); // was dev->bus->secondary << 8 | dev->path.u.pci.devfn;
 	X86EMU_intrFuncs intFuncs[256];
 
 	if((rinfo->mmio_base == NULL) || (rinfo->io_base == NULL))
 		return;
+#ifndef COLDFIRE
+	/* try to not init the board with thr X86 VGA BIOS, too long on CT60 (more than 10 seconds, 2 seconds on Coldfire) */
+	if(os_magic == 1)
+		return;
+	if(restart /* CTRL-ALT-DEL else 0 if reset */
+	 && (*memvalid == MEMVALID_MAGIC) && (*memval2 == MEMVAL2_MAGIC)
+	 && (*((unsigned long *) 0x51AL) == 0x5555AAAA)) /* memval3 */
+		return;
+#endif
 	rinfo_biosemu = rinfo;
 	config_address_reg = 0;
 	offset_port = 0x300;
+#ifdef DIRECT_ACCESS
+	offset_io = (u32)rinfo->io_base-(u32)offset_port;
+	offset_mem = (u32)rinfo->fb_base-0xA0000;
+#else
+	offset_io = rinfo->io_base_phys-(u32)offset_port;
+	offset_mem = rinfo->fb_base_phys-0xA0000;
+#endif
 	rom_header = (struct rom_header *)0;
 	do
 	{
@@ -633,11 +697,20 @@ void run_bios(struct radeonfb_info *rinfo)
 	rom_size = (unsigned long)BIOS_IN8((long)&rom_header->size) * 512;
 	if(PCI_CLASS_DISPLAY_VGA == BIOS_IN16((long)&rom_data->class_hi))
 	{
-#ifndef USE_SDRAM
+#ifdef USE_SDRAM
+#if 0
+		if(os_magic == 1)
+		{
+			biosmem = Mxalloc(SIZE_EMU, 3);
+			if(biosmem == 0)
+				return;
+		}
+#endif
+#else
 		biosmem = Mxalloc(SIZE_EMU, 0);
 		if(biosmem == 0)
 			return;
-#endif
+#endif /* USE_SDRAM */
 		memset((char *)biosmem, 0, SIZE_EMU);
 		setup_system_bios((char *)biosmem);
 		DPRINTVALHEX("Copying VGA ROM Image from ", (long)rinfo->bios_seg+(long)rom_header);
@@ -693,11 +766,20 @@ void run_bios(struct radeonfb_info *rinfo)
 	}
 	else
 	{
-#ifndef USE_SDRAM
+#ifdef USE_SDRAM
+#if 0
+		if(os_magic == 1)
+		{
+			biosmem = Mxalloc(SIZE_EMU, 3);
+			if(biosmem == 0)
+				return;
+		}
+#endif
+#else
 		biosmem = Mxalloc(SIZE_EMU, 0);
 		if(biosmem == 0)
 			return;
-#endif
+#endif /* USE_SDRAM */
 		setup_system_bios((char *)biosmem);
 		memset((char *)biosmem, 0, SIZE_EMU);
 		DPRINTVALHEX("Copying non-VGA ROM Image from ", (long)rinfo->bios_seg+(long)rom_header);
@@ -759,8 +841,16 @@ void run_bios(struct radeonfb_info *rinfo)
 	*vblsem = 1;
 	DPRINT("X86EMU halted\r\n");
 //	biosfn_set_video_mode(0x13); /* 320 x 200 x 256 colors */
-#ifndef USE_SDRAM
+#ifdef USE_SDRAM
+#if 0
+	if(os_magic == 1)
+	{
+		memset((char *)biosmem, 0, SIZE_EMU);
+		Mfree(biosmem);
+	}
+#endif
+#else
 	memset((char *)biosmem, 0, SIZE_EMU);
 	Mfree(biosmem);
-#endif
+#endif /* USE_SDRAM */
 }

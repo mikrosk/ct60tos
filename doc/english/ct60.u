@@ -4,7 +4,7 @@
 !title   Documentation of the
 !programimage ..\img\ct60.img
 !program CT60
-!version Version 1.04
+!version Version 2.00
 !date    (!today)
 !author  Didier MEQUIGNON
 !street  25, rue de l'Ascenseur
@@ -49,8 +49,8 @@ Don't send your Falcon at the retirement !
 
 !begin_itemize
 
-!item SOCKETED 060 FULL(COPRO & PMMU) or LC (NO COPRO) or EC(NO COPRO & 
-PMMU) at 66 MHz (mask 1F43G) or 100 MHz (mask 1E41J).  
+!item SOCKETED 060 FULL(COPRO & PMMU) or LC (NO COPRO) at 66 MHz (mask 
+1F43G) or 100 MHz (mask 1E41J).  
 
 !item Bus CT60 at 66 MHz or 100 MHz (SDRAM & 060 BUS accesses).
 
@@ -83,9 +83,11 @@ DSP & VIDEL at 40 MHz, Bus at 20 MHz.
 With its FULL (FL) version, the 68060, like the 68040, integrates a FPU 
 (Coprocessor) that is really more powerfull than the old 68882. 
 
-With the LC version, the 060 has no FPU.
+With the LC version, the 060 has no FPU, this processor is not supported 
+since the boot 2.00.
 
-With the EC version, the 060 has no FPU and no PMMU.
+With the EC version, the 060 has no FPU and no PMMU, this processor is not
+supported since the boot 2.00.
 
 The 060 is a dream and the first reason is its wonderfull computing power 
 regarding the previous ones in the 68K familly : 
@@ -119,6 +121,7 @@ performances are clear :
 !begin_table [|l|l|l|l|l|l|] !hline
 PRODUCT        !! BUS      !! RAM   !! READ       !! WRITE     !! FACTOR
 !hline
+CT60-95-CTPCI  !!  95 MHz  !! SDRAM !!  92.9 Mo/s !!  91.6 Mo/S !! 20.4 - 16.6
 CT60-100       !! 100 MHz  !! SDRAM !! 104.4 MB/s !! 102.8 MB/s !! 22.9 - 18.7
 CT60           !! 66 MHz   !! SDRAM !!  73.8 MB/s !!  72.6 MB/s !! 16.2 - 13.2
 HADES60 FPM    !! 29.5 MHz !! FPM   !!  43.0 MB/s !!  33.5 MB/s !! 9.5 - 6.1
@@ -134,7 +137,7 @@ FALCON(VGA16c) !! 16 MHz   !! FPM   !!  4.55 MB/s !!  5.5 MB/s  !! 1.00 - 1.00
 !hline
 !end_table
 
-(MB=MegaBytes) - ALL TESTS REALIZED WITH NEMBENCH 2.1
+(MB=MegaBytes) - ALL TESTS REALIZED WITH NEMBENCH 2.1 in 2003 and 2010 for the CTPCI
 
 
 !subnode Overclocking the FALCON mainboard !
@@ -455,28 +458,21 @@ Synoptic
 
 !item CLK2 and CLK 3 are disabled.
  
-!item CLK5 and CLK6 can be used for DSP or VIDEL clock, but there are 
-always a link with the CT60 clock like this : 
+!item CLK5 and CLK6 can be used for a user clock, but there are always 
+a link with the CT60 clock with a divider from 2 to 6, excepted for a 
+frequency <= 66 MHz : 
 
 !end_itemize
 
 !begin_table [|c|c|c|] !hline
-CT60 clock (MHz) !! CLK5/6 (MHz) !! Factor
+CT60 clock (MHz) !! CLK5/6 (MHz) !! Divider
 !hline
-     50.000      !!   50.000     !!  2/2
-     51.000      !!   51.000     !!  2/2
+      50.000     !!   25.000     !!  /2
+      66.000     !!   33.000     !!  /2
 !hline         
-     51.125      !!   34.083     !!  2/3
-     60.000      !!   40.000     !!  2/3
-     66.625      !!   44.416     !!  2/3
-     75.000      !!   50.000     !!  2/3
-     77.000      !!   51.333     !!  2/3
-!hline
-     77.125      !!   38.562     !!  2/4
-     80.000      !!   40.000     !!  2/4
-     90.000      !!   45.000     !!  2/4
-    100.000      !!   50.000     !!  2/4
-    110.000      !!   55.000     !!  2/4
+      66.600     !!   16.650     !!  /4
+      66.000     !!   33.000     !!  /2
+      99.000     !!   33.000     !!  /3
 !hline
 !end_table
 
@@ -573,21 +569,25 @@ Synoptic
 at 1 the clock is between 33 and 66 MHz (strap cut). If the CTRL0 input 
 is at 0 the clock is between 66 and 110 MHz (strap put).
 
-!item OUT1 can be used for VIDEL clock, but there are always a link with 
-the CT60 clock like this : 
+(!B)WARNING! The boot 2.0 not support this jumper because the CTCM clock 
+is not stable (no PLL) and it's impossible to read the state of the jumper.(!b)
+So the frequency range is 66 to 110 MHz (the DALLAS used on the CTCM isn't 
+certified for work below 66 MHz).
+
+!item OUT1 can be used for user clock, but there are always a link with 
+the CT60 clock with a divider from 2 to 6, excepted for a frequency <= 66 
+MHz : 
 
 !end_itemize
 
 !begin_table [|c|c|c|] !hline
-CT60 clock (MHz) !! OUT1 (MHz) !! Factor
+CT60 clock (MHz) !! OUT1 (MHz) !! Divider
 !hline
-      50.000      !!   50.000    !!  /1
-      51.000      !!   51.000    !!  /1
+      66.000     !!   33.000   !!  /2
 !hline         
-      51.050      !!   25.025    !!  /2
-      66.600      !!   33.300    !!  /2
-     100.000      !!   50.000    !!  /2
-     110.000      !!   55.000    !!  /2
+      66.600     !!   16.650   !!  /4
+      66.000     !!   33.000   !!  /2
+      99.000     !!   33.000   !!  /3
 !hline
 !end_table
 
@@ -614,14 +614,18 @@ For the frequency to 100 MHz, you must fix the CT60 clock (look at
 
 !subnode Technical
 
-This is a TOS 4.04 patched, in this order there are :
+This is a TOS 4.04 patched by the boot (2.0+), in this order there are :
 
 !begin_itemize
 !item The validation of the superscalar dispatcher on the 68060 (PCR).
 !item The initialization of the translation registers (on all 68060's 
 types), the first zone mapped to 0 at $7FFFFFFF in copyback excepted for 
 the zone mapped to 0 … $FFFFFF in writethrough, and the second zone mapped 
-to $80000000 at $FFFFFFFF in cache inhibed.  
+to $40000000 at $FFFFFFFF in cache inhibed. 
+!item The reading and the display of the SDRAM's type from his EEPROM. 
+!item The copy of the TOS in SDRAM after apply the patches.
+!item The initialization of the PMMU tree. All the ST-RAM is in 
+writethrough and the SDRAM declaration in copyback.
 !item The installation of the cookies '_CPU', '_FPU', 'CT60', and also 
 '_FRQ' (internal clock) and '_FRE' (external clock) if the videl need to 
 use an external 32 MHz clock for RGB monitors. The CT60 cookie can return 
@@ -638,13 +642,9 @@ logo copied at the top of the ST-RAM (needed if the TOS in ROM is a 4.02).
 !item The picture in 65K colors displayed during 2 seconds.
 !item Check and fix the modecode get from NVM.
 !item Check and set the serial programmable clock (I2C port).
+!item Start the PCI BIOS and the drivers (if drivers.hex is loaded).
 !item The display of the 68060's type (revision, mask and frequency).
 !item The modification of PCR for the bugged types revision 1.
-!item The reading and the display of the SDRAM's type from his EEPROM. 
-!item The initialization of the PMMU tree (excepted for 68060 EC or LC), 
-and the possible creation of the 'PMMU' cookie. All the ST-RAM is in 
-writethrough and the SDRAM declaration in copyback.
-!item The possible copy of the TOS in SDRAM (excepted for 68060 EC or LC). 
 !item The declaration of the SDRAM to the TOS.
 !item The initialization of the SDRAM, and the MB/s during writing 
 displayed.
@@ -829,29 +829,14 @@ IF YOU RUN IT, YOU DO SO AT YOUR OWN RISK!
 ELSE NOT USE -V.
 !end_verbatim
 
+If the Radeon/CTPCI are used, it is possible to avoid that the kernel use 
+the Videl, for example with bootargs :
 
-!subnode 68060 EC
+-V 0x4303 -k vmlinuz root=/dev/hda9 video=atafb:external:1920;1080;8;p;0x40000000 
 
-In spite of the PMMU (Memory Management Unit) removed, the performances 
-are equal, this is the differences from the TOS :
-
-!begin_itemize
-!item The memory zone of the FLACON's motherboard is declared with a 
-cache in writethrough (0 to $FFFFFF, bus on 24 bits), therefore the ST-RAM.
-!item The memory zone at $80000000 to $FFFFFFFF is without cache, therefore 
-the input/output, excepted the cartrige port (in $00FAxxxx - $00FBxxxx) !
-!item The memory zone at $01000000 to $7FFFFFFF is declared with a cache 
-in copyback, therefore the SDRAM (see also the part 'Cache').
-!item The 'PMMU' cookie not exist.
-!item The are no emulation of unimplementated FPU instructions.
-!item There are no 'Selection TOS in RAM'. 
-!end_itemize
-
-
-!subnode 68060 LC
-
-It's impossible to found difference between a 68060 LC and a 68060 EC, 
-so for the moment a 68060 LC is used like an EC.
+0x4303 is the modecode for the Radeon driver (Vsetscreen) used inside Ataboot.
+external is here for the send infos to the kernel (0x40000000 isthe screen address,
+'p' for packed pixels, 't' for true color).
 
 
 !subnode SDRAM identification
@@ -876,9 +861,6 @@ delay at boot to 60 seconds.
 !item Switch off the computer.
 !item Set the turbo mode.
 !item Set the power to on.
-!item When you see the picture during the boot, press in the same time on 
-CTRL and left SHIFT keys, this is for effect to start the machine without 
-PMMU tree in SDRAM (like a 68060 EC).
 !item After the SDRAM initialization (to 0), begin the ST-RAM test and 
 after the TT-RAM test (the SDRAM here), if the 'X' characters replaces 
 the '-' characters, the SDRAM is defective.  
@@ -910,6 +892,11 @@ Abnormal termination in this tests may result in lost data :
 !item IDE.
 !item SCSI.
 !end_itemize
+
+(!U)
+If you have a CTPCI and you have loaded drivers.hex, the diagnostics are 
+not available.
+(!u)
 
 
 !subnode Main Keys
@@ -1446,10 +1433,20 @@ EE SDRAM refresh rate error. This SDRAM not works on the CT60.
 
 !end_verbatim
 
-The main task of this program is to put TOS binary (.BIN) files inside 
-the flash. It's also possible to update the flash with the 68060 (turbo 
-mode), but in this case it's better to choice the 'Selection TOS in RAM' 
-(risk of crash when this option isn't actived).
+The main task of this program is to put TOS binary (.BIN) or Srecord files
+(.HEX) inside the flash. It's also possible to update the flash with the 
+68060 (turbo mode).
+
+Since the BOOT v2.0, it's possible to load separate files for the TOS404, the 
+BOOT and the PCI drivers for the CTPCI:
+!begin_itemize
+!item CT60TOS.BIN: contains BOOT + TOS404 + Atari Diagnostics (must disappear).
+!item BOOT.HEX: contains the BOOT.
+!item DIAG.HEX: contains the Atari Diagnostics.
+!item DRIVERS.HEX: contains the PCI drivers (GPL licence, overwrites DIAG.HEX).
+!item TOS404.BIN (not in the archive): just for put the TOS in flash, in the 
+case of CT60TOS.BIN isn't used.
+!end_itemize
 
 !image ..\img\flash2.img
 !begin_verbatim
@@ -1457,7 +1454,7 @@ mode), but in this case it's better to choice the 'Selection TOS in RAM'
 !end_verbatim
 
 The second task is to update the CT60 hardware with two jedec files (.JED) 
-for ABE60 and SDR60 chips (XILINX XC95144XL CPLD). 
+for ABE60, SDR60 and CTPCI chips (XILINX XC95144XL / XC95288XL CPLD). 
 
 !begin_itemize
 
@@ -1572,6 +1569,8 @@ For check the temperature and use curves, the CPX :
 !item Under MagiC start a thread.
 !end_itemize
 
+Note: On the CT63, the temperature level is to 0 (hardware wired by Rodolphe).
+
 
 !subnode Average load
 
@@ -1645,6 +1644,8 @@ microprocessor (BogoMips).
 
 !item If necessary change the CT60 frequency.
 
+!item If necessary change the user clock divider from 2 to 6.
+
 !item If necessary see the speed of the fan or the pump (if watercooling) 
 with a 3 wires connector :
 
@@ -1669,10 +1670,12 @@ or a DS1085Z-50 must be connected on the CT60's I2C port with some wires
 
 The adjustment works by step of 125 KHz between 50 and 110 MHz for the 
 CY27EE16 (ak-modul-bus module), or by step of 50 KHz between 66 and 110 
-MHz for the DS1085Z-50 (CTCM module), the value is writed in RAM for a 
-test after 'OK'. The TOS during the boot when the Atari logo arrive send 
+MHz for the DALLAS DS1085Z-50 (CTCM module), the value is writed in RAM for 
+a test after 'OK'. The TOS during the boot when the Atari logo arrive send 
 equally this value to the clock, but in case of a problem it's possible to 
 bypass this feature and use the original frequency by press CTRL or ALT.
+
+A user clock is available, this is the CT60 frequency divided from 2 to 6.
 
 (!U)
 ATTENTION !
@@ -1718,6 +1721,11 @@ Like the (!B) ak-modul-bus module (!b), the last solution is to connect
 the (!B) CTCM module (!b) on the MODEM 2 port with a link HE10 SUBD and 
 reprogram in 030 mode the EEPROM of the module with the 'Save' button.
 
+(!B)WARNING! The boot 2.0 not support this jumper because the CTCM clock 
+is not stable (no PLL) and it's impossible to read the state of the jumper.(!b)
+So the frequency range is 66 to 110 MHz (the DALLAS used on the CTCM isn't 
+certified for work below 66 MHz).
+
 !image ..\img\modem2.img
 !begin_verbatim
 
@@ -1741,14 +1749,20 @@ At this page you can :
 !item Set the delay at boot in secondes (you need lot of time if you want test the 
 ST-RAM and the SDRAM).
 !item Change the speed of the blitter.
-!item Set the transfer of TOS 4.0x in RAM with using of the PMMU.
+!item Set the transfer of TOS 4.0x in RAM with using of the PMMU (obsolete).
 !item Under TOS, remove the caches during 5 seconds when a program is 
 started or remove the copyback alert box. 
 !item Redirect displays of the AUTO folder's programs to a file boot.log.
+!item With a Radeon/CTPCI get a debug file video.log:
+!image ..\img\cpx4_pci.img
+!item With a CTPCI swap the two IDE ports (CTPCI and FALCON).
 !end_itemize
 
 
-!subsubnode Selection TOS in RAM 
+!subsubnode Selection TOS in RAM (obsolete)
+
+(!B)This option is only available with the boot version is less than 2.00.(!b)
+Since this version the boot run the patches on the TOS and copy it in SDRAM.
 
 When this option is set, the TOS is copied in SDRAM $E00000 to 
 $EEFFFF (the last sector of the flash $EE0000 to $EFFFFF is used for 
@@ -1818,6 +1832,35 @@ At this page you can :
 IKBD clock instead of the RTC. This feature is for fix NVM problems caused 
 by a battery failure.
 !end_itemize
+
+!image ..\img\cpx7_pci.img
+!begin_verbatim
+
+!end_verbatim
+
+If the vid‚o display use the Radeon/CTPCI you can :
+
+!begin_itemize
+!item Select at boot the screen resolution, if the prefered video mode is 
+found on the monitor, the mode added to the list.
+!item Select at boot the numbers of colors (256/65K/16M).
+!item Select at boot the monitor layout (MON.1,MON.2) :
+!begin_itemize
+!item DEFAULT (automatic mode)
+!item CRT,NONE
+!item CRT,CRT
+!item CRT,TMDS
+!item TMDS,CRT
+!item TMDS,TMDS
+!end_itemize
+!item Select using DMA for boost display (WARNING! Actually sometimes this 
+option can freeze your system - hardware bug).
+!item Replace the NVRAM reading by TOS values saved in the Flash and use the 
+IKBD clock instead of the RTC. This feature is for fix NVM problems caused 
+by a battery failure.
+!end_itemize
+
+Note that the Radeon/CTPCI mode not overwrite tthe Videl mode.
 
 
 !subnode CT60TEMP.APP
@@ -2047,7 +2090,10 @@ You must use the Centek MAGIC.RAM patch (with MAGIC_P.PRG) before use
 MagiC. 
 
 You need to install CT60XBIO.PRG and DSPXBIOS.PRG inside the AUTO 
-folder. 
+folder.
+
+If you have the Radeon/CTPCI and drivers.hex loaded, the VDI and the XBIOS 
+of the TOS are used for the display.
 
 
 !subnode Solutions
@@ -2055,8 +2101,12 @@ folder.
 !begin_table [|l|l|l|] !hline
 (!B)Software(!b) !! (!B)Problem(!b)   !! (!B)Solution(!b)
 !hline
-Cartrige port    !! Not works         !! Buy a full 68060.
+Boot >= 2.00     !! Not works         !! Buy a full 68060.
 and 68060 EC     !!                   !! 
+!hline
+TOS drivers      !! Delay too long    !! The 15-20 seconds added 
+Radeon/CTPCI     !! for booting       !! are for initialize the 
+                 !!                   !! board with an X86 emulator.
 !hline
 HD Driver 8 and  !! Crashes with      !! Update the ABE060 chip 
 SCSI drive or    !! "SCSI Processor   !! to v5K or more.
@@ -2066,11 +2116,27 @@ HD Driver 8 and  !! Problems when the !! Update HD Driver (8.13 or more).
 IO7 MFP 1 bug    !! SDMA runs with    !!
                  !! D2D programs      !!
 !hline
-MagiC            !! Not works         !! Patch MAGIC.RAM and use the
+SpeedoGDOS 5     !! Crashes           !! Use the launcher SPDGDOS.PRG
+                 !!                   !! who disable the caches during
+                 !!                   !! exec of the real SPDGDOS.PRG.
+!hline
+SpeedoGDOS 5     !! Not stable        !! Use NVDI.
+!hline
+fVDI/radeon.sys  !! Slower than TOS   !! Use NVDI.
+!hline
+fVDI/radeon.sys  !! Filling not works !! v_contourfill not implemented
+                 !! with graphics app !! inside fVDI. Use NVDI.
+!hline
+NVDI 5           !! Not works on      !! Rename all NVDIDRV*.SYS to
+                 !! Radeon/CTPCI      !! NVDIDRV*.SY (for example). 
+!hline
+MagiC 6          !! Not works         !! Patch MAGIC.RAM and use the
                  !!                   !! new MAGXBOOT.PRG.
                  !!                   !! Install CT60XBIO.PRG and 
                  !!                   !! DSPXBIOS.PRG inside the AUTO 
                  !!                   !! folder after MAGXBOOT.PRG.
+!hline
+MagiC 3-4-5      !! Ne fonctionne pas !! Use MagiC 6.
 !hline
 Cubase Audio     !! Not works         !! Patch CAF_20x.PRG unpacked by
                  !!                   !! NEW DEPACK and use the new
@@ -2115,6 +2181,21 @@ Ethernec     !! Slow and/or     !! Install CT60 drivers (without movep).
 Eclipse      !! Not works       !! Cut the trace between pins 20 and 22.
              !!                 !! Update the ABE060 chip to v5I or more.
              !!                 !! Try only at 16/32 MHz.
+!hline
+CTPCI        !! Not works       !! Update the ABE/SDR060 chip to v7 or more. 
+!hline
+CTPCI        !! No PCI board    !! Ckeck 3V3 and the 2x80 wires ribbon.
+             !! detected        !! 
+!hline
+CTPCI        !! Parity erreur   !! Reduce the length of the 2x80 wires ribbon.
+             !!                 !! Contact Rodolphe.
+!hline
+CTPCI        !! USB / Network   !! Wait an hardware update from Rodolphe.
+             !! PCI boards not  !!
+             !! works           !!
+!hline
+Radeon       !! Not works        !! Use a Radeon for PC. TOS use an X86 emulator
+for MAC      !!                  !! for initialize the board.
 !hline
 !end_table
 
@@ -3312,11 +3393,13 @@ Pin Card !! Signal !! Comment
 !subnode TOS Keyboard shortcuts
 
 !begin_verbatim
-CTRL:          Boot without AUTO folder and ACC.
-ALT:           Remove cache if pressed before the SDRAM init.
+CTRL:          If pressed before the Atari logo, jump the initialization
+               of the clock generator (CTCM) et le bios PCI (CTPCI).
+               Boot without AUTO folder and ACC.
+ALT:           If pressed before the Atari logo, jump the initialization
+               of the clock generator (CTCM) et le bios PCI (CTPCI).
+               Remove cache if pressed before the SDRAM init.
                Boot without disk if pressed after.
-CTRL-SHIFL:    Boot without PMMU tree like a 68060 EC if pressed before 
-               the Atari logo.
 SHIFTL-SHIFTR: Boot without SDRAM if pressed before the Atari logo.
 SHIFTL:        Displays infos about the SDRAM module.
 CTRL-ALT-UNDO: NVM and Flash Parameters init if pressed during the memory 
@@ -3324,7 +3407,7 @@ CTRL-ALT-UNDO: NVM and Flash Parameters init if pressed during the memory
                60 seconds with the configuration CPX. 
 CTRL-ALT-
 SHIFTL-SHIFTR: Start the Atari Diagnostics if pressed before the Atari 
-               logo.  
+               logo (if not overwrited by drivers.hex).  
 !end_verbatim
 
 
@@ -3335,10 +3418,6 @@ Hardware :
 Rodolphe CZUBA
 rodolphe.czuba@free.fr
 http://www.czuba-tech.com
-
-Flash ttp, system :
-Xavier JOUBERT
-xavier.joubert@free.fr
 
 Flash Tool, Configuration, and system :
 Didier MEQUIGNON

@@ -36,6 +36,7 @@ short time;
 /* the address of the vector in TOS vars */
 #define etv_timer	(((void (**)()) 0x400L))
 
+
 /*
  * private declarations
  */
@@ -75,7 +76,7 @@ long    xsetdate(short d)
 {
     short curmo, day;
     long time;
-
+    
     curmo = ((d >> 5) & 0x0F);
     day = d & DAY_BM;
 
@@ -158,8 +159,14 @@ long    xsettime(short t)
 
 void time_init(void)
 {
-    Settime(((long)date << 16) + ((long)time & 0xFFFF));
-    
+
+#if 1
+		xgetdate();
+		xgettime();
+#else
+    Settime(((long)date << 16) + ((long)time & 0xFFFF)); /* why ??? */
+#endif
+
     *etv_timer = tikfrk;
 }
 

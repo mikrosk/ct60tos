@@ -68,8 +68,9 @@
 	(OUTREG(SURFACE_CNTL, __surface_cntl));
 
 /* Set cursor foreground and background colors */
-void RADEONSetCursorColors(struct radeonfb_info *rinfo, int bg, int fg)
+void RADEONSetCursorColors(struct fb_info *info, int bg, int fg)
 {
+	struct radeonfb_info *rinfo = info->par;
 	unsigned long *pixels = (unsigned long *)(pointer)((unsigned long)rinfo->fb_base+rinfo->cursor_start);
 	int pixel, i;
 	CURSOR_SWAPPING_DECL_MMIO
@@ -97,9 +98,9 @@ void RADEONSetCursorColors(struct radeonfb_info *rinfo, int bg, int fg)
 /* Set cursor position to (x,y) with offset into cursor bitmap at
  * (xorigin,yorigin)
  */
-void RADEONSetCursorPosition(struct radeonfb_info *rinfo, int x, int y)
+void RADEONSetCursorPosition(struct fb_info *info, int x, int y)
 {
-	struct fb_info *info = rinfo->info;
+	struct radeonfb_info *rinfo = info->par;
 	struct fb_var_screeninfo *mode = &info->var;
 	int xorigin = 0;
 	int yorigin = 0;
@@ -126,11 +127,12 @@ void RADEONSetCursorPosition(struct radeonfb_info *rinfo, int x, int y)
 /* Copy cursor image from `image' to video memory.  RADEONSetCursorPosition
  * will be called after this, so we can ignore xorigin and yorigin.
  */
-void RADEONLoadCursorImage(struct radeonfb_info *rinfo, unsigned short *mask, unsigned short *data, int zoom)
+void RADEONLoadCursorImage(struct fb_info *info, unsigned short *mask, unsigned short *data, int zoom)
 {
+	struct radeonfb_info *rinfo = info->par;
 	unsigned long *d = (unsigned long *)(pointer)((unsigned long)rinfo->fb_base+rinfo->cursor_start);
 	unsigned long save = 0;
-	unsigned short chunk,mchunk;
+	unsigned short chunk, mchunk;
 	unsigned long i, j, k;
 	CURSOR_SWAPPING_DECL
 //	DPRINTVALHEX("radeonfb: RADEONLoadCursorImage: cursor_start ",rinfo->cursor_start);
@@ -269,26 +271,29 @@ void RADEONLoadCursorImage(struct radeonfb_info *rinfo, unsigned short *mask, un
 }
 
 /* Hide hardware cursor. */
-void RADEONHideCursor(struct radeonfb_info *rinfo)
+void RADEONHideCursor(struct fb_info *info)
 {
+	struct radeonfb_info *rinfo = info->par;
 //	DPRINT("radeonfb: RADEONHideCursor\r\n");
 	OUTREGP(CRTC_GEN_CNTL, 0, ~CRTC_CUR_EN);
 	rinfo->cursor_show = 0;
 }
 
 /* Show hardware cursor. */
-void RADEONShowCursor(struct radeonfb_info *rinfo)
+void RADEONShowCursor(struct fb_info *info)
 {
+	struct radeonfb_info *rinfo = info->par;
 //	DPRINT("radeonfb: RADEONShowCursor\r\n");
 	OUTREGP(CRTC_GEN_CNTL, CRTC_CUR_EN, ~CRTC_CUR_EN);
 	rinfo->cursor_show = 1;
 }
 
 /* Initialize hardware cursor support. */
-long RADEONCursorInit(struct radeonfb_info *rinfo)
+long RADEONCursorInit(struct fb_info *info)
 {
+	struct radeonfb_info *rinfo = info->par;
 	int size_bytes = CURSOR_WIDTH * 4 * CURSOR_HEIGHT;
-	unsigned long fbarea = radeon_offscreen_alloc(rinfo, size_bytes+256);
+	unsigned long fbarea = offscreen_alloc(rinfo->info, size_bytes+256);
 //	DPRINTVALHEX("radeonfb: RADEONCursorInit: fbarea ",fbarea);
 	if(!fbarea)
 		rinfo->cursor_start = 0;

@@ -1,0 +1,2 @@
+SPDGDOS.PRG disable the caches, start the original C:\GDOS\SPDGDOS.PRG, 
+and enable the caches

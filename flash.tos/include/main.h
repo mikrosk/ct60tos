@@ -1,33 +1,22 @@
-/*  CT60 board
- *  Copyright (C) 2000 Xavier Joubert
- *
- *  This program is free software; you can redistribute it and/or modify
- *  it under the terms of the GNU General Public License as published by
- *  the Free Software Foundation; either version 2 of the License, or
- *  (at your option) any later version.
- *
- *  This program is distributed in the hope that it will be useful,
- *  but WITHOUT ANY WARRANTY; without even the implied warranty of
- *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- *  GNU General Public License for more details.
- *
- *  You should have received a copy of the GNU General Public License
- *  along with this program; if not, write to the Free Software
- *  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
- *
- *
- *  To contact author write to Xavier Joubert, 5 Cour aux Chais, 44 100 Nantes,
- *  FRANCE or by e-mail to xavier.joubert@free.fr.
- *
- */
+/* CT60 / Coldfire board(s) Flash size
+*
+*  This program is free software; you can redistribute it and/or modify
+*  it under the terms of the GNU General Public License as published by
+*  the Free Software Foundation; either version 2 of the License, or
+*  (at your option) any later version.
+*
+*  This program is distributed in the hope that it will be useful,
+*  but WITHOUT ANY WARRANTY; without even the implied warranty of
+*  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+*  GNU General Public License for more details.
+*
+*  You should have received a copy of the GNU General Public License
+*  along with this program; if not, write to the Free Software
+*  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+*/
 
 #ifndef	_MAIN_H
 #define	_MAIN_H	1
-
-#define RESERVE_MEM_FONTS  0x8000
-#ifndef COLDFIRE
-#define RESERVE_MEM       0x60000
-#endif
 
 #ifdef COLDFIRE
 
@@ -38,7 +27,7 @@
 
 #else
 
-#ifdef MCF5474X /* COLDARI */
+#ifdef MCF5474X /* FIREBEE */
 
 #define PARAM_SIZE  (64*1024)
 #define FLASH_SIZE  0x00100000

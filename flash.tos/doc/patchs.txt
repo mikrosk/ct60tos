@@ -1,7 +1,7 @@
 CT60 Patch file list (tos directory)
 ====================================
 
-sdram.S
+boot2.S
 -------
 . Validation of the superscalar dispatcher on the 68060 (PCR).
 . Initialization of the translation registers (on all 68060 types):
@@ -40,7 +40,7 @@ vector.S, vectors2.S (fpsp.S, isp.S)
 ------------------------------------
 . Emulation of unimplemented instructions (integers and FPU).
 
-boot.S, sdram.S
+boot.S, boot2.S
 ---------------
 . Boot order patch for IDE and SCSI drives.
 

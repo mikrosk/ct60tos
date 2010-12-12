@@ -16,12 +16,12 @@
 *********************************************************************/
 
 /* Register read/write macros */
-#define MCF_I2C_I2AR     (*(vuint8 *)(void*)(&__MBAR[0x008F00]))
-#define MCF_I2C_I2FDR    (*(vuint8 *)(void*)(&__MBAR[0x008F04]))
-#define MCF_I2C_I2CR     (*(vuint8 *)(void*)(&__MBAR[0x008F08]))
-#define MCF_I2C_I2SR     (*(vuint8 *)(void*)(&__MBAR[0x008F0C]))
-#define MCF_I2C_I2DR     (*(vuint8 *)(void*)(&__MBAR[0x008F10]))
-#define MCF_I2C_I2ICR    (*(vuint8 *)(void*)(&__MBAR[0x008F20]))
+#define MCF_I2C_I2AR     (__MBAR + 0x008F00)
+#define MCF_I2C_I2FDR    (__MBAR + 0x008F04)
+#define MCF_I2C_I2CR     (__MBAR + 0x008F08)
+#define MCF_I2C_I2SR     (__MBAR + 0x008F0C)
+#define MCF_I2C_I2DR     (__MBAR + 0x008F10)
+#define MCF_I2C_I2ICR    (__MBAR + 0x008F20)
 
 /* Bit definitions and macros for MCF_I2C_I2AR */
 #define MCF_I2C_I2AR_ADR(x)    (((x)&0x7F)<<1)

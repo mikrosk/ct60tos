@@ -16,11 +16,12 @@
  * and such are added to the fVDI kernel.
  */
 
-#include <osbind.h>
+#include <mint/osbind.h>
+#include <string.h>
 #include "fvdi.h"
 #include "driver.h"
 #include "relocate.h"
-#include "../../radeon/radeonfb.h"
+#include "fb.h"
 
 
 #define MAX_PALETTE	256
@@ -109,7 +110,7 @@ Device device;
 
 short *loaded_palette;
 
-static char tos_colours[] = {0, 255, 1, 2, 4, 6, 3, 5, 7, 8, 9, 10, 12, 14, 11, 13};
+static unsigned char tos_colours[] = {0, 255, 1, 2, 4, 6, 3, 5, 7, 8, 9, 10, 12, 14, 11, 13};
 
 char err_msg[80];
 
@@ -208,7 +209,7 @@ void setup_scrninfo(Device *device, Mode *graphics_mode)
 		device->colours = (1L << graphics_mode->bpp) & 0xffff;
 
 		for(i = 0; i < sizeof(tos_colours); i++)
-			device->scrmap.vdi2pix[i] = tos_colours[i];
+			device->scrmap.vdi2pix[i] = (unsigned short)tos_colours[i];
 		if (graphics_mode->bpp == 8) {
 			for(; i < 255; i++)
 				device->scrmap.vdi2pix[i] = i;
@@ -234,6 +235,11 @@ long CDECL init(Access *_access, Driver *driver, Virtual *vwk, char *opts)
 	Virtual *default_vwk = 0;
 	Workstation *default_wk = 0;
 	Colour *default_palette = 0;
+	if(((unsigned long)init < 0xE00000UL) || ((unsigned long)init >= 0x1000000UL)) /* not from ROM */
+	{
+		extern char _bss_start[], _end[];
+		memset(_bss_start, 0, (int)(_end - _bss_start)); /* bss zone not cleared by fVDI */
+	}
 	
 	access = _access;
 
@@ -284,10 +290,13 @@ long CDECL init(Access *_access, Driver *driver, Virtual *vwk, char *opts)
 	 * if it can be of use to the driver.
 	 */
 
-	if (graphics_mode->flags & CHECK_PREVIOUS) {
+	if (graphics_mode && (graphics_mode->flags & CHECK_PREVIOUS)) {
 		check_linea(wk);		/* Sets linea/wrap/width/height/bitplanes */
 
-		wk->screen.palette.size = Min(1L << wk->screen.mfdb.bitplanes, MAX_PALETTE);
+		if(wk->screen.mfdb.bitplanes == 32)
+			wk->screen.palette.size = MAX_PALETTE;
+		else
+			wk->screen.palette.size = Min(1L << wk->screen.mfdb.bitplanes, MAX_PALETTE);
 		wk->screen.mfdb.address = (void *)Physbase();
 		wk->screen.mfdb.wdwidth = wk->screen.mfdb.width / 16;
 #if 0
@@ -440,7 +449,6 @@ long CDECL init(Access *_access, Driver *driver, Virtual *vwk, char *opts)
 		}
 	}
 
-
 	/*
 	 * Initialize colour number to mask conversion table
 	 * if it's needed (that is, for bitplane modes).
@@ -472,7 +480,7 @@ long CDECL init(Access *_access, Driver *driver, Virtual *vwk, char *opts)
 	}
 	
 	setup_scrninfo(&device, graphics_mode);
-
+	
 /* Perhaps set up default clipping? */
 
 	return 1;

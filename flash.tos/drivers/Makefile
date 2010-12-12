@@ -1,17 +1,10 @@
-CROSS = N
-
-CROSSBINDIR_IS_Y = m68k-atari-mint-
-CROSSBINDIR_IS_N =
-
-CROSSBINDIR = $(CROSSBINDIR_IS_$(CROSS))
-
-CC = $(CROSSBINDIR)gcc
-LD = $(CROSSBINDIR)ld
-NM = $(CROSSBINDIR)nm
+CC = gcc
+LD = ld
+STRIP = strip
+STACK =	stack
 rm = rm
 
-BINHEX_BINARY= ../binhex.ttp
-COMPRESS_BINARY= ../compress.ttp
+VERSION = 0x0100
 
 ATICOD = ../nonfree/ativcm20.cod
 
@@ -24,17 +17,23 @@ OBJDIRCF2 = ./obj_cf2
 OBJDIRCF3 = ./obj_cf3
 
 SUBOBJDIRS=	\
+		$(OBJDIR)/tools \
 		$(OBJDIR)/radeon \
+		$(OBJDIR)/video \
 		$(OBJDIR)/emulator \
 		$(OBJDIR)/emulator/pcbios \
 		$(OBJDIR)/emulator/x86emu \
 		$(OBJDIR)/fvdi \
 		$(OBJDIR)/fvdi/common \
+		$(OBJDIR)/fvdi/1_plane \
 		$(OBJDIR)/dma_utils \
 		$(OBJDIR)/usb
 
 SUBOBJDIRSCF=	\
+		$(OBJDIR)/tools \
 		$(OBJDIRCF)/radeon \
+		$(OBJDIRCF)/lynx \
+		$(OBJDIRCF)/video \
 		$(OBJDIRCF)/emulator \
 		$(OBJDIRCF)/emulator/pcbios \
 		$(OBJDIRCF)/emulator/x86emu \
@@ -52,7 +51,9 @@ SUBOBJDIRSCF=	\
 		$(OBJDIRCF)/freertos
 
 SUBOBJDIRSCF2=	\
+		$(OBJDIR)/tools \
 		$(OBJDIRCF2)/radeon \
+		$(OBJDIRCF2)/video \
 		$(OBJDIRCF2)/emulator \
 		$(OBJDIRCF2)/emulator/pcbios \
 		$(OBJDIRCF2)/emulator/x86emu \
@@ -66,7 +67,9 @@ SUBOBJDIRSCF2=	\
 		$(OBJDIRCF2)/freertos
 		
 SUBOBJDIRSCF3=	\
+		$(OBJDIR)/tools \
 		$(OBJDIRCF3)/radeon \
+		$(OBJDIRCF3)/video \
 		$(OBJDIRCF3)/emulator \
 		$(OBJDIRCF3)/emulator/pcbios \
 		$(OBJDIRCF3)/emulator/x86emu \
@@ -91,23 +94,25 @@ CFLAGSCF3 = $(CFLAGSCF) -DMCF547X
 LDFLAGS = -nostdlib --entry _init -s
 
 OBJSDRIVERFVDI=	\
-		$(OBJDIR)/radeon/mouse.o \
-		$(OBJDIR)/radeon/8b_pal.o \
-		$(OBJDIR)/radeon/16b_pal.o \
-		$(OBJDIR)/radeon/32b_pal.o \
 		$(OBJDIR)/radeon/radeon_accel.o \
 		$(OBJDIR)/radeon/radeon_render.o \
 		$(OBJDIR)/radeon/radeon_pm.o \
 		$(OBJDIR)/radeon/radeon_monitor.o \
 		$(OBJDIR)/radeon/radeon_i2c.o \
 		$(OBJDIR)/radeon/radeon_cursor.o \
-		$(OBJDIR)/radeon/radeon_mem.o \
-		$(OBJDIR)/radeon/i2c-algo-bit.o \
-		$(OBJDIR)/radeon/modedb.o \
-		$(OBJDIR)/radeon/fbmem.o \
-		$(OBJDIR)/radeon/fbmon.o \
-		$(OBJDIR)/radeon/access.o \
-		$(OBJDIR)/radeon/videl_test.o \
+		$(OBJDIR)/video/i2c-algo-bit.o \
+		$(OBJDIR)/video/modedb.o \
+		$(OBJDIR)/video/fbmem.o \
+		$(OBJDIR)/video/fbmon.o \
+		$(OBJDIR)/video/offscreen.o \
+		$(OBJDIR)/video/1b_pal.o \
+		$(OBJDIR)/video/8b_pal.o \
+		$(OBJDIR)/video/16b_pal.o \
+		$(OBJDIR)/video/32b_pal.o \
+		$(OBJDIR)/video/access.o \
+		$(OBJDIR)/video/timer.o \
+		$(OBJDIR)/video/debug.o \
+		$(OBJDIR)/video/mouse.o \
 		$(OBJDIR)/fvdi/common/init.o \
 		$(OBJDIR)/fvdi/common/common.o \
 		$(OBJDIR)/fvdi/common/c_common.o \
@@ -115,28 +120,31 @@ OBJSDRIVERFVDI=	\
 		$(OBJDIR)/fvdi/common/lineachk.o \
 		$(OBJDIR)/fvdi/common/colours.o \
 		$(OBJDIR)/fvdi/common/falc_pal.o \
+		$(OBJDIR)/fvdi/1_plane/1_line.o \
+		$(OBJDIR)/fvdi/1_plane/1_fill.o \
 		$(OBJDIR)/gcc.o
 
 OBJSDRIVERFVDICF=	\
-		$(OBJDIRCF)/radeon/mouse.o \
-		$(OBJDIRCF)/radeon/8b_pal.o \
-		$(OBJDIRCF)/radeon/16b_pal.o \
-		$(OBJDIRCF)/radeon/32b_pal.o \
 		$(OBJDIRCF)/radeon/radeon_accel.o \
 		$(OBJDIRCF)/radeon/radeon_render.o \
 		$(OBJDIRCF)/radeon/radeon_pm.o \
 		$(OBJDIRCF)/radeon/radeon_monitor.o \
 		$(OBJDIRCF)/radeon/radeon_i2c.o \
 		$(OBJDIRCF)/radeon/radeon_cursor.o \
-		$(OBJDIRCF)/radeon/radeon_mem.o \
-		$(OBJDIRCF)/radeon/i2c-algo-bit.o \
-		$(OBJDIRCF)/radeon/modedb.o \
-		$(OBJDIRCF)/radeon/fbmem.o \
-		$(OBJDIRCF)/radeon/fbmon.o \
-		$(OBJDIRCF)/radeon/access.o \
+		$(OBJDIRCF)/video/i2c-algo-bit.o \
+		$(OBJDIRCF)/video/modedb.o \
+		$(OBJDIRCF)/video/fbmem.o \
+		$(OBJDIRCF)/video/fbmon.o \
+		$(OBJDIRCF)/video/offscreen.o \
+		$(OBJDIRCF)/video/8b_pal.o \
+		$(OBJDIRCF)/video/16b_pal.o \
+		$(OBJDIRCF)/video/32b_pal.o \
+		$(OBJDIRCF)/video/access.o \
+		$(OBJDIRCF)/video/timer.o \
+		$(OBJDIRCF)/video/debug.o \
+		$(OBJDIRCF)/video/mouse.o \
 		$(OBJDIRCF)/fvdi/common/init.o \
-		$(OBJDIR)/fvdi/common/common.o \
-		$(OBJDIRCF)/fvdi/common/c_common.o \
+		$(OBJDIRCF)/fvdi/common/common.o \
 		$(OBJDIRCF)/fvdi/common/clip.o \
 		$(OBJDIRCF)/fvdi/common/lineachk.o \
 		$(OBJDIRCF)/fvdi/common/colours.o \
@@ -144,24 +152,25 @@ OBJSDRIVERFVDICF=	\
 		$(OBJDIRCF)/gcc.o
 		
 OBJSDRIVERFVDICF2=	\
-		$(OBJDIRCF)/radeon/mouse.o \
-		$(OBJDIRCF)/radeon/8b_pal.o \
-		$(OBJDIRCF)/radeon/16b_pal.o \
-		$(OBJDIRCF)/radeon/32b_pal.o \
 		$(OBJDIRCF2)/radeon/radeon_accel.o \
 		$(OBJDIRCF)/radeon/radeon_pm.o \
 		$(OBJDIRCF)/radeon/radeon_monitor.o \
 		$(OBJDIRCF)/radeon/radeon_i2c.o \
 		$(OBJDIRCF)/radeon/radeon_cursor.o \
-		$(OBJDIRCF)/radeon/radeon_mem.o \
-		$(OBJDIRCF)/radeon/i2c-algo-bit.o \
-		$(OBJDIRCF)/radeon/modedb.o \
-		$(OBJDIRCF)/radeon/fbmem.o \
-		$(OBJDIRCF)/radeon/fbmon.o \
-		$(OBJDIRCF)/radeon/access.o \
+		$(OBJDIRCF)/video/i2c-algo-bit.o \
+		$(OBJDIRCF)/video/modedb.o \
+		$(OBJDIRCF)/video/fbmem.o \
+		$(OBJDIRCF)/video/fbmon.o \
+		$(OBJDIRCF)/video/offscreen.o \
+		$(OBJDIRCF)/video/8b_pal.o \
+		$(OBJDIRCF)/video/16b_pal.o \
+		$(OBJDIRCF)/video/32b_pal.o \
+		$(OBJDIRCF)/video/access.o \
+		$(OBJDIRCF)/video/timer.o \
+		$(OBJDIRCF2)/video/debug.o \
+		$(OBJDIRCF)/video/mouse.o \
 		$(OBJDIRCF)/fvdi/common/init.o \
-		$(OBJDIR)/fvdi/common/common.o \
-		$(OBJDIRCF)/fvdi/common/c_common.o \
+		$(OBJDIRCF)/fvdi/common/common.o \
 		$(OBJDIRCF)/fvdi/common/clip.o \
 		$(OBJDIRCF)/fvdi/common/lineachk.o \
 		$(OBJDIRCF)/fvdi/common/colours.o \
@@ -169,25 +178,26 @@ OBJSDRIVERFVDICF2=	\
 		$(OBJDIRCF2)/gcc.o
 
 OBJSDRIVERFVDICF3=	\
-		$(OBJDIRCF)/radeon/mouse.o \
-		$(OBJDIRCF)/radeon/8b_pal.o \
-		$(OBJDIRCF)/radeon/16b_pal.o \
-		$(OBJDIRCF)/radeon/32b_pal.o \
 		$(OBJDIRCF)/radeon/radeon_accel.o \
 		$(OBJDIRCF)/radeon/radeon_render.o \
 		$(OBJDIRCF)/radeon/radeon_pm.o \
 		$(OBJDIRCF)/radeon/radeon_monitor.o \
 		$(OBJDIRCF)/radeon/radeon_i2c.o \
 		$(OBJDIRCF)/radeon/radeon_cursor.o \
-		$(OBJDIRCF)/radeon/radeon_mem.o \
-		$(OBJDIRCF)/radeon/i2c-algo-bit.o \
-		$(OBJDIRCF)/radeon/modedb.o \
-		$(OBJDIRCF)/radeon/fbmem.o \
-		$(OBJDIRCF)/radeon/fbmon.o \
-		$(OBJDIRCF)/radeon/access.o \
+		$(OBJDIRCF)/video/i2c-algo-bit.o \
+		$(OBJDIRCF)/video/modedb.o \
+		$(OBJDIRCF)/video/fbmem.o \
+		$(OBJDIRCF)/video/fbmon.o \
+		$(OBJDIRCF)/video/offscreen.o \
+		$(OBJDIRCF)/video/8b_pal.o \
+		$(OBJDIRCF)/video/16b_pal.o \
+		$(OBJDIRCF)/video/32b_pal.o \
+		$(OBJDIRCF)/video/access.o \
+		$(OBJDIRCF)/video/timer.o \
+		$(OBJDIRCF)/video/debug.o \
+		$(OBJDIRCF)/video/mouse.o \
 		$(OBJDIRCF)/fvdi/common/init.o \
-		$(OBJDIR)/fvdi/common/common.o \
-		$(OBJDIRCF)/fvdi/common/c_common.o \
+		$(OBJDIRCF)/fvdi/common/common.o \
 		$(OBJDIRCF)/fvdi/common/clip.o \
 		$(OBJDIRCF)/fvdi/common/lineachk.o \
 		$(OBJDIRCF)/fvdi/common/colours.o \
@@ -283,6 +293,9 @@ OBJSLWIPCF=	\
 		$(OBJDIRCF)/mcdapi/MCD_tasksInit.o \
 		$(OBJDIRCF)/mcdapi/MCD_tasks.o \
 		$(OBJDIRCF)/bdos/bdos.o \
+		$(OBJDIRCF)/usb_dev/msc.o \
+		$(OBJDIRCF)/usb_dev/msc_desc.o \
+		$(OBJDIRCF)/usb_dev/usb.o \
 		$(OBJDIRCF)/stdlib.o \
 		$(OBJDIRCF)/printk.o
 
@@ -337,14 +350,14 @@ OBJSLWIPCF3=	\
 		$(OBJDIRCF)/lwip/mem.o \
 		$(OBJDIRCF)/lwip/memp.o \
 		$(OBJDIRCF)/lwip/netif.o \
-		$(OBJDIRCF)/lwip/pbuf.o \
+		$(OBJDIRCF3)/lwip/pbuf.o \
 		$(OBJDIRCF)/lwip/raw.o \
 		$(OBJDIRCF)/lwip/stats.o \
 		$(OBJDIRCF)/lwip/sys.o \
 		$(OBJDIRCF)/lwip/tcp.o \
-		$(OBJDIRCF)/lwip/tcp_in.o \
-		$(OBJDIRCF)/lwip/udp.o \
-		$(OBJDIRCF)/lwip/ip.o \
+		$(OBJDIRCF3)/lwip/tcp_in.o \
+		$(OBJDIRCF3)/lwip/udp.o \
+		$(OBJDIRCF3)/lwip/ip.o \
 		$(OBJDIRCF)/lwip/ip_addr.o \
 		$(OBJDIRCF)/lwip/icmp.o \
 		$(OBJDIRCF)/lwip/ip_frag.o \
@@ -356,8 +369,8 @@ OBJSLWIPCF3=	\
 		$(OBJDIRCF)/lwip/sockets.o \
 		$(OBJDIRCF)/lwip/etharp.o \
 		$(OBJDIRCF)/lwip/resolv.o \
-		$(OBJDIRCF)/lwip/sys_arch.o \
-		$(OBJDIRCF)/lwip/nbuf.o \
+		$(OBJDIRCF3)/lwip/sys_arch.o \
+		$(OBJDIRCF3)/lwip/nbuf.o \
 		$(OBJDIRCF3)/lwip/fec.o \
 		$(OBJDIRCF3)/lwip/am79c874.o \
 		$(OBJDIRCF)/lwip/gs_func.o \
@@ -369,24 +382,53 @@ OBJSLWIPCF3=	\
 		$(OBJDIRCF3)/lwip/web.o \
 		$(OBJDIRCF)/lwip/gif.o \
 		$(OBJDIRCF3)/lwip/init.o \
-		$(OBJDIRCF)/dma_utils/dma_utils.o \
+		$(OBJDIRCF3)/dma_utils/dma_utils.o \
 		$(OBJDIRCF)/mcdapi/MCD_dmaApi.o \
 		$(OBJDIRCF)/mcdapi/MCD_tasksInit.o \
 		$(OBJDIRCF)/mcdapi/MCD_tasks.o \
 		$(OBJDIRCF)/bdos/bdos.o \
 		$(OBJDIRCF)/stdlib.o \
-		$(OBJDIRCF)/printk.o \
+		$(OBJDIRCF)/printk.o
 
-OBJSBUSB=
+OBJSUSB=	\
+		$(OBJDIR)/usb/usb.o \
+		$(OBJDIR)/usb/ohci-hcd.o \
+		$(OBJDIR)/usb/ehci-hcd.o \
+		$(OBJDIR)/usb/usb_kbd.o \
+		$(OBJDIR)/usb/usb_mouse.o \
+		$(OBJDIR)/usb/usb_storage.o \
+		$(OBJDIR)/usb/usb_mem.o \
+		$(OBJDIR)/usb/cmd_usb.o
+    
+OBJSUSBCF=	\
+		$(OBJDIRCF)/usb/usb.o \
+		$(OBJDIRCF)/usb/ohci-hcd.o \
+		$(OBJDIRCF)/usb/ehci-hcd.o \
+		$(OBJDIRCF)/usb/usb_kbd.o \
+		$(OBJDIRCF)/usb/usb_mouse.o \
+		$(OBJDIRCF)/usb/usb_storage.o \
+		$(OBJDIRCF)/usb/usb_mem.o \
+		$(OBJDIRCF)/usb/cmd_usb.o
 
-OBJSBUSBCF=	\
-		$(OBJDIRCF)/usb_dev/msc.o \
-		$(OBJDIRCF)/usb_dev/msc_desc.o \
-		$(OBJDIRCF)/usb_dev/usb.o 
+OBJSUSBCF2=	\
+		$(OBJDIRCF2)/usb/usb.o \
+		$(OBJDIRCF2)/usb/ohci-hcd.o \
+		$(OBJDIRCF2)/usb/ehci-hcd.o \
+		$(OBJDIRCF2)/usb/usb_kbd.o \
+		$(OBJDIRCF2)/usb/usb_mouse.o \
+		$(OBJDIRCF)/usb/usb_storage.o \
+		$(OBJDIRCF2)/usb/usb_mem.o \
+		$(OBJDIRCF)/usb/cmd_usb.o
 
-OBJSBUSBCF2=
-
-OBJSBUSBCF3=
+OBJSUSBCF3=	\
+		$(OBJDIRCF3)/usb/usb.o \
+		$(OBJDIRCF3)/usb/ohci-hcd.o \
+		$(OBJDIRCF3)/usb/ehci-hcd.o \
+		$(OBJDIRCF3)/usb/usb_kbd.o \
+		$(OBJDIRCF3)/usb/usb_mouse.o \
+		$(OBJDIRCF)/usb/usb_storage.o \
+		$(OBJDIRCF3)/usb/usb_mem.o \
+		$(OBJDIRCF)/usb/cmd_usb.o
 
 OBJSAC97CF=	\
 		$(OBJDIRCF)/ac97/control.o \
@@ -396,7 +438,7 @@ OBJSAC97CF=	\
 OBJSAC97CF3=	\
 		$(OBJDIRCF)/ac97/control.o \
 		$(OBJDIRCF)/ac97/ac97_codec.o \
-		$(OBJDIRCF)/ac97/mcf548x_ac97.o
+		$(OBJDIRCF3)/ac97/mcf548x_ac97.o
 
 OBJSBDOSCF=	\
 		$(OBJDIRCF)/bdos/fsbuf.o \
@@ -493,8 +535,9 @@ OBJS=	\
 		$(OBJDIR)/xbios.o \
 		$(OBJDIR)/detxbios.o \
 		$(OBJDIR)/detlinea.o \
-		$(OBJDIR)/stdlib.o \
 		$(OBJDIR)/detvdi.o \
+		$(OBJDIR)/work.o \
+		$(OBJDIR)/debug.o \
 		$(OBJDIR)/m68k_disasm.o \
 		$(OBJDIR)/emulator/biosemu.o \
 		$(OBJDIR)/emulator/pcbios/pcibios.o \
@@ -516,15 +559,17 @@ OBJS=	\
 		$(OBJDIR)/fvdi/conic.o \
 		$(OBJDIR)/fvdi/contourfill.o \
 		$(OBJDIR)/fvdi/vdi_misc.o \
-		$(OBJDIR)/radeon/accel_rom.o \
-		$(OBJDIR)/radeon/spec_rom.o \
+		$(OBJDIR)/video/accel_rom.o \
+		$(OBJDIR)/video/spec_rom.o \
 		$(OBJDIR)/radeon/radeon_base_rom.o \
 		$(OBJDIR)/radeon/radeon_video.o \
 		$(OBJDIR)/radeon/radeon_theatre_dsp.o \
 		$(OBJDIR)/radeon/radeon_theatre.o \
 		$(OBJDIR)/radeon/radeon_vid.o \
 		$(OBJDIR)/dma_utils/dma_utils.o \
-		$(OBJDIR)/lz.o \
+		$(OBJDIR)/stdlib.o \
+		$(OBJDIR)/printk.o \
+		$(OBJSUSB) \
 		$(OBJSDRIVERFVDI)
 
 OBJSCF=	\
@@ -535,6 +580,7 @@ OBJSCF=	\
 		$(OBJDIRCF)/detxbios.o \
 		$(OBJDIRCF)/detlinea.o \
 		$(OBJDIRCF)/detvdi.o \
+		$(OBJDIRCF)/work.o \
 		$(OBJDIRCF)/m68k_disasm.o \
 		$(OBJDIRCF)/emulator/biosemu.o \
 		$(OBJDIRCF)/emulator/pcbios/pcibios.o \
@@ -556,16 +602,22 @@ OBJSCF=	\
 		$(OBJDIRCF)/fvdi/conic.o \
 		$(OBJDIRCF)/fvdi/contourfill.o \
 		$(OBJDIRCF)/fvdi/vdi_misc.o \
-		$(OBJDIRCF)/radeon/spec_rom.o \
-		$(OBJDIRCF)/radeon/accel_rom.o \
+		$(OBJDIRCF)/fvdi/common/c_common_rom.o \
+		$(OBJDIRCF)/video/spec_rom.o \
+		$(OBJDIRCF)/video/accel_rom.o \
+		$(OBJDIRCF)/video/videl.o \
 		$(OBJDIRCF)/radeon/radeon_base_rom.o \
 		$(OBJDIRCF)/radeon/radeon_video.o \
 		$(OBJDIR)/radeon/radeon_theatre_dsp.o \
 		$(OBJDIRCF)/radeon/radeon_theatre.o \
 		$(OBJDIRCF)/radeon/radeon_vid.o \
+		$(OBJDIRCF)/lynx/smi_base.o \
+		$(OBJDIRCF)/lynx/smi_accel.o \
+		$(OBJDIRCF)/lynx/smi_cursor.o \
+		$(OBJDIRCF)/lynx/smi_i2c.o \
 		$(OBJDIRCF)/get.o \
-		$(OBJDIRCF)/lz.o \
 		$(OBJDIRCF)/rtc/rtc5c387.o \
+		$(OBJSUSBCF) \
 		$(OBJSDRIVERFVDICF) \
 		$(OBJSBDOSCF) \
 		$(OBJSNETCF)
@@ -578,6 +630,7 @@ OBJSCF2=	\
 		$(OBJDIRCF2)/detxbios.o \
 		$(OBJDIRCF)/detlinea.o \
 		$(OBJDIRCF)/detvdi.o \
+		$(OBJDIRCF)/work.o \
 		$(OBJDIRCF)/m68k_disasm.o \
 		$(OBJDIRCF)/emulator/biosemu.o \
 		$(OBJDIRCF)/emulator/pcbios/pcibios.o \
@@ -599,23 +652,26 @@ OBJSCF2=	\
 		$(OBJDIRCF)/fvdi/conic.o \
 		$(OBJDIRCF)/fvdi/contourfill.o \
 		$(OBJDIRCF)/fvdi/vdi_misc.o \
-		$(OBJDIRCF)/radeon/spec_rom.o \
-		$(OBJDIRCF2)/radeon/accel_rom.o \
+		$(OBJDIRCF)/fvdi/common/c_common_rom.o \
+		$(OBJDIRCF)/video/spec_rom.o \
+		$(OBJDIRCF2)/video/accel_rom.o \
+		$(OBJDIRCF2)/video/videl.o \
 		$(OBJDIRCF2)/radeon/radeon_base_rom.o \
 		$(OBJDIRCF)/get.o \
-		$(OBJDIRCF)/lz.o \
+		$(OBJSUSBCF2) \
 		$(OBJSDRIVERFVDICF2) \
 		$(OBJSBDOSCF2) \
 		$(OBJSNETCF2)
 
 OBJSCF3=	\
 		$(OBJDIRCF3)/init.o \
-		$(OBJDIRCF)/videocnf.o \
+		$(OBJDIRCF3)/videocnf.o \
 		$(OBJDIRCF)/gemform.o \
 		$(OBJDIRCF3)/xbios.o \
 		$(OBJDIRCF3)/detxbios.o \
 		$(OBJDIRCF)/detlinea.o \
 		$(OBJDIRCF)/detvdi.o \
+		$(OBJDIRCF)/work.o \
 		$(OBJDIRCF)/m68k_disasm.o \
 		$(OBJDIRCF)/emulator/biosemu.o \
 		$(OBJDIRCF)/emulator/pcbios/pcibios.o \
@@ -637,69 +693,117 @@ OBJSCF3=	\
 		$(OBJDIRCF)/fvdi/conic.o \
 		$(OBJDIRCF)/fvdi/contourfill.o \
 		$(OBJDIRCF)/fvdi/vdi_misc.o \
-		$(OBJDIRCF)/radeon/spec_rom.o \
-		$(OBJDIRCF)/radeon/accel_rom.o \
+		$(OBJDIRCF)/fvdi/common/c_common_rom.o \
+		$(OBJDIRCF)/video/spec_rom.o \
+		$(OBJDIRCF3)/video/accel_rom.o \
+		$(OBJDIRCF3)/video/videl.o \
+		$(OBJDIRCF3)/video/blitter.o \
 		$(OBJDIRCF)/radeon/radeon_base_rom.o \
 		$(OBJDIRCF)/radeon/radeon_video.o \
 		$(OBJDIR)/radeon/radeon_theatre_dsp.o \
 		$(OBJDIRCF)/radeon/radeon_theatre.o \
 		$(OBJDIRCF)/radeon/radeon_vid.o \
-		$(OBJDIRCF)/get.o \
-		$(OBJDIRCF)/lz.o \
+		$(OBJDIRCF3)/get.o \
+		$(OBJSUSBCF3) \
 		$(OBJSDRIVERFVDICF3) \
 		$(OBJSBDOSCF3) \
 		$(OBJSNETCF3)
 
-HEX = pci.hex
-HEXCF = pci_cf.hex
-HEXCF2 = pci_cf2.hex
-HEXCF3 = pci_cf3.hex
+HEX = drivers.hex
+HEXCF = drivers_cf.hex
+HEXCF2 = drivers_cf2.hex
+HEXCF3 = drivers_cf3.hex
+HEXFIREBEE = drivers_firebee.hex
 DRIVERFVDI = radeon.sys
-DRIVERFVDICF = radeoncf.sys
-DRIVERFVDICF2 = radeoncf2.sys
-DRIVERFVDICF3 = radeoncf3.sys
+DRIVERFVDICF = radeon_cf.sys
+DRIVERFVDICF2 = radeon_cf2.sys
+DRIVERFVDICF3 = radeon_f.sys
+FLASH_DRIVERS = 0xEC0000
+FLASH_DRIVERS_CF = 0xEA0000
+FLASH_DRIVERS_FIREBEE = 0xE04A0000
 
-all: $(HEX) $(HEXCF) $(HEXCF2) $(HEXCF3) $(DRIVERFVDI) $(DRIVERFVDICF) $(DRIVERFVDICF2) $(DRIVERFVDICF3)
+BINHEX_BINARY= binhex.ttp
+COMPRESS_BINARY= compress.ttp
+STACKSIZE= 64k
 
-ctpci: $(HEX) $(DRIVERFVDI)
+all: $(BINHEX_BINARY) $(COMPRESS_BINARY) version.h $(HEX) $(HEXCF) $(HEXCF2) $(HEXCF3) $(DRIVERFVDI) $(DRIVERFVDICF) $(DRIVERFVDICF2) $(DRIVERFVDICF3)
 
-m5484lite: $(HEXCF) $(DRIVERFVDICF)
+ctpci: $(BINHEX_BINARY) $(COMPRESS_BINARY) version.h $(HEX) $(DRIVERFVDI)
 
-m54455evb: $(HEXCF2) $(DRIVERFVDICF2)
+m5484lite: $(BINHEX_BINARY) $(COMPRESS_BINARY) version.h $(HEXCF) $(DRIVERFVDICF)
 
-coldari: $(HEXCF3) $(DRIVERFVDICF3)
+m54455evb: $(BINHEX_BINARY) $(COMPRESS_BINARY) version.h $(HEXCF2) $(DRIVERFVDICF2)
+
+firebee: $(BINHEX_BINARY) $(COMPRESS_BINARY) version.h $(HEXCF3) $(DRIVERFVDICF3)
 
 clean:
 	rm -rf $(OBJDIR) $(OBJDIRCF) $(OBJDIRCF2) $(OBJDIRCF3)
-	rm -f $(HEX) $(HEXCF) $(HEXCF2) $(HEXCF3) pci.map pci_cf.map pci_cf2.map pci_cf3.map $(DRIVERFVDI) $(DRIVERFVDICF) $(DRIVERFVDICF2) $(DRIVERFVDICF3) 
+	rm -f $(BINHEX_BINARY) $(COMPRESS_BINARY) $(HEX) $(HEXCF) $(HEXCF2) $(HEXCF3) $(HEXFIREBEE) drivers.map drivers_cf.map drivers_cf2.map drivers_cf3.map $(DRIVERFVDI) $(DRIVERFVDICF) $(DRIVERFVDICF2) $(DRIVERFVDICF3) 
 
 $(HEX):	$(OBJS)
-	$(LD) -oformat srec -Map pci.map --cref -T pci.lk \
+	$(LD) --oformat srec -Map drivers.map --cref -T drivers.lk \
 	--entry Start -o $(HEX) $(OBJS)
+	$(COMPRESS_BINARY) $(HEX) temp.bin
+	objcopy --verbose -I binary -O srec --adjust-vma=$(FLASH_DRIVERS) temp.bin $(HEX)
+	rm temp.bin 
 
-$(HEXCF):	$(OBJDIRCF)/header.o $(OBJSCF) $(OBJSRTOSCF) $(OBJSLWIPCF) $(OBJSBUSBCF) $(OBJSAC97CF)
-	$(LD) -oformat srec -Map pci_cf.map --cref -T pcicf.lk \
+$(HEXCF):	$(OBJDIRCF)/header.o $(OBJSCF) $(OBJSRTOSCF) $(OBJSLWIPCF) $(OBJSAC97CF)
+	$(LD) --oformat srec -Map drivers_cf.map --cref -T drivers_cf.lk \
 	--entry Start -o $(HEXCF) $(OBJSCF)
+	$(COMPRESS_BINARY) $(HEXCF) temp.bin
+	objcopy --verbose -I binary -O srec --adjust-vma=$(FLASH_DRIVERS_CF) temp.bin $(HEXCF)
+	rm temp.bin 
 
-$(HEXCF2):	$(OBJDIRCF2)/header.o $(OBJSCF2) $(OBJSRTOSCF2) $(OBJSLWIPCF2)
-	$(LD) -oformat srec -Map pci_cf2.map --cref -T pcicf2.lk \
+$(HEXCF2):	$(OBJDIRCF)/header.o $(OBJSCF2) $(OBJSRTOSCF2) $(OBJSLWIPCF2)
+	$(LD) --oformat srec -Map drivers_cf2.map --cref -T drivers_cf2.lk \
 	--entry Start -o $(HEXCF2) $(OBJSCF2)
+	$(COMPRESS_BINARY) $(HEXCF2) temp.bin
+	objcopy --verbose -I binary -O srec --adjust-vma=$(FLASH_DRIVERS_CF) temp.bin $(HEXCF2)
+	rm temp.bin 
 
-$(HEXCF3):	$(OBJDIRCF3)/header.o $(OBJSCF3) $(OBJSRTOSCF3) $(OBJSLWIPCF3) $(OBJSAC97CF3)
-	$(LD) -oformat srec -Map pci_cf3.map --cref -T pcicf3.lk \
+$(HEXCF3):	$(OBJDIRCF)/header.o $(OBJSCF3) $(OBJSRTOSCF3) $(OBJSLWIPCF3) $(OBJSAC97CF3)
+	$(LD) --oformat srec -Map drivers_cf3.map --cref -T drivers_cf3.lk \
 	--entry Start -o $(HEXCF3) $(OBJSCF3)
+	$(COMPRESS_BINARY) $(HEXCF3) temp.bin
+	objcopy --verbose -I binary -O srec --adjust-vma=$(FLASH_DRIVERS_FIREBEE) temp.bin $(HEXFIREBEE)
+	objcopy --verbose -I binary -O srec --adjust-vma=$(FLASH_DRIVERS_CF) temp.bin $(HEXCF3)
+	rm temp.bin 
 
-$(DRIVERFVDI): $(OBJDIR)/radeon/spec.o $(OBJDIR)/radeon/accel.o $(OBJDIR)/radeon/radeon_base.o $(OBJSDRIVERFVDI)
-	$(LD) $(LDFLAGS) -o $(DRIVERFVDI) $(OBJDIR)/radeon/spec.o $(OBJDIR)/radeon/accel.o $(OBJDIR)/radeon/radeon_base.o $(OBJSDRIVERFVDI)
+$(DRIVERFVDI):	$(OBJDIR)/video/spec.o $(OBJDIR)/video/accel.o $(OBJDIR)/radeon/radeon_base.o $(OBJSDRIVERFVDI)
+	$(LD) $(LDFLAGS) -o $(DRIVERFVDI) $(OBJDIR)/video/spec.o $(OBJDIR)/video/accel.o $(OBJDIR)/radeon/radeon_base.o $(OBJSDRIVERFVDI)
+	$(STRIP) $(DRIVERFVDI)
 
-$(DRIVERFVDICF): $(OBJDIRCF)/radeon/spec.o $(OBJDIRCF)/radeon/accel.o $(OBJDIRCF)/radeon/radeon_base.o $(OBJSDRIVERFVDICF)
-	$(LD) $(LDFLAGS) -o $(DRIVERFVDICF) $(OBJDIRCF)/radeon/spec.o $(OBJDIRCF)/radeon/accel.o $(OBJDIRCF)/radeon/radeon_base.o $(OBJSDRIVERFVDICF)
+$(DRIVERFVDICF):	$(OBJDIRCF)/video/spec.o $(OBJDIRCF)/video/accel.o $(OBJDIRCF)/radeon/radeon_base.o $(OBJDIRCF)/fvdi/common/c_common.o $(OBJSDRIVERFVDICF)
+	$(LD) $(LDFLAGS) -o $(DRIVERFVDICF) $(OBJDIRCF)/video/spec.o $(OBJDIRCF)/video/accel.o $(OBJDIRCF)/radeon/radeon_base.o $(OBJDIRCF)/fvdi/common/c_common.o $(OBJSDRIVERFVDICF)
+	$(STRIP) $(DRIVERFVDICF)
 
-$(DRIVERFVDICF2): $(OBJDIRCF2)/radeon/spec.o $(OBJDIRCF2)/radeon/accel.o $(OBJDIRCF2)/radeon/radeon_base.o $(OBJSDRIVERFVDICF2)
-	$(LD) $(LDFLAGS) -o $(DRIVERFVDICF2) $(OBJDIRCF2)/radeon/spec.o $(OBJDIRCF2)/radeon/accel.o $(OBJDIRCF2)/radeon/radeon_base.o $(OBJSDRIVERFVDICF2)
+$(DRIVERFVDICF2):	$(OBJDIRCF)/video/spec.o $(OBJDIRCF2)/video/accel.o $(OBJDIRCF2)/radeon/radeon_base.o $(OBJDIRCF)/fvdi/common/c_common.o $(OBJSDRIVERFVDICF2)
+	$(LD) $(LDFLAGS) -o $(DRIVERFVDICF2) $(OBJDIRCF)/video/spec.o $(OBJDIRCF2)/video/accel.o $(OBJDIRCF2)/radeon/radeon_base.o $(OBJDIRCF)/fvdi/common/c_common.o $(OBJSDRIVERFVDICF2)
+	$(STRIP) $(DRIVERFVDICF2)
 
-$(DRIVERFVDICF3): $(OBJDIRCF3)/radeon/spec.o $(OBJDIRCF3)/radeon/accel.o $(OBJDIRCF3)/radeon/radeon_base.o $(OBJSDRIVERFVDICF3)
-	$(LD) $(LDFLAGS) -o $(DRIVERFVDICF3) $(OBJDIRCF3)/radeon/spec.o $(OBJDIRCF3)/radeon/accel.o $(OBJDIRCF3)/radeon/radeon_base.o $(OBJSDRIVERFVDICF3)
+$(DRIVERFVDICF3):	$(OBJDIRCF)/video/spec.o $(OBJDIRCF3)/video/accel.o $(OBJDIRCF3)/radeon/radeon_base.o $(OBJDIRCF)/fvdi/common/c_common.o $(OBJSDRIVERFVDICF3)
+	$(LD) $(LDFLAGS) -o $(DRIVERFVDICF3) $(OBJDIRCF)/video/spec.o $(OBJDIRCF3)/video/accel.o $(OBJDIRCF3)/radeon/radeon_base.o $(OBJDIRCF)/fvdi/common/c_common.o $(OBJSDRIVERFVDICF3)
+	$(STRIP) $(DRIVERFVDICF3)
+
+version.h:
+	@date -u +%e,%_m,%Y,%k,%_M > date.tmp
+	@echo "#define VERSION" $(VERSION) > $(INCDIR)/version.h
+	@echo "#define DATE \\" > version.tmp
+	@cat version.tmp >> $(INCDIR)/version.h
+	@cat date.tmp >> $(INCDIR)/version.h
+	@rm version.tmp
+	@rm date.tmp
+	@touch -m $(SRCDIR)/header.S
+
+$(BINHEX_BINARY):	$(OBJDIR)/tools/binhex.o
+	$(CC) $(OBJDIR)/tools/binhex.o -o $(BINHEX_BINARY)
+	$(STRIP) $(BINHEX_BINARY)
+	$(STACK) -S $(STACKSIZE) $(BINHEX_BINARY)
+
+$(COMPRESS_BINARY):	$(OBJDIR)/tools/compress.o $(OBJDIR)/tools/lz.o $(OBJDIR)/tools/srec.o
+	$(CC) $(OBJDIR)/tools//compress.o $(OBJDIR)/tools/lz.o $(OBJDIR)/tools/srec.o -o $(COMPRESS_BINARY)
+	$(STRIP) $(COMPRESS_BINARY)
+	$(STACK) -S $(STACKSIZE) $(COMPRESS_BINARY)
 
 define CREATEOBJDIRS
 	@for d in $(OBJDIR) $(SUBOBJDIRS); do \
@@ -733,90 +837,6 @@ define CREATEOBJDIRSCF3
 	done
 endef
 
-#$(OBJDIR)/radeon/%.o:	$(SRCDIR)/radeon/%.c
-#	$(CREATEOBJDIRS)
-#	$(CC) $(INCLUDE) $(INCLUDEFVDI) $(CFLAGS) -Wa,-alhsd=x.ls -c $< -o $@
-
-#$(OBJDIRCF)/emulator/biosemu.o:	$(SRCDIR)/emulator/biosemu.c
-#	$(CREATEOBJDIRSCF)
-#	$(CC) $(INCLUDE) $(INCLUDEFVDI) $(CFLAGSCF) -Wa,-alhsd=biosemu.ls -c $< -o $@
-
-$(OBJDIR)/radeon/radeon_base_rom.o:	$(SRCDIR)/radeon/radeon_base.c
-	$(CREATEOBJDIRS)
-	$(CC) $(INCLUDE) $(INCLUDEFVDI) $(CFLAGS) -DDRIVER_IN_ROM -c $< -o $@
-
-$(OBJDIRCF)/radeon/radeon_base_rom.o:	$(SRCDIR)/radeon/radeon_base.c
-	$(CREATEOBJDIRSCF)
-	$(CC) $(INCLUDE) $(INCLUDEFVDI) $(CFLAGSCF) -DDRIVER_IN_ROM -c $< -o $@
-
-$(OBJDIRCF2)/radeon/radeon_base_rom.o:	$(SRCDIR)/radeon/radeon_base.c
-	$(CREATEOBJDIRSCF2)
-	$(CC) $(INCLUDE) $(INCLUDEFVDI) $(CFLAGSCF2) -DDRIVER_IN_ROM -c $< -o $@
-
-$(OBJDIRCF3)/radeon/radeon_base_rom.o:	$(SRCDIR)/radeon/radeon_base.c
-	$(CREATEOBJDIRSCF3)
-	$(CC) $(INCLUDE) $(INCLUDEFVDI) $(CFLAGSCF3) -DDRIVER_IN_ROM -c $< -o $@
-
-$(OBJDIR)/radeon/radeon_accel_rom.o:	$(SRCDIR)/radeon/radeon_accel.c
-	$(CREATEOBJDIRS)
-	$(CC) $(INCLUDE) $(INCLUDEFVDI) $(CFLAGS) -DDRIVER_IN_ROM -c $< -o $@
-
-$(OBJDIRCF)/radeon/radeon_accel_rom.o:	$(SRCDIR)/radeon/radeon_accel.c
-	$(CREATEOBJDIRSCF)
-	$(CC) $(INCLUDE) $(INCLUDEFVDI) $(CFLAGSCF) -DDRIVER_IN_ROM -c $< -o $@
-
-$(OBJDIRCF2)/radeon/radeon_accel_rom.o:	$(SRCDIR)/radeon/radeon_accel.c
-	$(CREATEOBJDIRSCF2)
-	$(CC) $(INCLUDE) $(INCLUDEFVDI) $(CFLAGSCF2) -DDRIVER_IN_ROM -c $< -o $@
-
-$(OBJDIRCF3)/radeon/radeon_accel_rom.o:	$(SRCDIR)/radeon/radeon_accel.c
-	$(CREATEOBJDIRSCF3)
-	$(CC) $(INCLUDE) $(INCLUDEFVDI) $(CFLAGSCF3) -DDRIVER_IN_ROM -c $< -o $@
-
-$(OBJDIR)/radeon/spec_rom.o:	$(SRCDIR)/radeon/spec.c
-	$(CREATEOBJDIRS)
-	$(CC) $(INCLUDE) $(INCLUDEFVDI) $(CFLAGS) -DDRIVER_IN_ROM -c $< -o $@
-
-$(OBJDIRCF)/radeon/spec_rom.o:	$(SRCDIR)/radeon/spec.c
-	$(CREATEOBJDIRSCF)
-	$(CC) $(INCLUDE) $(INCLUDEFVDI) $(CFLAGSCF) -DDRIVER_IN_ROM -c $< -o $@
-
-$(OBJDIRCF2)/radeon/spec_rom.o:	$(SRCDIR)/radeon/spec.c
-	$(CREATEOBJDIRSCF2)
-	$(CC) $(INCLUDE) $(INCLUDEFVDI) $(CFLAGSCF2) -DDRIVER_IN_ROM -c $< -o $@
-
-$(OBJDIRCF3)/radeon/spec_rom.o:	$(SRCDIR)/radeon/spec.c
-	$(CREATEOBJDIRSCF3)
-	$(CC) $(INCLUDE) $(INCLUDEFVDI) $(CFLAGSCF3) -DDRIVER_IN_ROM -c $< -o $@
-
-$(OBJDIR)/radeon/accel_rom.o:	$(SRCDIR)/radeon/accel.c
-	$(CREATEOBJDIRS)
-	$(CC) $(INCLUDE) $(INCLUDEFVDI) $(CFLAGS) -DDRIVER_IN_ROM -c $< -o $@
-
-$(OBJDIRCF)/radeon/accel_rom.o:	$(SRCDIR)/radeon/accel.c
-	$(CREATEOBJDIRSCF)
-	$(CC) $(INCLUDE) $(INCLUDEFVDI) $(CFLAGSCF) -DDRIVER_IN_ROM -c $< -o $@
-
-$(OBJDIRCF2)/radeon/accel_rom.o:	$(SRCDIR)/radeon/accel.c
-	$(CREATEOBJDIRSCF2)
-	$(CC) $(INCLUDE) $(INCLUDEFVDI) $(CFLAGSCF2) -DDRIVER_IN_ROM -c $< -o $@
-
-$(OBJDIRCF3)/radeon/accel_rom.o:	$(SRCDIR)/radeon/accel.c
-	$(CREATEOBJDIRSCF3)
-	$(CC) $(INCLUDE) $(INCLUDEFVDI) $(CFLAGSCF3) -DDRIVER_IN_ROM -c $< -o $@
-
-$(OBJDIR)/radeon/radeon_theatre_dsp.o: $(ATICOD)
-	$(COMPRESS_BINARY) $(ATICOD) ./ati.bin
-	$(BINHEX_BINARY) ./ati.bin $(SRCDIR)/radeon/radeon_theatre_dsp.txt theatre_dsp
-	@rm ati.bin
-	@echo "#include \"config.h\"" > $(SRCDIR)/radeon/radeon_theatre_dsp.c
-	@echo "#ifdef RADEON_THEATRE" >> $(SRCDIR)/radeon/radeon_theatre_dsp.c
-	@cat $(SRCDIR)/radeon/radeon_theatre_dsp.txt >> $(SRCDIR)/radeon/radeon_theatre_dsp.c
-	@echo "#endif" >> $(SRCDIR)/radeon/radeon_theatre_dsp.c
-	@rm $(SRCDIR)/radeon/radeon_theatre_dsp.txt
-	$(CREATEOBJDIRS)
-	$(CC) $(INCLUDE) $(CFLAGS) -c $(SRCDIR)/radeon/radeon_theatre_dsp.c -o $@
-
 $(OBJDIR)/radeon/%.o:	$(SRCDIR)/radeon/%.c
 	$(CREATEOBJDIRS)
 	$(CC) $(INCLUDE) $(INCLUDEFVDI) $(CFLAGS) -c $< -o $@
@@ -849,6 +869,38 @@ $(OBJDIRCF3)/radeon/%.o:	$(SRCDIR)/radeon/%.S
 	$(CREATEOBJDIRSCF3)
 	$(CC) $(INCLUDE) $(INCLUDEFVDI) $(CFLAGSCF3) -c $< -o $@
 
+$(OBJDIR)/radeon/%.o:	$(SRCDIR)/radeon/%.c
+	$(CREATEOBJDIRS)
+	$(CC) $(INCLUDE) $(INCLUDEFVDI) $(CFLAGS) -c $< -o $@
+
+$(OBJDIRCF)/video/%.o:	$(SRCDIR)/video/%.c
+	$(CREATEOBJDIRSCF)
+	$(CC) $(INCLUDE) $(INCLUDEFVDI) $(CFLAGSCF) -c $< -o $@
+
+$(OBJDIRCF2)/video/%.o:	$(SRCDIR)/video/%.c
+	$(CREATEOBJDIRSCF2)
+	$(CC) $(INCLUDE) $(INCLUDEFVDI) $(CFLAGSCF2) -c $< -o $@
+
+$(OBJDIRCF3)/video/%.o:	$(SRCDIR)/video/%.c
+	$(CREATEOBJDIRSCF3)
+	$(CC) $(INCLUDE) $(INCLUDEFVDI) $(CFLAGSCF3) -c $< -o $@
+
+$(OBJDIR)/video/%.o:	$(SRCDIR)/video/%.S
+	$(CREATEOBJDIRS)
+	$(CC) $(INCLUDE) $(INCLUDEFVDI) $(CFLAGS) -c $< -o $@
+
+$(OBJDIRCF)/video/%.o:	$(SRCDIR)/video/%.S
+	$(CREATEOBJDIRSCF)
+	$(CC) $(INCLUDE) $(INCLUDEFVDI) $(CFLAGSCF) -c $< -o $@
+
+$(OBJDIRCF2)/video/%.o:	$(SRCDIR)/video/%.S
+	$(CREATEOBJDIRSCF2)
+	$(CC) $(INCLUDE) $(INCLUDEFVDI) $(CFLAGSCF2) -c $< -o $@
+
+$(OBJDIRCF3)/video/%.o:	$(SRCDIR)/video/%.S
+	$(CREATEOBJDIRSCF3)
+	$(CC) $(INCLUDE) $(INCLUDEFVDI) $(CFLAGSCF3) -c $< -o $@
+
 $(OBJDIR)/fvdi/common/%.o:	$(SRCDIR)/fvdi/common/%.c
 	$(CREATEOBJDIRS)
 	$(CC) $(INCLUDE) $(INCLUDEFVDI) $(CFLAGS) -c $< -o $@
@@ -878,6 +930,38 @@ $(OBJDIRCF2)/fvdi/common/%.o:	$(SRCDIR)/fvdi/common/%.S
 	$(CC) $(INCLUDE) $(INCLUDEFVDI) $(CFLAGSCF2) -c $< -o $@
 
 $(OBJDIRCF3)/fvdi/common/%.o:	$(SRCDIR)/fvdi/common/%.S
+	$(CREATEOBJDIRSCF3)
+	$(CC) $(INCLUDE) $(INCLUDEFVDI) $(CFLAGSCF3) -c $< -o $@
+
+$(OBJDIR)/fvdi/1_plane/%.o:	$(SRCDIR)/fvdi/1_plane/%.c
+	$(CREATEOBJDIRS)
+	$(CC) $(INCLUDE) $(INCLUDEFVDI) $(CFLAGS) -c $< -o $@
+
+$(OBJDIRCF)/fvdi/1_plane/%.o:	$(SRCDIR)/fvdi/1_plane/%.c
+	$(CREATEOBJDIRSCF)
+	$(CC) $(INCLUDE) $(INCLUDEFVDI) $(CFLAGSCF) -c $< -o $@
+
+$(OBJDIRCF2)/fvdi/1_plane/%.o:	$(SRCDIR)/fvdi/1_plane/%.c
+	$(CREATEOBJDIRSCF2)
+	$(CC) $(INCLUDE) $(INCLUDEFVDI) $(CFLAGSCF2) -c $< -o $@
+
+$(OBJDIRCF3)/fvdi/1_plane/%.o:	$(SRCDIR)/fvdi/1_plane/%.c
+	$(CREATEOBJDIRSCF3)
+	$(CC) $(INCLUDE) $(INCLUDEFVDI) $(CFLAGSCF3) -c $< -o $@
+
+$(OBJDIR)/fvdi/1_plane/%.o:	$(SRCDIR)/fvdi/1_plane/%.S
+	$(CREATEOBJDIRS)
+	$(CC) $(INCLUDE) $(INCLUDEFVDI) $(CFLAGS) -c $< -o $@
+
+$(OBJDIRCF)/fvdi/1_plane/%.o:	$(SRCDIR)/fvdi/1_plane/%.S
+	$(CREATEOBJDIRSCF)
+	$(CC) $(INCLUDE) $(INCLUDEFVDI) $(CFLAGSCF) -c $< -o $@
+
+$(OBJDIRCF2)/fvdi/1_plane/%.o:	$(SRCDIR)/fvdi/1_plane/%.S
+	$(CREATEOBJDIRSCF2)
+	$(CC) $(INCLUDE) $(INCLUDEFVDI) $(CFLAGSCF2) -c $< -o $@
+
+$(OBJDIRCF3)/fvdi/1_plane/%.o:	$(SRCDIR)/fvdi/1_plane/%.S
 	$(CREATEOBJDIRSCF3)
 	$(CC) $(INCLUDE) $(INCLUDEFVDI) $(CFLAGSCF3) -c $< -o $@
 
@@ -936,7 +1020,7 @@ $(OBJDIRCF2)/net//%.o:	$(SRCDIR)/net//%.S
 $(OBJDIRCF3)/net//%.o:	$(SRCDIR)/net//%.S
 	$(CREATEOBJDIRSCF3)
 	$(CC) $(INCLUDE) $(CFLAGSCF3) -c $< -o $@
-
+	
 $(OBJDIRCF)/usb_dev/%.o:	$(SRCDIR)/usb_dev/%.c
 	$(CREATEOBJDIRSCF)
 	$(CC) $(INCLUDE) $(CFLAGSCF) -c $< -o $@
@@ -1016,3 +1100,100 @@ $(OBJDIRCF2)/%.o:	$(SRCDIR)/%.S
 $(OBJDIRCF3)/%.o:	$(SRCDIR)/%.S
 	$(CREATEOBJDIRSCF3)
 	$(CC) $(INCLUDE) $(INCLUDEFVDI) $(CFLAGSCF3) -c $< -o $@
+
+#$(OBJDIR)/radeon/%.o:	$(SRCDIR)/radeon/%.c
+#	$(CREATEOBJDIRS)
+#	$(CC) $(INCLUDE) $(INCLUDEFVDI) $(CFLAGS) -Wa,-alhsd=x.ls -c $< -o $@
+
+#$(OBJDIRCF)/emulator/biosemu.o:	$(SRCDIR)/emulator/biosemu.c
+#	$(CREATEOBJDIRSCF)
+#	$(CC) $(INCLUDE) $(INCLUDEFVDI) $(CFLAGSCF) -Wa,-alhsd=biosemu.ls -c $< -o $@
+
+$(OBJDIR)/radeon/radeon_base_rom.o:	$(SRCDIR)/radeon/radeon_base.c
+	$(CREATEOBJDIRS)
+	$(CC) $(INCLUDE) $(INCLUDEFVDI) $(CFLAGS) -DDRIVER_IN_ROM -c $< -o $@
+
+$(OBJDIRCF)/radeon/radeon_base_rom.o:	$(SRCDIR)/radeon/radeon_base.c
+	$(CREATEOBJDIRSCF)
+	$(CC) $(INCLUDE) $(INCLUDEFVDI) $(CFLAGSCF) -DDRIVER_IN_ROM -c $< -o $@
+
+$(OBJDIRCF2)/radeon/radeon_base_rom.o:	$(SRCDIR)/radeon/radeon_base.c
+	$(CREATEOBJDIRSCF2)
+	$(CC) $(INCLUDE) $(INCLUDEFVDI) $(CFLAGSCF2) -DDRIVER_IN_ROM -c $< -o $@
+
+$(OBJDIRCF3)/radeon/radeon_base_rom.o:	$(SRCDIR)/radeon/radeon_base.c
+	$(CREATEOBJDIRSCF3)
+	$(CC) $(INCLUDE) $(INCLUDEFVDI) $(CFLAGSCF3) -DDRIVER_IN_ROM -c $< -o $@
+
+$(OBJDIR)/radeon/radeon_accel_rom.o:	$(SRCDIR)/radeon/radeon_accel.c
+	$(CREATEOBJDIRS)
+	$(CC) $(INCLUDE) $(INCLUDEFVDI) $(CFLAGS) -DDRIVER_IN_ROM -c $< -o $@
+
+$(OBJDIRCF)/radeon/radeon_accel_rom.o:	$(SRCDIR)/radeon/radeon_accel.c
+	$(CREATEOBJDIRSCF)
+	$(CC) $(INCLUDE) $(INCLUDEFVDI) $(CFLAGSCF) -DDRIVER_IN_ROM -c $< -o $@
+
+$(OBJDIRCF2)/radeon/radeon_accel_rom.o:	$(SRCDIR)/radeon/radeon_accel.c
+	$(CREATEOBJDIRSCF2)
+	$(CC) $(INCLUDE) $(INCLUDEFVDI) $(CFLAGSCF2) -DDRIVER_IN_ROM -c $< -o $@
+
+$(OBJDIRCF3)/radeon/radeon_accel_rom.o:	$(SRCDIR)/radeon/radeon_accel.c
+	$(CREATEOBJDIRSCF3)
+	$(CC) $(INCLUDE) $(INCLUDEFVDI) $(CFLAGSCF3) -DDRIVER_IN_ROM -c $< -o $@
+
+$(OBJDIR)/radeon/radeon_theatre_dsp.o: $(ATICOD)
+	$(COMPRESS_BINARY) $(ATICOD) ./ati.bin
+	$(BINHEX_BINARY) ./ati.bin $(SRCDIR)/radeon/radeon_theatre_dsp.txt theatre_dsp
+	@rm ati.bin
+	@echo "#include \"config.h\"" > $(SRCDIR)/radeon/radeon_theatre_dsp.c
+	@echo "#ifdef RADEON_THEATRE" >> $(SRCDIR)/radeon/radeon_theatre_dsp.c
+	@cat $(SRCDIR)/radeon/radeon_theatre_dsp.txt >> $(SRCDIR)/radeon/radeon_theatre_dsp.c
+	@echo "#endif" >> $(SRCDIR)/radeon/radeon_theatre_dsp.c
+	@rm $(SRCDIR)/radeon/radeon_theatre_dsp.txt
+	$(CREATEOBJDIRS)
+	$(CC) $(INCLUDE) $(CFLAGS) -c $(SRCDIR)/radeon/radeon_theatre_dsp.c -o $@
+
+$(OBJDIR)/video/spec_rom.o:	$(SRCDIR)/video/spec.c
+	$(CREATEOBJDIRS)
+	$(CC) $(INCLUDE) $(INCLUDEFVDI) $(CFLAGS) -DDRIVER_IN_ROM -c $< -o $@
+
+$(OBJDIRCF)/video/spec_rom.o:	$(SRCDIR)/video/spec.c
+	$(CREATEOBJDIRSCF)
+	$(CC) $(INCLUDE) $(INCLUDEFVDI) $(CFLAGSCF) -DDRIVER_IN_ROM -c $< -o $@
+
+$(OBJDIRCF2)/video/spec_rom.o:	$(SRCDIR)/video/spec.c
+	$(CREATEOBJDIRSCF2)
+	$(CC) $(INCLUDE) $(INCLUDEFVDI) $(CFLAGSCF2) -DDRIVER_IN_ROM -c $< -o $@
+
+$(OBJDIRCF3)/video/spec_rom.o:	$(SRCDIR)/video/spec.c
+	$(CREATEOBJDIRSCF3)
+	$(CC) $(INCLUDE) $(INCLUDEFVDI) $(CFLAGSCF3) -DDRIVER_IN_ROM -c $< -o $@
+
+$(OBJDIR)/video/accel_rom.o:	$(SRCDIR)/video/accel.c
+	$(CREATEOBJDIRS)
+	$(CC) $(INCLUDE) $(INCLUDEFVDI) $(CFLAGS) -DDRIVER_IN_ROM -c $< -o $@
+
+$(OBJDIRCF)/video/accel_rom.o:	$(SRCDIR)/video/accel.c
+	$(CREATEOBJDIRSCF)
+	$(CC) $(INCLUDE) $(INCLUDEFVDI) $(CFLAGSCF) -DDRIVER_IN_ROM -c $< -o $@
+
+$(OBJDIRCF2)/video/accel_rom.o:	$(SRCDIR)/video/accel.c
+	$(CREATEOBJDIRSCF2)
+	$(CC) $(INCLUDE) $(INCLUDEFVDI) $(CFLAGSCF2) -DDRIVER_IN_ROM -c $< -o $@
+
+$(OBJDIRCF3)/video/accel_rom.o:	$(SRCDIR)/video/accel.c
+	$(CREATEOBJDIRSCF3)
+	$(CC) $(INCLUDE) $(INCLUDEFVDI) $(CFLAGSCF3) -DDRIVER_IN_ROM -c $< -o $@
+
+$(OBJDIRCF)/fvdi/common/c_common_rom.o:	$(SRCDIR)/fvdi/common/c_common.S
+	$(CREATEOBJDIRSCF)
+	$(CC) $(INCLUDE) $(INCLUDEFVDI) $(CFLAGSCF) -DDRIVER_IN_ROM -c $< -o $@
+
+$(OBJDIRCF2)/fvdi/common/c_common_rom.o:	$(SRCDIR)/fvdi/common/c_common.S
+	$(CREATEOBJDIRSCF2)
+	$(CC) $(INCLUDE) $(INCLUDEFVDI) $(CFLAGSCF2) -DDRIVER_IN_ROM -c $< -o $@
+
+$(OBJDIRCF3)/fvdi/common/c_common_rom.o:	$(SRCDIR)/fvdi/common/c_common.S
+	$(CREATEOBJDIRSCF3)
+	$(CC) $(INCLUDE) $(INCLUDEFVDI) $(CFLAGSCF3) -DDRIVER_IN_ROM -c $< -o $@
+

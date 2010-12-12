@@ -1,5 +1,5 @@
 /* TOS 4.04 LineA dispatcher for the CT60/CTPCI boards
- * Didier Mequignon 2002-2005, e-mail: aniplay@wanadoo.fr
+ * Didier Mequignon 2002-2010, e-mail: aniplay@wanadoo.fr
  *
  * This file is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -18,12 +18,12 @@
 
 	.global _det_linea,_old_vector_linea,_oldmouse
 	.global show_c,hide_c
+	.global _os_magic
+	.global adr_var_vdi,adr_linea_fonts,adr_linea_atab
+
+#define _sysbase   0x4F2
 
 	.data
-
-	dc.l 0x58425241          // XBRA
-	dc.l 0x5F504349          // _PCI
-	dc.l 0                   // cannot store here because we are in flash
 
 _det_linea:
 
@@ -63,5 +63,20 @@ _det_linea:
 	move.l A1,2(SP)          // jump opcode
 	rte	
 .l1:
+#if 0
+	tst.w _os_magic
+	beq.s .i4
+	move.l _sysbase,A0
+	move.l 0x18(A0),D2       // date
+	swap D2
+	cmp.l #0x20010000,D2     // MagiC 6.20
+	bcs.s .i4
+	move.l A1,2(SP)          // jump opcode
+	move.l adr_var_vdi,A0
+	move.l adr_linea_fonts,A1
+	move.l adr_linea_atab,A2
+ 	rte
+.i4:
+#endif
 	move.l _old_vector_linea,-(SP)
 	rts	

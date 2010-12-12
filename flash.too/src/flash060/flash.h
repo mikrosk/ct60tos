@@ -1,7 +1,7 @@
 #ifndef __flash_H
 #define __flash_H
-/* Flashing CT60
-*  Didier Mequignon 2005 April, e-mail: aniplay@wanadoo.fr
+/* Flashing CT60 / CTPCI and Firebee
+*  Didier Mequignon 2005-2010, e-mail: aniplay@wanadoo.fr
 *
 *  This program is free software; you can redistribute it and/or modify
 *  it under the terms of the GNU General Public License as published by
@@ -21,5 +21,9 @@
 #define FLASH_ADR  0xFFE00000
 #define FLASH_SIZE 0x100000
 #define PARAM_SIZE 0x10000
+
+#define FLASH_ADR_CF     0xE0000000
+#define FLASH_ADR_TOS_CF 0xE0400000
+#define FLASH_SIZE_CF    0x00800000
 
 #endif

@@ -75,7 +75,7 @@ _default_line:
 	movem.l	(a7)+,d6-d7/a1/a3-a4
 #endif
 	rts
-
+	
 .draw:
 	move.l	#0x00010001,d7		// d7 = y-step, x-step
 #ifdef COLDFIRE
@@ -85,7 +85,8 @@ _default_line:
 	move.w	d3,d6
 	ext.l	d0
 	ext.l	d6
-	sub.l	d0,d6			// d3 = dx
+	sub.l	d0,d6
+	move.w	d6,d3		// d3 = dx
 	bge	.ok1
 	neg.l	d6
 	move.w	d6,d3
@@ -98,6 +99,7 @@ _default_line:
 	ext.l	d0
 	ext.l	d6
 	sub.l	d0,d6			// d4 = dy
+	move.w	d6,d4
 	bge	.ok2
 	neg.l	d6
 	move.w	d6,d4
@@ -105,6 +107,8 @@ _default_line:
 	move.w	d7,d6
 	neg.l	d6
 	move.w	d6,d7
+	swap	d7
+.ok2:
 	move.l	(a7)+,d6
 #else
 	sub.w	d1,d3			// d3 = dx
@@ -117,9 +121,9 @@ _default_line:
 	neg.w	d4
 	swap	d7
 	neg.w	d7
-#endif
 	swap	d7
 .ok2:
+#endif
 	and.l	#0xffff,d5
 #ifdef COLDFIRE
 	move.l	d2,-(a7)
@@ -144,13 +148,17 @@ _default_line:
 	swap	d4
 	sub.l	d0,d2			// d4 = incrE, incrNE = 2(dy - dx)
 	move.w	d2,d4
-	move.l	d5,d2
-	lsl.l	#1,d2
-	moveq	#15,d0
-	lsr.l	d0,d5
-	or.l	d2,d5
+
+	moveq	#0,d2
+	move.w	d5,d2
+	add.l	d2,d2
+	move.l	d2,d0
+	swap	d0
+	or.l	d2,d0
+	move.w	d0,d5
 	move.l	(a7)+,d2
 	move.l	(a7)+,d0
+	move	d5,ccr
 #else
 	cmp.w	d3,d4
 	bls	.xmajor
@@ -260,14 +268,17 @@ _default_line:
 .plot:
 #ifdef COLDFIRE
 	move.l	d0,-(a7)
-	move.l	d5,d2
-	lsl.l	#1,d2
-	moveq	#15,d0
-	lsr.l	d0,d5
-	or.l	d2,d5
+	moveq	#0,d2
+	move.w	d5,d2
+	add.l	d2,d2
+	move.l	d2,d0
+	swap	d0
+	or.l	d2,d0
+	move.w	d0,d5	
 	move.l	(a7)+,d0
 	move.l	d1,d2
 	swap	d2
+	move	d5,ccr
 #else
 	move.l	d1,d2
 	swap	d2
@@ -277,27 +288,41 @@ _default_line:
 
 .loop_end1:
 #ifdef COLDFIRE
+	move.l	d2,-(sp)
 	move.w	d3,d2
-	ext.l	d2
 	subq.l	#1,d2
-	move.w	d3,d2
+	move.w	d2,d3
+	move.l	(sp)+,d2
+	tst.w	d3	
 	bpl	.loop1
 #else
 	dbra	d3,.loop1
 #endif
 	rts
-
+	
 .multiline:				// Transform multiline to single ones
 #ifdef COLDFIRE
+	move.l	d2,-(a7)
 	ext.l	d2
 	cmp.l	#1,d2
+	bhi.s	.line_done_cf	// Only coordinate pairs and pairs+marks available so far
+	bne.s	.not_use_marks
+	move.l	(a7)+,d2
+	bra.s	.use_marks
+.line_done_cf:
+	move.l	(a7)+,d2
+	bra	.line_done
+.not_use_marks:
+	moveq	#0,d3			// Move count
+.use_marks:
+	move.l	(a7)+,d2
 #else
 	cmp.w	#1,d2
-#endif
 	bhi	.line_done		// Only coordinate pairs and pairs+marks available so far
 	beq	.use_marks
 	moveq	#0,d3			// Move count
 .use_marks:
+#endif
 	swap	d3
 	move.w	#1,d3			// Current index in high word
 	swap	d3

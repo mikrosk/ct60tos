@@ -59,7 +59,11 @@ extern unsigned char __MBAR[];
 #define SYSTEM_CLOCK                    133 // system bus frequency in MHz
 #define portVECTOR_TIMER                ( 64 + INT0_HI_DTMR2 )
 #else /* MCF548X */
+#ifdef MCF547X
+#define SYSTEM_CLOCK                    133 // system bus frequency in MHz
+#else /* MCF548X */
 #define SYSTEM_CLOCK                    100 // system bus frequency in MHz
+#endif /* MCF547X */
 #define portVECTOR_TIMER                ( 64 + 54 )
 #endif
 #define portVECTOR_SYSCALL              ( 32 + portTRAP_YIELD )
@@ -81,10 +85,10 @@ static void prvPortPreemptiveTick ( void );
 /* ------------------------ Start implementation -------------------------- */
 #if( HAVE_USP == 1 )
 portSTACK_TYPE *pxPortInitialiseStack( portSTACK_TYPE * pxTopOfStack, pdTASK_CODE pxCode,
-                       void *pvParameters, portSTACK_TYPE * pxContext, unsigned portBASE_TYPE uxSuper,  portSTACK_TYPE * pxTopOfUserStack )
+ void *pvParameters, portSTACK_TYPE * pxContext, unsigned portBASE_TYPE uxSuper,  portSTACK_TYPE * pxTopOfUserStack, unsigned portBASE_TYPE uxMaskIntLevel )
 #else
 portSTACK_TYPE *pxPortInitialiseStack( portSTACK_TYPE * pxTopOfStack, pdTASK_CODE pxCode,
-                       void *pvParameters, portSTACK_TYPE * pxContext )
+ void *pvParameters, portSTACK_TYPE * pxContext, unsigned portBASE_TYPE uxMaskIntLevel )
 #endif
 {
 #if( HAVE_USP == 1 )
@@ -122,10 +126,10 @@ portSTACK_TYPE *pxPortInitialiseStack( portSTACK_TYPE * pxTopOfStack, pdTASK_COD
 #if( HAVE_USP == 1 )
     if(uxSuper)
 #endif
-        *pxTopOfStack = 0x40002000UL | (portVECTOR_SYSCALL << 18);
+        *pxTopOfStack = 0x40002000UL | (portVECTOR_SYSCALL << 18) | ((uxMaskIntLevel & 7) << 8);
 #if( HAVE_USP == 1 )
     else
-        *pxTopOfStack = 0x40000000UL | (portVECTOR_SYSCALL << 18);
+        *pxTopOfStack = 0x40000000UL | (portVECTOR_SYSCALL << 18) | ((uxMaskIntLevel & 7) << 8);
 #endif
 
     *pxContext++ = ( portSTACK_TYPE ) 0xD0;    /* D0 */
@@ -189,6 +193,8 @@ extern volatile portTickType xTickCount;
 unsigned long save_imrl0, save_imrl0_tos, save_imrh0, save_imrh0_tos, save_imrh1, save_imrh1_tos;
 #else
 unsigned long save_imrl, save_imrl_tos, save_imrh, save_imrh_tos;
+extern void set_intfrcl(unsigned long mask);
+extern void clr_intfrcl(unsigned long mask);
 #endif
 
 void
@@ -257,15 +263,23 @@ portSaveRestoreInt( int iSave )
         {
             MCF_INTC_IMRL = save_imrl_tos & save_imrl;
             MCF_INTC_IMRH = save_imrh_tos & save_imrh;
-            if( *(unsigned short *)_timer_ms
+            if(*(unsigned short *)_timer_ms
              && *(unsigned long *)_hz_200 < (unsigned long)xTickCount )
             {
+#ifndef MCF547X /* because INT7 is used on MCF5484LITE for PCI */
+                set_intfrcl(MCF_INTC_INTFRCL_INTFRC6); // same cycle
+#else
                 MCF_INTC_INTFRCL |= MCF_INTC_INTFRCL_INTFRC6; /* force INT 6 */
+#endif /* MCF547X */
                 portIntCounter++;
                 if(portIntCounter >= (configTICK_RATE_HZ / 50) )
                 {
-                   portIntCounter = 0;
-                   MCF_INTC_INTFRCL |= MCF_INTC_INTFRCL_INTFRC4; /* force INT 4 */
+                    portIntCounter = 0;
+#ifndef MCF547X /* because INT7 is used on MCF5484LITE for PCI */
+                    set_intfrcl(MCF_INTC_INTFRCL_INTFRC4); // same cycle
+#else
+                    MCF_INTC_INTFRCL |= MCF_INTC_INTFRCL_INTFRC4; /* force INT 4 */
+#endif /* MCF547X */
                 }
             }
         }
@@ -273,7 +287,11 @@ portSaveRestoreInt( int iSave )
         {
             MCF_INTC_IMRL = save_imrl;
             MCF_INTC_IMRH = save_imrh;
+#ifndef MCF547X /* because INT7 is used on MCF5484LITE for PCI */
+            clr_intfrcl(~(MCF_INTC_INTFRCL_INTFRC4 | MCF_INTC_INTFRCL_INTFRC6)); // same cycle          
+#else
             MCF_INTC_INTFRCL &= ~(MCF_INTC_INTFRCL_INTFRC4 | MCF_INTC_INTFRCL_INTFRC6);
+#endif /* MCF547X */
         }
 #endif /* MCF5445X */
 //        PERF_STOP_INT("inter");
@@ -354,6 +372,12 @@ void portYIELD(void)
 int vPortSetIPL( unsigned long int uiNewIPL )
 {
     int iOldIPL;
+#if 0 // ugly hack fixed by using portOldIPLTOS
+    portSTACK_TYPE *p = (portSTACK_TYPE *) pxCurrentTCB;
+    unsigned portBASE_TYPE uxStartIntLevel = (unsigned portBASE_TYPE) p[65];
+    if(( pxCurrentTCB != tid_TOS ) && ( (unsigned portBASE_TYPE) uiNewIPL < uxStartIntLevel ) )
+        uiNewIPL = (unsigned long int) uxStartIntLevel;
+#endif
 #if ( HAVE_USP == 1 )
 		if( !xTaskIsSuper() || ( pxCurrentTCB == tid_TOS ) )
 #else
@@ -397,7 +421,6 @@ prvPortPreemptiveTick ( void )
     /* The cooperative scheduler requires a normal IRQ service routine to
      * simply increment the system tick.
      */
-
     vTaskIncrementTick(  );
 #ifdef MCF5445X
     MCF_DTIM_DTER(2) = DTIM_DTER_REF;
@@ -427,14 +450,19 @@ prvPortPreemptiveTick( void )
 }
 #endif
 
-static int portOldIPL;
+static int portOldIPL, portOldIPLTOS;
 
 void
 vPortEnterCritical()
 {
     int level = portSET_IPL( portIPL_MAX );
     if( ulCriticalNesting == portNO_CRITICAL_NESTING )
-         portOldIPL = level;
+    {
+         if( pxCurrentTCB != tid_TOS )
+               portOldIPL = level;
+         else
+               portOldIPLTOS = level;
+    }
     /* Now interrupts are disabled ulCriticalNesting can be accessed
      * directly.  Increment ulCriticalNesting to keep a count of how many times
      * portENTER_CRITICAL() has been called. */
@@ -448,13 +476,10 @@ vPortExitCritical()
     {
         /* Decrement the nesting count as we are leaving a critical section. */
         ulCriticalNesting--;
-
         /* If the nesting level has reached zero then interrupts should be
         re-enabled. */
         if( ulCriticalNesting == portNO_CRITICAL_NESTING )
-        {
-            ( void )portSET_IPL( portOldIPL );
-        }
+            ( void )portSET_IPL( pxCurrentTCB != tid_TOS ? portOldIPL : portOldIPLTOS );
     }
 }
 

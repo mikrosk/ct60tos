@@ -1,0 +1,23 @@
+;FLASH_CF.PRJ for Pure C
+
+FLASH_CF.PRG
+.C [-Iinclude]
+.C [ -27 -P]
+.S [ -4 -S]
+.L [ -S=16384]
+=
+
+;PCSTART.O          ; startup code
+ahcstart.o
+
+FLASH060.C
+FLASH.S
+FLASH_CF.S
+SREC.C           
+JEDEC.C
+J_FUSE.S           
+JTAG.C
+JTAG_P.S           
+
+ahccstdf.lib
+ahccgemf.lib

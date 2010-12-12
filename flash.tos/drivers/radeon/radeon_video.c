@@ -1,5 +1,4 @@
 #include "radeonfb.h"
-#include <string.h>
 #include "vidix.h"
 #include "fourcc.h"
 

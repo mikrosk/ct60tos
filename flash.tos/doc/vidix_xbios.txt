@@ -3,35 +3,35 @@
 *************************************************************************
 XBIOS Functions list:
 
-vixGetVersion()          XBIOS function 400 - mandatory
-vixProbe()               XBIOS function 401 - mandatory
-vixInit()                XBIOS function 402 - optional
-vixDestroy()             XBIOS function 403 - optional
-vixGetCapability()       XBIOS function 404 - mandatory
-vixQueryFourcc()         XBIOS function 405 - mandatory
-vixConfigPlayback()      XBIOS function 406 - mandatory
-vixPlaybackOn()          XBIOS function 407 - mandatory
-vixPlaybackOff()         XBIOS function 408 - mandatory
-vixPlaybackFrameSelect() XBIOS function 409 - optional
-vixGetGrKeys()           XBIOS function 410 - optional
-vixSetGrKeys()           XBIOS function 411 - optional
-vixPlaybackGetEq()       XBIOS function 412 - optional
-vixPlaybackSetEq()       XBIOS function 413 - optional
-vixPlaybackGetDeint()    XBIOS function 414 - optional
-vixPlaybackSetDeint()    XBIOS function 415 - optional
-vixPlaybackCopyFrame()   XBIOS function 416 - optional
-vixQueryDMAStatus()      XBIOS function 417 - optional
+vdxGetVersion()          XBIOS function 400 - mandatory
+vdxProbe()               XBIOS function 401 - mandatory
+vdxInit()                XBIOS function 402 - optional
+vdxDestroy()             XBIOS function 403 - optional
+vdxGetCapability()       XBIOS function 404 - mandatory
+vdxQueryFourcc()         XBIOS function 405 - mandatory
+vdxConfigPlayback()      XBIOS function 406 - mandatory
+vdxPlaybackOn()          XBIOS function 407 - mandatory
+vdxPlaybackOff()         XBIOS function 408 - mandatory
+vdxPlaybackFrameSelect() XBIOS function 409 - optional
+vdxGetGrKeys()           XBIOS function 410 - optional
+vdxSetGrKeys()           XBIOS function 411 - optional
+vdxPlaybackGetEq()       XBIOS function 412 - optional
+vdxPlaybackSetEq()       XBIOS function 413 - optional
+vdxPlaybackGetDeint()    XBIOS function 414 - optional
+vdxPlaybackSetDeint()    XBIOS function 415 - optional
+vdxPlaybackCopyFrame()   XBIOS function 416 - optional
+vdxQueryDMAStatus()      XBIOS function 417 - optional
 
 
 *************************************************************************
-			vixGetVersion    
+			vdxGetVersion    
 *************************************************************************
 
   Opcode:
        XBIOS 400
 
   Syntax:
-       unsigned vixGetVersion(void);
+       unsigned vdxGetVersion(void);
 
   Description:
           Get the version.
@@ -44,14 +44,14 @@ vixQueryDMAStatus()      XBIOS function 417 - optional
   Return: Version.
 
 *************************************************************************
-			vixProbe    
+			vdxProbe    
 *************************************************************************
 
   Opcode:
        XBIOS 401
 
   Syntax:
-       int vixProbe(int verbose,int force);
+       int vdxProbe(int verbose,int force);
 
   Description:
           Probe the board.
@@ -68,14 +68,14 @@ vixQueryDMAStatus()      XBIOS function 417 - optional
           ENXIO.
           
 *************************************************************************
-			vixInit    
+			vdxInit    
 *************************************************************************
 
   Opcode:
        XBIOS 402
 
   Syntax:
-       int vixInit(void);
+       int vdxInit(void);
 
   Description:
           Initialize the VIDIX driver.
@@ -88,14 +88,14 @@ vixQueryDMAStatus()      XBIOS function 417 - optional
   Return: Driver should return 0.
 
 *************************************************************************
-			vixDestroy    
+			vdxDestroy    
 *************************************************************************
 
   Opcode:
        XBIOS 403
 
   Syntax:
-       void vixDestroy(void);
+       void vdxDestroy(void);
 
   Description:
           Quit the VIDIX driver.
@@ -108,14 +108,14 @@ vixQueryDMAStatus()      XBIOS function 417 - optional
   Return: Nothing.
 
 *************************************************************************
-			vixGetCapability    
+			vdxGetCapability    
 *************************************************************************
 
   Opcode:
        XBIOS 404
 
   Syntax:
-       int vixGetCapability(vidix_capability_t *to);
+       int vdxGetCapability(vidix_capability_t *to);
 
   Description:
           Driver should return capability with filled vidix_capability_t.type field.
@@ -158,14 +158,14 @@ vixQueryDMAStatus()      XBIOS function 417 - optional
   Return: Driver should return 0.
 
 *************************************************************************
-			vixQueryFourcc    
+			vdxQueryFourcc    
 *************************************************************************
 
   Opcode:
        XBIOS 405
 
   Syntax:
-       int vixQueryFourcc(vidix_fourcc_t *to);
+       int vdxQueryFourcc(vidix_fourcc_t *to);
 
   Description:
           Select requested fourcc, witdh and height
@@ -212,14 +212,14 @@ vixQueryDMAStatus()      XBIOS function 417 - optional
   Return: Driver should return 0 else ENOSYS.
           
 *************************************************************************
-			vixConfigPlayback    
+			vdxConfigPlayback    
 *************************************************************************
 
   Opcode:
        XBIOS 406
 
   Syntax:
-       int vixConfigPlayback(vidix_playback_t *info);
+       int vdxConfigPlayback(vidix_playback_t *info);
 
   Description:
           Driver should prepare BES on this call.
@@ -321,14 +321,14 @@ vixQueryDMAStatus()      XBIOS function 417 - optional
   Return: Driver should return 0.
  
 *************************************************************************
-			vixPlaybackOn    
+			vdxPlaybackOn    
 *************************************************************************
 
   Opcode:
        XBIOS 407
 
   Syntax:
-       int vixPlaybackOn(void);
+       int vdxPlaybackOn(void);
 
   Description:
           Driver should activate BES on this call.
@@ -341,14 +341,14 @@ vixQueryDMAStatus()      XBIOS function 417 - optional
   Return: Driver should return 0.
           
 *************************************************************************
-			vixPlaybackOff    
+			vdxPlaybackOff    
 *************************************************************************
 
   Opcode:
        XBIOS 408
 
   Syntax:
-       int vixPlaybackOff(void);
+       int vdxPlaybackOff(void);
 
   Description:
           Driver should deactivate BES on this call.
@@ -361,14 +361,14 @@ vixQueryDMAStatus()      XBIOS function 417 - optional
   Return: Driver should return 0.
           
 *************************************************************************
-			vixPlaybackFrameSelect    
+			vdxPlaybackFrameSelect    
 *************************************************************************
 
   Opcode:
        XBIOS 409
 
   Syntax:
-       int vixPlaybackFrameSelect(unsigned frame);
+       int vdxPlaybackFrameSelect(unsigned frame);
 
   Description:
           Driver should prepare and activate corresponded frame.
@@ -384,14 +384,14 @@ vixQueryDMAStatus()      XBIOS function 417 - optional
   Return: Driver should return 0.
 
 *************************************************************************
-			vixGetGrKeys    
+			vdxGetGrKeys    
 *************************************************************************
 
   Opcode:
        XBIOS 410
 
   Syntax:
-       int vixGetGrKeys(vidix_grkey_t *grkey);
+       int vdxGetGrKeys(vidix_grkey_t *grkey);
 
   Description:
           This interface should be tuned but introduced for overlapped playback
@@ -418,14 +418,14 @@ vixQueryDMAStatus()      XBIOS function 417 - optional
   Return: Driver should return 0.
   
 *************************************************************************
-			vixSetGrKeys    
+			vdxSetGrKeys    
 *************************************************************************
 
   Opcode:
        XBIOS 411
 
   Syntax:
-       int vixSetGrKeys(const vidix_grkey_t *grkey);
+       int vdxSetGrKeys(const vidix_grkey_t *grkey);
 
   Description:
           This interface should be tuned but introduced for overlapped playback
@@ -452,14 +452,14 @@ vixQueryDMAStatus()      XBIOS function 417 - optional
   Return: Driver should return 0.
   
 *************************************************************************
-			vixPlaybackGetEq    
+			vdxPlaybackGetEq    
 *************************************************************************
 
   Opcode:
        XBIOS 412
 
   Syntax:
-       int vixPlaybackGetEq(vidix_video_eq_t * eq);
+       int vdxPlaybackGetEq(vidix_video_eq_t * eq);
 
   Description:
           Function for get color correction.
@@ -497,14 +497,14 @@ vixQueryDMAStatus()      XBIOS function 417 - optional
   Return: Driver should return 0.
   
 *************************************************************************
-			vixPlaybackSetEq    
+			vdxPlaybackSetEq    
 *************************************************************************
 
   Opcode:
        XBIOS 413
 
   Syntax:
-       int vixPlaybackSetEq(const vidix_video_eq_t * eq;
+       int vdxPlaybackSetEq(const vidix_video_eq_t * eq;
 
   Description:
           Function for set color correction.
@@ -542,14 +542,14 @@ vixQueryDMAStatus()      XBIOS function 417 - optional
   Return: Driver should return 0.
 
 *************************************************************************
-			vixPlaybackGetDeint    
+			vdxPlaybackGetDeint    
 *************************************************************************
 
   Opcode:
        XBIOS 414
 
   Syntax:
-       int vixPlaybackGetDeint(vidix_deinterlace_t * info);
+       int vdxPlaybackGetDeint(vidix_deinterlace_t * info);
 
   Description:
           Function for get interlacing.
@@ -576,14 +576,14 @@ vixQueryDMAStatus()      XBIOS function 417 - optional
   Return: Driver should return 0.
 
 *************************************************************************
-			vixPlaybackSetDeint    
+			vdxPlaybackSetDeint    
 *************************************************************************
 
   Opcode:
        XBIOS 415
 
   Syntax:
-       int vixPlaybackSetDeint(vidix_deinterlace_t * info);
+       int vdxPlaybackSetDeint(vidix_deinterlace_t * info);
 
   Description:
           Function for set interlacing.
@@ -610,14 +610,14 @@ vixQueryDMAStatus()      XBIOS function 417 - optional
   Return: Driver should return 0.
 
 *************************************************************************
-			vixPlaybackCopyFrame    
+			vdxPlaybackCopyFrame    
 *************************************************************************
 
   Opcode:
        XBIOS 416
 
   Syntax:
-       int vixPlaybackCopyFrame(vidix_dma_t *dmai);
+       int vdxPlaybackCopyFrame(vidix_dma_t *dmai);
 
   Description:
           Function for copy frame with the DMA.
@@ -649,17 +649,17 @@ vixQueryDMAStatus()      XBIOS function 417 - optional
           ENOSYS.
 
 *************************************************************************
-			vixQueryDMAStatus    
+			vdxQueryDMAStatus    
 *************************************************************************
 
   Opcode:
        XBIOS 417
 
   Syntax:
-       int vixQueryDMAStatus(void);
+       int vdxQueryDMAStatus(void);
 
   Description:
-          Function for get the status of the DMA after a vixPlaybackCopyFrame().
+          Function for get the status of the DMA after a vdxPlaybackCopyFrame().
 
   Binding:
           move.w  #417,-(sp)

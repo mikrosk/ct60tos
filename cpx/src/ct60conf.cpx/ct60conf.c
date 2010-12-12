@@ -1,5 +1,5 @@
 /* CT60 CONFiguration - Pure C */
-/* Didier MEQUIGNON - v1.04 - Aout 2009 */
+/* Didier MEQUIGNON - v2.00 - December 2010 */
 
 #include <portab.h>
 #include <tos.h>
@@ -15,7 +15,9 @@
 #include "ct60ctcm.h"
 #include "radeon.h"
 
-/* #define LIGHT */					/* without language & video */
+#define VERSION "2.00"
+#define Vsetscreen(log,phy,rez,mode) (void)xbios((short)0x05,(long)(log),(long)(phy),(short)(rez),(short)(mode))
+
 /* #define ALERT_INSTALL_CT60TEMP */
 /* #define DEBUG */
 /* #define TEST */
@@ -29,15 +31,6 @@
 #define ITIME 1000L	/* mS */
 #define MAX_CPULOAD 10000
 #define MAX_TEMP 90
-
-/* modecode extended flags */
-#define HORFLAG         0x200 /* double width */
-#define HORFLAG2        0x400 /* width increased */
-#define VESA_600        0x800 /* SVGA 600 lines */
-#define VESA_768       0x1000 /* SVGA 768 lines */
-#define VERTFLAG2      0x2000 /* double height */
-#define VIRTUAL_SCREEN 0x8000 /* width * 2 and height * 2, 2048 x 2048 max */
-#define BPS32 5
 
 #define KER_GETINFO 0x0100
 
@@ -91,6 +84,8 @@ typedef struct
 	unsigned char beep;
 	unsigned char bootlog;
 	unsigned char idectpci;
+	unsigned char div_frequency;
+	unsigned char serialspeed;
 } HEAD;
 
 typedef struct
@@ -233,15 +228,17 @@ COOKIE *fcookie(void);
 COOKIE *ncookie(COOKIE *p);
 COOKIE *get_cookie(long id);
 int add_cookie(COOKIE *cook);
+long cdecl enumfunc(SCREENINFO *inf, long flag);
 int find_radeon(void);
 int test_060(void);
+CT60_COOKIE *get_cookie_ct60(void);
 int copy_string(char *p1,char *p2);
 int long_deci(char *p,int *lg);
 int val_string(char *p);
 void reboot(void);
 void (*reset)(void);
 extern long ct60_read_clock(void);
-extern int ct60_configure_clock(unsigned long frequency,int mode);
+extern int ct60_configure_clock(unsigned long frequency,int mode,int divider);
 extern void tempo_20ms(void);
 extern long ct60_read_temp(void);
 extern long ct60_stop(void);
@@ -250,13 +247,14 @@ extern long ct60_cpu_revision(void);
 extern long mes_delay(void);
 extern int ct60_read_info_sdram(unsigned char *buffer);
 extern int ct60_read_info_clock(unsigned char *buffer);
+extern long get_version_flash(void);
 extern long ct60_rw_param(int mode,long type_param,long value);
 extern long ct60_rw_clock(int mode,int address,int data);
 extern int read_i2c(long device_address);
 
 /* global variables in the 1st position of DATA segment */
 
-HEAD config={0,2,2,0x11,'/',1,0x1b2,0x87,0,50,0,0,1,0,1,1,MIN_FREQ,1,1};
+HEAD config={0,2,2,0x11,'/',1,0x1b2,0x87,0,50,0,0,1,0,1,1,MIN_FREQ,1,1,2,2};
 
 #include "ct60temp.h"
 
@@ -267,7 +265,7 @@ int errno;
 WORD global[15];
 int gr_hwchar,gr_hhchar;
 int	ap_id=-1,temp_id=-1,wi_id=-1;
-int mint,magic,radeon,coldfire,flag_frequency,flag_cpuload,flag_xbios,thread=0,time_out_thread=-1,time_out_bubble=-1,bubblegem_right_click=1;
+int mint,magic,radeon,coldfire,flag_frequency,flag_cpuload,flag_xbios,thread=0,time_out_thread=-1,time_out_bubble=-1,bubblegem_right_click=1,div_frequency=2;
 unsigned long magic_date,st_ram,fast_ram,loops_per_sec=0,frequency=MIN_FREQ,min_freq=MIN_FREQ,max_freq=MAX_FREQ_REV6;
 extern unsigned long step_frequency;
 long cpu_cookie=0;
@@ -283,8 +281,8 @@ USERBLK spec_trace={0,0};
 USERBLK spec_cpuload={0,0};
 int ed_objc,new_objc,ed_pos,new_pos;
 int start_lang,flag_bubble,selection,no_jumper;
-int language,keyboard,datetime,vmode,bootpref,bootdelay,scsi,cpufpu;
-int tosram,blitterspeed,cachedelay,bootorder,bootlog,idectpci,nv_magic_code;
+int language,keyboard,datetime,vmode,vmode_prefered,width_max_mono,height_max_mono,width_prefered,height_prefered,bootpref,bootdelay,scsi,cpufpu;
+int tosram,blitterspeed,serialspeed,cachedelay,bootorder,bootlog,idectpci,nv_magic_code;
 unsigned int trigger_temp,daystop,timestop,beep;
 char *buffer_bubble=NULL;
 char *buffer_path=NULL;
@@ -293,6 +291,7 @@ unsigned short tab_temp[61],tab_temp_eiffel[61],tab_cpuload[61];
 /* ressource */
 
 #define MENUBOX 0
+#define MENUTITLE 1
 #define MENUBSELECT 3
 #define MENUBOXSTATUS 5
 #define MENUTEMP 7
@@ -311,46 +310,48 @@ unsigned short tab_temp[61],tab_temp_eiffel[61],tab_cpuload[61];
 #define MENUBOXSLIDER 32
 #define MENUSLIDER 33
 #define MENUBRIGHT 34
-#define MENURAM 35
-#define MENUBOXLANG 36
-#define MENUBLANG 38
-#define MENUBKEY 40
-#define MENUBDATE 42
-#define MENUBTIME 44
-#define MENUSEP 45
-#define MENULANG 46
-#define MENUBOXVIDEO 47
-#define MENUBVIDEO 49
-#define MENUBMODE 51
-#define MENUBRES 53
-#define MENUBCOUL 55
-#define MENUSTMODES 56
-#define MENUOVERSCAN 57
-#define MENUNVM 58
-#define MENUVIDEO 59
-#define MENUBOXBOOT 60
-#define MENUBBOOTORDER 61
-#define MENUBOS 63
-#define MENUBARBIT 65
-#define MENUBIDSCSI 67
-#define MENUDELAY 68
-#define MENUBBLITTER 70
-#define MENUBTOSRAM 72
-#define MENUBCACHE 74
-#define MENUBBOOTLOG 76
-#define MENUBIDECTPCI 78
-#define MENUBOOT 79
-#define MENUBOXSTOP 80
-#define MENUBDAY 82
-#define MENUTIME 83
-#define MENUBBEEP 85
-#define MENUSTOP 86
+#define MENUBDIV 35
+#define MENURAM 36
+#define MENUBOXLANG 37
+#define MENUBLANG 39
+#define MENUBKEY 41
+#define MENUBDATE 43
+#define MENUBTIME 45
+#define MENUSEP 46
+#define MENULANG 47
+#define MENUBOXVIDEO 48
+#define MENUBVIDEO 50
+#define MENUBMODE 52
+#define MENUBRES 54
+#define MENUBCOUL 56
+#define MENUBMLAYOUT 57
+#define MENUSTMODES 58
+#define MENUOVERSCAN 59
+#define MENUNVM 60
+#define MENUVIDEO 61
+#define MENUBOXBOOT 62
+#define MENUBBOOTORDER 63
+#define MENUBOS 65
+#define MENUBARBIT 67
+#define MENUBIDSCSI 69
+#define MENUDELAY 70
+#define MENUBBLITTER 72
+#define MENUBTOSRAM 74
+#define MENUBCACHE 76
+#define MENUBBOOTLOG 78
+#define MENUBIDECTPCI 80
+#define MENUBOOT 81
+#define MENUBOXSTOP 82
+#define MENUBDAY 84
+#define MENUTIME 85
+#define MENUBBEEP 87
+#define MENUSTOP 88
 
-#define MENUBSAVE 87
-#define MENUBLOAD 88
-#define MENUBOK 89
-#define MENUBCANCEL 90
-#define MENUBINFO 91
+#define MENUBSAVE 89
+#define MENUBLOAD 90
+#define MENUBOK 91
+#define MENUBCANCEL 92
+#define MENUBINFO 93
 
 #define INFOBOX 0
 #define INFOLOGO 1
@@ -421,6 +422,7 @@ char *rs_strings[] = {
 	"FPU:",
 	"Non","","",
 	"123.456","","",
+	"/2","","",
 	" Langage ","","",
 	"Langage:",
 	"Fran‡ais","","",
@@ -440,6 +442,7 @@ char *rs_strings[] = {
 	"320x200","","",
 	"Couleurs:",
 	"xxxxx","","",
+	"M.Layout","","",
 	"Mode ST",
 	"Overscan",
 	"Remplace NVM",
@@ -474,16 +477,16 @@ char *rs_strings[] = {
 	"OK",
 	"Annule",
 	
-	"CT60 Configuration V1.04 Aout 2009","","",
+	"CT60 Configuration V" VERSION " D‚cembre 2010","","",
+	"","","",
 	"Ce CPX et systŠme:","","",
 	"Didier MEQUIGNON","","",
 	"aniplay@wanadoo.fr","","",
-	"SystŠme:","","",
-	"Xavier JOUBERT","","",
-	"xavier.joubert@free.fr","","",
+	"","","",
 	"Hardware:","","",
 	"Rodolphe CZUBA","","",
 	"rczuba@free.fr","","",
+	"","","",
 	"http://www.powerphenix.com","","",
 	"OK",
 	"SDRAM",
@@ -548,6 +551,7 @@ char *rs_strings_en[] = {
 	"FPU:",
 	"No","","",
 	"012.345","","",
+	"/3","","",
 	" Language ","","",
 	"Language:",
 	"English","","",
@@ -567,6 +571,7 @@ char *rs_strings_en[] = {
 	"320x200","","",
 	"Colors:",
 	"xxxxx","","",
+	"M.Layout","","",
 	"Mode ST",
 	"Overscan",
 	"Replace NVRAM",
@@ -601,16 +606,16 @@ char *rs_strings_en[] = {
 	"OK",
 	"Cancel",
 
-	"CT60 Configuration V1.04 August 2009","","",
+	"CT60 Configuration V" VERSION " December 2010","","",
+	"","","",
 	"This CPX and system:","","",
 	"Didier MEQUIGNON","","",
 	"aniplay@wanadoo.fr","","",
-	"System:","","",
-	"Xavier JOUBERT","","",
-	"xavier.joubert@free.fr","","",
+	"","","",
 	"Hardware:","","",
 	"Rodolphe CZUBA","","",
 	"rczuba@free.fr","","",
+	"","","",
 	"http://www.powerphenix.com","","",
 	"OK",
 	"SDRAM",
@@ -677,36 +682,36 @@ TEDINFO rs_tedinfo[] = {
 	(char *)44L,(char *)45L,(char *)46L,IBM,0,0,0x1180,0,0,16,1,
 	(char *)48L,(char *)49L,(char *)50L,IBM,0,2,0x1180,0,-1,4,1,
 	(char *)51L,(char *)52L,(char *)53L,SMALL,0,2,0x1180,0,-1,8,1,
-	(char *)54L,(char *)55L,(char *)56L,IBM,0,2,0x1180,0,0,9,1,
-	(char *)58L,(char *)59L,(char *)60L,IBM,0,2,0x1180,0,-1,16,1,
-	(char *)62L,(char *)63L,(char *)64L,IBM,0,2,0x1180,0,-1,16,1,
-	(char *)66L,(char *)67L,(char *)68L,IBM,0,2,0x1180,0,-1,16,1,
-	(char *)70L,(char *)71L,(char *)72L,IBM,0,2,0x1180,0,-1,4,1,	
-	(char *)73L,(char *)74L,(char *)75L,IBM,0,0,0x1180,0,0,2,14,
-	(char *)76L,(char *)77L,(char *)78L,IBM,0,2,0x1180,0,0,9,1,
-	(char *)80L,(char *)81L,(char *)82L,IBM,0,2,0x1180,0,-1,8,1,
-	(char *)84L,(char *)85L,(char *)86L,IBM,0,2,0x1180,0,-1,8,1,
-	(char *)88L,(char *)89L,(char *)90L,IBM,0,2,0x1180,0,-1,16,1,
-	(char *)92L,(char *)93L,(char *)94L,IBM,0,2,0x1180,0,-1,16,1,
-	(char *)98L,(char *)99L,(char *)100L,IBM,0,2,0x1180,0,0,6,1,
-	(char *)101L,(char *)102L,(char *)103L,IBM,0,2,0x1180,0,-1,10,1,
-	(char *)105L,(char *)106L,(char *)107L,IBM,0,2,0x1180,0,-1,16,1,
-	(char *)109L,(char *)110L,(char *)111L,IBM,0,2,0x1180,0,-1,5,1,
-	(char *)113L,(char *)114L,(char *)115L,IBM,0,2,0x1180,0,-1,3,1,		
-	(char *)116L,(char *)117L,(char *)118L,IBM,0,0,0x1180,0,0,3,13,
-	(char *)120L,(char *)121L,(char *)122L,IBM,0,2,0x1180,0,-1,7,1,
-	(char *)124L,(char *)125L,(char *)126L,IBM,0,2,0x1180,0,-1,4,1,
-	(char *)128L,(char *)129L,(char *)130L,IBM,0,2,0x1180,0,-1,8,1,
-	(char *)132L,(char *)133L,(char *)134L,IBM,0,2,0x1180,0,-1,7,1,
-	(char *)136L,(char *)137L,(char *)138L,IBM,0,2,0x1180,0,-1,7,1,
-	(char *)139L,(char *)140L,(char *)141L,IBM,0,2,0x1180,0,0,14,1,
-	(char *)143L,(char *)144L,(char *)145L,IBM,0,2,0x1180,0,-1,16,1,
-	(char *)146L,(char *)147L,(char *)148L,IBM,0,0,0x1180,0,0,5,10,
-	(char *)150L,(char *)151L,(char *)152L,IBM,0,2,0x1180,0,-1,5,1,
+	(char *)54L,(char *)55L,(char *)56L,IBM,0,2,0x1180,0,-1,3,1,
+	(char *)57L,(char *)58L,(char *)59L,IBM,0,2,0x1180,0,0,9,1,
+	(char *)61L,(char *)62L,(char *)63L,IBM,0,2,0x1180,0,-1,16,1,
+	(char *)65L,(char *)66L,(char *)67L,IBM,0,2,0x1180,0,-1,16,1,
+	(char *)69L,(char *)70L,(char *)71L,IBM,0,2,0x1180,0,-1,16,1,
+	(char *)73L,(char *)74L,(char *)75L,IBM,0,2,0x1180,0,-1,4,1,	
+	(char *)76L,(char *)77L,(char *)78L,IBM,0,0,0x1180,0,0,2,14,
+	(char *)79L,(char *)80L,(char *)81L,IBM,0,2,0x1180,0,0,9,1,
+	(char *)83L,(char *)84L,(char *)85L,IBM,0,2,0x1180,0,-1,8,1,
+	(char *)87L,(char *)88L,(char *)89L,IBM,0,2,0x1180,0,-1,8,1,
+	(char *)91L,(char *)92L,(char *)93L,IBM,0,2,0x1180,0,-1,16,1,
+	(char *)95L,(char *)96L,(char *)97L,IBM,0,2,0x1180,0,-1,16,1,
+	(char *)98L,(char *)99L,(char *)100L,IBM,0,2,0x1180,0,-1,16,1,
+	(char *)104L,(char *)105L,(char *)106L,IBM,0,2,0x1180,0,0,6,1,
+	(char *)107L,(char *)108L,(char *)109L,IBM,0,2,0x1180,0,-1,10,1,
+	(char *)111L,(char *)112L,(char *)113L,IBM,0,2,0x1180,0,-1,16,1,
+	(char *)115L,(char *)116L,(char *)117L,IBM,0,2,0x1180,0,-1,5,1,
+	(char *)119L,(char *)120L,(char *)121L,IBM,0,2,0x1180,0,-1,3,1,		
+	(char *)122L,(char *)123L,(char *)124L,IBM,0,0,0x1180,0,0,3,13,
+	(char *)126L,(char *)127L,(char *)128L,IBM,0,2,0x1180,0,-1,7,1,
+	(char *)130L,(char *)131L,(char *)132L,IBM,0,2,0x1180,0,-1,4,1,
+	(char *)134L,(char *)135L,(char *)136L,IBM,0,2,0x1180,0,-1,8,1,
+	(char *)138L,(char *)139L,(char *)140L,IBM,0,2,0x1180,0,-1,7,1,
+	(char *)142L,(char *)143L,(char *)144L,IBM,0,2,0x1180,0,-1,7,1,
+	(char *)145L,(char *)146L,(char *)147L,IBM,0,2,0x1180,0,0,14,1,
+	(char *)149L,(char *)150L,(char *)151L,IBM,0,2,0x1180,0,-1,16,1,
+	(char *)152L,(char *)153L,(char *)154L,IBM,0,0,0x1180,0,0,5,10,
+	(char *)156L,(char *)157L,(char *)158L,IBM,0,2,0x1180,0,-1,5,1,
 
-	(char *)157L,(char *)158L,(char *)159L,IBM,0,2,0x1480,0,0,38,1,
-	(char *)160L,(char *)161L,(char *)162L,IBM,0,2,0x1180,0,0,38,1,
-	(char *)163L,(char *)164L,(char *)165L,IBM,0,2,0x1180,0,0,38,1,
+	(char *)163L,(char *)164L,(char *)165L,IBM,0,2,0x1480,0,0,38,1,
 	(char *)166L,(char *)167L,(char *)168L,IBM,0,2,0x1180,0,0,38,1,
 	(char *)169L,(char *)170L,(char *)171L,IBM,0,2,0x1180,0,0,38,1,
 	(char *)172L,(char *)173L,(char *)174L,IBM,0,2,0x1180,0,0,38,1,
@@ -715,13 +720,15 @@ TEDINFO rs_tedinfo[] = {
 	(char *)181L,(char *)182L,(char *)183L,IBM,0,2,0x1180,0,0,38,1,
 	(char *)184L,(char *)185L,(char *)186L,IBM,0,2,0x1180,0,0,38,1,
 	(char *)187L,(char *)188L,(char *)189L,IBM,0,2,0x1180,0,0,38,1,
+	(char *)190L,(char *)191L,(char *)192L,IBM,0,2,0x1180,0,0,38,1,
+	(char *)193L,(char *)194L,(char *)195L,IBM,0,2,0x1180,0,0,38,1,
 
-	(char *)193L,(char *)194L,(char *)195L,IBM,0,2,0x1480,0,-1,17,1,
+	(char *)199L,(char *)200L,(char *)201L,IBM,0,2,0x1480,0,-1,17,1,
 	
-	(char *)224L,(char *)225L,(char *)226L,IBM,0,0,0x1180,0,0,4,32 };
+	(char *)230L,(char *)231L,(char *)232L,IBM,0,0,0x1180,0,0,4,32 };
 	
 OBJECT rs_object[] = {
-	-1,1,91,G_BOX,FL3DBAK,NORMAL,0x1100L,0,0,32,11,
+	-1,1,93,G_BOX,FL3DBAK,NORMAL,0x1100L,0,0,32,11,
 	2,-1,-1,G_TEXT,FL3DBAK,SELECTED,0L,0,0,32,1,
 	3,-1,-1,G_STRING,NONE,NORMAL,3L,1,1,14,1,
 	4,-1,-1,G_BOXTEXT,TOUCHEXIT,SHADOWED,1L,16,1,15,1,								/* popup selection */
@@ -740,7 +747,7 @@ OBJECT rs_object[] = {
 	17,-1,-1,G_TEXT,FL3DBAK,NORMAL,7L,0,4,3,1,
 	5,-1,-1,G_TEXT,FL3DBAK,NORMAL,8L,0,5,3,1,
 	19,-1,-1,G_TEXT,FL3DBAK,NORMAL,2L,1,2,13,1,
-	35,20,34,G_BOX,FL3DIND,NORMAL,0xff1100L,0,2,32,6,								/* memory box */
+	36,20,35,G_BOX,FL3DIND,NORMAL,0xff1100L,0,2,32,6,								/* memory box */
 	21,-1,-1,G_STRING,NONE,NORMAL,32L,1,1,15,1,
 	22,-1,-1,G_STRING,NONE,NORMAL,33L,16,1,16,1,									/* total ST-Ram */
 	23,-1,-1,G_STRING,NONE,NORMAL,34L,1,2,15,1,
@@ -751,130 +758,132 @@ OBJECT rs_object[] = {
 	28,-1,-1,G_TEXT,FL3DBAK,NORMAL,11L,16,4,16,1,									/* free Fast-Ram */
 	29,-1,-1,G_TEXT,/* TOUCHEXIT| */ FL3DBAK,NORMAL,12L,1,5,30,1,					/* Mips & tr/mn */
 	30,-1,-1,G_STRING,NONE,NORMAL,47L,1,6,4,1,
-	31,-1,-1,G_BOXTEXT,TOUCHEXIT,SHADOWED,13L,6,6,6,1,								/* popup PFU */
-	32,-1,-1,G_BOXCHAR,TOUCHEXIT,NORMAL,0x4ff1100L,16,6,2,1,						/*  */
-	34,33,33,G_BOX,TOUCHEXIT,NORMAL,0xff1111L,18,6,11,1,
+	31,-1,-1,G_BOXTEXT,TOUCHEXIT,SHADOWED,13L,6,6,4,1,								/* popup PFU */
+	32,-1,-1,G_BOXCHAR,TOUCHEXIT,NORMAL,0x4ff1100L,12,6,2,1,						/*  */
+	34,33,33,G_BOX,TOUCHEXIT,NORMAL,0xff1111L,14,6,11,1,
 	32,-1,-1,G_BOXTEXT,TOUCHEXIT,NORMAL,14L,0,0,5,1,
-	19,-1,-1,G_BOXCHAR,TOUCHEXIT,NORMAL,0x3ff1100L,29,6,2,1,						/*  */
-	36,-1,-1,G_TEXT,FL3DBAK,NORMAL,9L,1,2,14,1,
-	46,37,45,G_BOX,FL3DIND,NORMAL,0xff1100L,0,2,32,6,								/* language box */
-	38,-1,-1,G_STRING,NONE,NORMAL,57L,1,1,15,1,
-	39,-1,-1,G_BOXTEXT,TOUCHEXIT,SHADOWED,16L,16,1,15,1,							/* popup language */
-	40,-1,-1,G_STRING,NONE,NORMAL,61L,1,2,15,1,
-	41,-1,-1,G_BOXTEXT,TOUCHEXIT,SHADOWED,17L,16,2,15,1,							/* popup keyboard */
-	42,-1,-1,G_STRING,NONE,NORMAL,65L,1,3,15,1,
-	43,-1,-1,G_BOXTEXT,TOUCHEXIT,SHADOWED,18L,16,3,15,1,							/* popup date format */
-	44,-1,-1,G_STRING,NONE,NORMAL,69L,1,5,7,1,
-	45,-1,-1,G_BOXTEXT,TOUCHEXIT,SHADOWED,19L,8,5,3,1,								/* popup time format */
-	36,-1,-1,G_FTEXT,EDITABLE|FL3DBAK,NORMAL,20L,16,5,14,1,
-	47,-1,-1,G_TEXT,FL3DBAK,NORMAL,15L,1,2,10,1,
-	59,48,58,G_BOX,FL3DIND,NORMAL,0xff1100L,0,2,32,6,								/* video box */
-	49,-1,-1,G_STRING,NONE,NORMAL,79L,1,1,7,1,
-	50,-1,-1,G_BOXTEXT,TOUCHEXIT,SHADOWED,22L,8,1,7,1,								/* popup video TV/VGA */
-	51,-1,-1,G_STRING,NONE,NORMAL,83L,16,1,7,1,
-	52,-1,-1,G_BOXTEXT,TOUCHEXIT,SHADOWED,23L,24,1,7,1,								/* popup mode NTSC/PAL */
-	53,-1,-1,G_STRING,NONE,NORMAL,87L,1,2,15,1,
-	54,-1,-1,G_BOXTEXT,TOUCHEXIT,SHADOWED,25L,16,2,15,1,							/* popup resolution */
-	55,-1,-1,G_STRING,NONE,NORMAL,91L,1,3,9,1,
-	56,-1,-1,G_BOXTEXT,TOUCHEXIT,SHADOWED,24L,10,3,5,1,								/* popup colors */
-	57,-1,-1,G_BUTTON,SELECTABLE|TOUCHEXIT|FL3DIND,NORMAL,95L,16,3,15,1,            /* mode ST */
-	58,-1,-1,G_BUTTON,SELECTABLE|TOUCHEXIT|FL3DIND,NORMAL,96L,16,5,15,1,            /* overscan */
-	47,-1,-1,G_BUTTON,SELECTABLE|TOUCHEXIT|FL3DIND,NORMAL,97L,1,5,14,1,             /* replace NVRAM */
-	60,-1,-1,G_TEXT,FL3DBAK,NORMAL,21L,1,2,14,1,
-	79,61,78,G_BOX,FL3DIND,NORMAL,0xff1100L,0,2,32,6,								/* boot box */
-	62,-1,-1,G_BOXTEXT,TOUCHEXIT,SHADOWED,27L,1,1,17,1,								/* popup boot order */
-	63,-1,-1,G_STRING,NONE,NORMAL,104L,20,1,3,1,
-	64,-1,-1,G_BOXTEXT,TOUCHEXIT,SHADOWED,28L,24,1,7,1,								/* popup favourite OS */
-	65,-1,-1,G_STRING,NONE,NORMAL,108L,1,2,17,1,
-	66,-1,-1,G_BOXTEXT,TOUCHEXIT,SHADOWED,29L,18,2,4,1,								/* popup arbitration */
-	67,-1,-1,G_STRING,NONE,NORMAL,112L,24,2,3,1,
-	68,-1,-1,G_BOXTEXT,TOUCHEXIT,SHADOWED,30L,28,2,2,1,								/* popup ID SCSI */
-	69,-1,-1,G_FTEXT,EDITABLE|FL3DBAK,NORMAL,31L,1,3,13,1,
-	70,-1,-1,G_STRING,NONE,NORMAL,119L,15,3,8,1,
-	71,-1,-1,G_BOXTEXT,TOUCHEXIT,SHADOWED,32L,24,3,6,1,								/* popup speed blitter */
-	72,-1,-1,G_STRING,NONE,NORMAL,123L,1,4,11,1,
-	73,-1,-1,G_BOXTEXT,TOUCHEXIT,SHADOWED,33L,12,4,4,1,								/* popup 2transfer TOS in RAM */
-	74,-1,-1,G_STRING,NONE,NORMAL,127L,18,4,4,1,
-	75,-1,-1,G_BOXTEXT,TOUCHEXIT,SHADOWED,34L,23,4,7,1,								/* popup TOS cache delay */
-	76,-1,-1,G_STRING,NONE,NORMAL,131L,1,5,9,1,
-	77,-1,-1,G_BOXTEXT,TOUCHEXIT,SHADOWED,35L,10,5,7,1,								/* popup boot.log */
-	78,-1,-1,G_STRING,NONE,NORMAL,135L,19,5,5,1,
-	60,-1,-1,G_BOXTEXT,TOUCHEXIT,SHADOWED,36L,23,5,7,1,								/* popup IDE CTPCI */
-	80,-1,-1,G_TEXT,FL3DBAK,NORMAL,26L,1,2,6,1,
-	86,81,85,G_BOX,FL3DIND,NORMAL,0xff1100L,0,2,32,6,								/* stop box */
-	82,-1,-1,G_STRING,NONE,NORMAL,142L,1,1,15,1,
-	83,-1,-1,G_BOXTEXT,TOUCHEXIT,SHADOWED,38L,16,1,15,1,							/* popup stop */
-	84,-1,-1,G_FTEXT,EDITABLE|FL3DBAK,NORMAL,39L,1,3,13,1,							/* time */
-	85,-1,-1,G_STRING,NONE,NORMAL,149L,1,5,15,1,
-	80,-1,-1,G_BOXTEXT,TOUCHEXIT,SHADOWED,40L,16,5,4,1,								/* popup beep */
-	87,-1,-1,G_TEXT,FL3DBAK,NORMAL,37L,1,2,6,1,
+	35,-1,-1,G_BOXCHAR,TOUCHEXIT,NORMAL,0x3ff1100L,25,6,2,1,						/*  */
+	19,-1,-1,G_BOXTEXT,TOUCHEXIT,SHADOWED,15L,28,6,3,1,								/* popup secondary clock divider */	
+	37,-1,-1,G_TEXT,FL3DBAK,NORMAL,9L,1,2,14,1,
+	47,38,46,G_BOX,FL3DIND,NORMAL,0xff1100L,0,2,32,6,								/* language box */
+	39,-1,-1,G_STRING,NONE,NORMAL,60L,1,1,15,1,
+	40,-1,-1,G_BOXTEXT,TOUCHEXIT,SHADOWED,17L,16,1,15,1,							/* popup language */
+	41,-1,-1,G_STRING,NONE,NORMAL,64L,1,2,15,1,
+	42,-1,-1,G_BOXTEXT,TOUCHEXIT,SHADOWED,18L,16,2,15,1,							/* popup keyboard */
+	43,-1,-1,G_STRING,NONE,NORMAL,68L,1,3,15,1,
+	44,-1,-1,G_BOXTEXT,TOUCHEXIT,SHADOWED,19L,16,3,15,1,							/* popup date format */
+	45,-1,-1,G_STRING,NONE,NORMAL,72L,1,5,7,1,
+	46,-1,-1,G_BOXTEXT,TOUCHEXIT,SHADOWED,20L,8,5,3,1,								/* popup time format */
+	37,-1,-1,G_FTEXT,EDITABLE|FL3DBAK,NORMAL,21L,16,5,14,1,
+	48,-1,-1,G_TEXT,FL3DBAK,NORMAL,16L,1,2,10,1,
+	61,49,60,G_BOX,FL3DIND,NORMAL,0xff1100L,0,2,32,6,								/* video box */
+	50,-1,-1,G_STRING,NONE,NORMAL,82L,1,1,7,1,
+	51,-1,-1,G_BOXTEXT,TOUCHEXIT,SHADOWED,23L,8,1,7,1,								/* popup video TV/VGA */
+	52,-1,-1,G_STRING,NONE,NORMAL,86L,16,1,7,1,
+	53,-1,-1,G_BOXTEXT,TOUCHEXIT,SHADOWED,24L,24,1,7,1,								/* popup mode NTSC/PAL */
+	54,-1,-1,G_STRING,NONE,NORMAL,90L,1,2,15,1,
+	55,-1,-1,G_BOXTEXT,TOUCHEXIT,SHADOWED,26L,16,2,15,1,							/* popup resolution */
+	56,-1,-1,G_STRING,NONE,NORMAL,94L,1,3,9,1,
+	57,-1,-1,G_BOXTEXT,TOUCHEXIT,SHADOWED,25L,10,3,5,1,                             /* popup colors */
+	58,-1,-1,G_BOXTEXT,HIDETREE,SHADOWED,27L,16,3,15,1,                             /* popup monitor layout */
+	59,-1,-1,G_BUTTON,SELECTABLE|TOUCHEXIT|FL3DIND,NORMAL,101L,16,3,15,1,            /* mode ST */
+	60,-1,-1,G_BUTTON,SELECTABLE|TOUCHEXIT|FL3DIND,NORMAL,102L,16,5,15,1,            /* overscan */
+	48,-1,-1,G_BUTTON,SELECTABLE|TOUCHEXIT|FL3DIND,NORMAL,103L,1,5,14,1,            /* replace NVRAM */
+	62,-1,-1,G_TEXT,FL3DBAK,NORMAL,22L,1,2,14,1,
+	81,63,80,G_BOX,FL3DIND,NORMAL,0xff1100L,0,2,32,6,								/* boot box */
+	64,-1,-1,G_BOXTEXT,TOUCHEXIT,SHADOWED,29L,1,1,17,1,								/* popup boot order */
+	65,-1,-1,G_STRING,NONE,NORMAL,110L,20,1,3,1,
+	66,-1,-1,G_BOXTEXT,TOUCHEXIT,SHADOWED,30L,24,1,7,1,								/* popup favourite OS */
+	67,-1,-1,G_STRING,NONE,NORMAL,114L,1,2,17,1,
+	68,-1,-1,G_BOXTEXT,TOUCHEXIT,SHADOWED,31L,18,2,4,1,								/* popup arbitration */
+	69,-1,-1,G_STRING,NONE,NORMAL,118L,24,2,3,1,
+	70,-1,-1,G_BOXTEXT,TOUCHEXIT,SHADOWED,32L,28,2,2,1,								/* popup ID SCSI */
+	71,-1,-1,G_FTEXT,EDITABLE|FL3DBAK,NORMAL,33L,1,3,13,1,
+	72,-1,-1,G_STRING,NONE,NORMAL,125L,15,3,8,1,
+	73,-1,-1,G_BOXTEXT,TOUCHEXIT,SHADOWED,34L,24,3,6,1,								/* popup speed blitter */
+	74,-1,-1,G_STRING,NONE,NORMAL,129L,1,4,11,1,
+	75,-1,-1,G_BOXTEXT,TOUCHEXIT,SHADOWED,35L,12,4,4,1,								/* popup transfer TOS in RAM */
+	76,-1,-1,G_STRING,NONE,NORMAL,133L,18,4,4,1,
+	77,-1,-1,G_BOXTEXT,TOUCHEXIT,SHADOWED,36L,23,4,7,1,								/* popup TOS cache delay */
+	78,-1,-1,G_STRING,NONE,NORMAL,137L,1,5,9,1,
+	79,-1,-1,G_BOXTEXT,TOUCHEXIT,SHADOWED,37L,10,5,7,1,								/* popup boot.log */
+	80,-1,-1,G_STRING,NONE,NORMAL,141L,19,5,5,1,
+	62,-1,-1,G_BOXTEXT,TOUCHEXIT,SHADOWED,38L,23,5,7,1,								/* popup IDE CTPCI */
+	82,-1,-1,G_TEXT,FL3DBAK,NORMAL,28L,1,2,6,1,
+	88,83,87,G_BOX,FL3DIND,NORMAL,0xff1100L,0,2,32,6,								/* stop box */
+	84,-1,-1,G_STRING,NONE,NORMAL,148L,1,1,15,1,
+	85,-1,-1,G_BOXTEXT,TOUCHEXIT,SHADOWED,40L,16,1,15,1,							/* popup stop */
+	86,-1,-1,G_FTEXT,EDITABLE|FL3DBAK,NORMAL,41L,1,3,13,1,							/* time */
+	87,-1,-1,G_STRING,NONE,NORMAL,155L,1,5,15,1,
+	82,-1,-1,G_BOXTEXT,TOUCHEXIT,SHADOWED,42L,16,5,4,1,								/* popup beep */
+	89,-1,-1,G_TEXT,FL3DBAK,NORMAL,39L,1,2,6,1,
 
-	88,-1,-1,G_BUTTON,SELECTABLE|EXIT|FL3DIND|FL3DBAK,NORMAL,153L,1,9,5,1,			/* Save */
-	89,-1,-1,G_BUTTON,SELECTABLE|EXIT|FL3DIND|FL3DBAK,NORMAL,154L,8,9,6,1,			/* Load */
-	90,-1,-1,G_BUTTON,SELECTABLE|EXIT|FL3DIND|FL3DBAK,NORMAL,155L,16,9,3,1,			/* OK */
-	91,-1,-1,G_BUTTON,SELECTABLE|DEFAULT|EXIT|FL3DIND|FL3DBAK,NORMAL,156L,21,9,6,1,	/* Cancel */
+	90,-1,-1,G_BUTTON,SELECTABLE|EXIT|FL3DIND|FL3DBAK,NORMAL,159L,1,9,5,1,			/* Save */
+	91,-1,-1,G_BUTTON,SELECTABLE|EXIT|FL3DIND|FL3DBAK,NORMAL,160L,8,9,6,1,			/* Load */
+	92,-1,-1,G_BUTTON,SELECTABLE|EXIT|FL3DIND|FL3DBAK,NORMAL,161L,16,9,3,1,			/* OK */
+	93,-1,-1,G_BUTTON,SELECTABLE|DEFAULT|EXIT|FL3DIND|FL3DBAK,NORMAL,162L,21,9,6,1,	/* Cancel */
 	0,-1,-1,G_BOXCHAR,SELECTABLE|EXIT|LASTOB|FL3DIND|FL3DBAK,NORMAL,0x69ff1100L,29,9,2,1,	/* i */
 
 	/* info box */
-	-1,1,15,G_BOX,FL3DBAK,OUTLINED,0x21100L,0,0,40,24,
+	-1,1,15,G_BOX,FL3DBAK,OUTLINED,0x21100L,0,0,40,21,
 	2,-1,-1,G_IMAGE,NONE,NORMAL,0L,2,1,36,5,
-	3,-1,-1,G_TEXT,FL3DBAK,NORMAL,41L,1,7,38,1,
-	4,-1,-1,G_TEXT,FL3DBAK,NORMAL,42L,1,9,38,1,
-	5,-1,-1,G_TEXT,FL3DBAK,NORMAL,43L,1,10,38,1,
-	6,-1,-1,G_TEXT,FL3DBAK,NORMAL,44L,1,11,38,1,
-	7,-1,-1,G_TEXT,FL3DBAK,NORMAL,45L,1,13,38,1,
-	8,-1,-1,G_TEXT,FL3DBAK,NORMAL,46L,1,14,38,1,
-	9,-1,-1,G_TEXT,FL3DBAK,NORMAL,47L,1,15,38,1,
-	10,-1,-1,G_TEXT,FL3DBAK,NORMAL,48L,1,17,38,1,
-	11,-1,-1,G_TEXT,FL3DBAK,NORMAL,49L,1,18,38,1,
-	12,-1,-1,G_TEXT,FL3DBAK,NORMAL,50L,1,19,38,1,
-	13,-1,-1,G_TEXT,FL3DBAK,NORMAL,51L,1,20,38,1,
-	14,-1,-1,G_BUTTON,SELECTABLE|DEFAULT|EXIT|FL3DIND|FL3DBAK,NORMAL,190L,4,22,8,1,	/* OK */		
-	15,-1,-1,G_BUTTON,SELECTABLE|EXIT|FL3DIND|FL3DBAK,NORMAL,191L,16,22,8,1,		/* SDRAM */
-	0,-1,-1,G_BUTTON,SELECTABLE|EXIT|LASTOB|FL3DIND|FL3DBAK,NORMAL,192L,28,22,8,1,	/* Help */	
+	3,-1,-1,G_TEXT,FL3DBAK,NORMAL,43L,1,7,38,1,
+	4,-1,-1,G_TEXT,FL3DBAK,NORMAL,44L,1,8,38,1,
+	5,-1,-1,G_TEXT,FL3DBAK,NORMAL,45L,1,9,38,1,
+	6,-1,-1,G_TEXT,FL3DBAK,NORMAL,46L,1,10,38,1,
+	7,-1,-1,G_TEXT,FL3DBAK,NORMAL,47L,1,11,38,1,
+	8,-1,-1,G_TEXT,FL3DBAK,NORMAL,48L,1,12,38,1,
+	9,-1,-1,G_TEXT,FL3DBAK,NORMAL,49L,1,13,38,1,
+	10,-1,-1,G_TEXT,FL3DBAK,NORMAL,50L,1,14,38,1,
+	11,-1,-1,G_TEXT,FL3DBAK,NORMAL,51L,1,15,38,1,
+	12,-1,-1,G_TEXT,FL3DBAK,NORMAL,52L,1,16,38,1,
+	13,-1,-1,G_TEXT,FL3DBAK,NORMAL,53L,1,17,38,1,
+	14,-1,-1,G_BUTTON,SELECTABLE|DEFAULT|EXIT|FL3DIND|FL3DBAK,NORMAL,196L,4,19,8,1,	/* OK */		
+	15,-1,-1,G_BUTTON,SELECTABLE|EXIT|FL3DIND|FL3DBAK,NORMAL,197L,16,19,8,1,		/* SDRAM */
+	0,-1,-1,G_BUTTON,SELECTABLE|EXIT|LASTOB|FL3DIND|FL3DBAK,NORMAL,198L,28,19,8,1,	/* Help */	
 
 	/* alert box */
 	-1,1,32,G_BOX,FL3DBAK,OUTLINED,0x21100L,0,0,42,30,
-	2,-1,-1,G_BOXTEXT,FL3DIND,NORMAL,52L,0,0,42,1,
+	2,-1,-1,G_BOXTEXT,FL3DIND,NORMAL,54L,0,0,42,1,
 	3,-1,-1,G_IMAGE,NONE,NORMAL,1L,1,2,4,2,
 	4,-1,-1,G_IMAGE,NONE,NORMAL,2L,1,2,4,2,
 	5,-1,-1,G_IMAGE,NONE,NORMAL,3L,1,2,4,2,
-	6,-1,-1,G_STRING,NONE,NORMAL,196L,1,2,40,1,
-	7,-1,-1,G_STRING,NONE,NORMAL,197L,1,3,40,1,
-	8,-1,-1,G_STRING,NONE,NORMAL,198L,1,4,40,1,
-	9,-1,-1,G_STRING,NONE,NORMAL,199L,1,5,40,1,
-	10,-1,-1,G_STRING,NONE,NORMAL,200L,1,6,40,1,
-	11,-1,-1,G_STRING,NONE,NORMAL,201L,1,7,40,1,
-	12,-1,-1,G_STRING,NONE,NORMAL,202L,1,8,40,1,
-	13,-1,-1,G_STRING,NONE,NORMAL,203L,1,9,40,1,
-	14,-1,-1,G_STRING,NONE,NORMAL,204L,1,10,40,1,
-	15,-1,-1,G_STRING,NONE,NORMAL,205L,1,11,40,1,
-	16,-1,-1,G_STRING,NONE,NORMAL,206L,1,12,40,1,
-	17,-1,-1,G_STRING,NONE,NORMAL,207L,1,13,40,1,
-	18,-1,-1,G_STRING,NONE,NORMAL,208L,1,14,40,1,
-	19,-1,-1,G_STRING,NONE,NORMAL,209L,1,15,40,1,
-	20,-1,-1,G_STRING,NONE,NORMAL,210L,1,16,40,1,
-	21,-1,-1,G_STRING,NONE,NORMAL,211L,1,17,40,1,
-	22,-1,-1,G_STRING,NONE,NORMAL,212L,1,18,40,1,
-	23,-1,-1,G_STRING,NONE,NORMAL,213L,1,19,40,1,
-	24,-1,-1,G_STRING,NONE,NORMAL,214L,1,20,40,1,
-	25,-1,-1,G_STRING,NONE,NORMAL,215L,1,21,40,1,
-	26,-1,-1,G_STRING,NONE,NORMAL,216L,1,22,40,1,
-	27,-1,-1,G_STRING,NONE,NORMAL,217L,1,23,40,1,
-	28,-1,-1,G_STRING,NONE,NORMAL,218L,1,24,40,1,
-	29,-1,-1,G_STRING,NONE,NORMAL,219L,1,25,40,1,
-	30,-1,-1,G_STRING,NONE,NORMAL,220L,1,26,40,1,
-	31,-1,-1,G_BUTTON,SELECTABLE|DEFAULT|EXIT|FL3DIND|FL3DBAK,NORMAL,221L,1,28,10,1,
-	32,-1,-1,G_BUTTON,SELECTABLE|EXIT|FL3DIND|FL3DBAK,NORMAL,222L,12,28,10,1,
-	0,-1,-1,G_BUTTON,SELECTABLE|EXIT|LASTOB|FL3DIND|FL3DBAK,NORMAL,223L,23,28,10,1,
+	6,-1,-1,G_STRING,NONE,NORMAL,202L,1,2,40,1,
+	7,-1,-1,G_STRING,NONE,NORMAL,203L,1,3,40,1,
+	8,-1,-1,G_STRING,NONE,NORMAL,204L,1,4,40,1,
+	9,-1,-1,G_STRING,NONE,NORMAL,205L,1,5,40,1,
+	10,-1,-1,G_STRING,NONE,NORMAL,206L,1,6,40,1,
+	11,-1,-1,G_STRING,NONE,NORMAL,207L,1,7,40,1,
+	12,-1,-1,G_STRING,NONE,NORMAL,208L,1,8,40,1,
+	13,-1,-1,G_STRING,NONE,NORMAL,209L,1,9,40,1,
+	14,-1,-1,G_STRING,NONE,NORMAL,210L,1,10,40,1,
+	15,-1,-1,G_STRING,NONE,NORMAL,211L,1,11,40,1,
+	16,-1,-1,G_STRING,NONE,NORMAL,212L,1,12,40,1,
+	17,-1,-1,G_STRING,NONE,NORMAL,213L,1,13,40,1,
+	18,-1,-1,G_STRING,NONE,NORMAL,214L,1,14,40,1,
+	19,-1,-1,G_STRING,NONE,NORMAL,215L,1,15,40,1,
+	20,-1,-1,G_STRING,NONE,NORMAL,216L,1,16,40,1,
+	21,-1,-1,G_STRING,NONE,NORMAL,217L,1,17,40,1,
+	22,-1,-1,G_STRING,NONE,NORMAL,218L,1,18,40,1,
+	23,-1,-1,G_STRING,NONE,NORMAL,219L,1,19,40,1,
+	24,-1,-1,G_STRING,NONE,NORMAL,220L,1,20,40,1,
+	25,-1,-1,G_STRING,NONE,NORMAL,221L,1,21,40,1,
+	26,-1,-1,G_STRING,NONE,NORMAL,222L,1,22,40,1,
+	27,-1,-1,G_STRING,NONE,NORMAL,223L,1,23,40,1,
+	28,-1,-1,G_STRING,NONE,NORMAL,224L,1,24,40,1,
+	29,-1,-1,G_STRING,NONE,NORMAL,225L,1,25,40,1,
+	30,-1,-1,G_STRING,NONE,NORMAL,226L,1,26,40,1,
+	31,-1,-1,G_BUTTON,SELECTABLE|DEFAULT|EXIT|FL3DIND|FL3DBAK,NORMAL,227L,1,28,10,1,
+	32,-1,-1,G_BUTTON,SELECTABLE|EXIT|FL3DIND|FL3DBAK,NORMAL,228L,12,28,10,1,
+	0,-1,-1,G_BUTTON,SELECTABLE|EXIT|LASTOB|FL3DIND|FL3DBAK,NORMAL,229L,23,28,10,1,
 
 	/* TLV offset */
 	-1,1,3,G_BOX,FL3DBAK,OUTLINED,0x21100L,0,0,33,5,
-	2,-1,-1,G_FTEXT,EDITABLE|FL3DBAK,NORMAL,53L,1,1,31,1,
-	3,-1,-1,G_BUTTON,SELECTABLE|EXIT|FL3DIND|FL3DBAK,NORMAL,227L,7,3,6,1,					/* OK */
-	0,-1,-1,G_BUTTON,SELECTABLE|DEFAULT|EXIT|LASTOB|FL3DIND|FL3DBAK,NORMAL,228L,20,3,6,1 };	/* Cancel */
+	2,-1,-1,G_FTEXT,EDITABLE|FL3DBAK,NORMAL,55L,1,1,31,1,
+	3,-1,-1,G_BUTTON,SELECTABLE|EXIT|FL3DIND|FL3DBAK,NORMAL,233L,7,3,6,1,					/* OK */
+	0,-1,-1,G_BUTTON,SELECTABLE|DEFAULT|EXIT|LASTOB|FL3DIND|FL3DBAK,NORMAL,234L,20,3,6,1 };	/* Cancel */
 
-long rs_trindex[] = {0L,92L,108L,141L};
+long rs_trindex[] = {0L,94L,110L,143L};
 struct foobar {
 	int dummy;
 	int *image;
@@ -993,14 +1002,14 @@ UWORD pic_stop[]={
 	0x37FF,0xFFEC,0x1BFF,0xFFD8,0x0DFF,0xFFB0,0x06FF,0xFF60,
 	0x037F,0xFEC0,0x01BF,0xFD80,0x00C0,0x0300,0x007F,0xFE00 };
 
-#define NUM_STRINGS 229	/* number of strings */
+#define NUM_STRINGS 235	/* number of strings */
 #define NUM_FRSTR 0		/* strings form_alert */
 #define NUM_IMAGES 0
 #define NUM_BB 4		/* number of BITBLK */
 #define NUM_FRIMG 0
 #define NUM_IB 0		/* number of ICONBLK */
-#define NUM_TI 54		/* number of TEDINFO */
-#define NUM_OBS 145		/* number of objects */
+#define NUM_TI 56		/* number of TEDINFO */
+#define NUM_OBS 147		/* number of objects */
 #define NUM_TREE 4		/* number of trees */ 
 
 #define TREE1 0
@@ -1008,13 +1017,8 @@ UWORD pic_stop[]={
 #define TREE3 2
 #define TREE4 3
 
-#ifndef LIGHT
 #define MAX_SELECT 7
-#define NB_BUB 46
-#else
-#define MAX_SELECT 5
-#define NB_BUB 46-12
-#endif
+#define NB_BUB 48
 
 #define USA 0
 #define FRG 1
@@ -1034,7 +1038,8 @@ char *_select[2][7]={"  Charge moyenne ","  Temp‚rature    ","  M‚moire / æP   "
                      "  Average load   ","  Temperature    ","  Memory / æP    ","  Boot           ","  Stop           ","  Language       ","  Video (boot)   "};
 char *spec_fpu[2][2]={"Non","Oui","No","Yes"};
 char *fpu[2][2]={"  Non ","  Oui ","  No  ","  Yes "};
-#ifndef LIGHT
+char *spec_div_freq[]={"/2","/3","/4","/5","/6"};
+char *div_freq[]={"  /2 ","  /3 ","  /4 ","  /5 ","  /6 "};
 char *spec_lang[]={"English","Deutsch","Fran‡ais","Espa¥ol","Italiano","Suisse","Schweiz"};
 char *lang[]={ "  English     ",
                "  Deutsch     ",
@@ -1063,13 +1068,16 @@ char *spec_mode[]={"NTSC","PAL"};
 char *mode[]={"  NTSC ","  PAL  "};
 char *spec_coul[]={" 2 "," 4 ","16","256","65536","16M"};
 char *coul[]={"  2     ","  4     ","  16    ","  256   ","  65536 ","  16M   "};
-char *spec_res[2][8]={"320x200","320x400","640x200","640x400","800x600","1024x768","1280x960","1600x1200",
-                      "320x240","320x480","640x240","640x480","800x600","1024x768","1280x960","1600x1200"};
-char *res[2][8]={"  320 x 200 ","  320 x 400 ","  640 x 200 ","  640 x 400 ",
-                 "  800 x 600 "," 1024 x 768 "," 1280 x 960 "," 1600 x1200 ",
-                 "  320 x 240 ","  320 x 480 ","  640 x 240 ","  640 x 480 ",
-                 "  800 x 600 "," 1024 x 768 "," 1280 x 960 "," 1600 x1200 "};
-#endif
+char *spec_res[2][9]={"320x200","320x400","640x200","640x400","800x600","1024x768","1280x960","1600x1200","Pref.Mode",
+                      "320x240","320x480","640x240","640x480","800x600","1024x768","1280x960","1600x1200","Pref.Mode"};
+char *res[2][9]={"   320 x 200 ","   320 x 400 ","   640 x 200 ","   640 x 400 ",
+                 "   800 x 600 ","  1024 x 768 ","  1280 x 960 ","  1600 x1200 ",
+                 "  Pref. Mode ",
+                 "   320 x 240 ","   320 x 480 ","   640 x 240 ","   640 x 480 ",
+                 "   800 x 600 ","  1024 x 768 ","  1280 x 960 ","  1600 x1200 ",
+                 "  Pref. Mode "};
+char *spec_monitor_layout[6]={"DEFAULT","CRT,NONE","CRT,CRT","CRT,TMDS","TMDS,CRT","TMDS,TMDS"};
+char *monitor_layout[6]={"  DEFAULT  ","  CRT,NONE ","  CRT,CRT  ","  CRT,TMDS "," TMDS,CRT  "," TMDS,TMDS "};
 unsigned char code_lang[]= { USA, FRG, FRA, SPA, ITA, SWF, SWG };
 unsigned char code_key[]=  { USA, FRG, FRA, UK, SPA, ITA, SWE, SWF, SWG };
 unsigned char code_os[]={0,0x80,8,0x40,0x10,0x20};
@@ -1112,10 +1120,16 @@ char *boot_order[2][8]={"  Nouv. boot SCSI0-7 -> IDE0-1 ",
                         "  Old boot IDE0-1 -> SCSI0-7 ",
                         "  Old boot SCSI7-0 -> IDE1-0 ",
                         "  Old boot IDE1-0 -> SCSI7-0 "};
+char *spec_video_log[2][2]={"Oui","Non","Yes","No"};
+char *video_log[2][2]={"  Oui ","  Non ","  Yes ","  No  "};
 char *spec_boot_log[2][2]={"Avec","Sans","With","Without"};
 char *boot_log[2][2]={"  Avec ","  Sans ","  With    ","  Without "};
 char *spec_ide_ctpci[2][2]={"FALCON","CTPCI","FALCON","CTPCI"};
 char *ide_ctpci[2][2]={"  FALCON ","  CTPCI  ","  FALCON ","  CTPCI  "};
+char *spec_ide_cf[2][2]={"IDE","CF","IDE","CF"};
+char *ide_cf[2][2]={"  IDE          ","  CompactFlash ","  IDE          ","  CompactFlash "};
+char *spec_serial_speed[]={"19200","9600","4800","3600","2400","2000","1800","1200","600","300","230400","115200","57600","38400","153600","76800"};
+char *serial_speed[]={"   19200 ","    9600 ","    4800 ","    3600 ","    2400 ","    2000 ","    1800 ","    1200 ","     600 ","     300 ","  230400 ","  115200 ","   57600 ","   38400 ","  153600 ","   76800 "};
 char *spec_day_stop[2][11]={"Sans","Lundi","Mardi","Mercredi","Jeudi","Vendredi","Samedi","Dimanche","Jours ouvr‚s","Fin de semaine","Chaque jour",
                             "Without","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday","Mon-Fri","Weekend","Every day"};
 char *day_stop[2][11]={"  Sans           ","  Lundi          ","  Mardi          ","  Mercredi       ","  Jeudi          ","  Vendredi       ",
@@ -1183,7 +1197,9 @@ struct bubblegem bubbletab[NB_BUB] = {
 	{MENUSLIDER,
 	"Change la fr‚quence de|l'horloge de la CT60",
 	"Change the frequency of|the clock of the CT60"},
-#ifndef LIGHT
+	{MENUBDIV,
+	"Change le diviseur de l'horloge|utilisateur de la CT60",
+	"Change the divider of|the user clock on the CT60"},
 	{MENUBLANG,
 	"S‚lectionne au d‚marrage|la langue par d‚faut",
 	"Select default language|at startup"},
@@ -1211,6 +1227,9 @@ struct bubblegem bubbletab[NB_BUB] = {
 	{MENUBCOUL,
 	"S‚lectionne au d‚marrage|le nombre de couleurs",
 	"Select number of colours|at startup"},	
+	{MENUBMLAYOUT,
+	"S‚lectionne au d‚marrage|le mapping des moniteurs",
+	"Select monitor layout|at startup"},		
 	{MENUSTMODES,
 	"S‚lectionne au d‚marrage|le mode de compatibilit‚ ST",
 	"Select ST compatibility mode|at startup"},
@@ -1220,7 +1239,6 @@ struct bubblegem bubbletab[NB_BUB] = {
 	{MENUNVM,
 	"Remplace la lecture NVRAM|par les valeurs TOS sauv‚s|en Flash. Utilise l'horloge|IKBD au lieu du RTC.",
 	"Replace the NVRAM reading|by TOS values saved in the|Flash. Use the IKBD clock|instead of the RTC."},
-#endif
 	{MENUBBOOTORDER,
 	"S‚lectionne l'ordre de boot|sur les disques IDE et SCSI",
 	"Select boot order for|IDE and SCSI drives"},
@@ -1279,12 +1297,12 @@ struct bubblegem bubbletab[NB_BUB] = {
 };
 
 CPXINFO* CDECL cpx_init(XCPB *xcpb)
-
 {
 	register int i;
 	long value,stack;
 	COOKIE apk;
 	COOKIE idt;
+	COOKIE *p;
 	HEAD *header;
 	MX_KERNEL *mx_kernel;
 	CT60_COOKIE *ct60_arg=NULL;
@@ -1298,8 +1316,7 @@ CPXINFO* CDECL cpx_init(XCPB *xcpb)
 		NVMaccess(2,0,0,&nvram);					/* init */
 		NVMaccess(0,0,(int)(sizeof(NVM)),&nvram);	/* read */
 	}
-	radeon=find_radeon();
-	if((*Xcpb->get_cookie)('MiNT',&value))
+	if(get_cookie('MiNT') != NULL)
 		mint=1;
 	else
 		mint=0;
@@ -1320,29 +1337,34 @@ CPXINFO* CDECL cpx_init(XCPB *xcpb)
 	else
 		fast_ram=0L;
 	Super((void *)stack);
-	if(init_rsc()==0)
+	radeon=find_radeon();
+	if(get_cookie(ID_CF) != NULL)
+		coldfire=1;
+	else
+		coldfire=0;
+	if(!init_rsc())
 		return(0);
 #ifdef DEBUG
 	printf("\r\nTest cookies");
 #endif
-	if(!(*Xcpb->get_cookie)('_AKP',&value))
+	if(get_cookie('_AKP') == NULL)
 	{
-		apk.ident='_AKP';						/* cookie created if not exists */
-		apk.v.l=(((long)nvram.language)<<8) + (long)nvram.keyboard;
+		apk.ident = '_AKP';						/* cookie created if not exists */
+		apk.v.l = (((long)nvram.language)<<8) + (long)nvram.keyboard;
 		add_cookie(&apk);
 	}
-	if(!(*Xcpb->get_cookie)('_IDT',&value))
+	if(get_cookie('_IDT') == NULL)
 	{
-		idt.ident='_IDT';						/* cookie created if not exists */
-		idt.v.l=(((long)nvram.datetime)<<8) + (long)nvram.separator;
+		idt.ident = '_IDT';						/* cookie created if not exists */
+		idt.v.l = (((long)nvram.datetime)<<8) + (long)nvram.separator;
 		add_cookie(&idt);
 	}
-	eiffel_media_keys=NULL;
-	if((*Xcpb->get_cookie)('Eiff',&value))
-		eiffel_media_keys=(short *)value;
+	eiffel_media_keys = NULL;
+	if((p = get_cookie('Eiff')) != NULL)
+		eiffel_media_keys = (short *)p->v.l;
 	eiffel_temp=NULL;
-	if((*Xcpb->get_cookie)('Temp',&value))
-		eiffel_temp=(char *)value;
+	if((p = get_cookie('Temp')) != NULL)
+		eiffel_temp = (char *)p->v.l;
 	for(i=0;i<61;i++)
 		tab_temp[i]=tab_temp_eiffel[i]=tab_cpuload[i]=0;
 #ifdef DEBUG
@@ -1378,23 +1400,18 @@ CPXINFO* CDECL cpx_init(XCPB *xcpb)
 		 && (ap_id=appl_find("FREEDOM2"))<0)
 			ap_id=-1;
 	}
-	if((*Xcpb->get_cookie)(ID_CF,&value))
-		coldfire=1;
-	else
-		coldfire=0;
-	if((*Xcpb->get_cookie)(ID_CT60,&value) || coldfire)
+	if((get_cookie(ID_CT60) != NULL) || coldfire)
 		flag_xbios=1;
 	else
 		flag_xbios=0;
-	if(((*Xcpb->get_cookie)('_MCH',&value) && (value==0x30000)	/* Falcon */
+	if((((p = get_cookie('_MCH')) != NULL) && (p->v.l == 0x30000)	/* Falcon */
 	 && (flag_xbios || test_060()))								/* & CT60 */
-	 && ap_id>=0 )
+	 && (ap_id >= 0))
 	{
 #ifdef DEBUG
 		printf("\r\nStart temperature task");
 #endif
-		if(((*Xcpb->get_cookie)(ID_CT60,&(long)ct60_arg)
-		 || (*Xcpb->get_cookie)(ID_CF,&(long)ct60_arg)) && (ct60_arg!=NULL))
+		if((ct60_arg = get_cookie_ct60()) != NULL)
 		{
 			ct60_arg->trigger_temp=(unsigned short)trigger_temp;
 			ct60_arg->daystop=(unsigned short)daystop;
@@ -1410,23 +1427,24 @@ CPXINFO* CDECL cpx_init(XCPB *xcpb)
 }
 
 int CDECL cpx_call(GRECT *work)
-
 {
 	GRECT menu;
 	TEDINFO *t_edinfo;
 	long value,stack;
 	static char mess_alert[256];
 	HEAD *header;
+	COOKIE *p;
 	CT60_COOKIE *ct60_arg=NULL;
 	int ret;
+	int mlayout;
 	register int i;
 #ifdef DEBUG
 	printf("\r\nCPX call\r\nOpen virtual workstation");
 #endif	
-	if((vdi_handle=Xcpb->handle)>0)
+	if((vdi_handle = Xcpb->handle) > 0)
 	{
 		v_opnvwk(work_in,&vdi_handle,work_out);
-		if(vdi_handle<=0 || (head=get_header(ID_CPX))==0)
+		if((vdi_handle <= 0) || ((head = get_header(ID_CPX)) == NULL))
 			return(0);
 	}
 	else
@@ -1434,7 +1452,7 @@ int CDECL cpx_call(GRECT *work)
 #ifdef DEBUG
 	printf("\r\nTest cookies");
 #endif
-	if(!(*Xcpb->get_cookie)('_MCH',&value) || (value!=0x30000))	/* Falcon */
+	if(((p = get_cookie('_MCH')) == NULL) || (p->v.l != 0x30000))	/* Falcon */
 	{
 		if(!start_lang)
 			form_alert(1,"[1][Cette machine n'est|pas un FALCON 030][Annuler]");
@@ -1447,7 +1465,7 @@ int CDECL cpx_call(GRECT *work)
 		stack=Super(0L);
 		tosram=(int)ct60_rw_param(CT60_MODE_READ,CT60_PARAM_TOSRAM,0L);
 		Super((void *)stack);
-		if(tosram<0)
+		if(tosram < 0)
 		{
 			if(!start_lang)
 				form_alert(1,"[1][Pas de CT60 !][OK]");
@@ -1455,14 +1473,19 @@ int CDECL cpx_call(GRECT *work)
 				form_alert(1,"[1][CT60 not found!][OK]");
 		}
 	}
-	if((ap_id<0 || temp_id<0) && test_060())
+	if(!coldfire && ((ap_id < 0) || (temp_id < 0)) && test_060())
 	{
 		if(!start_lang)
 			form_alert(1,"[1][ATTENTION !|Il n'est pas possible de|surveiller la temp‚rature quand|ce CPX sera ferm‚ !|S.V.P.installez CT60TEMP.ACC/APP][OK]");
 		else
 			form_alert(1,"[1][WARNING!|It is not possible to monitor|the temperature when this CPX|is closed!  Please install|CT60TEMP.ACC/APP][OK]");
 	}
-	selection=PAGE_TEMP;
+	if(!radeon)
+		radeon=find_radeon();
+	if(coldfire)
+		selection=PAGE_BOOT;
+	else
+		selection=PAGE_TEMP;
 	flag_bubble=0;
 	rs_object[MENUBOX].ob_x=work->g_x;
 	rs_object[MENUBOX].ob_y=work->g_y;
@@ -1507,9 +1530,7 @@ int CDECL cpx_call(GRECT *work)
 	sprintf(rs_object[MENUFASTRAMTOT].ob_spec.free_string,"%9ld",fast_ram);
 	rs_object[MENUFASTRAMTOT].ob_spec.free_string[9]=' ';
 	t_edinfo=rs_object[MENUMIPS].ob_spec.tedinfo;
-	if(((*Xcpb->get_cookie)(ID_CT60,&(long)ct60_arg)
-     || (*Xcpb->get_cookie)(ID_CF,&(long)ct60_arg))
-      && (ct60_arg!=NULL) && ct60_arg->speed_fan)
+	if(((ct60_arg = get_cookie_ct60()) != NULL) && ct60_arg->speed_fan)
 		sprintf(t_edinfo->te_ptext,"æP: %3lu.%02lu Mips     %04u tr/mn",
 		loops_per_sec/500000,(loops_per_sec/5000) % 100,ct60_arg->speed_fan);
 	else
@@ -1526,7 +1547,6 @@ int CDECL cpx_call(GRECT *work)
 		keyboard=0;
 	datetime=(int)nvram.datetime & 0x13;
 	vmode=(int)nvram.vmode & (VERTFLAG|STMODES|OVERSCAN|PAL|VGA_FALCON|COL80|NUMCOLS);
-#ifndef LIGHT
 	t_edinfo=rs_object[MENUBLANG].ob_spec.tedinfo;
 	t_edinfo->te_ptext=spec_lang[language];
 	t_edinfo=rs_object[MENUBKEY].ob_spec.tedinfo;
@@ -1547,41 +1567,114 @@ int CDECL cpx_call(GRECT *work)
 			value=ct60_rw_param(CT60_MODE_READ,CT60_VMODE,0L);
 			Super((void *)stack);
 		}
-		if(value<0)
-			vmode=PAL|VGA_FALCON|COL80|BPS16;
-		else
-			vmode=(int)value & (VERTFLAG2|VESA_768|VESA_600|HORFLAG2|HORFLAG|VERTFLAG|VGA_FALCON|COL80|NUMCOLS);
-		vmode|=(PAL|VGA_FALCON);
-		if((vmode & NUMCOLS) < BPS8 || (vmode & NUMCOLS) > BPS32)
+		vmode_prefered=width_max_mono=height_max_mono=width_prefered=height_prefered=0;
+		Vsetscreen(-1,&enumfunc,'VN',CMD_ENUMMODES);
+		if((width_prefered>=0) && (width_prefered<=9999) && (height_prefered>=0) && (height_prefered<=9999))
 		{
-			vmode &= (PAL|VGA_FALCON|COL80);
-			vmode |= BPS8;
+			sprintf(spec_res[1][8],"%dx%d",width_prefered,height_prefered);
+			if(height_prefered<=999)
+				sprintf(res[1][8],"  %04d x %03d ",width_prefered,height_prefered);
+			else
+				sprintf(res[1][8],"  %04d x%04d ",width_prefered,height_prefered);
 		}
-		if(vmode & COL80)
-			vmode &= ~VERTFLAG;
-		else
-			vmode |= VERTFLAG;
-		i=2;
-		ret=VERTFLAG2|VESA_768|VESA_600|HORFLAG2|HORFLAG;
-		if(!(vmode & ret))
+		if((value<0) || ((value & DEVID) && !vmode_prefered))
+			vmode = PAL|VGA_FALCON|COL80|BPS16;
+		else if(value & DEVID) /* bits 11-3 used for devID */
 		{
-			i=0;      /* 320 * 240 */
+			vmode=(int)value & ~VIRTUAL_SCREEN;
+			if( ((vmode & NUMCOLS) != BPS1) && (((vmode & NUMCOLS) < BPS8) || ((vmode & NUMCOLS) > BPS32)))
+			{
+				vmode &= ~NUMCOLS;
+				vmode |= BPS8;
+			}
+		}
+		else /* normal modecode */
+		{
+			vmode = (int)value & (VERTFLAG2|VESA_768|VESA_600|HORFLAG2|HORFLAG|VERTFLAG|PAL|VGA_FALCON|COL80|NUMCOLS);
+			vmode &= ~(VIRTUAL_SCREEN|OVERSCAN);
+			vmode |= (PAL|VGA_FALCON);
+			if(((vmode & NUMCOLS) == BPS1) && width_max_mono && height_max_mono) /* VGA monochrome emulation */
+			{
+				switch(vmode & (VERTFLAG2|VESA_768|VESA_600|HORFLAG2|HORFLAG|VERTFLAG|STMODES|VGA_FALCON|COL80))
+				{
+					case (VERTFLAG+VGA_FALCON):                      /* 320 * 240 */
+					case (VGA_FALCON+COL80):                         /* 640 * 480 */
+					case (VESA_600+HORFLAG2+VGA_FALCON+COL80):       /* 800 * 600 */
+					case (VESA_768+HORFLAG2+VGA_FALCON+COL80):       /* 1024 * 768 */
+						break;
+					default:
+						vmode = PAL|VGA_FALCON|COL80|BPS1;           /* 640 * 480 * 1 */
+						break;
+				}
+			}
+			else if(((vmode & NUMCOLS) < BPS8) || ((vmode & NUMCOLS) > BPS32))
+			{
+				vmode &= (PAL|VGA_FALCON|COL80);
+				vmode |= BPS8;
+			}
 			if(vmode & COL80)
-				i=3;  /* 640 * 480 */
+				vmode &= ~VERTFLAG;
+			else
+				vmode |= VERTFLAG;
+		}
+		if((vmode & DEVID) && vmode_prefered)
+		{
+			if((vmode & NUMCOLS) == BPS1) /* VBL monochrome emulation */
+			{
+				if((width_max_mono >= width_prefered) && (height_max_mono >= width_prefered))
+					i=8; /* prefered mode */
+				else
+					i=3;			
+			}
+			else
+				i=8; /* prefered mode */
 		}
 		else
-		{	
-			if((vmode & ret) == (VESA_600|HORFLAG2))
-				i=4;  /* 800 * 600 */
-			else if ((vmode & ret) == (VESA_768|HORFLAG2)) 
-				i=5;  /* 1024 * 768 */
-			else if ((vmode & ret) == (VERTFLAG2|HORFLAG)) 
-				i=6;  /* 1280 * 960 */
-			else if ((vmode & ret) == (VERTFLAG2|VESA_600|HORFLAG2|HORFLAG)) 
-				i=7;  /* 1600 * 1200 */
+		{
+			i=3;
+			ret=VERTFLAG2|VESA_768|VESA_600|HORFLAG2|HORFLAG;
+			if(!(vmode & ret))
+			{
+				i=0;      /* 320 * 240 */
+				if(vmode & COL80)
+					i=3;  /* 640 * 480 */
+			}
+			else
+			{
+				if((vmode & NUMCOLS) == BPS1)
+				{
+					if(((vmode & ret) == (VESA_600|HORFLAG2)) && (width_max_mono >= 800) && (height_max_mono >= 600))
+						i=4;  /* 800 * 600 */
+					else if(((vmode & ret) == (VESA_768|HORFLAG2)) && (width_max_mono >= 1024) && (height_max_mono >= 768))
+						i=5;  /* 1024 * 768 */
+					else if(((vmode & ret) == (VERTFLAG2|HORFLAG)) && (width_max_mono >= 1280) && (height_max_mono >= 960))
+						i=6;  /* 1280 * 960 */
+					else if(((vmode & ret) == (VERTFLAG2|VESA_600|HORFLAG2|HORFLAG)) && (width_max_mono >= 1600) && (height_max_mono >= 1200))
+						i=7;  /* 1600 * 1200 */
+				}
+				else
+				{
+					if((vmode & ret) == (VESA_600|HORFLAG2))
+						i=4;  /* 800 * 600 */
+					else if((vmode & ret) == (VESA_768|HORFLAG2))
+						i=5;  /* 1024 * 768 */
+					else if((vmode & ret) == (VERTFLAG2|HORFLAG))
+						i=6;  /* 1280 * 960 */
+					else if((vmode & ret) == (VERTFLAG2|VESA_600|HORFLAG2|HORFLAG))
+						i=7;  /* 1600 * 1200 */
+				}
+			}
 		}
 		rs_object[MENUOVERSCAN].ob_state &= ~SELECTED;
 		rs_object[MENUSTMODES].ob_state &= ~SELECTED;
+		rs_object[MENUSTMODES].ob_flags &= ~TOUCHEXIT;
+		rs_object[MENUSTMODES].ob_flags |= HIDETREE;
+		rs_object[MENUBMLAYOUT].ob_flags |= TOUCHEXIT;
+		rs_object[MENUBMLAYOUT].ob_flags &= ~HIDETREE;
+		t_edinfo=rs_object[MENUBVIDEO].ob_spec.tedinfo;
+		t_edinfo->te_ptext=spec_video[1];
+		t_edinfo=rs_object[MENUBMODE].ob_spec.tedinfo;
+		t_edinfo->te_ptext=spec_mode[1];
 	}
 	else /* VIDEL */
 	{
@@ -1633,16 +1726,24 @@ int CDECL cpx_call(GRECT *work)
 			if((vmode & NUMCOLS)>=BPS8)
 				vmode &= ~STMODES;	
 		}
+		rs_object[MENUSTMODES].ob_flags |= TOUCHEXIT;
+		rs_object[MENUSTMODES].ob_flags &= ~HIDETREE;
+		rs_object[MENUBMLAYOUT].ob_flags &= ~TOUCHEXIT;
+		rs_object[MENUBMLAYOUT].ob_flags |= HIDETREE;		
+		t_edinfo=rs_object[MENUBVIDEO].ob_spec.tedinfo;
+		t_edinfo->te_ptext=spec_video[((vmode & VGA_FALCON)>>4) & 1];
+		t_edinfo=rs_object[MENUBMODE].ob_spec.tedinfo;
+		t_edinfo->te_ptext=spec_mode[((vmode & PAL)>>5) & 1];
 	}
-	t_edinfo=rs_object[MENUBVIDEO].ob_spec.tedinfo;
-	t_edinfo->te_ptext=spec_video[((vmode & VGA_FALCON)>>4) & 1];
-	t_edinfo=rs_object[MENUBMODE].ob_spec.tedinfo;
-	t_edinfo->te_ptext=spec_mode[((vmode & PAL)>>5) & 1];
 	t_edinfo=rs_object[MENUBCOUL].ob_spec.tedinfo;
-	t_edinfo->te_ptext=spec_coul[vmode & NUMCOLS];	
+	t_edinfo->te_ptext=spec_coul[vmode & NUMCOLS];
 	t_edinfo=rs_object[MENUBRES].ob_spec.tedinfo;
 	t_edinfo->te_ptext=spec_res[(vmode & VGA_FALCON) ? 1 : 0][i];
-#endif
+	t_edinfo=rs_object[MENUBMLAYOUT].ob_spec.tedinfo;
+	mlayout=idectpci>>2;
+	if((mlayout<0) || (mlayout>5))
+		mlayout=0;
+	t_edinfo->te_ptext=spec_monitor_layout[mlayout];
 	bootpref=0;
 	while(bootpref<6 && nvram.bootpref!=(int)code_os[bootpref])
 		bootpref++;
@@ -1667,55 +1768,32 @@ int CDECL cpx_call(GRECT *work)
 	{
 		tosram=(int)ct60_rw_parameter(CT60_MODE_READ,CT60_PARAM_TOSRAM,0L)&1;
 		blitterspeed=(int)ct60_rw_parameter(CT60_MODE_READ,CT60_BLITTER_SPEED,0L)&1;
+		serialspeed=(int)ct60_rw_parameter(CT60_MODE_READ,CT60_SERIAL_SPEED,0L);
 		cachedelay=(int)ct60_rw_parameter(CT60_MODE_READ,CT60_CACHE_DELAY,0L)&3;
 		bootorder=(int)ct60_rw_parameter(CT60_MODE_READ,CT60_BOOT_ORDER,0L)&7;
-		bootlog=(int)ct60_rw_parameter(CT60_MODE_READ,CT60_BOOT_LOG,0L)&1;
+		bootlog=(int)ct60_rw_parameter(CT60_MODE_READ,CT60_BOOT_LOG,0L)&3;
 		cpufpu=(int)ct60_rw_parameter(CT60_MODE_READ,CT60_CPU_FPU,0L)&1;
 		nv_magic_code=(int)((ct60_rw_parameter(CT60_MODE_READ,CT60_SAVE_NVRAM_1,0L)>>16) & 0xffff);
-		frequency=(int)ct60_rw_parameter(CT60_MODE_READ,CT60_CLOCK,0L);
-		switch(ct60_rw_parameter(CT60_MODE_READ,CT60_PARAM_CTPCI,0L))
-		{
-			case 0: idectpci=0; break; /* boot IDE F030 - no DMA */
-			case 1: idectpci=1; break; /* boot IDE CTPCI - no DMA */
-			case 2: idectpci=2; break; /* boot IDE F030 - DMA */
-			case 3: idectpci=3; break; /* boot IDE CTPCI - DMA */
-			default: idectpci=0; break;
-		}
+		frequency=(unsigned long)ct60_rw_parameter(CT60_MODE_READ,CT60_CLOCK,0L);
+		div_frequency=(int)ct60_rw_parameter(CT60_MODE_READ,CT60_USER_DIV_CLOCK,0L);
+		idectpci=(int)ct60_rw_parameter(CT60_MODE_READ,CT60_PARAM_CTPCI,0L);
 	}
 	else
 	{
 		stack=Super(0L);
 		tosram=(int)ct60_rw_param(CT60_MODE_READ,CT60_PARAM_TOSRAM,0L)&1;
 		blitterspeed=(int)ct60_rw_param(CT60_MODE_READ,CT60_BLITTER_SPEED,0L)&1;
+		serialspeed=(int)ct60_rw_param(CT60_MODE_READ,CT60_SERIAL_SPEED,0L);
 		cachedelay=(int)ct60_rw_param(CT60_MODE_READ,CT60_CACHE_DELAY,0L)&3;
 		bootorder=(int)ct60_rw_param(CT60_MODE_READ,CT60_BOOT_ORDER,0L)&7;
-		bootlog=(int)ct60_rw_param(CT60_MODE_READ,CT60_BOOT_LOG,0L)&1;
+		bootlog=(int)ct60_rw_param(CT60_MODE_READ,CT60_BOOT_LOG,0L)&3;
 		cpufpu=(int)ct60_rw_param(CT60_MODE_READ,CT60_CPU_FPU,0L)&1;
 		nv_magic_code=(int)((ct60_rw_param(CT60_MODE_READ,CT60_SAVE_NVRAM_1,0L)>>16) & 0xffff);
-		frequency=(int)ct60_rw_param(CT60_MODE_READ,CT60_CLOCK,0L);
-		switch(ct60_rw_param(CT60_MODE_READ,CT60_PARAM_CTPCI,0L))
-		{
-			case 0: idectpci=0; break; /* boot IDE F030 - no DMA */
-			case 1: idectpci=1; break; /* boot IDE CTPCI - no DMA */
-			case 2: idectpci=2; break; /* boot IDE F030 - DMA */
-			case 3: idectpci=3; break; /* boot IDE CTPCI - DMA */
-			default: idectpci=0; break;
-		}
+		frequency=(unsigned long)ct60_rw_param(CT60_MODE_READ,CT60_CLOCK,0L);
+		div_frequency=(int)ct60_rw_param(CT60_MODE_READ,CT60_USER_DIV_CLOCK,0L);
+		idectpci=(int)ct60_rw_param(CT60_MODE_READ,CT60_PARAM_CTPCI,0L);
 		Super((void *)stack);
 	}
-#ifndef LIGHT /* todo: use a true button for DMA */
-	if(radeon)
-	{
-		if(!start_lang)
-			rs_object[MENUOVERSCAN].ob_spec.free_string = "Utilise DMA";
-		else
-			rs_object[MENUOVERSCAN].ob_spec.free_string = "Use DMA";
-		if(idectpci & 2) /* DMA */
-			rs_object[MENUOVERSCAN].ob_state |= SELECTED;
-		else
-			rs_object[MENUOVERSCAN].ob_state &= ~SELECTED;	
-	}
-#endif
 	flag_frequency=0; /* modif */
 	step_frequency=125;
 	min_freq=MIN_FREQ;
@@ -1725,36 +1803,75 @@ int CDECL cpx_call(GRECT *work)
 		max_freq=MAX_FREQ_REV6;
 	if(frequency<min_freq || frequency>max_freq)
 		frequency=min_freq;
-#ifndef LIGHT
+	if(div_frequency<2)
+		div_frequency=2;
+	if(div_frequency>6)
+		div_frequency=6;
+	if((serialspeed<0) || (serialspeed>15))
+		serialspeed=0;
+	t_edinfo=rs_object[MENUBTOSRAM].ob_spec.tedinfo;
+	t_edinfo->te_ptext=spec_tos_ram[start_lang][tosram];
+	if(radeon)
+	{
+		if(coldfire || ((long)Supexec(get_version_flash) >= 0x200))
+		{
+			t_edinfo->te_ptext=spec_video_log[start_lang][(bootlog>>1)&1];
+			rs_object[MENUBTOSRAM-1].ob_spec.free_string = "video.log:";
+		}
+		if(!start_lang)
+			rs_object[MENUOVERSCAN].ob_spec.free_string = "Utilise DMA";
+		else
+			rs_object[MENUOVERSCAN].ob_spec.free_string = "Use DMA";
+		if(idectpci & 2) /* DMA */
+			rs_object[MENUOVERSCAN].ob_state |= SELECTED;
+		else
+			rs_object[MENUOVERSCAN].ob_state &= ~SELECTED;	
+	}
 	if(nv_magic_code=='NV')
 		rs_object[MENUNVM].ob_state |= SELECTED;
 	else
 		rs_object[MENUNVM].ob_state &= ~SELECTED;
-#endif
 	t_edinfo=rs_object[MENUBBLITTER].ob_spec.tedinfo;
-	t_edinfo->te_ptext=spec_blitter_speed[start_lang][blitterspeed];
-	t_edinfo=rs_object[MENUBTOSRAM].ob_spec.tedinfo;
-	t_edinfo->te_ptext=spec_tos_ram[start_lang][tosram];
+	if(coldfire)
+		t_edinfo->te_ptext=spec_serial_speed[serialspeed];	
+	else
+		t_edinfo->te_ptext=spec_blitter_speed[start_lang][blitterspeed];
 	t_edinfo=rs_object[MENUBCACHE].ob_spec.tedinfo;
 	t_edinfo->te_ptext=spec_cache_delay[start_lang][cachedelay];
 	t_edinfo=rs_object[MENUBBOOTORDER].ob_spec.tedinfo;
 	t_edinfo->te_ptext=spec_boot_order[start_lang][bootorder];
 	t_edinfo=rs_object[MENUBBOOTLOG].ob_spec.tedinfo;
-	t_edinfo->te_ptext=spec_boot_log[start_lang][bootlog];
+	t_edinfo->te_ptext=spec_boot_log[start_lang][bootlog&1];
 	t_edinfo=rs_object[MENUBIDECTPCI].ob_spec.tedinfo;
-	t_edinfo->te_ptext=spec_ide_ctpci[start_lang][idectpci&1];
+	if(coldfire)
+		t_edinfo->te_ptext=spec_ide_cf[start_lang][idectpci&1];
+	else
+		t_edinfo->te_ptext=spec_ide_ctpci[start_lang][idectpci&1];
 	t_edinfo=rs_object[MENUBFPU].ob_spec.tedinfo;
 	t_edinfo->te_ptext=spec_fpu[start_lang][cpufpu];
-    ed_pos=ed_objc=0;
+	t_edinfo=rs_object[MENUBDIV].ob_spec.tedinfo;
+	t_edinfo->te_ptext=spec_div_freq[div_frequency-2];
+	ed_pos=ed_objc=0;
 	Work=work;
 	t_edinfo=rs_object[MENUBSELECT].ob_spec.tedinfo;
 	if(test_060())
 	{
-		t_edinfo->te_ptext=spec_select[start_lang][PAGE_TEMP];
-		display_selection(PAGE_TEMP,0);
-		selection=-1;
-		cpx_timer(&ret);
-		selection=PAGE_TEMP;
+		if(coldfire)
+		{
+			t_edinfo->te_ptext=spec_select[start_lang][PAGE_BOOT];
+			display_selection(PAGE_BOOT,0);
+			selection=-1;
+			cpx_timer(&ret);
+			selection=PAGE_BOOT;
+		}
+		else
+		{
+			t_edinfo->te_ptext=spec_select[start_lang][PAGE_TEMP];
+			display_selection(PAGE_TEMP,0);
+			selection=-1;
+			cpx_timer(&ret);
+			selection=PAGE_TEMP;
+		}
 		ed_objc=MENUTRIGGER;
 		no_jumper=0;
 		if(coldfire || (value=ct60_read_clock())<0)
@@ -1764,9 +1881,7 @@ int CDECL cpx_call(GRECT *work)
 			if(step_frequency==DAC_STEP) /* Dallas DS1085 programmable clock */
 			{
 				min_freq=MIN_FREQ_DALLAS+600UL;
-				if(((*Xcpb->get_cookie)(ID_CT60,&(long)ct60_arg)
-				 || (*Xcpb->get_cookie)(ID_CF,&(long)ct60_arg))
-				  && (ct60_arg!=NULL))
+				if((ct60_arg = get_cookie_ct60()) != NULL)
 				{
 #ifdef DEBUG
 					printf("\r\nCPU frequency: %3lu.%01lu MHz",ct60_arg->cpu_frequency/10,ct60_arg->cpu_frequency%10);
@@ -1825,13 +1940,11 @@ int CDECL cpx_call(GRECT *work)
 }
 
 void CDECL cpx_draw(GRECT *clip)
-
 {
 	display_objc(0,clip);
 }
 
 void CDECL cpx_wmove(GRECT *work)
-
 {
 	rs_object[MENUBOX].ob_x=work->g_x;
 	rs_object[MENUBOX].ob_y=work->g_y;
@@ -1840,7 +1953,6 @@ void CDECL cpx_wmove(GRECT *work)
 }
 
 int CDECL cpx_hook(int event,WORD *msg,MRETS *mrets,int *key,int *nclicks)
-
 {
 	register int i;
 	register long ret;
@@ -1908,7 +2020,6 @@ int CDECL cpx_hook(int event,WORD *msg,MRETS *mrets,int *key,int *nclicks)
 }
 
 void CDECL cpx_timer(int *event)
-
 {
 	register int i,j,ret,mn;
 	long value;
@@ -1928,9 +2039,7 @@ void CDECL cpx_timer(int *event)
 				send_ask_temp();		
 			break;
 		case PAGE_MEMORY:
-			if(((*Xcpb->get_cookie)(ID_CT60,&(long)ct60_arg)
-			 || (*Xcpb->get_cookie)(ID_CF,&(long)ct60_arg))
-			  && (ct60_arg!=NULL) && ct60_arg->speed_fan)
+			if(((ct60_arg = get_cookie_ct60()) != NULL) && ct60_arg->speed_fan)
 			{
 				t_edinfo=rs_object[MENUMIPS].ob_spec.tedinfo;	
 				sprintf(t_edinfo->te_ptext,"æP: %3lu.%02lu Mips     %04u tr/mn",
@@ -2046,7 +2155,7 @@ void CDECL cpx_timer(int *event)
 	if(time_out_thread>=0)
 	{
 		time_out_thread++;
-		if(time_out_thread>10)
+		if(!coldfire && (time_out_thread>10))
 		{
 			if(!start_lang)
 				form_alert(1,"[1][Pas de r‚ponse de|CT60TEMP.APP/ACC ou Thread !| |Il n'est pas possible|d'afficher la derniŠre heure][Annuler]");
@@ -2058,7 +2167,6 @@ void CDECL cpx_timer(int *event)
 }
 
 void CDECL cpx_key(int kstate,int key,int *event)
-
 {
 	register int i,j,dial;
 	register TEDINFO *t_edinfo;
@@ -2113,11 +2221,11 @@ void CDECL cpx_key(int kstate,int key,int *event)
 }
 
 void CDECL cpx_button(MRETS *mrets,int nclicks,int *event)
-
 {
 	register int i,j,k,objc_clic,pos_clic;
 	register TEDINFO *t_edinfo;
 	int ret,xoff,yoff,attrib[10];
+	int mlayout=0;
 	static char mess_alert[256];
 	long value,stack,offset;
 	GRECT menu;
@@ -2259,9 +2367,7 @@ void CDECL cpx_button(MRETS *mrets,int nclicks,int *event)
 			case MENUMIPS:
 				loops_per_sec=bogomips();
 				t_edinfo=rs_object[MENUMIPS].ob_spec.tedinfo;
-				if(((*Xcpb->get_cookie)(ID_CT60,&(long)ct60_arg)
-				 || (*Xcpb->get_cookie)(ID_CF,&(long)ct60_arg))
-				  && (ct60_arg!=NULL) && ct60_arg->speed_fan)
+				if(((ct60_arg = get_cookie_ct60()) != NULL) && ct60_arg->speed_fan)
 					sprintf(t_edinfo->te_ptext,"æP: %3lu.%02lu Mips     %04u tr/mn",
 					loops_per_sec/500000,(loops_per_sec/5000) % 100,ct60_arg->speed_fan);
 				else
@@ -2339,7 +2445,19 @@ void CDECL cpx_button(MRETS *mrets,int nclicks,int *event)
 					while(mouse.bstate);
 				}
 				break;
-#ifndef LIGHT
+			case MENUBDIV:
+				objc_offset(rs_object,MENUBDIV,&menu.g_x,&menu.g_y);
+				menu.g_w=rs_object[MENUBDIV].ob_width;
+				menu.g_h=rs_object[MENUBDIV].ob_height;
+				ret=(*Xcpb->Popup)(div_freq,5,div_frequency-2,IBM,&menu,Work);
+				if(ret>=0 && ret!=(div_frequency-2))
+				{
+					t_edinfo=rs_object[MENUBDIV].ob_spec.tedinfo;
+					t_edinfo->te_ptext=spec_div_freq[ret];
+					display_objc(MENUBDIV,Work);				
+					div_frequency=ret+2;
+				}
+				break;
 			case MENUBLANG:
 				objc_offset(rs_object,MENUBLANG,&menu.g_x,&menu.g_y);
 				menu.g_w=rs_object[MENUBLANG].ob_width;
@@ -2464,25 +2582,68 @@ void CDECL cpx_button(MRETS *mrets,int nclicks,int *event)
 				menu.g_h=rs_object[MENUBRES].ob_height;
 				if(radeon)
 				{
-					i=2;
-					ret=VERTFLAG2|VESA_768|VESA_600|HORFLAG2|HORFLAG;
-					if(!(vmode & ret))
+					if((vmode & DEVID) && vmode_prefered)
 					{
-						i=0;    /* 320 * 240 */
-						if(vmode & COL80)
-							i=2;  /* 640 * 480 */
+						if((vmode & NUMCOLS) == BPS1) /* VBL monochrome emulation */
+						{
+							if((width_max_mono >= width_prefered) && (height_max_mono >= width_prefered))
+								i=8; /* prefered mode */
+							else
+								i=3;			
+						}
+						else
+							i=8; /* prefered mode */
 					}
 					else
-					{	
-						if((vmode & ret) == (VESA_600|HORFLAG2))
-							i=4;  /* 800 * 600 */
-						else if ((vmode & ret) == (VESA_768|HORFLAG2)) 
-							i=5;  /* 1024 * 768 */
-						else if ((vmode & ret) == (VERTFLAG2|HORFLAG)) 
-							i=6;  /* 1280 * 960 */
-						else if ((vmode & ret) == (VERTFLAG2|VESA_600|HORFLAG2|HORFLAG)) 
-							i=7;  /* 1600 * 1200 */
+					{
+						i=3;
+						ret=VERTFLAG2|VESA_768|VESA_600|HORFLAG2|HORFLAG;
+						if(!(vmode & ret))
+						{
+							i=0;    /* 320 * 240 */
+							if(vmode & COL80)
+								i=3;  /* 640 * 480 */
+						}
+						else
+						{	
+							if((vmode & NUMCOLS) == BPS1)
+							{
+								if(((vmode & ret) == (VESA_600|HORFLAG2)) && (width_max_mono >= 800) && (height_max_mono >= 600))
+									i=4;  /* 800 * 600 */
+								else if(((vmode & ret) == (VESA_768|HORFLAG2)) && (width_max_mono >= 1024) && (height_max_mono >= 768))
+									i=5;  /* 1024 * 768 */
+								else if(((vmode & ret) == (VERTFLAG2|HORFLAG)) && (width_max_mono >= 1280) && (height_max_mono >= 960))
+									i=6;  /* 1280 * 960 */
+								else if(((vmode & ret) == (VERTFLAG2|VESA_600|HORFLAG2|HORFLAG)) && (width_max_mono >= 1600) && (height_max_mono >= 1200))
+									i=7;  /* 1600 * 1200 */
+							}
+							else
+							{
+								if((vmode & ret) == (VESA_600|HORFLAG2))
+									i=4;  /* 800 * 600 */
+								else if((vmode & ret) == (VESA_768|HORFLAG2))
+									i=5;  /* 1024 * 768 */
+								else if((vmode & ret) == (VERTFLAG2|HORFLAG))
+									i=6;  /* 1280 * 960 */
+								else if((vmode & ret) == (VERTFLAG2|VESA_600|HORFLAG2|HORFLAG))
+									i=7;  /* 1600 * 1200 */							
+							}
+						}
 					}
+					if((vmode & NUMCOLS) == BPS1) /* VBL monochorme emulation */
+					{			
+						ret = 4;
+						if((width_max_mono >= 800) && (height_max_mono >= 600))
+							ret = 5;
+						if((width_max_mono >= 1024) && (height_max_mono >= 768))
+							ret = 6;
+						if((width_max_mono >= 1280) && (height_max_mono >= 960))
+							ret = 7;
+						if((width_max_mono >= 1600) && (height_max_mono >= 1200))
+							ret = 8;
+					}
+					else
+						ret = 8;
 				}
 				else
 				{
@@ -2494,26 +2655,26 @@ void CDECL cpx_button(MRETS *mrets,int nclicks,int *event)
 					if((vmode & VERTFLAG) && !(vmode & VGA_FALCON))
 						i++;
 				}
-				ret=(*Xcpb->Popup)(res[(vmode & VGA_FALCON) ? 1 : 0],radeon ? 8 : 4,i,IBM,&menu,Work);
+				ret=(*Xcpb->Popup)(res[(vmode & VGA_FALCON) ? 1 : 0],radeon ? (vmode_prefered && ((vmode & NUMCOLS) != BPS1)) ? 9 : ret : 4,i,IBM,&menu,Work);
 				if(ret>=0 && ret!=i)
 				{
 					if(radeon)
 					{
 						if(ret==1)
 							ret--;
-						else if (ret==2)
+						else if(ret==2)
 							ret++;
 					}
 					else
 					{
 						if(ret<2)
 						{
-							if((vmode & NUMCOLS)==BPS1)
+							if((vmode & NUMCOLS) == BPS1)
 								ret+=2;					
 						}
 						else
 						{
-							if((vmode & VGA_FALCON) && (vmode & NUMCOLS)==BPS16)
+							if((vmode & VGA_FALCON) && (vmode & NUMCOLS) == BPS16)
 								ret-=2;
 						}
 						if(vmode & STMODES)
@@ -2547,6 +2708,10 @@ void CDECL cpx_button(MRETS *mrets,int nclicks,int *event)
 								vmode = (VERTFLAG2|HORFLAG|PAL|VGA_FALCON|COL80) | (vmode & NUMCOLS); break;
 							case 7:        /* 1600 * 1200 */
 								vmode = (VERTFLAG2|VESA_600|HORFLAG2|HORFLAG|PAL|VGA_FALCON|COL80) | (vmode & NUMCOLS); break;
+							case 8:
+								if(vmode_prefered)						
+									vmode = (vmode_prefered & ~NUMCOLS) | (vmode & NUMCOLS);
+								break;
 						}
 					}
 					else
@@ -2587,19 +2752,71 @@ void CDECL cpx_button(MRETS *mrets,int nclicks,int *event)
 				break;		
 			case MENUBCOUL:
 				objc_offset(rs_object,MENUBCOUL,&menu.g_x,&menu.g_y);
-				menu.g_w=rs_object[MENUBCOUL].ob_width;
-				menu.g_h=rs_object[MENUBCOUL].ob_height;
-				ret=(*Xcpb->Popup)(coul,radeon ? 6 : 5,vmode & NUMCOLS,IBM,&menu,Work);
-				if(ret>=0 && ret!=(vmode & NUMCOLS))
+				menu.g_w = rs_object[MENUBCOUL].ob_width;
+				menu.g_h = rs_object[MENUBCOUL].ob_height;
+				ret = (*Xcpb->Popup)(coul,radeon ? 6 : 5,vmode & NUMCOLS,IBM,&menu,Work);
+				if((ret >= 0) && (ret != (vmode & NUMCOLS)))
 				{
 					if(radeon)
-					{
-						if(ret < BPS8)
+					{			
+						if(!((ret == BPS1) && width_max_mono && height_max_mono) && (ret < BPS8))
 						{
-							vmode &=~NUMCOLS;
+							vmode &=~ NUMCOLS;
 							vmode |= BPS8;
-							ret=BPS8;
-						}				
+							ret = BPS8;
+						}
+						else if((ret == BPS1) && width_max_mono && height_max_mono)
+						{
+							if((vmode & DEVID) && vmode_prefered)
+							{
+								if((width_max_mono < width_prefered) || (height_max_mono < height_prefered))
+								{
+									vmode = PAL|VGA_FALCON|COL80; /* 640 * 480 */
+									t_edinfo=rs_object[MENUBRES].ob_spec.tedinfo;
+									t_edinfo->te_ptext=spec_res[1][3];
+									display_objc(MENUBRES,Work);
+								}
+							}
+							else
+							{
+								int mask=VERTFLAG2|VESA_768|VESA_600|HORFLAG2|HORFLAG;
+								i=3;
+								if(!(vmode & mask))
+								{
+									i=0;      /* 320 * 240 */
+										if(vmode & COL80)
+											i=3;  /* 640 * 480 */
+								}
+								else if(((vmode & mask) == (VESA_600|HORFLAG2)) && (width_max_mono >= 800) && (height_max_mono >= 600))
+									i=4;  /* 800 * 600 */
+								else if(((vmode & mask) == (VESA_768|HORFLAG2)) && (width_max_mono >= 1024) && (height_max_mono >= 768))
+									i=5;  /* 1024 * 768 */
+								else if(((vmode & mask) == (VERTFLAG2|HORFLAG)) && (width_max_mono >= 1280) && (height_max_mono >= 960))
+									i=6;  /* 1280 * 960 */
+								else if(((vmode & mask) == (VERTFLAG2|VESA_600|HORFLAG2|HORFLAG)) && (width_max_mono >= 1600) && (height_max_mono >= 1200))
+									i=7;  /* 1600 * 1200 */
+								switch(i)
+								{
+									case 0:
+									case 1:        /* 320 * 240 */
+										vmode = VERTFLAG|PAL|VGA_FALCON; break;
+									case 2:
+									case 3:        /* 640 * 480 */
+										vmode = PAL|VGA_FALCON|COL80; break;
+									case 4:        /* 800 * 600 */
+										vmode = VESA_600|HORFLAG2|PAL|VGA_FALCON|COL80; break;
+									case 5:        /* 1024 * 768 */
+										vmode = VESA_768|HORFLAG2|PAL|VGA_FALCON|COL80; break;
+									case 6:        /* 1280 * 960 */
+										vmode = VERTFLAG2|HORFLAG|PAL|VGA_FALCON|COL80; break;
+									case 7:        /* 1600 * 1200 */
+										vmode = VERTFLAG2|VESA_600|HORFLAG2|HORFLAG|PAL|VGA_FALCON|COL80; break;
+								}
+								t_edinfo=rs_object[MENUBRES].ob_spec.tedinfo;
+								t_edinfo->te_ptext=spec_res[1][i];
+								display_objc(MENUBRES,Work);								
+							}
+						}
 					}
 					else
 					{
@@ -2643,9 +2860,9 @@ void CDECL cpx_button(MRETS *mrets,int nclicks,int *event)
 								break;
 							}
 						}
-						if(!(vmode & COL80) && ret==BPS1)
+						if(!(vmode & COL80) && (ret == BPS1))
 							ret++;
-						if((vmode & COL80) && (vmode & VGA_FALCON) && ret==BPS16)
+						if((vmode & COL80) && (vmode & VGA_FALCON) && (ret == BPS16))
 							ret--;
 					}
 					t_edinfo=rs_object[MENUBCOUL].ob_spec.tedinfo;
@@ -2654,6 +2871,23 @@ void CDECL cpx_button(MRETS *mrets,int nclicks,int *event)
 					vmode &= ~NUMCOLS;
 					vmode |= ret;
 				}		
+				break;
+			case MENUBMLAYOUT:
+				objc_offset(rs_object,MENUBMLAYOUT,&menu.g_x,&menu.g_y);
+				menu.g_w=rs_object[MENUBMLAYOUT].ob_width;
+				menu.g_h=rs_object[MENUBMLAYOUT].ob_height;
+				mlayout=idectpci>>2;
+				if((mlayout<0) || (mlayout>5))
+					mlayout=0;
+				ret=(*Xcpb->Popup)(monitor_layout,6,mlayout,IBM,&menu,Work);
+				if(ret>=0 && ret!=mlayout)
+				{
+					t_edinfo=rs_object[MENUBMLAYOUT].ob_spec.tedinfo;
+					t_edinfo->te_ptext=spec_monitor_layout[ret];
+					display_objc(MENUBMLAYOUT,Work);
+					idectpci &= 3;
+					idectpci |= (ret << 2);	
+				}
 				break;
 			case MENUSTMODES:
 				if(!radeon && (rs_object[MENUSTMODES].ob_state & SELECTED) && (vmode & NUMCOLS)<BPS8)
@@ -2724,13 +2958,12 @@ void CDECL cpx_button(MRETS *mrets,int nclicks,int *event)
 				else
 					nv_magic_code=0;
 				break;	
-#endif
 			case MENUBBOOTORDER:
 				objc_offset(rs_object,MENUBBOOTORDER,&menu.g_x,&menu.g_y);
 				menu.g_w=rs_object[MENUBBOOTORDER].ob_width;
 				menu.g_h=rs_object[MENUBBOOTORDER].ob_height;
 				ret=(*Xcpb->Popup)(boot_order[start_lang],8,bootorder,IBM,&menu,Work);
-				if(ret>=0 && ret!=bootorder)
+				if((ret >= 0) && (ret != bootorder))
 				{
 					t_edinfo=rs_object[MENUBBOOTORDER].ob_spec.tedinfo;
 					t_edinfo->te_ptext=spec_boot_order[start_lang][ret];
@@ -2743,7 +2976,7 @@ void CDECL cpx_button(MRETS *mrets,int nclicks,int *event)
 					menu.g_w=rs_object[MENUBOS].ob_width;
 				menu.g_h=rs_object[MENUBOS].ob_height;
 				ret=(*Xcpb->Popup)(os,6,bootpref,IBM,&menu,Work);
-				if(ret>=0 && ret!=bootpref)
+				if((ret >= 0) && (ret != bootpref))
 				{
 					t_edinfo=rs_object[MENUBOS].ob_spec.tedinfo;
 					t_edinfo->te_ptext=spec_os[ret];
@@ -2756,7 +2989,7 @@ void CDECL cpx_button(MRETS *mrets,int nclicks,int *event)
 				menu.g_w=rs_object[MENUBARBIT].ob_width;
 				menu.g_h=rs_object[MENUBARBIT].ob_height;
 				ret=(*Xcpb->Popup)(arbit[start_lang],2,(scsi>>7) & 1,IBM,&menu,Work);
-				if(ret>=0 && ret!=((scsi>>7) & 1))
+				if((ret >= 0) && (ret != ((scsi>>7) & 1)))
 				{
 					t_edinfo=rs_object[MENUBARBIT].ob_spec.tedinfo;
 					t_edinfo->te_ptext=spec_arbit[start_lang][ret];
@@ -2771,7 +3004,7 @@ void CDECL cpx_button(MRETS *mrets,int nclicks,int *event)
 				menu.g_w=rs_object[MENUBIDSCSI].ob_width;
 				menu.g_h=rs_object[MENUBIDSCSI].ob_height;
 				ret=(*Xcpb->Popup)(idscsi,8,scsi & 7,IBM,&menu,Work);
-				if(ret>=0 && ret!=(scsi & 7))
+				if((ret >= 0) && (ret != (scsi & 7)))
 				{
 					t_edinfo=rs_object[MENUBIDSCSI].ob_spec.tedinfo;
 					t_edinfo->te_ptext=spec_idscsi[ret];
@@ -2784,26 +3017,55 @@ void CDECL cpx_button(MRETS *mrets,int nclicks,int *event)
 				objc_offset(rs_object,MENUBBLITTER,&menu.g_x,&menu.g_y);
 				menu.g_w=rs_object[MENUBBLITTER].ob_width;
 				menu.g_h=rs_object[MENUBBLITTER].ob_height;
-				ret=(*Xcpb->Popup)(blitter_speed[start_lang],2,blitterspeed,IBM,&menu,Work);
-				if(ret>=0 && ret!=blitterspeed)
+				if(coldfire)
 				{
-					t_edinfo=rs_object[MENUBBLITTER].ob_spec.tedinfo;
-					t_edinfo->te_ptext=spec_blitter_speed[start_lang][ret];
-					display_objc(MENUBBLITTER,Work);				
-					blitterspeed=ret;
+					ret=(*Xcpb->Popup)(serial_speed,16,serialspeed,IBM,&menu,Work);
+					if((ret >= 0) && (ret != serialspeed))
+					{
+						t_edinfo=rs_object[MENUBBLITTER].ob_spec.tedinfo;
+						t_edinfo->te_ptext=spec_serial_speed[ret];
+						display_objc(MENUBBLITTER,Work);				
+						serialspeed=ret;
+					}
+				}
+				else
+				{
+					ret=(*Xcpb->Popup)(blitter_speed[start_lang],2,blitterspeed,IBM,&menu,Work);
+					if((ret >= 0) && (ret != blitterspeed))
+					{
+						t_edinfo=rs_object[MENUBBLITTER].ob_spec.tedinfo;
+						t_edinfo->te_ptext=spec_blitter_speed[start_lang][ret];
+						display_objc(MENUBBLITTER,Work);				
+						blitterspeed=ret;
+					}
 				}
 				break;
 			case MENUBTOSRAM:
 				objc_offset(rs_object,MENUBTOSRAM,&menu.g_x,&menu.g_y);
 				menu.g_w=rs_object[MENUBTOSRAM].ob_width;
 				menu.g_h=rs_object[MENUBTOSRAM].ob_height;
-				ret=(*Xcpb->Popup)(tos_ram[start_lang],2,tosram,IBM,&menu,Work);
-				if(ret>=0 && ret!=tosram)
+				if((coldfire || ((long)Supexec(get_version_flash) >= 0x200)) && radeon)
 				{
-					t_edinfo=rs_object[MENUBTOSRAM].ob_spec.tedinfo;
-					t_edinfo->te_ptext=spec_tos_ram[start_lang][ret];
-					display_objc(MENUBTOSRAM,Work);				
-					tosram=ret;
+					ret=(*Xcpb->Popup)(video_log[start_lang],2,(bootlog>>1)&1,IBM,&menu,Work);
+					if((ret >= 0) && (ret != ((bootlog>>1) & 1)))
+					{
+						t_edinfo=rs_object[MENUBTOSRAM].ob_spec.tedinfo;
+						t_edinfo->te_ptext=spec_video_log[start_lang][ret];
+						display_objc(MENUBTOSRAM,Work);
+						bootlog &= ~2;
+						bootlog |= (ret << 1);
+					}
+				}
+				else
+				{
+					ret=(*Xcpb->Popup)(tos_ram[start_lang],2,tosram,IBM,&menu,Work);
+					if((ret >= 0) && (ret!=tosram))
+					{
+						t_edinfo=rs_object[MENUBTOSRAM].ob_spec.tedinfo;
+						t_edinfo->te_ptext=spec_tos_ram[start_lang][ret];
+						display_objc(MENUBTOSRAM,Work);				
+						tosram=ret;
+					}
 				}
 				break;
 			case MENUBCACHE:
@@ -2811,7 +3073,7 @@ void CDECL cpx_button(MRETS *mrets,int nclicks,int *event)
 				menu.g_w=rs_object[MENUBCACHE].ob_width;
 				menu.g_h=rs_object[MENUBCACHE].ob_height;
 				ret=(*Xcpb->Popup)(cache_delay[start_lang],4,cachedelay,IBM,&menu,Work);
-				if(ret>=0 && ret!=cachedelay)
+				if((ret >= 0) && (ret != cachedelay))
 				{
 					t_edinfo=rs_object[MENUBCACHE].ob_spec.tedinfo;
 					t_edinfo->te_ptext=spec_cache_delay[start_lang][ret];
@@ -2823,24 +3085,28 @@ void CDECL cpx_button(MRETS *mrets,int nclicks,int *event)
 				objc_offset(rs_object,MENUBBOOTLOG,&menu.g_x,&menu.g_y);
 				menu.g_w=rs_object[MENUBBOOTLOG].ob_width;
 				menu.g_h=rs_object[MENUBBOOTLOG].ob_height;
-				ret=(*Xcpb->Popup)(boot_log[start_lang],2,bootlog,IBM,&menu,Work);
-				if(ret>=0 && ret!=bootlog)
+				ret=(*Xcpb->Popup)(boot_log[start_lang],2,bootlog&1,IBM,&menu,Work);
+				if((ret >= 0) && (ret != (bootlog & 1)))
 				{
 					t_edinfo=rs_object[MENUBBOOTLOG].ob_spec.tedinfo;
 					t_edinfo->te_ptext=spec_boot_log[start_lang][ret];
-					display_objc(MENUBBOOTLOG,Work);				
-					bootlog=ret;
+					display_objc(MENUBBOOTLOG,Work);
+					bootlog &= ~1;
+					bootlog |= ret;
 				}
 				break;
 			case MENUBIDECTPCI:
 				objc_offset(rs_object,MENUBIDECTPCI,&menu.g_x,&menu.g_y);
 				menu.g_w=rs_object[MENUBIDECTPCI].ob_width;
 				menu.g_h=rs_object[MENUBIDECTPCI].ob_height;
-				ret=(*Xcpb->Popup)(ide_ctpci[start_lang],2,idectpci&1,IBM,&menu,Work);
+				ret=(*Xcpb->Popup)(coldfire ? ide_cf[start_lang] : ide_ctpci[start_lang],2,idectpci&1,IBM,&menu,Work);
 				if(ret>=0 && ret!=(idectpci&1))
 				{
 					t_edinfo=rs_object[MENUBIDECTPCI].ob_spec.tedinfo;
-					t_edinfo->te_ptext=spec_ide_ctpci[start_lang][ret];
+					if(coldfire)
+						t_edinfo->te_ptext=spec_ide_cf[start_lang][ret];
+					else
+						t_edinfo->te_ptext=spec_ide_ctpci[start_lang][ret];
 					display_objc(MENUBIDECTPCI,Work);
 					idectpci &= ~1;
 					idectpci |= ret;
@@ -2854,7 +3120,7 @@ void CDECL cpx_button(MRETS *mrets,int nclicks,int *event)
 				if(ret>=0 && ret!=daystop)
 				{
 					t_edinfo=rs_object[MENUBDAY].ob_spec.tedinfo;
-					t_edinfo->te_ptext=spec_ide_ctpci[start_lang][ret];
+					t_edinfo->te_ptext=spec_day_stop[start_lang][ret];
 					display_objc(MENUBDAY,Work);
 					daystop=ret;
 				}
@@ -2885,6 +3151,7 @@ void CDECL cpx_button(MRETS *mrets,int nclicks,int *event)
 				t_edinfo=rs_object[MENUDELAY].ob_spec.tedinfo;
 				header->bootdelay=(unsigned char)atoi(t_edinfo->te_ptext);
 				header->blitterspeed=(unsigned char)blitterspeed;
+				header->serialspeed=(unsigned char)serialspeed;
 				header->tosram=(unsigned char)tosram;
 				header->cachedelay=(unsigned char)cachedelay;
 				header->bootorder=(unsigned char)bootorder;
@@ -2897,10 +3164,11 @@ void CDECL cpx_button(MRETS *mrets,int nclicks,int *event)
 				t_edinfo=rs_object[MENUTIME].ob_spec.tedinfo;				
 				header->timestop=(((unsigned int)atoi(t_edinfo->te_ptext)/100)<<11)
 				                +(((unsigned int)atoi(t_edinfo->te_ptext)%100)<<5);
-                header->frequency=frequency;
-                header->beep=(unsigned char)beep;
-                if(nclicks<=1)
-                {
+				header->frequency=frequency;
+				header->div_frequency=(unsigned char)div_frequency;
+				header->beep=(unsigned char)beep;
+				if(nclicks<=1)
+				{
 					save_header();
 		 			if(!start_lang)
 						ret=form_alert(1,"[2][Voulez vous aussi sauver|le mode vid‚o dans le .INF ?][Sauver|Annuler]");
@@ -2971,7 +3239,7 @@ void CDECL cpx_button(MRETS *mrets,int nclicks,int *event)
 								ret=form_alert(2,"[2][Save the clock|inside the generator?|WARNING! The computer will start|with this new frequency|during the next power-on!][Save|Cancel]");
 							if(ret==1)
 							{
-								value=ct60_configure_clock(frequency,CT60_CLOCK_WRITE_EEPROM);
+								value=ct60_configure_clock(frequency,CT60_CLOCK_WRITE_EEPROM,div_frequency);
 								if(value<0)
 								{
 									if(value==CT60_CALC_CLOCK_ERROR)
@@ -2999,9 +3267,9 @@ void CDECL cpx_button(MRETS *mrets,int nclicks,int *event)
 						if(value==CT60_NULL_CLOCK_ERROR)
 						{
 							if(!start_lang)
-								form_alert(1,"[1][Tous les paramŠtres du g‚n‚rateur|de fr‚quence sont nuls !| |V‚rifier la liaison sur MODEM2][Annuler]");
+								form_alert(1,"[1][Tous les paramŠtres du|g‚n‚rateur d'horloge sont nuls !| |V‚rifier la liaison MODEM2][Annuler]");
 							else
-								form_alert(1,"[1][All parameters of the clock|generator are null!| |Please check the link on MODEM2][Cancel]");
+								form_alert(1,"[1][All parameters of the clock|generator are null!| |Please check the MODEM2 link][Cancel]");
 						}
 						else
 						{
@@ -3018,7 +3286,7 @@ void CDECL cpx_button(MRETS *mrets,int nclicks,int *event)
 		 		if(!start_lang)
 					ret=form_alert(1,"[2][Charger les|r‚glages sauv‚s ?][Charger|Annuler]");
 				else
-					ret=form_alert(1,"[2][Load saved parameters?][Load|Cancel]");
+					ret=form_alert(1,"[2][Load saved|parameters?][Load|Cancel]");
 				if(ret==1)
 				{
 					if(test_060())
@@ -3039,7 +3307,6 @@ void CDECL cpx_button(MRETS *mrets,int nclicks,int *event)
 						keyboard=0;
 					datetime=(int)header->datetime;
 					vmode=(int)header->vmode;
-#ifndef LIGHT
 					t_edinfo=rs_object[MENUBLANG].ob_spec.tedinfo;
 					t_edinfo->te_ptext=spec_lang[language];
 					t_edinfo=rs_object[MENUBKEY].ob_spec.tedinfo;
@@ -3050,43 +3317,70 @@ void CDECL cpx_button(MRETS *mrets,int nclicks,int *event)
 					t_edinfo->te_ptext=spec_time[(datetime>>4) & 1];
 					t_edinfo=rs_object[MENUSEP].ob_spec.tedinfo;
 					t_edinfo->te_ptext[0]=header->separator;
-					t_edinfo=rs_object[MENUBVIDEO].ob_spec.tedinfo;
-					t_edinfo->te_ptext=spec_video[((vmode & VGA_FALCON)>>4) & 1];
-					t_edinfo=rs_object[MENUBMODE].ob_spec.tedinfo;
-					t_edinfo->te_ptext=spec_mode[((vmode & PAL)>>5) & 1];
+					if(radeon)
+					{
+						t_edinfo=rs_object[MENUBVIDEO].ob_spec.tedinfo;
+						t_edinfo->te_ptext=spec_video[1];
+						t_edinfo=rs_object[MENUBMODE].ob_spec.tedinfo;
+						t_edinfo->te_ptext=spec_mode[1];
+					}
+					else
+					{
+						t_edinfo=rs_object[MENUBVIDEO].ob_spec.tedinfo;
+						t_edinfo->te_ptext=spec_video[((vmode & VGA_FALCON)>>4) & 1];
+						t_edinfo=rs_object[MENUBMODE].ob_spec.tedinfo;
+						t_edinfo->te_ptext=spec_mode[((vmode & PAL)>>5) & 1];
+					}
 					t_edinfo=rs_object[MENUBCOUL].ob_spec.tedinfo;
 					t_edinfo->te_ptext=spec_coul[vmode & NUMCOLS];
 					if(radeon) /* PCI */
 					{
-						vmode&=(VERTFLAG2|VESA_768|VESA_600|HORFLAG2|HORFLAG|VERTFLAG|VGA_FALCON|COL80|NUMCOLS);
-						vmode|=(PAL|VGA_FALCON);
-						if((vmode & NUMCOLS) < BPS8 || (vmode & NUMCOLS) > BPS32)
+						if((vmode & DEVID) && vmode_prefered)
 						{
-							vmode &=(PAL|VGA_FALCON|COL80);
-							vmode |= BPS8;
+							if((vmode & NUMCOLS) == BPS1) /* VBL monochrome emulation */
+							{
+								if((width_max_mono >= width_prefered) && (height_max_mono >= width_prefered))
+									i=8; /* prefered mode */
+								else
+									i=3;			
+							}
+							else
+								i=8; /* prefered mode */
 						}
-						if(vmode & COL80)
-							vmode &= ~VERTFLAG;
 						else
-							vmode |= VERTFLAG;
-						i=2;
-						ret=VERTFLAG2|VESA_768|VESA_600|HORFLAG2|HORFLAG;
-						if(!(vmode & ret))
 						{
-							i=0;      /* 320 * 240 */
+							vmode &= (VERTFLAG2|VESA_768|VESA_600|HORFLAG2|HORFLAG|VERTFLAG|VGA_FALCON|COL80|NUMCOLS);
+							vmode &= ~(VIRTUAL_SCREEN|OVERSCAN);
+							vmode |= (PAL|VGA_FALCON);
+							if(!(((vmode & NUMCOLS) == BPS1) && width_max_mono && height_max_mono)						
+							 && (((vmode & NUMCOLS) < BPS8) || ((vmode & NUMCOLS) > BPS32)))
+							{
+								vmode &=(PAL|VGA_FALCON|COL80);
+								vmode |= BPS8;
+							}
 							if(vmode & COL80)
-								i=2;  /* 640 * 480 */
-						}
-						else
-						{	
-							if((vmode & ret) == (VESA_600|HORFLAG2))
-								i=4;  /* 800 * 600 */
-							else if ((vmode & ret) == (VESA_768|HORFLAG2)) 
-								i=5;  /* 1024 * 768 */
-							else if ((vmode & ret) == (VERTFLAG2|HORFLAG)) 
-								i=6;  /* 1280 * 960 */
-							else if ((vmode & ret) == (VERTFLAG2|VESA_600|HORFLAG2|HORFLAG)) 
-								i=7;  /* 1600 * 1200 */
+								vmode &= ~VERTFLAG;
+							else
+								vmode |= VERTFLAG;
+							i=3;
+							ret=VERTFLAG2|VESA_768|VESA_600|HORFLAG2|HORFLAG;
+							if(!(vmode & ret))
+							{
+								i=0;      /* 320 * 240 */
+								if(vmode & COL80)
+									i=3;  /* 640 * 480 */
+							}
+							else
+							{	
+								if((vmode & ret) == (VESA_600|HORFLAG2))
+									i=4;  /* 800 * 600 */
+								else if ((vmode & ret) == (VESA_768|HORFLAG2)) 
+									i=5;  /* 1024 * 768 */
+								else if ((vmode & ret) == (VERTFLAG2|HORFLAG)) 
+									i=6;  /* 1280 * 960 */
+								else if ((vmode & ret) == (VERTFLAG2|VESA_600|HORFLAG2|HORFLAG)) 
+									i=7;  /* 1600 * 1200 */
+							}
 						}
 						if(idectpci & 2)
 							rs_object[MENUOVERSCAN].ob_state |= SELECTED;
@@ -3147,7 +3441,6 @@ void CDECL cpx_button(MRETS *mrets,int nclicks,int *event)
 					}
 					t_edinfo=rs_object[MENUBRES].ob_spec.tedinfo;
 					t_edinfo->te_ptext=spec_res[(vmode & VGA_FALCON) ? 1 : 0][i];
-#endif
 					bootpref=0;
 					while(bootpref<6 && header->bootpref!=(int)code_os[bootpref])
 						bootpref++;
@@ -3168,24 +3461,34 @@ void CDECL cpx_button(MRETS *mrets,int nclicks,int *event)
 						bootdelay=99;
 					t_edinfo=rs_object[MENUDELAY].ob_spec.tedinfo;
 					sprintf(t_edinfo->te_ptext,"%d",bootdelay);
-					blitterspeed=(int)header->blitterspeed;
+					blitterspeed=(int)header->blitterspeed&1;
+					serialspeed=(int)header->serialspeed&15;
 					t_edinfo=rs_object[MENUBBLITTER].ob_spec.tedinfo;
-					t_edinfo->te_ptext=spec_blitter_speed[start_lang][blitterspeed];
+					if(coldfire)
+						t_edinfo->te_ptext=spec_serial_speed[serialspeed];
+					else
+						t_edinfo->te_ptext=spec_blitter_speed[start_lang][blitterspeed];
+					bootlog=(int)header->bootlog;		
 					tosram=(int)header->tosram;
 					t_edinfo=rs_object[MENUBTOSRAM].ob_spec.tedinfo;
-					t_edinfo->te_ptext=spec_tos_ram[start_lang][tosram];
+					if((coldfire || ((long)Supexec(get_version_flash) >= 0x200)) && radeon)
+						t_edinfo->te_ptext=spec_video_log[start_lang][(bootlog>>1)&1];
+					else
+						t_edinfo->te_ptext=spec_tos_ram[start_lang][tosram];
 					cachedelay=(int)header->cachedelay;
 					t_edinfo=rs_object[MENUBCACHE].ob_spec.tedinfo;
 					t_edinfo->te_ptext=spec_cache_delay[start_lang][cachedelay];
 					bootorder=(int)header->bootorder;					
 					t_edinfo=rs_object[MENUBBOOTORDER].ob_spec.tedinfo;
 					t_edinfo->te_ptext=spec_boot_order[start_lang][bootorder];
-					bootlog=(int)header->bootlog;					
 					t_edinfo=rs_object[MENUBBOOTLOG].ob_spec.tedinfo;
-					t_edinfo->te_ptext=spec_boot_log[start_lang][bootlog];
+					t_edinfo->te_ptext=spec_boot_log[start_lang][bootlog&1];
 					idectpci=(int)header->idectpci;					
 					t_edinfo=rs_object[MENUBIDECTPCI].ob_spec.tedinfo;
-					t_edinfo->te_ptext=spec_ide_ctpci[start_lang][idectpci&1];
+					if(coldfire)
+						t_edinfo->te_ptext=spec_ide_cf[start_lang][idectpci&1];					
+					else
+						t_edinfo->te_ptext=spec_ide_ctpci[start_lang][idectpci&1];
 					cpufpu=(int)header->cpufpu;
 					t_edinfo=rs_object[MENUBFPU].ob_spec.tedinfo;
 					t_edinfo->te_ptext=spec_fpu[start_lang][cpufpu];
@@ -3212,6 +3515,13 @@ void CDECL cpx_button(MRETS *mrets,int nclicks,int *event)
 						frequency=min_freq;
 					if(test_060() && (coldfire || ct60_read_clock()<0))
 						frequency=0;
+					div_frequency=(int)header->div_frequency;
+					if(div_frequency<2)
+						div_frequency=2;
+					if(div_frequency>6)
+						div_frequency=6;
+					t_edinfo=rs_object[MENUBDIV].ob_spec.tedinfo;
+					t_edinfo->te_ptext=spec_div_freq[div_frequency-2];
 					init_slider();
 					beep=(int)header->beep&1;
 					t_edinfo=rs_object[MENUBBEEP].ob_spec.tedinfo;
@@ -3223,7 +3533,6 @@ void CDECL cpx_button(MRETS *mrets,int nclicks,int *event)
 				break;
 			case MENUBOK:
 _ok_:
-#ifndef LIGHT
 				nvram.language=code_lang[language];
 				nvram.keyboard=code_key[keyboard];
 				nvram.datetime=(unsigned char)datetime;
@@ -3231,7 +3540,6 @@ _ok_:
 				nvram.separator=t_edinfo->te_ptext[0];
 				if(!radeon)
 					nvram.vmode=(unsigned int)vmode;
-#endif
 				nvram.bootpref=(unsigned int)code_os[bootpref];
 				nvram.scsi=(unsigned char)scsi;
 				t_edinfo=rs_object[MENUDELAY].ob_spec.tedinfo;
@@ -3241,12 +3549,13 @@ _ok_:
 				{
 					tosram=(int)ct60_rw_parameter(CT60_MODE_WRITE,CT60_PARAM_TOSRAM,(long)tosram);
 					blitterspeed=(int)ct60_rw_parameter(CT60_MODE_WRITE,CT60_BLITTER_SPEED,(long)blitterspeed);
+					serialspeed=(int)ct60_rw_parameter(CT60_MODE_WRITE,CT60_SERIAL_SPEED,(long)serialspeed);
 					cachedelay=(int)ct60_rw_parameter(CT60_MODE_WRITE,CT60_CACHE_DELAY,(long)cachedelay);
 					bootorder=(int)ct60_rw_parameter(CT60_MODE_WRITE,CT60_BOOT_ORDER,(long)bootorder);
 					bootlog=(int)ct60_rw_parameter(CT60_MODE_WRITE,CT60_BOOT_LOG,(long)bootlog);
 					cpufpu=(int)ct60_rw_parameter(CT60_MODE_WRITE,CT60_CPU_FPU,(long)cpufpu);
 					ct60_rw_parameter(CT60_MODE_WRITE,CT60_CLOCK,(long)frequency);
-#ifndef LIGHT
+					ct60_rw_parameter(CT60_MODE_WRITE,CT60_USER_DIV_CLOCK,(long)div_frequency);
 					ct60_rw_parameter(CT60_MODE_WRITE,CT60_SAVE_NVRAM_1,
 					 (long)((((unsigned long)nv_magic_code)<<16)+(unsigned long)nvram.bootpref));
 					ct60_rw_parameter(CT60_MODE_WRITE,CT60_SAVE_NVRAM_2,
@@ -3260,7 +3569,6 @@ _ok_:
 					 + (unsigned long)nvram.scsi));
 					if(radeon)
 						ct60_rw_parameter(CT60_MODE_WRITE,CT60_VMODE,(long)vmode);
-#endif
 					ct60_rw_parameter(CT60_MODE_WRITE,CT60_PARAM_CTPCI,(long)idectpci);
 				}
 				else
@@ -3268,12 +3576,13 @@ _ok_:
 					stack=Super(0L);
 					tosram=(int)ct60_rw_param(CT60_MODE_WRITE,CT60_PARAM_TOSRAM,(long)tosram);
 					blitterspeed=(int)ct60_rw_param(CT60_MODE_WRITE,CT60_BLITTER_SPEED,(long)blitterspeed);
+					serialspeed=(int)ct60_rw_param(CT60_MODE_WRITE,CT60_SERIAL_SPEED,(long)serialspeed);
 					cachedelay=(int)ct60_rw_param(CT60_MODE_WRITE,CT60_CACHE_DELAY,(long)cachedelay);
 					bootorder=(int)ct60_rw_param(CT60_MODE_WRITE,CT60_BOOT_ORDER,(long)bootorder);
 					bootlog=(int)ct60_rw_param(CT60_MODE_WRITE,CT60_BOOT_LOG,(long)bootlog);
 					cpufpu=(int)ct60_rw_param(CT60_MODE_WRITE,CT60_CPU_FPU,(long)cpufpu);
 					ct60_rw_param(CT60_MODE_WRITE,CT60_CLOCK,(long)frequency);
-#ifndef LIGHT
+					ct60_rw_param(CT60_MODE_WRITE,CT60_USER_DIV_CLOCK,(long)div_frequency);
 					ct60_rw_param(CT60_MODE_WRITE,CT60_SAVE_NVRAM_1,
 					 (long)((((unsigned long)nv_magic_code)<<16)+(unsigned long)nvram.bootpref));
 					ct60_rw_param(CT60_MODE_WRITE,CT60_SAVE_NVRAM_2,
@@ -3287,7 +3596,6 @@ _ok_:
 					 + (unsigned long)nvram.scsi));
 					if(radeon)
 						ct60_rw_param(CT60_MODE_WRITE,CT60_VMODE,(long)vmode);
-#endif
 					ct60_rw_param(CT60_MODE_WRITE,CT60_PARAM_CTPCI,(long)idectpci);
 					Super((void *)stack);
 				}
@@ -3306,7 +3614,7 @@ _ok_:
 						if(!start_lang)
 							form_alert(1,"[1][Erreur ‚criture|paramŠtre en flash !][Annuler]");
 						else
-							form_alert(1,"[1][Error writing parameters|to flash!][Cancel]");
+							form_alert(1,"[1][Error writing|parameters to flash!][Cancel]");
 					}
 				}
 				if(test_060() && frequency!=0)
@@ -3318,7 +3626,7 @@ _ok_:
 					{
 						if(value!=frequency)
 						{
-							value=ct60_configure_clock(frequency,CT60_CLOCK_WRITE_RAM);
+							value=ct60_configure_clock(frequency,CT60_CLOCK_WRITE_RAM,div_frequency);
 							if(value<0)
 							{
 								if(value==CT60_CALC_CLOCK_ERROR)
@@ -3331,7 +3639,7 @@ _ok_:
 								else
 								{
 									if(!start_lang)
-										form_alert(1,"[1][Erreur ‚criture vers|le g‚n‚rateur d'horloge !][Annuler]");
+										form_alert(1,"[1][Erreur ‚criture|vers le g‚n‚rateur|d'horloge !][Annuler]");
 									else
 										form_alert(1,"[1][Error writing to|clock generator!][Cancel]");
 
@@ -3351,7 +3659,7 @@ _ok_:
 				break;
 			case MENUBINFO:
 				change_objc(MENUBINFO,NORMAL,Work);
-				if((info_tree=adr_tree(TREE2))!=0)
+				if(!coldfire && ((info_tree=adr_tree(TREE2))!=0))
 				{
 					if(test_060())
 					{
@@ -3373,6 +3681,8 @@ _ok_:
 						break;
 					}
 				}
+				else if(coldfire)
+					form_alert(1,"[0][FireTOS configuration  V" VERSION "  | |      Didier MEQUIGNON|      aniplay@wanadoo.fr][ OK ]");
 				break;
 			}
 		}
@@ -3380,7 +3690,6 @@ _ok_:
 }
 
 void CDECL cpx_close(int flag)
-
 {
 	int x,y,m,k;
 	if(flag);
@@ -3389,9 +3698,9 @@ void CDECL cpx_close(int flag)
 }
 
 int init_rsc(void)
-
 {
 	OBJECT *info_tree,*alert_tree;
+	TEDINFO *t_edinfo;
 	BITBLK *b_itblk;
 	char **rs_str;
 	register int h;
@@ -3454,6 +3763,7 @@ int init_rsc(void)
 			rs_object[MENUBOXSLIDER].ob_y-=(h+2);
 			rs_object[MENUBRIGHT].ob_x++;
 			rs_object[MENUBRIGHT].ob_y-=(h+2);
+			rs_object[MENUBDIV].ob_y-=(h+3);
 			rs_object[MENUBOXLANG].ob_y+=(h+1);
 			rs_object[MENUBOXLANG].ob_height+=h;
 			rs_object[MENUBLANG-1].ob_y-=h;
@@ -3468,6 +3778,7 @@ int init_rsc(void)
 			rs_object[MENUBMODE].ob_y-=h;		
 			rs_object[MENUBCOUL-1].ob_y+=h;
 			rs_object[MENUBCOUL].ob_y+=h;
+			rs_object[MENUBMLAYOUT].ob_y+=h;
 			rs_object[MENUSTMODES].ob_y+=h;
 			rs_object[MENUBOXBOOT].ob_y+=(h+1);
 			rs_object[MENUBOXBOOT].ob_height+=h;
@@ -3479,17 +3790,28 @@ int init_rsc(void)
 			rs_object[MENUBIDSCSI-1].ob_y-=(h-3);
 			rs_object[MENUBIDSCSI].ob_y-=(h-3);
 			rs_object[MENUDELAY].ob_y-=(h-6);
+			if(coldfire)
+			{
+				t_edinfo=rs_object[MENUTITLE].ob_spec.tedinfo;
+				t_edinfo->te_ptext="FireTOS Configuration";
+				rs_object[MENUBBLITTER-1].ob_spec.free_string="  Debug:";
+			}
 			rs_object[MENUBBLITTER-1].ob_y-=(h-6);
 			rs_object[MENUBBLITTER].ob_y-=(h-6);
 			rs_object[MENUBTOSRAM-1].ob_y+=(h-7);
 			rs_object[MENUBTOSRAM].ob_y+=(h-7);
+			if((coldfire || ((long)Supexec(get_version_flash) >= 0x200)) && !radeon)
+			{
+				rs_object[MENUBTOSRAM-1].ob_flags |= HIDETREE;
+				rs_object[MENUBTOSRAM].ob_flags |= HIDETREE;
+			}
 			rs_object[MENUBCACHE-1].ob_y+=(h-7);
 			rs_object[MENUBCACHE].ob_y+=(h-7);
 			rs_object[MENUBBOOTLOG-1].ob_y+=(h-4);
 			rs_object[MENUBBOOTLOG].ob_y+=(h-4);
 			rs_object[MENUBIDECTPCI-1].ob_y+=(h-4);
 			rs_object[MENUBIDECTPCI].ob_y+=(h-4);
-			if((*Xcpb->get_cookie)('_PCI',&value))
+			if((get_cookie('_PCI') != NULL) || coldfire)
 			{
 				rs_object[MENUBIDECTPCI-1].ob_flags &= ~HIDETREE;
 				rs_object[MENUBIDECTPCI].ob_flags &= ~HIDETREE;
@@ -3536,7 +3858,6 @@ int init_rsc(void)
 }
 
 OBJECT* adr_tree(int num_tree)
-
 {
 	register int i,tree;
 	if(!num_tree)
@@ -3554,7 +3875,6 @@ OBJECT* adr_tree(int num_tree)
 }
 
 void init_slider(void)
-
 {
 	TEDINFO *t_edinfo;
 	if(frequency)
@@ -3567,6 +3887,7 @@ void init_slider(void)
 		 (((frequency-min_freq) * (unsigned long)(rs_object[MENUBOXSLIDER].ob_width - rs_object[MENUSLIDER].ob_width))/(max_freq-min_freq));
 		t_edinfo=rs_object[MENUSLIDER].ob_spec.tedinfo;
 		sprintf(t_edinfo->te_ptext,"%ld.%03ld",frequency/1000,frequency%1000);
+		rs_object[MENUBDIV].ob_flags &= ~HIDETREE;
 	}
 	else
 	{
@@ -3574,32 +3895,30 @@ void init_slider(void)
 		rs_object[MENUBOXSLIDER].ob_flags |= HIDETREE;
 		rs_object[MENUSLIDER].ob_flags |= HIDETREE;
 		rs_object[MENUBRIGHT].ob_flags |= HIDETREE;
+		rs_object[MENUBDIV].ob_flags |= HIDETREE;
 	}
 }
 
 void display_slider(GRECT *work)
-
 {
 	init_slider();
 	display_objc(MENUBOXSLIDER,work);
 }
 
 int modif_inf(int modecode)
-
 {
-	static char path_desk[]="C:\\NEWDESK.INF";
-	static char path_magic[]="C:\\MAGX.INF";
+	static char path_desk[]="C:\\newdesk.inf";
+	static char path_magic[]="C:\\magx.inf";
 	static char path_inf[16];
 	static char chaine[8];
 	void *sauve_ssp,*buffer;
 	char *p;
 	register int handle,i;
-	register long err,longueur;
-	long value;
-	int ok,old_modecode,magic,lg;
+	register long err,size;
+	int ok,old_modecode,magic,lg=0;
 	ok=0;
 	graf_mouse(HOURGLASS,(MFORM*)0);
-	if((*Xcpb->get_cookie)('MagX',&value))
+	if(get_cookie('MagX') != NULL)
 	{
 		magic=1;
 		copy_string(path_magic,path_inf);
@@ -3614,20 +3933,20 @@ int modif_inf(int modecode)
 	Super(sauve_ssp);
 	if((err=(long)(handle=Fopen(path_inf,FO_RW)))>=0)
 	{
-		if((err=longueur=Fseek(0L,handle,2))>=0
+		if((err=size=Fseek(0L,handle,2))>=0
 		 && (err=Fseek(0L,handle,0))>=0)
 		{
-			if((err=(long)(buffer=Malloc(longueur)))>=0)
+			if((err=(long)(buffer=Malloc(size)))>=0)
 			{
-				if((err=Fread(handle,longueur,buffer))>=0)
+				if((err=Fread(handle,size,buffer))>=0)
 				{
 					p=(char *)buffer;
 					if(magic)
 					{
-						while(p<(char *)((long)buffer+longueur)
+						while(p<(char *)((long)buffer+size)
 						 && !(p[0]=='_' && p[1]=='D' && p[2]=='E' && p[3]=='V'))
 							p++;					/* search screen descriptor */
-						if(p<(char *)((long)buffer+longueur))
+						if(p<(char *)((long)buffer+size))
 						{
 							p+=4;
 							if((err=Fseek((long)(p-buffer),handle,0))>=0)
@@ -3647,7 +3966,7 @@ int modif_inf(int modecode)
 										sprintf(chaine,"%d",modecode);
 										if((err=Fwrite(handle,long_deci(chaine,&lg),chaine))>=0)
 										{
-											if((err=Fwrite(handle,longueur-(long)(p-buffer),p))>=0)
+											if((err=Fwrite(handle,size-(long)(p-buffer),p))>=0)
 												ok=1;
 										}
 									}
@@ -3664,10 +3983,10 @@ int modif_inf(int modecode)
 					}
 					else
 					{
-						while(p<(char *)((long)buffer+longueur)
+						while(p<(char *)((long)buffer+size)
 						 && !(p[0]=='#' && p[1]=='E'))
 							p++;					/* search screen descriptor */
-						if(p<(char *)((long)buffer+longueur))
+						if(p<(char *)((long)buffer+size))
 						{
 							p+=3;					/* 1st data hexa */
 							for(i=0;i<4 && p[-1]==' ' && read_hexa(p)!=-1;i++,p+=3);
@@ -3676,7 +3995,7 @@ int modif_inf(int modecode)
 							{
 								if(Vsetmode(-1)==0x88)	/* ST monochrome */
 									modecode=(old_modecode & ~(HORFLAG2|VERTFLAG|OVERSCAN))
-									         | (modecode & (HORFLAG2|VERTFLAG|OVERSCAN));
+									        | (modecode & (HORFLAG2|VERTFLAG|OVERSCAN));
 								if(modecode!=old_modecode)
 								{
 									write_hexa(modecode>>8,p);
@@ -3684,7 +4003,7 @@ int modif_inf(int modecode)
 									write_hexa(modecode,p);
 									if((err=Fseek(0L,handle,0))>=0)
 									{
-										if((err=Fwrite(handle,longueur,buffer))>=0)
+										if((err=Fwrite(handle,size,buffer))>=0)
 											ok=1;
 									}
 								}
@@ -3714,13 +4033,11 @@ int modif_inf(int modecode)
 }
 
 int read_hexa(char *p)
-
 {
 	return((ascii_hexa(p)<<4) | ascii_hexa(p+1));
 }
 
 int ascii_hexa(char *p)
-
 {
 	register int val;
 	if((val=p[0]-'0')<0)
@@ -3735,7 +4052,6 @@ int ascii_hexa(char *p)
 }	
 
 void write_hexa(int val,char *p)
-
 {
 	val&=0xff;
 	hexa_ascii(val>>4,p++);
@@ -3743,7 +4059,6 @@ void write_hexa(int val,char *p)
 }
 
 void hexa_ascii(int val,char *p)
-
 {
 	val&=0xf;
 	val+='0';
@@ -3753,7 +4068,6 @@ void hexa_ascii(int val,char *p)
 }
 
 void display_error(int err)
-
 {
 	if(err<0)
 	{
@@ -3775,7 +4089,6 @@ void display_error(int err)
 }
 
 void infos_sdram(void)
-
 {
 	static char mess_alert[26*61];
 	static unsigned char buffer[128];
@@ -3800,9 +4113,9 @@ void infos_sdram(void)
 	if(i<0)
 	{
  		if(!start_lang)
-			form_alert(1,"[1][Il n'est pas possible de lire|les informations de la SDRAM][Annuler]");
+			form_alert(1,"[1][Il n'est pas possible|de lire les informations|de la SDRAM][Annuler]");
 		else
-			form_alert(1,"[1][Cannot read the|informations about the SDRAM][Cancel]");
+			form_alert(1,"[1][Cannot read the|informations about|the SDRAM][Cancel]");
 		return;	
 	}
 	if(start_lang)
@@ -4039,7 +4352,6 @@ void infos_sdram(void)
 }
 
 void add_latency(char *buffer_ascii,unsigned char val)
-
 {
 	int i,first;
 	char buf[]={"/0"};
@@ -4064,7 +4376,6 @@ void add_latency(char *buffer_ascii,unsigned char val)
 }
 
 int cdecl trace_temp(PARMBLK *parmblock)
-
 {
 	register int i,color,temp,temp2,x,y,w,h;
 	int tab_clip[4],tab_l[10],tab_f[4],attrib_l[6],attrib_f[5],xy[6];
@@ -4208,7 +4519,6 @@ int cdecl trace_temp(PARMBLK *parmblock)
 }
 
 int cdecl cpu_load(PARMBLK *parmblock)
-
 {
 	register int i,scale,x,y,w,h;
 	int tab_clip[4],tab_f[4],attrib_l[6],attrib_f[5],xy[4];
@@ -4265,7 +4575,6 @@ int cdecl cpu_load(PARMBLK *parmblock)
 }
 
 CPXNODE* get_header(long id)
-
 {
 	register CPXNODE *p;
 	p=(CPXNODE *)(*Xcpb->Get_Head_Node)();	/* header 1st CPX */
@@ -4279,7 +4588,6 @@ CPXNODE* get_header(long id)
 }
 
 HEAD *fix_header(void)
-
 {
 	HEAD *header;
 	header=(HEAD *)head->cpxhead.buffer;
@@ -4287,14 +4595,13 @@ HEAD *fix_header(void)
 	 && header->datetime==0 && header->separator==0 && header->bootdelay==0
 	 && header->vmode==0 && header->scsi==0 && header->tosram==0
 	 && header->trigger_temp==0 && header->daystop==0 && header->timestop==0
-	 && header->blitterspeed==0 && header->cachedelay==0 && header->bootorder==0
-	 && header->bootlog==0 && header->cpufpu==0 && header->beep==0)
+	 && header->blitterspeed==0 && header->serialspeed==0 && header->cachedelay==0
+	 && header->bootorder==0 && header->bootlog==0 && header->cpufpu==0 && header->beep==0)
 		*header=config;	/* buffer of header is always to 0 with ZCONTROL */
 	return(header);
 }
 
 void save_header(void)
-
 {
 	HEAD *header;
 	if((*Xcpb->XGen_Alert)(SAVE_DEFAULTS))
@@ -4309,7 +4616,6 @@ void save_header(void)
 }
 
 void display_selection(int selection,int flag_aff)
-
 {
 	static char *status[2][2]={" Charge CPU "," Temp‚rature ",
 	                           " CPU load "," Temperature "};
@@ -4505,7 +4811,6 @@ void display_selection(int selection,int flag_aff)
 			new_pos=ed_pos;
 		}
 		break;		
-#ifndef LIGHT
 	case PAGE_LANG:				/* language */
 		rs_object[MENUBOXSTATUS].ob_flags |= HIDETREE;
 		rs_object[MENUSTATUS].ob_flags |= HIDETREE;
@@ -4557,12 +4862,10 @@ void display_selection(int selection,int flag_aff)
 			new_objc=ed_objc=new_pos=ed_pos=0;
 		}
 		break;
-#endif
 	}
 }
 
 void change_objc(int objc,int state,GRECT *clip)
-
 {
 	switch(state)
 	{
@@ -4580,7 +4883,6 @@ void change_objc(int objc,int state,GRECT *clip)
 }
 
 void display_objc(int objc,GRECT *clip)
-
 {
 	register GRECT *rect;
 	register int cursor=0;
@@ -4602,7 +4904,6 @@ void display_objc(int objc,GRECT *clip)
 }
 
 void move_cursor(void)
-
 {
 	if(new_objc>0 && (ed_objc!=new_objc || ed_pos!=new_pos))
 	{
@@ -4616,7 +4917,6 @@ void move_cursor(void)
 }
 
 int hndl_form(OBJECT *tree,int objc)
-
 {
 	register int i,flag_exit,answer;
 	long value;
@@ -4656,7 +4956,6 @@ int hndl_form(OBJECT *tree,int objc)
 }	
 
 int MT_form_xalert(int fo_xadefbttn,char *fo_xastring,long time_out,void (*call)(),WORD *global)
-
 {
 	register int i,j,w,max_length_lines,max_length_buttons;
 	register char *p;
@@ -4896,7 +5195,6 @@ int MT_form_xalert(int fo_xadefbttn,char *fo_xastring,long time_out,void (*call)
 }
 
 void bubble_help(void)
-
 {
 	register int i,j,ok;
 	int bubble_id,objc;
@@ -4972,7 +5270,6 @@ void bubble_help(void)
 }
 
 void call_st_guide(void)
-
 {
 	register int st_guide_id;
 	static WORD msg[8];
@@ -4990,7 +5287,6 @@ void call_st_guide(void)
 }
 
 long cdecl temp_thread(unsigned int *param)				/* used with MagiC > 4.5 */
-
 {
 	register int i,temp;
 	unsigned long daytime;
@@ -5205,7 +5501,6 @@ long cdecl temp_thread(unsigned int *param)				/* used with MagiC > 4.5 */
 }
 
 int start_temp(unsigned int *param1,unsigned int *param2,unsigned int *param3,unsigned int *param4)
-
 {
 	register int ret,err,i,j;
 	static unsigned int param[4];
@@ -5289,9 +5584,9 @@ int start_temp(unsigned int *param1,unsigned int *param2,unsigned int *param3,un
 			strcat(path_app,"CT60TEMP.ACC");
 #ifdef ALERT_INSTALL_CT60TEMP
 		if(!start_lang)
-			ret=form_alert(1,"[2][Il faut installer CT60TEMP|pour surveiller la temp‚rature][Installer|Annuler]");
+			ret=form_alert(1,"[2][Il faut installer|CT60TEMP pour surveiller|la temp‚rature][Installer|Annuler]");
 		else
-			ret=form_alert(1,"[2][You must install CT60TEMP|to monitor the temperature][Install|Cancel]");
+			ret=form_alert(1,"[2][You must install|CT60TEMP to monitor|the temperature][Install|Cancel]");
 		if(ret==1)
 #endif
 		{
@@ -5301,7 +5596,7 @@ int start_temp(unsigned int *param1,unsigned int *param2,unsigned int *param3,un
 			{
 				graf_mouse(ARROW,(MFORM*)0);
 				if(!start_lang)
-					ret=form_alert(1,"[1][Erreur durant la cr‚ation|du fichier CT60TEMP.ACC][Annuler]");
+					ret=form_alert(1,"[1][Erreur durant la|cr‚ation du fichier|CT60TEMP.ACC][Annuler]");
 				else
 					ret=form_alert(1,"[1][Error occurred while|creating CT60TEMP.ACC][Cancel]");	
 			}		
@@ -5313,7 +5608,7 @@ int start_temp(unsigned int *param1,unsigned int *param2,unsigned int *param3,un
 				if(err<0)
 				{
 					if(!start_lang)
-						ret=form_alert(1,"[1][Erreur durant l'‚criture|du fichier CT60TEMP.ACC][Annuler]");
+						ret=form_alert(1,"[1][Erreur durant|l'‚criture du|fichier CT60TEMP.ACC][Annuler]");
 					else
 						ret=form_alert(1,"[1][Error occurred while|writing CT60TEMP.ACC][Cancel]");	
 				}
@@ -5327,7 +5622,7 @@ int start_temp(unsigned int *param1,unsigned int *param2,unsigned int *param3,un
 						if(start_ct60temp(param1,param2,param3,param4))
 							return(appl_find("CT60TEMP"));
 					}
-					else
+					else if(!coldfire)
 					{
 						if(!start_lang)
 							ret=form_alert(1,"[2][Vous devez red‚marrer|votre ordinateur pour que la|surveillance de temp‚rature|fonctionne][Reboot|Annuler]");
@@ -5344,7 +5639,6 @@ int start_temp(unsigned int *param1,unsigned int *param2,unsigned int *param3,un
 }
 
 int start_ct60temp(unsigned int *param1,unsigned int *param2,unsigned int *param3,unsigned int *param4)
-
 {
 	register int ret=0;
 	char path_app[256],cmd_line[256];
@@ -5370,7 +5664,6 @@ int start_ct60temp(unsigned int *param1,unsigned int *param2,unsigned int *param
 }
 
 int send_ask_temp(void)
-
 {	
 	register int ret;
 	static WORD msg[8];
@@ -5393,7 +5686,6 @@ int send_ask_temp(void)
 }
 
 int test_stop(unsigned long daytime,unsigned int daystop,unsigned int timestop)
-
 {
 	unsigned int day;
 	int year,mon,mday;
@@ -5434,7 +5726,6 @@ int test_stop(unsigned long daytime,unsigned int daystop,unsigned int timestop)
 }
 
 int dayofweek(int year,int mon,int mday)
-
 {
 	static int doylookup[2][13] = {
 	 { 0, 31, 59, 90, 120, 151, 181, 212, 243, 273, 304, 334, 365 },
@@ -5462,7 +5753,6 @@ int dayofweek(int year,int mon,int mday)
 }
 
 void beep_psg(unsigned int beep)
-
 {
 	static unsigned char tab_beep[] = {
 	0,0xA0,1,0,2,0,3,0,4,0,5,0,6,0,7,0xFE,8,13,9,0,10,0,0xFF,10,
@@ -5472,7 +5762,6 @@ void beep_psg(unsigned int beep)
 }
 
 void SendIkbd(int count, char *buffer)
-
 {
 	while(count>=0)
 	{
@@ -5483,12 +5772,11 @@ void SendIkbd(int count, char *buffer)
 }
 
 void stop_060(void)
-
 {
-	long value;
+	COOKIE *p;
 	Sync();
 	Shutdown(0L);
-	if((*Xcpb->get_cookie)('_CPU',&value) && (value==60L))
+	if(((p = get_cookie('_CPU')) != NULL) && (p->v.l == 60L))
 	{
 		if(coldfire)
 			Supexec(cf_stop);
@@ -5499,7 +5787,6 @@ void stop_060(void)
 }
 
 long version_060(void)
-
 {
 	if(!test_060())
 		return(6);
@@ -5513,7 +5800,6 @@ long version_060(void)
 }
 
 int read_temp(void)
-
 {
 	register int temp,temperature,i;
 	static int old_temp[8]={0,0,0,0,0,0,0,0};
@@ -5541,7 +5827,6 @@ int read_temp(void)
 }
 
 int fill_tab_temp(void)
-
 {
 	register int i,temp;
 	register unsigned int time;
@@ -5574,16 +5859,14 @@ int fill_tab_temp(void)
 }
 
 unsigned long bogomips(void)
-
 {
-	long value;
 	unsigned long loops_per_sec=1;
 	unsigned long ticks;
 	while((loops_per_sec<<=1))
 	{
-		if(!(*Xcpb->get_cookie)('MgMc',&value))
-   		{	/* normal case ST, TT, FALCON, HADES, MILAN, CT60 */
-   			value_supexec=loops_per_sec;
+		if(get_cookie('MgMc') == NULL)
+		{	/* normal case ST, TT, FALCON, HADES, MILAN, CT60 */
+			value_supexec=loops_per_sec;
 			ticks=(unsigned long)Supexec(mes_delay);
 		}
 		else
@@ -5602,20 +5885,18 @@ unsigned long bogomips(void)
 }
 
 void delay_loop(long loops)
-
 {
 	while((--loops)>=0);
 }
 
 int get_MagiC_ver(unsigned long *crdate)
-
 {
-	long value;
 	AESVARS *av;
-	if(!(*Xcpb->get_cookie)('MagX',&value))
+	COOKIE *p;
+	if((p = get_cookie('MagX')) == NULL)
 		return(0);
-	av=((MAGX_COOKIE *)value)->aesvars;
-	if(!av)
+	av = ((MAGX_COOKIE *)p->v.l)->aesvars;
+	if(av == NULL)
 		return(0);
 	if(crdate)
 	{
@@ -5627,7 +5908,6 @@ int get_MagiC_ver(unsigned long *crdate)
 }
 
 COOKIE *fcookie(void)
-
 {
 	COOKIE *p;
 	long stack;
@@ -5640,7 +5920,6 @@ COOKIE *fcookie(void)
 }
 
 COOKIE *ncookie(COOKIE *p)
-
 {
 	if(!p->ident)
 		return(0);
@@ -5648,7 +5927,6 @@ COOKIE *ncookie(COOKIE *p)
 }
 
 COOKIE *get_cookie(long id)
-
 {
 	COOKIE *p;
 	p=fcookie();
@@ -5662,7 +5940,6 @@ COOKIE *get_cookie(long id)
 }
 
 int add_cookie(COOKIE *cook)
-
 {
 	COOKIE *p;
 	int i=0;
@@ -5688,31 +5965,64 @@ int add_cookie(COOKIE *cook)
 	return(-1);						/* no cookie-jar */
 }
 
-int find_radeon(void)
+long cdecl enumfunc(SCREENINFO *inf, long flag)
+{
+	if(flag);
+	if(!vmode_prefered && !width_prefered && !height_prefered
+	 && (inf->devID & DEVID) && !(inf->devID & VIRTUAL_SCREEN)
+	 && (strchr(inf->name,'*') != NULL)) /* symbol used for prefered mode */
+	{
+		vmode_prefered = (int)inf->devID;
+		width_prefered = (int)inf->scrWidth;
+		height_prefered = (int)inf->scrHeight;
+	}
+	if((inf->devID & NUMCOLS) == BPS1) /* VBL monochome emulation */
+	{
+		if((int)inf->scrWidth > width_max_mono)
+			width_max_mono = (int)inf->scrWidth;
+		if((int)inf->scrHeight > height_max_mono)
+			height_max_mono = (int)inf->scrHeight;
+	}
+	return(1);
+}
 
+long physbase_videl(void)
+{
+	unsigned long physaddr = (unsigned long)(*(unsigned char *)0xFFFF8201); /* video screen memory position, high byte */
+	physaddr <<= 8;
+	physaddr |= (unsigned long)(*(unsigned char *)0xFFFF8203); /* mid byte */
+	physaddr <<= 8;
+	physaddr |= (unsigned long)(*(unsigned char *)0xFFFF820D); /* low byte */
+	return((long)physaddr);
+}
+
+int find_radeon(void)
 {
 	unsigned long temp;
 	short index;
 	long handle,err;
+	unsigned long physaddr;
 	struct pci_device_id *radeon;
-	long value;
-	if(!(*Xcpb->get_cookie)('_PCI',&value) || !test_060())
+	if((get_cookie('_PCI') == NULL) || !test_060())
+		return(0);
+	physaddr = (unsigned long)Physbase();
+	if((physaddr < 0x1000000UL) && (physaddr == (unsigned long)Supexec(physbase_videl)))
 		return(0);
 	index=0;
 	do
 	{
-		handle=find_pci_device(0x0000FFFFL,index++);
-		if(handle>=0)
+		handle = find_pci_device(0x0000FFFFL,index++);
+		if(handle >= 0)
 		{
-			err=read_config_longword(handle,PCIIDR,&temp);
+			err = read_config_longword(handle,PCIIDR,&temp);
 			/* test Radeon ATI devices */
-			if(err>=0)
+			if(err >= 0)
 			{
-				radeon=radeonfb_pci_table; /* compare table */
+				radeon = radeonfb_pci_table; /* compare table */
 				while(radeon->vendor)
 				{
-					if((radeon->vendor==(temp & 0xFFFF))
-					 && (radeon->device==(temp>>16)))
+					if((radeon->vendor == (temp & 0xFFFF))
+					 && (radeon->device == (temp >> 16)))
 						return(1);
 					radeon++;
 				}
@@ -5724,19 +6034,31 @@ int find_radeon(void)
 }	
 
 int test_060(void)
-
 {
 #ifndef TEST
+	COOKIE *p;
 	if(cpu_cookie==0)
-		(*Xcpb->get_cookie)('_CPU',&cpu_cookie);
-	return(cpu_cookie==60 ? 1 : 0);
+	{
+		if((p = get_cookie('_CPU')) != NULL)
+			cpu_cookie = p->v.l;
+	}
+	return((cpu_cookie == 60) ? 1 : 0);
 #else
 	return(1);
 #endif
 }
 
-int copy_string(char *p1,char *p2)
+CT60_COOKIE *get_cookie_ct60(void)
+{
+	COOKIE *p;
+	if((p = get_cookie(ID_CT60)) != NULL)
+		return((CT60_COOKIE *)p->v.l);
+	if((p = get_cookie(ID_CF)) != NULL)
+		return((CT60_COOKIE *)p->v.l);
+	return(NULL);
+}
 
+int copy_string(char *p1,char *p2)
 {
 	register int i=0;
 	while((*p2++ = *p1++)!=0)
@@ -5745,7 +6067,6 @@ int copy_string(char *p1,char *p2)
 }
 
 int long_deci(char *p,int *lg)
-
 {
 	register int i=0;
 	*lg=0;
@@ -5760,7 +6081,6 @@ int long_deci(char *p,int *lg)
 }
 
 int val_string(char *p)
-
 {
 	static int tab_mul_10[5]={10000,1000,100,10,1};
 	register int lg=0,i,j;
@@ -5775,7 +6095,6 @@ int val_string(char *p)
 }
 
 void reboot(void)
-
 {
 	EVNTDATA mouse;
 	do

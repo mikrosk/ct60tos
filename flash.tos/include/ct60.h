@@ -1,5 +1,5 @@
 /* TOS 4.04 Xbios for the CT60 board
-*  Didier Mequignon 2002-2006, e-mail: aniplay@wanadoo.fr
+*  Didier Mequignon 2002-2010, e-mail: aniplay@wanadoo.fr
 *
 *  This library is free software; you can redistribute it and/or
 *  modify it under the terms of the GNU Lesser General Public
@@ -21,6 +21,8 @@
 
 #define ID_CT60 (long)'CT60'
 
+#define XFRB_SIZE         0x10000
+
 /* Vsetscreen modecode extended flags */
 
 #define HORFLAG         0x200 /* double width */
@@ -32,8 +34,8 @@
 #define VIRTUAL_SCREEN 0x8000 /* width * 2 and height * 2, 2048 x 2048 max */
 #define BPS32 5
 
-#define GET_DEVID(x) ((x & DEVID) ? ((x & 0x3FF8) >> 3) : -1)
-#define SET_DEVID(x) (((x << 3) & 0x3FF8) | DEVID)
+#define GET_DEVID(x) (((x) & DEVID) ? (((x) & 0x3FF8) >> 3) : -1)
+#define SET_DEVID(x) ((((x) << 3) & 0x3FF8) | DEVID)
 
 /* Vsetscreen New modes */
 /* Vsetscreen(void *par1, void *par2, short rez, short command) */
@@ -59,7 +61,7 @@
 #define CT60_FARENHEIT 1
 #define CT60_MODE_READ 0
 #define CT60_MODE_WRITE 1
-#define CT60_PARAM_TOSRAM 0
+#define CT60_PARAM_TOSRAM 0 /* obsolete for boot >= 2.00 */
 #define CT60_BLITTER_SPEED 1
 #define CT60_CACHE_DELAY 2
 #define CT60_BOOT_ORDER 3
@@ -70,8 +72,8 @@
 #define CT60_SAVE_NVRAM_2 8
 #define CT60_SAVE_NVRAM_3 9
 #define CT60_PARAM_OFFSET_TLV 10
-#define CT60_ABE_CODE 11
-#define CT60_SDR_CODE 12
+#define CT60_SERIAL_SPEED 11
+#define CT60_USER_DIV_CLOCK 12
 #define CT60_CLOCK 13
 #define CT60_PARAM_CTPCI 14
 /* 15 is reserved - do not use */

@@ -181,7 +181,7 @@ a lot of data that needs to be copied, this should be set high. */
 #define SYS_STATS               1
 #endif /* STATS */
 
-#define LWIP_PROVIDE_ERRNO      1
+//#define LWIP_PROVIDE_ERRNO      1
 #define ERRNO
 
 #endif /* __LWIPOPTS_H__ */

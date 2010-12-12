@@ -13,6 +13,8 @@
 #include "relocate.h"
 #include "utility.h"
 
+extern long boot_alloc(long size);
+
 /*
  * Unpacks 6/8 pixel wide fonts into 16 consecutive bytes
  */
@@ -38,7 +40,7 @@ long unpack_font(Fontheader *header, long format)
    if (height > 16)                    /* 16 bytes per character for now */
       return 0;
 
-   if (!(buf = (char *)Mxalloc((long)chars * 16,3)))
+   if (!(buf = (char *)boot_alloc((long)chars * 16)))
       return 0;
    
    header->extra.unpacked.data = buf;

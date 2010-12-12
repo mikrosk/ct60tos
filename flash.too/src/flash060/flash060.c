@@ -1,5 +1,5 @@
-/* Flashing CT60 soft & hard
-*  Didier Mequignon 2003-2006, e-mail: aniplay@wanadoo.fr
+/* Flashing CT60 / CTPCI soft & hard and FIREBEE
+*  Didier Mequignon 2003-2010, e-mail: aniplay@wanadoo.fr
 *
 *  This program is free software; you can redistribute it and/or modify
 *  it under the terms of the GNU General Public License as published by
@@ -16,7 +16,10 @@
 *  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 */
 
-#include <tos.h>
+#include <tos.h> 
+#ifndef SIGPIPE
+#include <mint.h>
+#endif
 #include <aes.h>
 #include <vdi.h>
 #include <string.h>
@@ -123,6 +126,7 @@ int rc_intersect(GRECT *r1,GRECT *r2);
 int min(int a,int b),max(int a,int b);
 void get_date_file(unsigned short date_file,char *date_format);
 void get_date_os(unsigned char *date_os,char *date_format);
+void get_date_os2(unsigned short *date_os,char *date_format);
 void get_version_boot(unsigned char *version_boot,char *version_format);
 COOKIE *fcookie(void);
 COOKIE *ncookie(COOKIE *p);
@@ -136,19 +140,26 @@ int dd_reply(long fd,unsigned char ack);
 extern int srec_read(const char *path);
 extern long get_date_flash(void);
 extern long get_version_flash(void);
+extern long get_checksum_flash(void);
 extern long read_flash(long offset,long size,void *dest);
 extern long program_flash(long offset,long size,void *source,int lock_interrupts);
+extern long get_date_flash_cf(void);
+extern long get_version_flash_cf(void);
+extern long get_checksum_flash_cf(void);
+extern long read_flash_cf(long offset,long size,void *dest);
+extern long program_flash_cf(long offset,long size,void *source);
 
 /* global variables */
 
 int contrl[12],intin[128],intout[128],ptsin[128],ptsout[128];
 int ap_id,wh,w_icon,file_loaded=0;
-void *buffer_flash=0;
+void *buffer_flash=NULL;
 long size_tos=0;
+int coldfire=0;
 int jedec_only=0;
 int soft_hard=SOFT_BIN;
 int device=NO_DEVICE;
-unsigned long usercode_jed=0,flash_device=0;
+unsigned long usercode_jed=0,flash_device=0,dreg_length=DATA_LENGTH;
 OBJECT *Form;
 OBJECT *Icone;
 GRECT shrink;
@@ -164,12 +175,13 @@ void main(int argc, char **argv)
 	int message[8];
 	long value=0;
 	unsigned short version;
-	char *path;
 	OBJECT *op;
 	TEDINFO *tp;
 	GRECT rect1,rect2;
+	if(get_cookie('_CF_')!=0)
+		coldfire=1;
 	clic=1;
-	value=Supexec(get_date_flash);
+	value=Supexec(coldfire ? get_date_flash_cf : get_date_flash);
 	jedec_only=0;
 	if(value==0)
 		jedec_only=1;
@@ -180,7 +192,7 @@ void main(int argc, char **argv)
 		get_date_os((unsigned char *)&value,tp->te_ptext);  /* TOS in flash date */
 		rsrc_gaddr(R_OBJECT,VERSION_FLASH,&op);
 		tp=op->ob_spec.tedinfo;
-		version=(unsigned short)Supexec(get_version_flash);
+		version=(unsigned short)Supexec(coldfire ? get_version_flash_cf : get_version_flash);
 		get_version_boot((unsigned char *)&version,tp->te_ptext);
 		if(argc>1)
 		{
@@ -400,9 +412,9 @@ int Keyboard(int key)
 int Button(int objc_clic, int mouse_x)
 {
 	long stack,offset,value,tosram;
-	unsigned long usercode;
+	unsigned long usercode=0;
 	unsigned short version;
-	int i,j,b,error,verify,repeat,lock_interrupts,pos_clic,xoff,yoff,width;
+	int i,j,b,error,verify,repeat,lock_interrupts,pos_clic,xoff,yoff,width,ret;
 	unsigned char tap_state;
 	char c;
 	NVM nvram;
@@ -458,8 +470,13 @@ int Button(int objc_clic, int mouse_x)
 			tosram=lock_interrupts=0;
 			if(file_loaded && ((p=get_cookie('_CPU'))!=0) && (p->v.l==0x3C))	/* 68060 */
 			{
-				if(get_cookie('CT60'))
-					tosram=ct60_rw_parameter(CT60_MODE_READ,CT60_PARAM_TOSRAM,0L)&1;
+				if(coldfire || get_cookie('CT60'))
+				{
+					if((unsigned short)Supexec(coldfire ? get_version_flash_cf : get_version_flash) < 0x200)
+						tosram=ct60_rw_parameter(CT60_MODE_READ,CT60_PARAM_TOSRAM,0L)&1;
+					else
+						tosram=1;
+				}
 				if(!tosram && soft_hard!=HARD_JED)
 				{
 					b=Alert(ALERT_060);
@@ -473,21 +490,30 @@ int Button(int objc_clic, int mouse_x)
 						rsrc_gaddr(R_OBJECT,VERSION_FILE,&op);
 						tp=op->ob_spec.tedinfo;
 						usercode=(((unsigned long)tp->te_ptext[0])<<24)+(((unsigned long)tp->te_ptext[1])<<16)+(((unsigned long)tp->te_ptext[2])<<8)+((unsigned long)tp->te_ptext[3]);
-						NVMaccess(0,0,(int)(sizeof(NVM)),&nvram); /* read */
-						if(device==ABE)
-							nvram.code_abe=usercode;
-						if(device==SDR)
-							nvram.code_sdr=usercode;
-						NVMaccess(1,0,(int)(sizeof(NVM)),&nvram); /* write */
+#if 1 /* obsolete since boot V2.00 */
+						if((device==ABE) || (device==SDR))
+						{
+							NVMaccess(0,0,(int)(sizeof(NVM)),&nvram); /* read */
+							if(device==ABE)
+								nvram.code_abe=usercode;
+							else if(device==SDR)
+								nvram.code_sdr=usercode;
+							NVMaccess(1,0,(int)(sizeof(NVM)),&nvram); /* write */
+						}
+#endif
 					}
 					b=0;			
 				}
 			}
 			if(file_loaded && b==1)
 			{
+				int nvdi=0;
+				if(get_cookie('NVDI'))
+					nvdi=1;			
 				graf_mouse(BUSYBEE,0L);
 				aff_leds(-1);  /* init */
-				if(soft_hard==HARD_JED && jed)
+				if(soft_hard==HARD_JED && jed
+				 && ((device!=ABE) || nvdi || ((device==ABE) && !nvdi && (Alert(ALERT_NVDI)!=1))))
 				{
 					if(Supexec(test_cable)==0)
 						Alert(ALERT_CABLE);
@@ -503,6 +529,10 @@ int Button(int objc_clic, int mouse_x)
 							Alert(ALERT_POWER);
 						else
 						{
+							if(device==CTPCI)
+								dreg_length=DATA_LENGTH*2; /* XC95288 */
+							else
+								dreg_length=DATA_LENGTH; /* XC95144 */
 							JtagSelectTarget(device);
 							stack=Super(0L);
 							setPort(TMS,1); /* JTAG reset */
@@ -533,17 +563,22 @@ int Button(int objc_clic, int mouse_x)
 							if(error==ERROR_NONE)
 							{
 								if(verify)
-								{
-									NVMaccess(0,0,(int)(sizeof(NVM)),&nvram);       /* read */
-									if(device==ABE)
-										nvram.code_abe=usercode;
-									if(device==SDR)
-										nvram.code_sdr=usercode;
-									NVMaccess(1,0,(int)(sizeof(NVM)),&nvram);       /* write */			
+								{									
+#if 1 /* obsolete since boot V2.00 */
+									if((device==ABE) || (device==SDR))
+									{
+										NVMaccess(0,0,(int)(sizeof(NVM)),&nvram);       /* read */
+										if(device==ABE)
+											nvram.code_abe=usercode;
+										else if(device==SDR)
+											nvram.code_sdr=usercode;
+										NVMaccess(1,0,(int)(sizeof(NVM)),&nvram);       /* write */
+									}
+#endif
 									if(usercode!=usercode_jed)
 										error=ERROR_CODE;
 								}
-								else
+								else if(!verify)                                  /* programming */
 								{
 									repeat=10;
 									do
@@ -581,15 +616,17 @@ int Button(int objc_clic, int mouse_x)
 												error=i;
 										}
 									}
-									if(error==NONE)
+#if 1 /* obsolete since boot V2.00 */
+									if((error==NONE) && ((device==ABE) || (device==SDR)))
 									{
 										NVMaccess(0,0,(int)(sizeof(NVM)),&nvram);       /* read */
 										if(device==ABE)
 											nvram.code_abe=usercode_jed;
-										if(device==SDR)
+										else if(device==SDR)
 											nvram.code_sdr=usercode_jed;
 										NVMaccess(1,0,(int)(sizeof(NVM)),&nvram);       /* write */			
 									}
+#endif
 								}
 								if(error==NONE)
 								{
@@ -622,16 +659,29 @@ int Button(int objc_clic, int mouse_x)
 				}
 				else
 				{
-					if(!jedec_only && buffer_flash!=0)
+					if(!jedec_only && (buffer_flash!=NULL))
 					{
+						int ok=0;
+						long end_offset=FLASH_SIZE-PARAM_SIZE;
+						if(coldfire)
+							end_offset=FLASH_SIZE_CF;
 						offset=0;
 						if(soft_hard==SOFT_HEX)
 						{
-							offset=(start_adr-FLASH_ADR) & 0xFF0000;
+							if(coldfire)
+								offset = (start_adr-FLASH_ADR_CF) & 0xFF0000;
+							else
+								offset = (start_adr-FLASH_ADR) & 0xFF0000;
 							size_tos+=65535;     /* alignment */
-							size_tos&=0xF0000;	
+							size_tos&=0xFFFF0000;	
 						}
-						while(offset<(FLASH_SIZE-PARAM_SIZE))
+						else if(coldfire) /* .BIN */
+						{
+							offset = (FLASH_ADR_TOS_CF-FLASH_ADR_CF);
+							size_tos += offset;
+							end_offset = offset + (FLASH_SIZE-PARAM_SIZE);
+						}
+						while(offset<end_offset)
 						{
 							if(lock_interrupts)
 							{
@@ -639,8 +689,24 @@ int Button(int objc_clic, int mouse_x)
 								Ikbdws(0,buffer); /* pause output */
 								evnt_timer(10,0);
 							}
+							if(offset>=size_tos)
+								break;
+							if(!ok && coldfire && ((offset < 0x100000) || (offset >= 0x700000))) /* Bas or dBUG or FPGA table */
+							{
+								static char msg[256];
+								sprintf(msg,"[2][Confirm writing flash sector at 0x%08lX?|(Bas or dBUG or FPGA table)][Yes|Yes All|No]",offset+FLASH_ADR_CF);
+								ret=form_alert(1,msg);
+								if(ret == 2)
+									ok=1;
+								if(ret > 2)
+									break;
+							}
 							stack=Super(0L);
-							offset=program_flash(offset,size_tos,buffer_flash,lock_interrupts);
+							/* write sector */
+							if(coldfire)
+								offset=program_flash_cf(offset,size_tos,buffer_flash);
+							else
+								offset=program_flash(offset,size_tos,buffer_flash,lock_interrupts);
 							Super((void *)stack);
 							if(lock_interrupts)
 							{
@@ -665,12 +731,17 @@ int Button(int objc_clic, int mouse_x)
 							}
 							if(soft_hard==SOFT_HEX)
 							{
-								aff_leds((int)((offset-((start_adr-FLASH_ADR) & 0xFF0000)*16L)/size_tos));
+								long start;
+								if(coldfire)
+									start = start_adr-FLASH_ADR_CF;
+								else
+									start = (start_adr-FLASH_ADR) & 0xFF0000;
+								aff_leds((int)(((offset-start)*16L)/(size_tos-start)));
 								if(offset>=size_tos)
 									break;
 							}
 							else
-								aff_leds((int)((offset*16L)/(long)(FLASH_SIZE-PARAM_SIZE)));
+								aff_leds((int)(((offset & (FLASH_SIZE-1))*16L)/(long)(FLASH_SIZE-PARAM_SIZE)));
 						}
 					}
 				}
@@ -678,11 +749,11 @@ int Button(int objc_clic, int mouse_x)
 			}
 			rsrc_gaddr(R_OBJECT,DATE_FLASH,&op);
 			tp=op->ob_spec.tedinfo;
-			value=Supexec(get_date_flash);
+			value=Supexec(coldfire ? get_date_flash_cf : get_date_flash);
 			get_date_os((unsigned char *)&value,tp->te_ptext);
 			rsrc_gaddr(R_OBJECT,VERSION_FLASH,&op);
 			tp=op->ob_spec.tedinfo;
-			version=(unsigned short)Supexec(get_version_flash);
+			version=(unsigned short)Supexec(coldfire ? get_version_flash_cf : get_version_flash);
 			get_version_boot((unsigned char *)&version,tp->te_ptext);
 			display_objc_form(DATE_FLASH,Form->ob_x,Form->ob_y,Form->ob_width,Form->ob_height);
 			display_objc_form(VERSION_FLASH,Form->ob_x,Form->ob_y,Form->ob_width,Form->ob_height);
@@ -755,8 +826,8 @@ void move_cursor(void)
 		ed_pos=new_pos;
 		objc_edit(Form,new_objc,0,&ed_pos,ED_CHAR); /* new position of cursor */
 		objc_edit(Form,new_objc,0,&ed_pos,ED_END);  /* showm cursor */
-		ed_objc=new_objc;                               /* new zone edited */
-		ed_pos=new_pos;                                 /* new position cursor */
+		ed_objc=new_objc;                           /* new zone edited */
+		ed_pos=new_pos;                             /* new position cursor */
 	}
 }
 
@@ -827,7 +898,10 @@ int jtag_test_device(unsigned char *tap_state,unsigned long *usercode)
 		return(error);
 	tdi.len=tdo.len=tdo_cmp.len=tdo_mask.len=4;
 	*(unsigned long *)&tdi.val[0]=0xFFFFFFFF;
-	*(unsigned long *)&tdo_cmp.val[0]=IDCODE_XC95144XL;
+	if(device==CTPCI)
+		*(unsigned long *)&tdo_cmp.val[0]=IDCODE_XC95288XL;
+	else
+		*(unsigned long *)&tdo_cmp.val[0]=IDCODE_XC95144XL;
 	*(unsigned long *)&tdo_mask.val[0]=IDMASK;
 	error=JtagShift(tap_state,TAPSTATE_SHIFTDR,32,&tdi,&tdo,&tdo_cmp,&tdo_mask,TAPSTATE_RUNTEST,0,0);
 #ifdef DEBUG
@@ -1017,16 +1091,15 @@ int jtag_program(unsigned char *tap_state)
 	count_size=0;
 	bit=(int)jed->sizes_list[count_size];
 	value=0;
-	byte=8;
+	byte=(int)dreg_length;
 	first=1;
 	adr_fuse=old_adr=0;
-	*(unsigned long *)&tdo_cmp.val[0]=*(unsigned long *)&tdo_mask.val[0]=0;
-	*(unsigned long *)&tdo_cmp.val[4]=*(unsigned long *)&tdo_mask.val[4]=0;
-	*(unsigned long *)&tdo_cmp.val[8]=*(unsigned long *)&tdo_mask.val[8]=0x00000300;
+	for(i=0;i<dreg_length+2;tdo_cmp.val[i]=tdo_mask.val[i]=0x00,i++);
+	tdo_cmp.val[i]=tdo_mask.val[i]=0x03;
 	for(count_fuse=0;count_fuse<jed->fuse_count;count_fuse++)
 	{
 		bit--;
-			value>>=1;
+		value>>=1;
 		if(jedec_get_fuse(jed,count_fuse))
 			value |= 0x80;
 		else
@@ -1040,32 +1113,33 @@ int jtag_program(unsigned char *tap_state)
 				adr=jtag_device_adr(adr_fuse);
 				if(old_adr != (adr & 0xFFFFF000))
 					old_adr = adr & 0xFFFFF000;
-				tdi.len=tdo.len=tdo_cmp.len=tdo_mask.len=11;
+				tdi.len=tdo.len=tdo_cmp.len=tdo_mask.len=dreg_length+3;
 				tdi.val[0]=0;
 				*(unsigned short *)&tdi.val[1]=(unsigned short)adr;
 				if((adr & 0x1F)== 0x14)
-					tdi.val[11]=0xC0;
+					tdi.val[dreg_length+3]=0xC0;
 				else
-					tdi.val[11]=0x40;
-				*(unsigned long *)&tdi.val[0]<<=2;
-				*(unsigned long *)&tdi.val[0]|=(*(unsigned long *)&tdi.val[4]>>30);
-				*(unsigned long *)&tdi.val[4]<<=2;
-				*(unsigned long *)&tdi.val[4]|=(*(unsigned long *)&tdi.val[8]>>30);
-				*(unsigned long *)&tdi.val[8]<<=2;
+					tdi.val[dreg_length+3]=0x40;
+				for(i=0;i<dreg_length;i+=4)
+				{
+					*(unsigned long *)&tdi.val[i]<<=2;
+					*(unsigned long *)&tdi.val[i]|=(*(unsigned long *)&tdi.val[i+4]>>30);
+				}
+				*(unsigned long *)&tdi.val[i]<<=2;
 				if((adr & 0x1F)== 0x00)
 				{
-					tdo_cmp.val[10]=0x01;
-					tdo_mask.val[10]=0x03;
+					tdo_cmp.val[dreg_length+2]=0x01;
+					tdo_mask.val[dreg_length+2]=0x03;
 				}
 				if((adr & 0x1F)== 0x01)
 				{
-					tdo_cmp.val[10]=0x02;
-					tdo_mask.val[10]=0x00;
+					tdo_cmp.val[dreg_length+2]=0x02;
+					tdo_mask.val[dreg_length+2]=0x00;
 				}				
 				if(first)
-					error=JtagShift(tap_state,TAPSTATE_SHIFTDR,16+8*8+2,&tdi,0,0,0,TAPSTATE_RUNTEST,0,0);
+					error=JtagShift(tap_state,TAPSTATE_SHIFTDR,16+dreg_length*8+2,&tdi,0,0,0,TAPSTATE_RUNTEST,0,0);
 				else
-					error=JtagShift(tap_state,TAPSTATE_SHIFTDR,16+8*8+2,&tdi,&tdo,&tdo_cmp,&tdo_mask,TAPSTATE_RUNTEST,0,0);
+					error=JtagShift(tap_state,TAPSTATE_SHIFTDR,16+dreg_length*8+2,&tdi,&tdo,&tdo_cmp,&tdo_mask,TAPSTATE_RUNTEST,0,0);
 #ifdef DEBUG
 				if(error)
 				{
@@ -1073,9 +1147,9 @@ int jtag_program(unsigned char *tap_state)
 					for(i=0;i<tdi.len;printf("%02x",tdi.val[i++]));
 					if(!first)
 					{
-						printf(", tdo:");
+						printf(",\r\n       tdo:");
 						for(i=0;i<tdo.len;printf("%02x",tdo.val[i++]));
-						printf(", cmp:");
+						printf(",\r\n       cmp:");
 						for(i=0;i<tdo_cmp.len;printf("%02x",tdo_cmp.val[i++]));
 					}
 				}
@@ -1096,7 +1170,7 @@ int jtag_program(unsigned char *tap_state)
 						break;
 				}
 				adr_fuse=count_fuse+1;
-				byte=8;
+				byte=(int)dreg_length;
 			}
 			bit=(int)jed->sizes_list[count_size];
 			value=0;
@@ -1104,20 +1178,20 @@ int jtag_program(unsigned char *tap_state)
 	}
 	if(!error)
 	{
-		tdi.len=tdo.len=tdo_cmp.len=tdo_mask.len=11;
-		*(unsigned long *)&tdi.val[0]=*(unsigned long *)&tdi.val[4]=0;
-		*(unsigned long *)&tdi.val[8]=0x00000100;
-		tdo_cmp.val[10]=0x01;
-		tdo_mask.val[10]=0x03;		
-		error=JtagShift(tap_state,TAPSTATE_SHIFTDR,16+8*8+2,&tdi,&tdo,&tdo_cmp,&tdo_mask,TAPSTATE_RUNTEST,0,0);
+		tdi.len=tdo.len=tdo_cmp.len=tdo_mask.len=dreg_length+3;
+		for(i=0;i<dreg_length+2;tdi.val[i++]=0x00);
+		tdi.val[i]=0x01;
+		tdo_cmp.val[dreg_length+2]=0x01;
+		tdo_mask.val[dreg_length+2]=0x03;		
+		error=JtagShift(tap_state,TAPSTATE_SHIFTDR,16+dreg_length*8+2,&tdi,&tdo,&tdo_cmp,&tdo_mask,TAPSTATE_RUNTEST,0,0);
 #ifdef DEBUG
 		if(error)
 		{
 			printf("\r\nL%05ld tdi:",adr_fuse);
 			for(i=0;i<tdi.len;printf("%02x",tdi.val[i++]));
-			printf(", tdo:");
+			printf(",\r\n       tdo:");
 			for(i=0;i<tdo.len;printf("%02x",tdo.val[i++]));
-			printf(", cmp:");
+			printf(",\r\n       cmp:");
 			for(i=0;i<tdo_cmp.len;printf("%02x",tdo_cmp.val[i++]));
 		}
 #endif
@@ -1129,7 +1203,7 @@ int jtag_program(unsigned char *tap_state)
 
 int jtag_verify(unsigned char *tap_state)
 {
-	unsigned long count_fuse,count_size,adr_fuse,adr,mem_adr;
+	unsigned long count_fuse,count_size,adr_fuse,adr;
 	int i,byte,bit,first,error;				
 	unsigned char value;
 	static lenVal tdi,tdo,tdo_cmp,tdo_mask,old_tdo;
@@ -1144,19 +1218,18 @@ int jtag_verify(unsigned char *tap_state)
 	count_size=0;
 	bit=(int)jed->sizes_list[count_size];
 	value=0;
-	byte=8;
+	byte=(int)dreg_length;
 	first=1;
 	adr_fuse=0;
-	tdi.len=tdo.len=tdo_cmp.len=tdo_mask.len=11;
-	*(unsigned long *)&tdi.val[4]=0;
-	*(unsigned long *)&tdi.val[8]=0x00000300;
-	*(unsigned long *)&tdo_mask.val[0]=0x03FFFFFF;
-	*(unsigned long *)&tdo_mask.val[4]=0xFFFFFFFF;
-	*(unsigned long *)&tdo_mask.val[8]=0xFFFFFF00;
+	tdi.len=tdo.len=tdo_cmp.len=tdo_mask.len=dreg_length+3;
+	for(i=0;i<dreg_length+2;tdi.val[i++]=0x00);
+	tdi.val[i]=0x03;
+	tdo_mask.val[0]=0x3F;
+	for(i=1;i<=dreg_length+2;tdo_mask.val[i++]=0xFF);
 	for(count_fuse=0;count_fuse<jed->fuse_count;count_fuse++)
 	{
 		bit--;
-			value>>=1;
+		value>>=1;
 		if(jedec_get_fuse(jed,(count_fuse)))
 			value |= 0x80;
 		else
@@ -1171,16 +1244,17 @@ int jtag_verify(unsigned char *tap_state)
 				*(unsigned long *)&tdi.val[0]=adr<<10;
 				tdo_cmp.val[0]=0;
 				*(unsigned short *)&tdo_cmp.val[1]=(unsigned short)adr;
-				tdo_cmp.val[11]=0x40;
-				*(unsigned long *)&tdo_cmp.val[0]<<=2;
-				*(unsigned long *)&tdo_cmp.val[0]|=(*(unsigned long *)&tdo_cmp.val[4]>>30);
-				*(unsigned long *)&tdo_cmp.val[4]<<=2;
-				*(unsigned long *)&tdo_cmp.val[4]|=(*(unsigned long *)&tdo_cmp.val[8]>>30);
-				*(unsigned long *)&tdo_cmp.val[8]<<=2;
+				tdo_cmp.val[dreg_length+3]=0x40;
+				for(i=0;i<dreg_length;i+=4)
+				{
+					*(unsigned long *)&tdo_cmp.val[i]<<=2;
+					*(unsigned long *)&tdo_cmp.val[i]|=(*(unsigned long *)&tdo_cmp.val[i+4]>>30);
+				}
+				*(unsigned long *)&tdo_cmp.val[i]<<=2;
 				if(first)
-					error=JtagShift(tap_state,TAPSTATE_SHIFTDR,16+8*8+2,&tdi,0,0,0,TAPSTATE_RUNTEST,0,0);
+					error=JtagShift(tap_state,TAPSTATE_SHIFTDR,16+dreg_length*8+2,&tdi,0,0,0,TAPSTATE_RUNTEST,0,0);
 				else
-					error=JtagShift(tap_state,TAPSTATE_SHIFTDR,16+8*8+2,&tdi,&tdo,&old_tdo,&tdo_mask,TAPSTATE_RUNTEST,0,0);
+					error=JtagShift(tap_state,TAPSTATE_SHIFTDR,16+dreg_length*8+2,&tdi,&tdo,&old_tdo,&tdo_mask,TAPSTATE_RUNTEST,0,0);
 #ifdef DEBUG
 				if(error)
 				{
@@ -1188,9 +1262,9 @@ int jtag_verify(unsigned char *tap_state)
 					for(i=0;i<tdi.len;printf("%02x",tdi.val[i++]));
 					if(!first)
 					{
-						printf(", tdo:");
+						printf(",\r\n       tdo:");
 						for(i=0;i<tdo.len;printf("%02x",tdo.val[i++]));
-						printf(", cmp:");
+						printf(",\r\n       cmp:");
 						for(i=0;i<old_tdo.len;printf("%02x",old_tdo.val[i++]));
 					}
 				}
@@ -1204,7 +1278,7 @@ int jtag_verify(unsigned char *tap_state)
 				}
 				old_tdo=tdo_cmp;
 				adr_fuse=count_fuse+1;
-				byte=8;
+				byte=(int)dreg_length;
 			}
 			bit=(int)jed->sizes_list[count_size];
 			value=0;
@@ -1215,7 +1289,7 @@ int jtag_verify(unsigned char *tap_state)
 	if(!error)
 	{
 		tdi.val[10]=0x01;
-		error=JtagShift(tap_state,TAPSTATE_SHIFTDR,16+8*8+2,&tdi,&tdo,&tdo_cmp,&tdo_mask,TAPSTATE_RUNTEST,0,0);
+		error=JtagShift(tap_state,TAPSTATE_SHIFTDR,16+dreg_length*8+2,&tdi,&tdo,&tdo_cmp,&tdo_mask,TAPSTATE_RUNTEST,0,0);
 		if(error==ERROR_TDOMISMATCH)
 			error=ERROR_VERIFY;
 	}
@@ -1225,8 +1299,8 @@ int jtag_verify(unsigned char *tap_state)
 unsigned long jtag_device_adr(unsigned long jedec_line)
 {
 	unsigned long saddr,taddr,laddr;
-	saddr=jedec_line/(DATA_LENGTH/2)/SECTOR_LENGTH;
-	taddr=(jedec_line/DATA_LENGTH)%MAX_SECTOR;
+	saddr = jedec_line/(dreg_length/2) / SECTOR_LENGTH;
+	taddr = (jedec_line/dreg_length) % MAX_SECTOR;
 	if(taddr<72)
 		laddr=taddr/8;
 	else
@@ -1241,21 +1315,21 @@ unsigned long get_user_code_jed(void)
 	for(count_fuse=0;count_fuse<jed->fuse_count;count_fuse++)
 	{
 		fuse=jedec_get_fuse(jed,count_fuse);					
-		if((count_fuse >= 648*DATA_LENGTH) && (count_fuse < 712*DATA_LENGTH))
+		if((count_fuse >= 648*dreg_length) && (count_fuse < 712*dreg_length))
 		{
-			j = count_fuse - (648*DATA_LENGTH);
-			m = j / (DATA_LENGTH*8);
-			if((j & (DATA_LENGTH*8-1)) == 6 || (j & (DATA_LENGTH*8-1)) == 7)
+			j = count_fuse - (648*dreg_length);
+			m = j / (dreg_length*8);
+			if((j & (dreg_length*8-1)) == 6 || (j & (dreg_length*8-1)) == 7)
 			{
 				if(fuse)
 					usercode |= 0x80000000L >> (m*2+1-(count_fuse&1));
 			}
 		}
-		if((count_fuse >= 756*DATA_LENGTH) && (count_fuse < 820*DATA_LENGTH))
+		if((count_fuse >= 756*dreg_length) && (count_fuse < 820*dreg_length))
 		{
-			j = (count_fuse - 756*DATA_LENGTH);
-			m = j / (DATA_LENGTH*8);
-			if((j & (DATA_LENGTH*8-1)) == 6 || (j & (DATA_LENGTH*8-1)) == 7)
+			j = (count_fuse - 756*dreg_length);
+			m = j / (dreg_length*8);
+			if((j & (dreg_length*8-1)) == 6 || (j & (dreg_length*8-1)) == 7)
 			{
 				if(fuse)
 					usercode |= 0x00008000L >> (m*2+1-(count_fuse&1));
@@ -1275,7 +1349,9 @@ int test_file(char *path)
 		return(HARD_JED);
 	if(i>3 && path[i-4]=='.'
 	 && ((path[i-3]=='H' && path[i-2]=='E' && path[i-1]=='X')
-	 || (path[i-3]=='h' && path[i-2]=='e' && path[i-1]=='x')))
+	 || (path[i-3]=='h' && path[i-2]=='e' && path[i-1]=='x')
+	 || (path[i-3]=='S' && path[i-2]=='1' && path[i-1]=='9')
+	 || (path[i-3]=='s' && path[i-2]=='1' && path[i-1]=='9')))
 		return(SOFT_HEX);
 	return(SOFT_BIN);
 }
@@ -1307,10 +1383,7 @@ void load_file(char *path_argv)
 		}	
 		else
 		{
-			if(get_cookie('MagX') || get_cookie('MiNT'))
-				strcat(path,"*.BIN");
-			else
-				strcat(path,"*.*");
+			strcat(path,"*.*");
 			title=TITLE_BIN_JED;
 		}
 		if(rsrc_gaddr(R_STRING,title,&addr))
@@ -1382,7 +1455,6 @@ void load_file(char *path_argv)
 				tp=op->ob_spec.tedinfo;
 				get_date_file(date,tp->te_ptext);
 				graf_mouse(ARROW,0L);
-				usercode_jed=get_user_code_jed();
 				if(strcmp(device_name,"XC95144XL-5-TQ144")==0
 				 || strcmp(device_name,"XC95144XL-10-TQ144")==0) /* ABE from 2003 to 2009 (before the CT63 updates) */
 				{
@@ -1397,7 +1469,7 @@ void load_file(char *path_argv)
 						strcat(device_name," ABE60 ");
 					}
 				}
-				else if(strcmp(device_name,"XC95144XL-7-TQ144")==0) /* SDR from 2003 a 2009 (sauf CF63) */
+				else if(strcmp(device_name,"XC95144XL-7-TQ144")==0) /* SDR from 2003 to 2009 (excepted CT63) */
 				{
 					if((strstr(nom,"ABE") != NULL) && (FORCEABESDR==1)) /* check filename :-( */
 					{
@@ -1410,8 +1482,15 @@ void load_file(char *path_argv)
 						strcat(device_name," SDR60 ");
 					}
 				}
+				else if(strstr(device_name,"XC95288XL") != NULL) /* CTPCI */
+					device=CTPCI;
 				else
 					device=NO_DEVICE;
+				if(device==CTPCI)
+					dreg_length=DATA_LENGTH*2;
+				else
+					dreg_length=DATA_LENGTH;
+				usercode_jed=get_user_code_jed();
 				if(device==NO_DEVICE)
 					Alert(ALERT_JED_DEVICE);
 				else
@@ -1448,7 +1527,10 @@ void load_file(char *path_argv)
 						tp->te_ptext[0]=tp->te_ptext[1]=tp->te_ptext[2]=tp->te_ptext[3]='X';
 					}
 					tp->te_ptext[4]=0;
-					strcat(device_name,code);
+					if(device == CTPCI)
+						strcat(device_name," CTPCI");
+					else
+						strcat(device_name,code);
 					rsrc_gaddr(R_OBJECT,FILE,&op);
 					tp=op->ob_spec.tedinfo;
 					tp->te_ptext=device_name;
@@ -1474,13 +1556,16 @@ void load_file(char *path_argv)
 			}			
 			return;
 		}
-		if(jedec_only || buffer_flash==0)
+		if(jedec_only || (buffer_flash==NULL))
 			Alert(ALERT_JEDEC);
 		else if(soft_hard==SOFT_HEX)
 		{
-			memset(buffer_flash,-1,FLASH_SIZE-PARAM_SIZE);	
+			memset(buffer_flash,-1,coldfire ? FLASH_SIZE_CF : FLASH_SIZE-PARAM_SIZE);
 			stack=Super(0L);
-			read_flash(0L,FLASH_SIZE-PARAM_SIZE,buffer_flash);
+			if(coldfire)
+				read_flash_cf(0L,FLASH_SIZE_CF,buffer_flash);
+			else
+				read_flash(0L,FLASH_SIZE-PARAM_SIZE,buffer_flash);
 			Super((void *)stack);	
 			switch(srec_read(path))
 			{
@@ -1493,28 +1578,52 @@ void load_file(char *path_argv)
 					else
 					{
 						file_loaded=1;
-						size_tos = end_adr - (FLASH_ADR & 0xFFFFFF);
+						if(coldfire)
+							size_tos = end_adr - FLASH_ADR_CF;
+						else
+							size_tos = end_adr - (FLASH_ADR & 0xFFFFFF);
 					}
 					break;
 				case -1: Alert(ALERT_SREC); size_tos=0; break;
 				default: Alert(ALERT_OPEN); size_tos=0; break;
 			}
 		}
-		else
+		else /* .BIN */
 		{		
-			memset(buffer_flash,-1,FLASH_SIZE-PARAM_SIZE);
+			memset(buffer_flash,-1,coldfire ? FLASH_SIZE_CF : FLASH_SIZE-PARAM_SIZE);
 			if((handle=(int)Fopen(path,0))>=0)
 			{
-				if((size_tos=Fread(handle,FLASH_SIZE-PARAM_SIZE,buffer_flash))>=0)
+				char *buf = (char *)buffer_flash;
+				if(coldfire)
+					buf += (FLASH_ADR_TOS_CF-FLASH_ADR_CF);
+				if((size_tos=Fread(handle,FLASH_SIZE-PARAM_SIZE,buf))>=0)
 				{
-					p=(unsigned char *)buffer_flash;
-					if(size_tos<8 || p[4]!=0 || p[5]!=0xE0 || p[6]!=0 || p[7]!=0x30)
+					p=(unsigned char *)buf;
+					if((size_tos<8) || p[4]!=0 || p[5]!=0xE0 || p[6]!=0 || p[7]!=0x30)
 					{ 
 						Alert(ALERT_TOS);
 						size_tos=0;
 					}
 					else
-						file_loaded=1;
+					{ 
+						if((*((unsigned short *)((unsigned long)buf+0x30))!=0x4EF9) /* no jump */
+						 && (*((unsigned short *)((unsigned long)buf+0x30))!=0x60FF)) /* no bra.l */
+						{
+							if(size_tos>=0x80000 && (p[0x7FFFE]!=0x49 || p[0x7FFFF]!=0xFB))
+							{ 
+								Alert(ALERT_TOS);
+								size_tos=0;
+							}
+							else
+							{
+								*((unsigned short *)((unsigned long)buf+0x30))=0x60FF; /* bra.l to boot (12 bytes version header) */
+								*((unsigned long *)((unsigned long)buf+0x32))=0xE8000C-0xE00030-2;
+								file_loaded=1;
+							}
+						}
+						else
+							file_loaded=1;
+					}
 				}
 				else
 				{
@@ -1531,31 +1640,51 @@ void load_file(char *path_argv)
 		tp=op->ob_spec.tedinfo;
 		if(file_loaded && soft_hard==SOFT_BIN)
 		{
+			char *buf = (unsigned char *)buffer_flash;
+			if(coldfire)
+				buf += (FLASH_ADR_TOS_CF-FLASH_ADR_CF);
 			tp->te_ptext=path;
-			rsrc_gaddr(R_OBJECT,DATE_FILE,&op);
-			tp=op->ob_spec.tedinfo;
-			get_date_os((unsigned char *)buffer_flash+0x18,tp->te_ptext);
 			rsrc_gaddr(R_OBJECT,VERSION_FILE,&op);
 			tp=op->ob_spec.tedinfo;
-			get_version_boot((unsigned char *)buffer_flash+0x80000,tp->te_ptext);
+			get_version_boot(&buf[0x80000],tp->te_ptext);
+			rsrc_gaddr(R_OBJECT,DATE_FILE,&op);
+			tp=op->ob_spec.tedinfo;
+			if(*(unsigned short *)((unsigned long)&buf[0x80000]) >= 0x200) /* new boot patches TOS, so date of flash TOS is unchanged */
+				get_date_os2((unsigned short *)((unsigned long)&buf[0x80002]),tp->te_ptext);
+			else
+				get_date_os((unsigned char *)&buf[18],tp->te_ptext);
 		}
 		else if(file_loaded && soft_hard==SOFT_HEX)
 		{
+			char *buf = (unsigned char *)buffer_flash+0x80000;
+			if(coldfire)
+				buf += (FLASH_ADR_TOS_CF-FLASH_ADR_CF);
 			tp->te_ptext=path;
-			rsrc_gaddr(R_OBJECT,DATE_FILE,&op);
-			save_dta=Fgetdta();
-			Fsetdta(&tp_dta);
-			date=0;				
-			if(Fsfirst(path,1)==0)
-				date=(unsigned short)tp_dta.d_date;
-			Fsetdta(save_dta);
-			tp=op->ob_spec.tedinfo;
-			get_date_file(date,tp->te_ptext);
 			rsrc_gaddr(R_OBJECT,VERSION_FILE,&op);
 			tp=op->ob_spec.tedinfo;
-			strcpy(tp->te_ptext,"X.XX");
+			if((!coldfire && (start_adr==0xE80000) && (end_adr>=0xE8000C))
+			 || (coldfire && ((start_adr==0xE0400000) || (start_adr==0xE0480000)) && (end_adr>=0xE048000C)))
+				get_version_boot(buf,tp->te_ptext);
+			else
+				strcpy(tp->te_ptext,"X.XX");
+			rsrc_gaddr(R_OBJECT,DATE_FILE,&op);
+			tp=op->ob_spec.tedinfo;
+			if(((!coldfire && (start_adr==0xE80000) && (end_adr>=0xE8000C))
+			 || (coldfire && ((start_adr==0xE0400000) || (start_adr==0xE0480000)) && (end_adr>=0xE048000C)))
+			  && (*(unsigned short *)((unsigned long)&buf[0]) >= 0x200)) /* new boot patches TOS, so date of flash TOS is unchanged */
+				get_date_os2((unsigned short *)((unsigned long)&buf[2]),tp->te_ptext);
+			else
+			{
+				save_dta=Fgetdta();
+				Fsetdta(&tp_dta);
+				date=0;				
+				if(Fsfirst(path,1)==0)
+					date=(unsigned short)tp_dta.d_date;
+				Fsetdta(save_dta);
+				get_date_file(date,tp->te_ptext);
+			}
 		}
-		else
+		else /* JEDEC file */
 		{
 			tp->te_ptext[0]=0;
 			rsrc_gaddr(R_OBJECT,DATE_FILE,&op);
@@ -1602,17 +1731,16 @@ int init(int argc,int *vp,int *wp)
 	TEDINFO *tp;
 	GRECT curr,work;
 	COOKIE *p;
-	long value;
 	int i;
 	static int led[]={ L1,L2,L3,L4,L5,L6,L7,L8,L9,L10,L11,L12,L13,L14,L15,L16,0 };
 	if((ap_id=appl_init())==-1)
 		return(4);
 	if(jedec_only)
-		buffer_flash=0;
+		buffer_flash=NULL;
 	else
 	{
-		buffer_flash=Mxalloc(FLASH_SIZE-PARAM_SIZE,3);
-		if(buffer_flash<=0)
+		buffer_flash=Mxalloc(coldfire ? FLASH_SIZE_CF : FLASH_SIZE-PARAM_SIZE,3);
+		if(buffer_flash==NULL)
 		{
 			NOMEMORY;
 			return(4);	
@@ -1705,11 +1833,14 @@ int init(int argc,int *vp,int *wp)
 		NOWINDOW;
 		return(3);		/* no window available */
 	}
-	wind_set(*wp,WF_NAME," FLASH TOOL CT60 ",0,0);
+	if(coldfire)
+		wind_set(*wp,WF_NAME," FLASH TOOL FIREBEE",0,0);
+	else
+		wind_set(*wp,WF_NAME," FLASH TOOL CT60 / CTPCI",0,0);
 	graf_growbox(Grect(&shrink),Grect(&curr));
 	wind_open(*wp,Grect(&curr));
     ed_pos=0;
-    ed_objc=VERSION_FILE;
+    ed_objc=ROOT; /* VERSION_FILE; */
 	objc_edit(Form,ed_objc,0,&ed_pos,ED_INIT);
 	new_objc=ed_objc;
 	new_pos=ed_pos;
@@ -1739,7 +1870,7 @@ void term(int code,int vh,int wh)
 			wind_update(END_UPDATE);
 		appl_exit();
 	case 4:				/* other */
-		if(buffer_flash>0)
+		if(buffer_flash!=NULL)
 			Mfree(buffer_flash);
 		break;
 	}
@@ -1781,6 +1912,70 @@ void get_date_file(unsigned short date_file,char *date_format)
 	month=(unsigned char)((date_file>>5)&15);
 	year1=(unsigned char)(((date_file>>9)+1980)/100);
 	year2=(unsigned char)(((date_file>>9)+1980)%100);
+	if(day>31 || month>12 || year1>99 || year2>99)
+		day=month=year1=year2=0;
+	switch((value>>8)&3) /* Date Format */
+	{
+		case 0:          /* MMDDYY */
+			date_format[0]=(month/10)+'0';
+			date_format[1]=(month%10)+'0';
+			date_format[2]=date_format[5]='//';
+			date_format[3]=(day/10)+'0';
+			date_format[4]=(day%10)+'0';
+			date_format[6]=(year1/10)+'0';
+			date_format[7]=(year1%10)+'0';
+			date_format[8]=(year2/10)+'0';
+			date_format[9]=(year2%10)+'0';
+			break;
+		case 1:          /* DDMMYY */
+			date_format[0]=(day/10)+'0';
+			date_format[1]=(day%10)+'0';
+			date_format[2]=date_format[5]='//';
+			date_format[3]=(month/10)+'0';
+			date_format[4]=(month%10)+'0';
+			date_format[6]=(year1/10)+'0';
+			date_format[7]=(year1%10)+'0';
+			date_format[8]=(year2/10)+'0';
+			date_format[9]=(year2%10)+'0';
+			break;
+		case 2:          /* YYMMDD */
+			date_format[0]=(year1/10)+'0';
+			date_format[1]=(year1%10)+'0';
+			date_format[2]=(year2/10)+'0';
+			date_format[3]=(year2%10)+'0';
+			date_format[4]=date_format[7]='//';
+			date_format[5]=(month/10)+'0';
+			date_format[6]=(month%10)+'0';
+			date_format[8]=(day/10)+'0';
+			date_format[9]=(day%10)+'0';
+			break;
+		case 3:          /* YYDDMM */
+			date_format[0]=(year1/10)+'0';
+			date_format[1]=(year1%10)+'0';
+			date_format[2]=(year2/10)+'0';
+			date_format[3]=(year2%10)+'0';
+			date_format[4]=date_format[7]='//';
+			date_format[5]=(day/10)+'0';
+			date_format[6]=(day%10)+'0';
+			date_format[8]=(month/10)+'0';
+			date_format[9]=(month%10)+'0';
+			break;	
+	}
+	date_format[10]=0;
+}
+
+void get_date_os2(unsigned short *date_os,char *date_format)
+{
+	COOKIE *p;
+	unsigned char day,month,year1,year2;
+	long value;
+	value=0x112E;
+	if((p=get_cookie('_IDT'))!=0)
+		value=p->v.l;
+	month=date_os[1];
+	day=date_os[0];
+	year1=date_os[2]/100;
+	year2=date_os[2]%100;
 	if(day>31 || month>12 || year1>99 || year2>99)
 		day=month=year1=year2=0;
 	switch((value>>8)&3) /* Date Format */
@@ -1988,7 +2183,7 @@ long dd_open_pipe(short pnum)
 	strcpy(pipename,"U:\\PIPE\\DRAGDROP.");
 	strcat(pipename,ext);
 	if((fd=Fopen(pipename,2))>0)
-		oldsig=signal(SIGPIPE,(__Sigfunc)SIG_IGN);
+		oldsig=Psignal(SIGPIPE,(__Sigfunc)SIG_IGN);
 	return(fd);
 }
 
@@ -2012,7 +2207,7 @@ long dd_open(short pipe_num,unsigned char *extlist)
 
 void dd_close(long fd)
 {
-	signal(SIGPIPE,oldsig);
+	Psignal(SIGPIPE,oldsig);
 	Fclose((short)fd);
 }
 

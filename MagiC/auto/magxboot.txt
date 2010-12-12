@@ -1,0 +1,3 @@
+WARNING !
+MAGXBOOT.PRG add a patch for boot on IDE slave if boot order setting
+with the CT60CONF.CPX select IDE1 before IDE0.

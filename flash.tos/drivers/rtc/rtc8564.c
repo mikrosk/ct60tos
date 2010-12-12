@@ -65,6 +65,7 @@ struct rtc_tm {
 #define RTC8564_TD_1HZ			(0x2)
 #define RTC8564_TD_1_60HZ		(0x3)
 
+#ifdef USE_RTC
 #ifdef NETWORK
 #ifdef LWIP
 
@@ -149,7 +150,7 @@ unsigned char I2CreceiveByte(unsigned char address, unsigned char id)
   {
     if(timeout-ReadTimer() >= TIMEOUT)
     {
-      printf("Timeout I2CreceiveByte (2)\r\n");
+      display_string("Timeout I2CreceiveByte (2)\r\n");
       break;
     }    
   }
@@ -226,7 +227,7 @@ void I2CsendByte(unsigned char data, unsigned char address, unsigned char id)
 	MCF_I2C_I2CR |= MCF_I2C_I2CR_MSTA;
 	MCF_I2C_I2DR = id;                    /* set device ID to write */
 	/* wait until one byte transfer completion */
-	while( !(MCF_I2C_I2SR & MCF_I2C_I2SR_IIF ));
+	while(!(MCF_I2C_I2SR & MCF_I2C_I2SR_IIF));
 	/* clear the completion transfer flag */
 	MCF_I2C_I2SR &= ~MCF_I2C_I2SR_IIF;
 	/* Wait for a bit */
@@ -249,7 +250,7 @@ void I2CsendByte(unsigned char data, unsigned char address, unsigned char id)
 	MCF_I2C_I2DR = data;						/* memory data */
 	/* wait until one byte transfer completion */
 	timeout = ReadTimer();
-	while( !(MCF_I2C_I2SR & MCF_I2C_I2SR_IIF ))
+	while(!(MCF_I2C_I2SR & MCF_I2C_I2SR_IIF))
   {
     if(timeout - ReadTimer() >= TIMEOUT)
     {
@@ -402,4 +403,4 @@ void RTC_task(void)
 
 #endif
 #endif
-
+#endif

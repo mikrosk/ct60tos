@@ -281,7 +281,7 @@ static short log2(short n)
     short i;
 
     for (i = 0; n ; i++) {
-        n >>= 1;
+        (unsigned short)n >>= 1;
     }
 
     return(i-1);

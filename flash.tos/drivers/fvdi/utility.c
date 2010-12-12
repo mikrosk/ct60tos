@@ -19,7 +19,7 @@
 
 #include "config.h"
 #include <mint/osbind.h>
-#include <sysvars.h>
+#include <mint/sysvars.h>
 #include "fvdi.h"
 #include "relocate.h"
 
@@ -27,11 +27,15 @@
 #define NULL (void *)0
 #endif
 
+#define DEBUG
+
 #define WHITE 0
 #define BLACK 1
 
 #define BLOCKS           2              /* Default number of memory blocks to allocate for internal use */
 #define BLOCK_SIZE     100              /* Default size of those blocks, in kbyte */
+
+#define LOG_SIZE     8192
 
 extern void *default_text;
 extern void *default_line;
@@ -40,6 +44,8 @@ extern long buf_cursor;
 
 extern void initialize_wk_palette(Virtual *vwk);
 extern short *loaded_palette;
+extern short os_magic, memory_ok, drive_ok, redirect;
+extern long boot_alloc(long size);
 
 typedef struct
 {
@@ -60,6 +66,8 @@ long blocks;
 long block_size;
 char *block_chain;
 short arc_split,arc_min,arc_max;
+char buf_log[LOG_SIZE+1];
+static char *ptr_buf_log;
 
 /* some functions for the fVDI driver */
 extern long linea_fonts();
@@ -86,8 +94,7 @@ void minus(char *s)
 COOKIE *fcookie(void)
 {
 	COOKIE *p;
-	long stack;
-	stack=0;
+	long stack=0;
 	if(Super(1L)>=0)
 		stack=Super(0L);
 	p=*(COOKIE **)0x5a0;
@@ -112,7 +119,7 @@ COOKIE *get_cookie(long id)
 	while(p)
 	{
 		if(p->ident==id)
-			return p;
+			return(p);
 		p=ncookie(p);
 	}
 	return((COOKIE *)0);
@@ -281,11 +288,14 @@ static long numeric(long ch)
 
 static void *fmalloc(long size, long type)
 {
-	return((void *)Mxalloc(size,type));
+	if(type);
+	return((void *)boot_alloc(size));
 }
 
 static long free(void *addr)
 {
+	if((os_magic == 1) && !memory_ok)
+		return(0);
 	return(Mfree(addr));
 }
 
@@ -293,12 +303,18 @@ static int puts(const char *text)
 {
 #if 0 // #ifdef COLDFIRE
 #ifdef DEBUG
-	extern void display_string(char *string);
+	extern void display_string(const char *string);
 	display_string(text);
 #endif
 #endif
-	while(*text)
-		Bconout(2,*text++);
+	if(!redirect)
+		Cconws(text);
+	if(!drive_ok)
+	{
+		while(*text && (ptr_buf_log < &buf_log[LOG_SIZE]))
+			*ptr_buf_log++ = *text++;
+		*ptr_buf_log = '\0';
+	}
 	return(1);
 }
 
@@ -318,7 +334,7 @@ static long getcookie(const unsigned char *cname, long super)
 	if(p)
 		return(p->v.l);
 	else
-		return(0);
+		return(-1); /* not found */
 }
 
 static long setcookie(const unsigned char *cname, long value)
@@ -345,13 +361,22 @@ static long get_size(const char *name)
 	return(0);
 }
 
+// static char memory_pool[BLOCK_SIZE * 1024 * BLOCKS];
+
 long initialize_pool(long size, long n)
 {
 	char *addr, *ptr;
 	if((size <= 0) || (n <= 0))
 		return(0);
-	if(!(addr = (char *)Mxalloc(size * n,3)))
-		return(0);
+#if 0
+	if((size * n) <= (BLOCK_SIZE * 1024 * BLOCKS))
+    addr = memory_pool;
+  else
+#endif
+  {
+		if((addr = (char *)fmalloc(size * n, 3)) == NULL)
+			return(0);
+	}
 	block_size = size;
 	ptr = 0;
 	for(n = n - 1; n >= 0; n--)
@@ -412,8 +437,12 @@ Virtual *init_var_fvdi(void)
  	Workstation *wk;
 	Virtual *vwk;
 	Driver *driver;
+	Fontheader **system_font, *header;
+	long header_size = sizeof(Fontheader) - sizeof(Fontextra);
 	blocks = BLOCKS;
 	block_size = BLOCK_SIZE * 1024;
+	ptr_buf_log = buf_log;
+	*ptr_buf_log = '\0';
 	arc_split = 16384;  /* 1/4 as many lines as largest ellipse axel radius in pixels */
 	arc_min = 16;       /* Minimum number of lines in an ellipse */
 	arc_max = 256;      /* Maximum */
@@ -450,17 +479,17 @@ Virtual *init_var_fvdi(void)
 	access->funcs.cache_flush=cache_flush;
 	access->funcs.misc=misc;
 	access->funcs.event=event;
-	if(!(wk = (Workstation *)Mxalloc(sizeof(Workstation),3)))
+	if(!(wk = (Workstation *)fmalloc(sizeof(Workstation),3)))
 		return(0);
-	if(!(vwk = (Virtual *)Mxalloc(sizeof(Virtual),3)))
+	if(!(vwk = (Virtual *)fmalloc(sizeof(Virtual),3)))
 	{
-		Mfree(wk);
+		free(wk);
 		return(0);
 	}
-	if(!(driver = (Driver *)Mxalloc(sizeof(Driver),3)))
+	if(!(driver = (Driver *)fmalloc(sizeof(Driver),3)))
 	{
-		Mfree(vwk);
-		Mfree(wk);
+		free(vwk);
+		free(wk);
 		return(0);
 	}
 	/*
@@ -610,13 +639,11 @@ Virtual *init_var_fvdi(void)
 	vwk->standard_handle = 1;
 	vwk->palette = 0;
 	
-	Fontheader **system_font, *header;
-	long header_size = sizeof(Fontheader) - sizeof(Fontextra);
 	system_font = (Fontheader **)linea_fonts();
-	if(!(header = (Fontheader *)Mxalloc(sizeof(Fontheader) * 3,3)))
+	if(!(header = (Fontheader *)fmalloc(sizeof(Fontheader) * 3,3)))
 	{
-		Mfree(vwk);
-		Mfree(wk);
+		free(vwk);
+		free(wk);
 		return(0);
 	}
 	copy_mem(system_font[0], &header[0], header_size);

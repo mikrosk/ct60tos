@@ -34,7 +34,6 @@
 
 #ifdef NETWORK
 #ifdef LWIP
-#ifndef WEB_LIGHT
 
 /*
  *  GIF memory allocation helper functions.
@@ -590,7 +589,6 @@ void write_gif(char **file, Gif *gif)
 	write_byte(file, 0x3B);
 }
 
-#endif /* WEB_LIGHT */
 #endif /* LWIP */
 #endif /* NETWORK */
 

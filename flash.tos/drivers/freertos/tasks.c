@@ -263,6 +263,7 @@ typedef struct tskTaskControlBlock
 {
 	volatile portSTACK_TYPE	*pxTopOfStack;		/*< Points to the location of the last item placed on the tasks stack.  THIS MUST BE THE FIRST MEMBER OF THE STRUCT. */
 	portSTACK_TYPE Context[ 64 ];
+	unsigned portBASE_TYPE uxStartIntLevel;   /* start mask insterrupt level */
 	xListItem				xGenericListItem;	/*< List item used to place the TCB in ready and blocked queues. */
 	xListItem				xEventListItem;		/*< List item used to place the TCB in event lists. */
 	unsigned portBASE_TYPE	uxPriority;			/*< The priority of the task where 0 is the lowest priority. */
@@ -596,10 +597,11 @@ static unsigned portBASE_TYPE uxTaskNumber = 0; /*lint !e956 Static is deliberat
 		but had been interrupted by the scheduler.  The return address is set
 		to the start of the task function. Once the stack has been initialised
 		the	top of stack variable is updated. */
+		pxNewTCB->uxStartIntLevel = strcmp( pcName, "TOS" ) == 0 ? 0 : 3; 
 #if( HAVE_USP == 1 )
-		pxNewTCB->pxTopOfStack = pxPortInitialiseStack( pxTopOfStack, pvTaskCode, pvParameters, pxNewTCB->Context, pxNewTCB->uxSuper, pxTopOfUserStack );
+		pxNewTCB->pxTopOfStack = pxPortInitialiseStack( pxTopOfStack, pvTaskCode, pvParameters, pxNewTCB->Context, pxNewTCB->uxSuper, pxTopOfUserStack, pxNewTCB->uxStartIntLevel );
 #else
-		pxNewTCB->pxTopOfStack = pxPortInitialiseStack( pxTopOfStack, pvTaskCode, pvParameters, pxNewTCB->Context );
+		pxNewTCB->pxTopOfStack = pxPortInitialiseStack( pxTopOfStack, pvTaskCode, pvParameters, pxNewTCB->Context, pxNewTCB->uxStartIntLevel );
 #endif
 
 		/* We are going to manipulate the task queues to add this task to a

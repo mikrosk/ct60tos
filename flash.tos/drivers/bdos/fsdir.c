@@ -202,9 +202,9 @@ static void freednd(DND *dn);
 **  dots -, dots2  -
 */
 
-static  char dots[22] =  { ".          " } ;
+static char dots[22] =  { ".          " } ;
 
-/* unused static        char dots2[22] = { "..         " } ; */
+static char dots2[22] = { "..         " } ;
 
 
 
@@ -312,7 +312,7 @@ long xmkdir(char *s)
 
         /* write parent entry .. */
 
-        memcpy(f2, dots, 22);
+        memcpy(f2, dots2, 22);
         f2->f_attrib = FA_SUBDIR;
         f2->f_time = time;
         swpw( f2->f_time ) ;           /*  M01.01.SCC.FS.06  */
@@ -769,6 +769,12 @@ void xgsdtof(short *buf, short h, short wrt)
 
         b = buf ;
         f = getofd(h) ;
+        if ( !f )
+        {
+               if ( !wrt )
+                         b[0] = b[1] = 0 ;
+               return;
+        }
 
         if ( !wrt )
         {
@@ -1194,7 +1200,7 @@ FCB     *dirinit(DND *dn)
 {
         OFD     *fd;            /*  ofd for this dir                    */
         short   num;
-        long    i2,i1;
+        long    i2;
         char    *s1;
         DMD     *dm;
         FCB     *f1;
@@ -1207,20 +1213,18 @@ FCB     *dirinit(DND *dn)
         **      get the record and zero it out
         */
 
-        for (i1 = fd->o_currec+1, i2 = 1; i2 < (long)dm->m_clsiz; i2++)    
+        for (i2 = 1; i2 < (long)dm->m_clsiz; i2++)    
         {
-
+                s1 = getrec(fd->o_currec+i2,dn->d_drv,1);       
 #if DBGFSDIR
                 {
                     char buf[10];
-                    display_string("dirinit i1 ");
-                    ltoa(buf, i1, 10);
+                    display_string("dirinit i2 ");
+                    ltoa(buf, fd->o_currec+i2, 10);
                     display_string(buf);
                     display_string("\r\n");
                 }
 #endif            
-        
-                s1 = getrec(i1,dn->d_drv,1);       
                 _bzero( s1 , (long)num ) ;
         }
 

@@ -174,7 +174,7 @@ void init_usb_device(void)
 	device_reset = FALSE;
 	xTaskCreate(usb_timeout, "USBT", configMINIMAL_STACK_SIZE, NULL, 6, NULL);
 	MSC_Reset();
-	usb_init(); /* USB driver init */
+	usb_device_init(); /* USB driver init */
 }
 
 static BOOL MSC_Reset(void)

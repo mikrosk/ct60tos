@@ -51,7 +51,7 @@
 #define configCPU_CLOCK_HZ          ( ( unsigned portLONG ) 266000000 )
 #else
 #ifdef MCF547X
-#define configCPU_CLOCK_HZ          ( ( unsigned portLONG ) 266000000 )
+#define configCPU_CLOCK_HZ          ( ( unsigned portLONG ) 264000000 )
 #else /* MCF548X */
 #define configCPU_CLOCK_HZ          ( ( unsigned portLONG ) 200000000 )
 #endif /* MCF547X */

@@ -174,7 +174,7 @@ int radeon_probe_i2c_connector(struct radeonfb_info *rinfo, int conn, unsigned c
 		mdelay(15);
 		OUTREG(reg, INREG(reg) & ~(VGA_DDC_CLK_OUT_EN));
 		(void)INREG(reg);
-		for (j = 0; j < 10; j++)
+		for(j = 0; j < 10; j++)
 		{
 			mdelay(10);
 			if(INREG(reg) & VGA_DDC_CLK_INPUT)

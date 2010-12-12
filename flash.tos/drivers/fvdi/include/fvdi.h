@@ -14,6 +14,8 @@
  * the public domain. It's not copyrighted or under any sort
  * of license.
  */
+ 
+#include "config.h"
 
 #ifdef __PUREC__
 #define CDECL cdecl
@@ -199,6 +201,21 @@ typedef struct DrvLine_ {
    long draw_last;
 } DrvLine;
 
+typedef struct Fontcharmap_ {
+   short id;			/*  charmap header ('00',01,02,10,11,12,TT,T1) */
+   short map[224];		/*  mapping information d = map[s-32] like */
+} Fontcharmap;
+
+typedef struct Fontspdcharmap_ {
+   Fontcharmap bs_int;
+   Fontcharmap bs_symbol;
+   Fontcharmap bs_dingbats;
+   Fontcharmap ps_int;
+   Fontcharmap ps_symbol;
+   Fontcharmap ps_dingbats;
+   Fontcharmap true_type;
+   Fontcharmap type_1;
+} Fontspdcharmap;
 
 typedef struct Fontextra_ {
    struct distance1_ {		/* Calculated from the */
@@ -216,13 +233,19 @@ typedef struct Fontextra_ {
    short *width_table;		/* Precalculated widths */
    struct Fontheader_ *next_size;
    struct Fontheader_ *first_size;
-
+#ifdef FVDI_STRUCT_2006
+   short ref_count;		/* Reference count (dispose if 0) */
+#endif
    /* Vector fonts */
    char *filename;		/* Font filename for on-demand backends */
    short index;			/* FreeType2 font index */
    void *current;		/* Font current glyph */
    void *cache;			/* Glyph cache */
    void *scratch;		/* Glyph scratch .. */
+#ifdef FVDI_STRUCT_2006
+   short effects;		/* Effect combination the font was rendered to */
+   short underline_offset;	/* Offset or the underline stroke */
+#endif
 } Fontextra;
 
 
@@ -285,7 +308,9 @@ typedef struct vwk_ {
 		short height;
 	} cell;
 	short effects;
-/* short charmap; since fVDI 1.14 compatibility broken :-( */
+#ifdef FVDI_STRUCT_2006
+	short charmap;
+#endif
 	Fontheader *current_font;	/* Not in standard VDI */
    } text;
    struct line_ {
@@ -408,6 +433,52 @@ typedef struct function_ {
    	short retvals[2];
    	void *code;
 } Function;
+
+
+typedef struct XFNT_INFO_ {
+   long  size;               
+   short format;             
+   short id;                 
+   short index;              
+   char  font_name[50];      
+   char  family_name[50];    
+   char  style_name[50];     
+   char  file_name1[200];    
+   char  file_name2[200];    
+   char  file_name3[200];    
+   short pt_cnt;             
+   short pt_sizes[64];       
+} XFNT_INFO;
+
+
+typedef struct VQT_FHDR_ {
+  char           fh_fmver[8];
+  unsigned long  fh_fntsz;
+  unsigned long  fh_fbfsz;
+  unsigned short fh_cbfsz;
+  unsigned short fh_hedsz;
+  unsigned short fh_fntid;
+  unsigned short fh_sfvnr;
+  char           fh_fntnm[70];
+  char           fh_mdate[10];
+  char           fh_laynm[70];
+  char           fh_cpyrt[78];
+  unsigned short fh_nchrl;
+  unsigned short fh_nchrf;
+  unsigned short fh_fchrf;
+  unsigned short fh_nktks;
+  unsigned short fh_nkprs;
+  char           fh_flags;
+  char           fh_cflgs;
+  char           fh_famcl;
+  char           fh_frmcl;
+  char           fh_sfntn[32];
+  char           fh_sfacn[16];
+  char           fh_fntfm[14];
+  unsigned short fh_itang;
+  unsigned short fh_orupm;
+  /* There should really be a bunch of more things here! */
+} VQT_FHDR;
 
 
 typedef struct MFDB_ {

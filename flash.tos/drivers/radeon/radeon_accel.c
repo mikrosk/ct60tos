@@ -64,6 +64,7 @@
  *
  */
 
+#include "fb.h"
 #include "radeonfb.h"
 
 static struct {
@@ -123,8 +124,9 @@ void RADEONWaitForIdleMMIO(struct radeonfb_info *rinfo)
 #if 0
 
 /* This callback is required for multiheader cards using XAA */
-void RADEONRestoreAccelStateMMIO(struct radeonfb_info *rinfo)
+void RADEONRestoreAccelStateMMIO(struct fb_info *info)
 {
+	struct radeonfb_info *rinfo = info->par;
 //	unsigned long pitch64 = ((info->var.xres * (rinfo->bpp / 8) + 0x3f)) >> 6;
 	OUTREG(DEFAULT_OFFSET, (((INREG(DISPLAY_BASE_ADDR) + rinfo->fb_local_base) >> 10) | (rinfo->pitch << 22)));
 	/* FIXME: May need to restore other things, like BKGD_CLK FG_CLK... */
@@ -134,9 +136,10 @@ void RADEONRestoreAccelStateMMIO(struct radeonfb_info *rinfo)
 #endif
 
 /* Setup for XAA SolidFill */
-void RADEONSetupForSolidFillMMIO(struct radeonfb_info *rinfo,
+void RADEONSetupForSolidFillMMIO(struct fb_info *info,
      int color, int rop, unsigned int planemask)
 {
+	struct radeonfb_info *rinfo = info->par;
 	ACCEL_PREAMBLE();
 	/* Save for later clipping */
 	rinfo->dp_gui_master_cntl_clip = (rinfo->dp_gui_master_cntl
@@ -150,17 +153,15 @@ void RADEONSetupForSolidFillMMIO(struct radeonfb_info *rinfo,
 }
 
 /* Subsequent XAA SolidFillRect */
-void RADEONSubsequentSolidFillRectMMIO(struct radeonfb_info *rinfo,
+void RADEONSubsequentSolidFillRectMMIO(struct fb_info *info,
      int x, int y, int w, int h)
 {
+	struct radeonfb_info *rinfo = info->par;
 	ACCEL_PREAMBLE();
 #ifdef RADEON_TILING
 	BEGIN_ACCEL(3);
-	{
-		struct fb_info *info = rinfo->info;
-		OUT_ACCEL_REG(DST_PITCH_OFFSET, rinfo->dst_pitch_offset
-		 | ((rinfo->tilingEnabled && (y <= info->var.yres_virtual)) ? DST_TILE_MACRO : 0));
-	}
+	OUT_ACCEL_REG(DST_PITCH_OFFSET, rinfo->dst_pitch_offset
+	 | ((rinfo->tilingEnabled && (y <= info->var.yres_virtual)) ? DST_TILE_MACRO : 0));
 #else
 	BEGIN_ACCEL(2);
 #endif
@@ -170,9 +171,10 @@ void RADEONSubsequentSolidFillRectMMIO(struct radeonfb_info *rinfo,
 }
 
 /* Setup for XAA solid lines */
-void RADEONSetupForSolidLineMMIO(struct radeonfb_info *rinfo,
+void RADEONSetupForSolidLineMMIO(struct fb_info *info,
      int color, int rop, unsigned int planemask)
 {
+	struct radeonfb_info *rinfo = info->par;
 	ACCEL_PREAMBLE();
 	/* Save for later clipping */
 	rinfo->dp_gui_master_cntl_clip = (rinfo->dp_gui_master_cntl
@@ -190,9 +192,10 @@ void RADEONSetupForSolidLineMMIO(struct radeonfb_info *rinfo,
 }
 
 /* Subsequent XAA solid horizontal and vertical lines */
-void RADEONSubsequentSolidHorVertLineMMIO(struct radeonfb_info *rinfo,
+void RADEONSubsequentSolidHorVertLineMMIO(struct fb_info *info,
      int x, int y, int len, int dir)
 {
+	struct radeonfb_info *rinfo = info->par;
 	int w = 1;
 	int h = 1;
 	ACCEL_PREAMBLE();
@@ -203,11 +206,8 @@ void RADEONSubsequentSolidHorVertLineMMIO(struct radeonfb_info *rinfo,
 #ifdef RADEON_TILING
 	BEGIN_ACCEL(4);
 	OUT_ACCEL_REG(DP_CNTL, (DST_X_LEFT_TO_RIGHT | DST_Y_TOP_TO_BOTTOM));
-	{
-		struct fb_info *info = rinfo->info;
-		OUT_ACCEL_REG(DST_PITCH_OFFSET, rinfo->dst_pitch_offset
-		 | ((rinfo->tilingEnabled && (y <= info->var.xres_virtual)) ? DST_TILE_MACRO : 0));
-	}
+	OUT_ACCEL_REG(DST_PITCH_OFFSET, rinfo->dst_pitch_offset
+	 | ((rinfo->tilingEnabled && (y <= info->var.xres_virtual)) ? DST_TILE_MACRO : 0));
 #else
 	BEGIN_ACCEL(3);
 	OUT_ACCEL_REG(DP_CNTL, (DST_X_LEFT_TO_RIGHT | DST_Y_TOP_TO_BOTTOM));
@@ -218,20 +218,18 @@ void RADEONSubsequentSolidHorVertLineMMIO(struct radeonfb_info *rinfo,
 }
 
 /* Subsequent XAA solid TwoPointLine line */
-void RADEONSubsequentSolidTwoPointLineMMIO(struct radeonfb_info *rinfo,
+void RADEONSubsequentSolidTwoPointLineMMIO(struct fb_info *info,
      int xa, int ya, int xb, int yb, int flags)
 {
+	struct radeonfb_info *rinfo = info->par;
 	ACCEL_PREAMBLE();
 	/* TODO: Check bounds -- RADEON only has 14 bits */
 	if(!(flags & OMIT_LAST))
-		RADEONSubsequentSolidHorVertLineMMIO(rinfo, xb, yb, 1, DEGREES_0);
+		RADEONSubsequentSolidHorVertLineMMIO(info, xb, yb, 1, DEGREES_0);
 #ifdef RADEON_TILING
 	BEGIN_ACCEL(3);
-	{
-		struct fb_info *info = rinfo->info;
-		OUT_ACCEL_REG(DST_PITCH_OFFSET, rinfo->dst_pitch_offset
-		 | ((rinfo->tilingEnabled && (ya <= info->var.yres_virtual)) ? DST_TILE_MACRO : 0));
-	}
+	OUT_ACCEL_REG(DST_PITCH_OFFSET, rinfo->dst_pitch_offset
+	 | ((rinfo->tilingEnabled && (ya <= info->var.yres_virtual)) ? DST_TILE_MACRO : 0));
 #else
 	BEGIN_ACCEL(2);
 #endif
@@ -243,9 +241,10 @@ void RADEONSubsequentSolidTwoPointLineMMIO(struct radeonfb_info *rinfo,
 /* Setup for XAA dashed lines
  * NOTE: Since we can only accelerate lines with power-of-2 patterns of * length <= 32
  */
-void RADEONSetupForDashedLineMMIO(struct radeonfb_info *rinfo,
+void RADEONSetupForDashedLineMMIO(struct fb_info *info,
      int fg, int bg, int rop, unsigned int planemask, int length, unsigned char *pattern)
 {
+	struct radeonfb_info *rinfo = info->par;
 	unsigned long pat = *(unsigned long *)(pointer)pattern;
 	ACCEL_PREAMBLE();
 	/* Save for determining whether or not to draw last pixel */
@@ -288,9 +287,10 @@ void RADEONSetupForDashedLineMMIO(struct radeonfb_info *rinfo,
 }
 
 /* Helper function to draw last point for dashed lines */
-void RADEONDashedLastPelMMIO(struct radeonfb_info *rinfo,
-     int x, int y, int fg)
+static void RADEONDashedLastPelMMIO(struct fb_info *info,
+       int x, int y, int fg)
 {
+	struct radeonfb_info *rinfo = info->par;
 	unsigned long dp_gui_master_cntl = rinfo->dp_gui_master_cntl_clip;
 	ACCEL_PREAMBLE();
 	dp_gui_master_cntl &= ~GMC_BRUSH_DATATYPE_MASK;
@@ -301,11 +301,8 @@ void RADEONDashedLastPelMMIO(struct radeonfb_info *rinfo,
 	BEGIN_ACCEL(8);
 	OUT_ACCEL_REG(DP_GUI_MASTER_CNTL, dp_gui_master_cntl);
 	OUT_ACCEL_REG(DP_CNTL, (DST_X_LEFT_TO_RIGHT | DST_Y_TOP_TO_BOTTOM));
-	{
-		struct fb_info *info = rinfo->info;
-		OUT_ACCEL_REG(DST_PITCH_OFFSET, rinfo->dst_pitch_offset
-		 | ((rinfo->tilingEnabled && (y <= info->var.yres_virtual)) ? DST_TILE_MACRO : 0));
-	}
+	OUT_ACCEL_REG(DST_PITCH_OFFSET, rinfo->dst_pitch_offset
+	 | ((rinfo->tilingEnabled && (y <= info->var.yres_virtual)) ? DST_TILE_MACRO : 0));
 #else
 	BEGIN_ACCEL(7);
 	OUT_ACCEL_REG(DP_GUI_MASTER_CNTL, dp_gui_master_cntl);
@@ -321,9 +318,10 @@ void RADEONDashedLastPelMMIO(struct radeonfb_info *rinfo,
 }
 
 /* Subsequent XAA dashed line */
-void RADEONSubsequentDashedTwoPointLineMMIO(struct radeonfb_info *rinfo,
+void RADEONSubsequentDashedTwoPointLineMMIO(struct fb_info *info,
      int xa, int ya, int xb, int yb, int flags, int phase)
 {
+	struct radeonfb_info *rinfo = info->par;
 	ACCEL_PREAMBLE();
 	/* TODO: Check bounds -- RADEON only has 14 bits */
 	if(!(flags & OMIT_LAST))
@@ -342,17 +340,14 @@ void RADEONSubsequentDashedTwoPointLineMMIO(struct radeonfb_info *rinfo,
 		shift += phase;
 		shift %= rinfo->dashLen;
 		if((rinfo->dashPattern >> shift) & 1)
-			RADEONDashedLastPelMMIO(rinfo, xb, yb, rinfo->dash_fg);
+			RADEONDashedLastPelMMIO(info, xb, yb, rinfo->dash_fg);
 		else if(rinfo->dash_bg != -1)
-			RADEONDashedLastPelMMIO(rinfo, xb, yb, rinfo->dash_bg);
+			RADEONDashedLastPelMMIO(info, xb, yb, rinfo->dash_bg);
 	}
 #ifdef RADEON_TILING
 	BEGIN_ACCEL(4);
-	{
-		struct fb_info *info = rinfo->info;
-		OUT_ACCEL_REG(DST_PITCH_OFFSET, rinfo->dst_pitch_offset
-		 | ((rinfo->tilingEnabled && (ya <= info->var.yres_virtual)) ? DST_TILE_MACRO : 0));
-	}
+	OUT_ACCEL_REG(DST_PITCH_OFFSET, rinfo->dst_pitch_offset
+	 | ((rinfo->tilingEnabled && (ya <= info->var.yres_virtual)) ? DST_TILE_MACRO : 0));
 #else
 	BEGIN_ACCEL(3);
 #endif
@@ -368,7 +363,7 @@ void RADEONSubsequentDashedTwoPointLineMMIO(struct radeonfb_info *rinfo,
  * It should only draw when source != trans_color, this is the opposite
  * of that.
  */
-void RADEONSetTransparencyMMIO(struct radeonfb_info *rinfo, int trans_color)
+static void RADEONSetTransparencyMMIO(struct radeonfb_info *rinfo, int trans_color)
 {
 	if(trans_color != -1)
 	{
@@ -382,9 +377,10 @@ void RADEONSetTransparencyMMIO(struct radeonfb_info *rinfo, int trans_color)
 }
 
 /* Setup for XAA screen-to-screen copy */
-void RADEONSetupForScreenToScreenCopyMMIO(struct radeonfb_info *rinfo,
+void RADEONSetupForScreenToScreenCopyMMIO(struct fb_info *info,
      int xdir, int ydir, int rop, unsigned int planemask, int trans_color)
 {
+	struct radeonfb_info *rinfo = info->par;
 	ACCEL_PREAMBLE();
 	rinfo->xdir = xdir;
 	rinfo->ydir = ydir;
@@ -408,9 +404,10 @@ void RADEONSetupForScreenToScreenCopyMMIO(struct radeonfb_info *rinfo,
 }
 
 /* Subsequent XAA screen-to-screen copy */
-void RADEONSubsequentScreenToScreenCopyMMIO(struct radeonfb_info *rinfo,
+void RADEONSubsequentScreenToScreenCopyMMIO(struct fb_info *info,
      int xa, int ya, int xb, int yb, int w, int h)
 {
+	struct radeonfb_info *rinfo = info->par;
 	ACCEL_PREAMBLE();
 	if(rinfo->xdir < 0)
 		xa += w - 1, xb += w - 1;
@@ -418,13 +415,10 @@ void RADEONSubsequentScreenToScreenCopyMMIO(struct radeonfb_info *rinfo,
 		ya += h - 1, yb += h - 1;
 #ifdef RADEON_TILING
 	BEGIN_ACCEL(5);
-	{
-		struct fb_info *info = rinfo->info;
-		OUT_ACCEL_REG(SRC_PITCH_OFFSET, rinfo->dst_pitch_offset
-		 | ((rinfo->tilingEnabled && (ya <= info->var.yres_virtual)) ? DST_TILE_MACRO : 0));
-		OUT_ACCEL_REG(DST_PITCH_OFFSET, rinfo->dst_pitch_offset
-		 | ((rinfo->tilingEnabled && (yb <= info->var.yres_virtual)) ? DST_TILE_MACRO : 0));
-	}
+	OUT_ACCEL_REG(SRC_PITCH_OFFSET, rinfo->dst_pitch_offset
+	 | ((rinfo->tilingEnabled && (ya <= info->var.yres_virtual)) ? DST_TILE_MACRO : 0));
+	OUT_ACCEL_REG(DST_PITCH_OFFSET, rinfo->dst_pitch_offset
+	 | ((rinfo->tilingEnabled && (yb <= info->var.yres_virtual)) ? DST_TILE_MACRO : 0));
 #else
 	BEGIN_ACCEL(3);
 #endif
@@ -435,9 +429,10 @@ void RADEONSubsequentScreenToScreenCopyMMIO(struct radeonfb_info *rinfo,
 }
 
 /* XAA screen-to-screen copy */
-void RADEONScreenToScreenCopyMMIO(struct radeonfb_info *rinfo,
+void RADEONScreenToScreenCopyMMIO(struct fb_info *info,
      int xa, int ya, int xb, int yb, int w, int h, int rop)
 {
+	struct radeonfb_info *rinfo = info->par;
 	int xdir = xa - xb;
 	int ydir = ya - yb;
 	ACCEL_PREAMBLE();
@@ -451,13 +446,10 @@ void RADEONScreenToScreenCopyMMIO(struct radeonfb_info *rinfo,
 	 | GMC_BRUSH_NONE | GMC_SRC_DATATYPE_COLOR | RADEON_ROP[rop].rop
 	 | DP_SRC_SOURCE_MEMORY | GMC_SRC_PITCH_OFFSET_CNTL);
 	BEGIN_ACCEL(8);
-	{
-		struct fb_info *info = rinfo->info;
-		OUT_ACCEL_REG(SRC_PITCH_OFFSET, rinfo->dst_pitch_offset
-		 | ((rinfo->tilingEnabled && (ya <= info->var.yres_virtual)) ? DST_TILE_MACRO : 0));
-		OUT_ACCEL_REG(DST_PITCH_OFFSET, rinfo->dst_pitch_offset
-		 | ((rinfo->tilingEnabled && (yb <= info->var.yres_virtual)) ? DST_TILE_MACRO : 0));
-	}
+	OUT_ACCEL_REG(SRC_PITCH_OFFSET, rinfo->dst_pitch_offset
+	 | ((rinfo->tilingEnabled && (ya <= info->var.yres_virtual)) ? DST_TILE_MACRO : 0));
+	OUT_ACCEL_REG(DST_PITCH_OFFSET, rinfo->dst_pitch_offset
+	 | ((rinfo->tilingEnabled && (yb <= info->var.yres_virtual)) ? DST_TILE_MACRO : 0));
 #else
 	/* Save for later clipping */
 	rinfo->dp_gui_master_cntl_clip = (rinfo->dp_gui_master_cntl
@@ -477,9 +469,10 @@ void RADEONScreenToScreenCopyMMIO(struct radeonfb_info *rinfo,
  * transparency use `bg == -1'.  This routine is only used if the XAA
  * pixmap cache is turned on.
  */
-void RADEONSetupForMono8x8PatternFillMMIO(struct radeonfb_info *rinfo,
+void RADEONSetupForMono8x8PatternFillMMIO(struct fb_info *info,
      int patternx, int patterny, int fg, int bg, int rop, unsigned int planemask)
 {
+	struct radeonfb_info *rinfo = info->par;
 	unsigned char pattern[8];
 	ACCEL_PREAMBLE();
 	if(rinfo->big_endian)
@@ -525,17 +518,15 @@ void RADEONSetupForMono8x8PatternFillMMIO(struct radeonfb_info *rinfo,
 /* Subsequent XAA 8x8 pattern color expansion.  Because they are used in
  * the setup function, `patternx' and `patterny' are not used here.
  */
-void RADEONSubsequentMono8x8PatternFillRectMMIO(struct radeonfb_info *rinfo,
+void RADEONSubsequentMono8x8PatternFillRectMMIO(struct fb_info *info,
      int patternx, int patterny, int x, int y, int w, int h)
 {
+	struct radeonfb_info *rinfo = info->par;
 	ACCEL_PREAMBLE();
 #ifdef RADEON_TILING
 	BEGIN_ACCEL(4);
-	{
-		struct fb_info *info = rinfo->info;
-		OUT_ACCEL_REG(DST_PITCH_OFFSET, rinfo->dst_pitch_offset
-		 | ((rinfo->tilingEnabled && (y <= info->var.yres_virtual)) ? DST_TILE_MACRO : 0));
-	}
+	OUT_ACCEL_REG(DST_PITCH_OFFSET, rinfo->dst_pitch_offset
+	 | ((rinfo->tilingEnabled && (y <= info->var.yres_virtual)) ? DST_TILE_MACRO : 0));
 #else
 	BEGIN_ACCEL(3);
 #endif
@@ -550,9 +541,10 @@ void RADEONSubsequentMono8x8PatternFillRectMMIO(struct radeonfb_info *rinfo,
  * mainstore-to-screen color expansion.  Transparency is supported when
  * `bg == -1'.
  */
-void RADEONSetupForScanlineCPUToScreenColorExpandFillMMIO(struct radeonfb_info *rinfo, 
+void RADEONSetupForScanlineCPUToScreenColorExpandFillMMIO(struct fb_info *info, 
      int fg, int bg, int rop, unsigned int planemask)
 {
+	struct radeonfb_info *rinfo = info->par;
 	ACCEL_PREAMBLE();
 	/* Save for later clipping */
 	if(rinfo->big_endian)
@@ -567,8 +559,8 @@ void RADEONSetupForScanlineCPUToScreenColorExpandFillMMIO(struct radeonfb_info *
 		 | RADEON_ROP[rop].rop | GMC_BYTE_LSB_TO_MSB | DP_SRC_SOURCE_HOST_DATA);
 	if(rinfo->big_endian)
 	{
-		OUT_ACCEL_REG(RBBM_GUICNTL, HOST_DATA_SWAP_NONE);
     BEGIN_ACCEL(5);
+		OUT_ACCEL_REG(RBBM_GUICNTL, HOST_DATA_SWAP_NONE);
   }
 	else	
 		BEGIN_ACCEL(4);
@@ -582,19 +574,17 @@ void RADEONSetupForScanlineCPUToScreenColorExpandFillMMIO(struct radeonfb_info *
 /* Subsequent XAA indirect CPU-to-screen color expansion. This is only
  * called once for each rectangle.
  */
-void RADEONSubsequentScanlineCPUToScreenColorExpandFillMMIO(struct radeonfb_info *rinfo,
+void RADEONSubsequentScanlineCPUToScreenColorExpandFillMMIO(struct fb_info *info,
      int x, int y, int w, int h, int skipleft)
 {
+	struct radeonfb_info *rinfo = info->par;
 	ACCEL_PREAMBLE();
 	rinfo->scanline_h  = h;
 	rinfo->scanline_words = (w + 31) >> 5;
 #ifdef RADEON_TILING
 	BEGIN_ACCEL(5);
-	{
-		struct fb_info *info = rinfo->info;
-		OUT_ACCEL_REG(DST_PITCH_OFFSET, rinfo->dst_pitch_offset
-		 | ((rinfo->tilingEnabled && (y <= info->var.yres_virtual)) ? DST_TILE_MACRO : 0));
-	}
+	OUT_ACCEL_REG(DST_PITCH_OFFSET, rinfo->dst_pitch_offset
+	 | ((rinfo->tilingEnabled && (y <= info->var.yres_virtual)) ? DST_TILE_MACRO : 0));
 #else
 	BEGIN_ACCEL(4);
 #endif
@@ -609,8 +599,9 @@ void RADEONSubsequentScanlineCPUToScreenColorExpandFillMMIO(struct radeonfb_info
 /* Subsequent XAA indirect CPU-to-screen color expansion and indirect
  * image write.  This is called once for each scanline.
  */
-void RADEONSubsequentScanlineMMIO(struct radeonfb_info *rinfo, unsigned long *src)
+void RADEONSubsequentScanlineMMIO(struct fb_info *info, unsigned long *src)
 {
+	struct radeonfb_info *rinfo = info->par;
 	int left = rinfo->scanline_words;
 	volatile unsigned long *d;
 	ACCEL_PREAMBLE();
@@ -632,13 +623,13 @@ void RADEONSubsequentScanlineMMIO(struct radeonfb_info *rinfo, unsigned long *sr
 			{
 	    	BEGIN_ACCEL(left);
 				/* Unrolling doesn't improve performance */
-				for (d = ADDRREG(HOST_DATA7) - (left - 1); left; --left)
+				for(d = ADDRREG(HOST_DATA7) - (left - 1); left; --left)
 					*d++ = *src++;
 			}
 		}
 		else
 		{
-	    BEGIN_ACCEL(8);
+			BEGIN_ACCEL(8);
 			/* Unrolling doesn't improve performance */
 			d = ADDRREG(HOST_DATA0);
 			*d++ = *src++;
@@ -656,9 +647,10 @@ void RADEONSubsequentScanlineMMIO(struct radeonfb_info *rinfo, unsigned long *sr
 }
 
 /* Setup for XAA indirect image write */
-void RADEONSetupForScanlineImageWriteMMIO(struct radeonfb_info *rinfo,
+void RADEONSetupForScanlineImageWriteMMIO(struct fb_info *info,
      int rop, unsigned int planemask, int trans_color, int bpp)
 {
+	struct radeonfb_info *rinfo = info->par;
 	ACCEL_PREAMBLE();
 	rinfo->scanline_bpp = bpp;
 	/* Save for later clipping */
@@ -686,9 +678,10 @@ void RADEONSetupForScanlineImageWriteMMIO(struct radeonfb_info *rinfo,
 }
 
 /* Subsequent XAA indirect image write. This is only called once for each rectangle. */
-void RADEONSubsequentScanlineImageWriteRectMMIO(struct radeonfb_info *rinfo,
+void RADEONSubsequentScanlineImageWriteRectMMIO(struct fb_info *info,
      int x, int y, int w, int h, int skipleft)
 {
+	struct radeonfb_info *rinfo = info->par;
 	int shift = 0; /* 32bpp */
 	ACCEL_PREAMBLE();
 	if(rinfo->bpp == 8)
@@ -699,11 +692,8 @@ void RADEONSubsequentScanlineImageWriteRectMMIO(struct radeonfb_info *rinfo,
 	rinfo->scanline_words = (w * rinfo->scanline_bpp + 31) >> 5;
 #ifdef RADEON_TILING
 	BEGIN_ACCEL(5);
-	{
-		struct fb_info *info = rinfo->info;
-		OUT_ACCEL_REG(DST_PITCH_OFFSET, rinfo->dst_pitch_offset
-		 | ((rinfo->tilingEnabled && (y <= info->var.yres_virtual)) ? DST_TILE_MACRO : 0));
-	}
+	OUT_ACCEL_REG(DST_PITCH_OFFSET, rinfo->dst_pitch_offset
+	 | ((rinfo->tilingEnabled && (y <= info->var.yres_virtual)) ? DST_TILE_MACRO : 0));
 #else
 	BEGIN_ACCEL(4);
 #endif
@@ -716,9 +706,10 @@ void RADEONSubsequentScanlineImageWriteRectMMIO(struct radeonfb_info *rinfo,
 }
 
 /* Set up the clipping rectangle */
-void RADEONSetClippingRectangleMMIO(struct radeonfb_info *rinfo,
+void RADEONSetClippingRectangleMMIO(struct fb_info *info,
      int xa, int ya, int xb, int yb)
 {
+	struct radeonfb_info *rinfo = info->par;
 	unsigned long  tmp1 = 0;
 	unsigned long  tmp2 = 0;
 	ACCEL_PREAMBLE();
@@ -761,8 +752,9 @@ void RADEONSetClippingRectangleMMIO(struct radeonfb_info *rinfo,
 }
 
 /* Disable the clipping rectangle */
-void RADEONDisableClippingMMIO(struct radeonfb_info *rinfo)
+void RADEONDisableClippingMMIO(struct fb_info *info)
 {
+	struct radeonfb_info *rinfo = info->par;
 	ACCEL_PREAMBLE();
 	BEGIN_ACCEL(3);
 	OUT_ACCEL_REG(DP_GUI_MASTER_CNTL, rinfo->dp_gui_master_cntl_clip);
@@ -783,9 +775,9 @@ void RADEONDisableClippingMMIO(struct radeonfb_info *rinfo)
    ugly offset / fb reservation (cursor) is gone. And as a bonus, everything actually works...
    All surface addresses are relative to MC_FB_LOCATION
  */
-void RADEONChangeSurfaces(struct radeonfb_info *rinfo)
+void RADEONChangeSurfaces(struct fb_info *info)
 {
-	struct fb_info *info = rinfo->info;
+	struct radeonfb_info *rinfo = info->par;
 	int cpp = rinfo->bpp >> 3;
 	/* depth/front/back pitch must be identical (and the same as displayWidth) */
 	int width_bytes = info->var.xres_virtual * cpp;

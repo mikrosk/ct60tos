@@ -41,10 +41,11 @@
 #include "config.h"
 #include "ftpd.h"
 
-#define DEBUG
+#undef DEBUG
 
 #ifdef NETWORK
 #ifdef LWIP
+#ifdef FTP_SERVER
 
 /*---------------------------------------------------------------------------
  *  DEFINES
@@ -2591,5 +2592,6 @@ sint_t ftpd_start(char *username, char *password)
   return 0;
 }
 
+#endif /* FTP_SERVER */
 #endif /* LWIP */
 #endif /* NETWORK */

@@ -3,12 +3,14 @@
 FLASH060.PRG
 .C [ -2 -P]
 .S [ -4 -S]
+.L [ -S=16384]
 =
 
 PCSTART.O          ; startup code
 
 FLASH060.C
 FLASH.S
+FLASH_CF.S
 SREC.C           
 JEDEC.C
 J_FUSE.S           

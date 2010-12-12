@@ -1,9 +1,11 @@
 FLASH060.PRG
 ------------
 La tache principale de ce programme est de mettre une image binaire du 
-TOS (.BIN) dans la flash, mais la deuxiŠme tache est de mettre … jour 
-la partie hard de la CT60 avec deux fichiers jedec (.JED) pour les 
-composants ABE60 et SDR60 (XILINX XC95144XL CPLD).
+TOS (.BIN) and des fichier Srecord (.HEX) dans la flash de la CT60 ou 
+du FIREBEE, mais la deuxiŠme tache est de mettre … jour la partie hard 
+de la CT60 avec les fichiers jedec (.JED) pour les composants ABE60,
+SDR60 et CTPCI (XILINX XC95144XL / XC95288XL CPLD).
+ 
 - Vous avez besoin de fabriquer un cable pour le connecteur JTAG CT60 
 en liaison avec le port //, regardez le sch‚ma dans CT60.HYP. 
 - Normallement le cable doit ˆtre attach‚ et mis sous tension (par la 
@@ -30,7 +32,7 @@ Pin 17 TDI              --> Pin 5
 Pin 18 TMS              --> Pin 6
 
 
-Cette mise … jour permet de changer l'affichage du boot pour la 
+Cette mise … jour 2009 permet de changer l'affichage du boot pour la 
 version de ABE et SDR :
 - Se placer en mode 060.
 - Charger le fichier jedec -> boot/version est ‚ditable.
@@ -38,13 +40,18 @@ version de ABE et SDR :
 - Cliquer sur "Programmer".
 - Au message d'alerte "Impossible de mettre … jour le hard", cliquer 
   sur : "Ecrire Version".
-Cette mise … jour permet aussi de forcer le composant … programmer ABE 
-ou SDR, parceque depuis la CT63 il est impossible to d‚tecter le 
+Cette mise … jour permet aussi de forcer le composant … programmer 
+ABE ou SDR, parceque depuis la CT63 il est impossible to d‚tecter le 
 composant … partir du fichier jedec (SDR60 ‚tait un XC95144XL-7-TQ144 
 et ABE60 un C95144XL-10-TQ144). Quand vous chergez le fichier jedec, 
 le nom de fichier est aussi test‚ et un message d'alerte arrive pour 
-changer de composant. La seconde m‚thode est de cliquer sur la ligne 
-d'information de la source.
+changer de composant. Cette mise … jour permet aussi de programmer le 
+composant de la CTPCI (XC95288XL).
+
+FLASH_CF.PRG
+------------
+Executable en code natif Coldfire pour le FIREBEE, si vous avez des 
+problŠmes utilisez FLASH060.PRG sous TOS/CF68KLIB.
 
 
 Pour plus d'informations:

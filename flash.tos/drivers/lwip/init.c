@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <stdarg.h>
 #include <string.h>
+#include <errno.h>
 
 /* ------------------------ Platform includes ----------------------------- */
 #include "config.h"
@@ -22,7 +23,7 @@
 #include "../ac97/mcf548x_ac97.h"
 #endif
 #ifdef MCF547X
-#define AC97_DEVICE 2 /* COLDARI */
+#define AC97_DEVICE 2 /* FIREBEE */
 #else /* MCF548X */
 #define AC97_DEVICE 3 /* M5484LITE */
 #endif /* MCF547X */
@@ -251,7 +252,6 @@ void *start_run;
 
 int errno;
 xSemaphoreHandle xSemaphoreBDOS;
-long xSemaphoreRADEON;
 
 typedef struct
 {
@@ -331,7 +331,9 @@ extern int sprintD(char *s, const char *fmt, ...);
 extern void flush_caches(void);
 extern void enable_caches(void);
 extern void disable_caches(void);
-char *disassemble_pc(unsigned long pc);
+extern char *disassemble_pc(unsigned long pc);
+extern void uif_cmd_usb(int argc, char **argv);
+extern void usb_enable_interrupt(void);
 
 /* ------------------------ Implementation -------------------------------- */
 
@@ -531,14 +533,22 @@ void conout_debug(int c)
 {
   if(!*(unsigned char *)(serial_mouse))
   {
-    int level = vPortSetIPL(portIPL_MAX);
-    vPortSetIPL(level);
-    while(!(MCF_UART_USR(0) & MCF_UART_USR_TXRDY))
+    if(pxCurrentTCB != tid_TOS)
     {
-      if(!level && (pxCurrentTCB != tid_TOS))
-        vTaskDelay(1);    
+      int level = vPortSetIPL(portIPL_MAX);
+      vPortSetIPL(level);
+      while(!(MCF_UART_USR(0) & MCF_UART_USR_TXRDY))
+      {
+        if(!level)
+          vTaskDelay(1);    
+      }
+      MCF_UART_UTB(0) = (char)c; // send the character
     }
-    MCF_UART_UTB(0) = (char)c; // send the character
+    else
+    {
+      while(!(MCF_UART_USR(0) & MCF_UART_USR_TXRDY));
+      MCF_UART_UTB(0) = (char)c; // send the character
+    }
   }
 }
 
@@ -601,22 +611,38 @@ static int telnet_write_socket(char *response, int size, int flush)
 
 void board_printf(const char *fmt, ...)
 {
-  char buf[TELNET_BUF_SIZE];
   va_list ap;
   PRINTK_INFO info;
   info.dest = DEST_STRING;
-  info.loc = buf;
   va_start(ap, fmt);
-  printk(&info, fmt, ap);
-  *info.loc = '\0';
-  va_end(ap);
-  if(pxCurrentTCB == tid_TELNET)
+  if(pxCurrentTCB == tid_TOS)
   {
-    if(ts->sock > 0)
-      telnet_write_socket(buf, strlen(buf), 1);
+    static char buf_tos[TELNET_BUF_SIZE]; // minimize stack usage
+    info.loc = buf_tos;
+    printk(&info, fmt, ap);
+    *info.loc = '\0';
+    va_end(ap);
+    conws_debug(buf_tos);
   }
   else
-    conws_debug(buf);
+  {
+    char *buf = (char *)pvPortMalloc(TELNET_BUF_SIZE);
+    if(buf != NULL)
+    {
+      info.loc = buf;
+      printk(&info, fmt, ap);
+      *info.loc = '\0';
+      va_end(ap);
+      if(pxCurrentTCB == tid_TELNET)
+      {
+        if(ts->sock > 0)
+          telnet_write_socket(buf, strlen(buf), 1);
+      }
+      else
+        conws_debug(buf);
+      vPortFree(buf);    
+    }
+  }
 }
 
 static char board_getchar(void)
@@ -1414,11 +1440,47 @@ static void uif_cmd_lb(int argc, char **argv)
   breakpoint_display(argc, argv);
 }
 
+#ifdef MCF547X
+static portTASK_FUNCTION(vETOS,pvParmeters)
+{           
+  void (*fp)(void) = (void(*)(void))0xE00000;
+  (*fp)();
+}
+#endif
+
 static void uif_cmd_go(int argc, char **argv)
 {
-  int index;
-  if(argc);
-  if(argv);
+  int index, success;
+  if(argc == 2)
+  {
+    void (*fp)(void) = (void(*)(void))get_value(argv[1],&success,16);
+    if(success == 0)
+    {
+      board_printf(INVALUE,argv[1]);
+      return;
+    }
+#ifdef MCF547X
+    if((unsigned long)fp == 0xE0600000)
+    {
+      vTaskDelete(tid_TOS);
+      asm_set_ipl(7); /* disable interrupts */
+      disable_caches();
+      {
+        asm(" move.l #0x0000E040,D0"); /* zone at $00000000 to $00FFFFFF in cache inhibit */
+        asm(" movec.l D0,ACR0");
+      }
+      memcpy((void *)0xE00000,(void *)fp,0x80000); /* copy Emutos */
+      {
+        asm(" moveq #0,D0");
+        asm(" movec.l D0,ACR0");
+      }
+      enable_caches();
+      xTaskCreate(vETOS, "ETOS", STACK_DEFAULT, NULL, TOS_TASK_PRIORITY, NULL);
+      return;
+    }
+#endif
+    (*fp)();    
+  }
   *(unsigned long *)(cpu_trace_count) = 0;
   if(breakpoint_install(*(unsigned short *)(save_format) ? *(unsigned long *)(save_pc) : (unsigned long)-1)) /* insert all breakpoints */
     *(unsigned long *)(cpu_trace_thru) = *(unsigned long *)(save_pc); /* PC is at breakpoint */
@@ -1500,7 +1562,7 @@ static void uif_cmd_ac97_pr(int argc, char **argv)
     done = FALSE;
     while(!done)
     {
-    	address &= 0x7f;
+      address &= 0x7f;
       datar = mcf548x_ac97_debug_read(AC97_DEVICE,address);
       board_printf("%02X:  ", (int)address);
       board_printf("[%04X]  ", (int)datar);
@@ -2791,8 +2853,8 @@ static void uif_cmd_cache(int argc, char **argv)
      disable_caches();
   else if(argc < 2)
   {
-		unsigned long cacr = *(unsigned long *)(library_data_area + 96); // CACR cf68klib
-		board_printf("CACR: 0x%08X\r\n", cacr);  
+    unsigned long cacr = *(unsigned long *)(library_data_area + 96); // CACR cf68klib
+    board_printf("CACR: 0x%08X\r\n", cacr);  
   }
   else
     board_printf("Usage : cache <on/off>\r\n");
@@ -3030,13 +3092,16 @@ static UIF_CMD UIF_CMDTAB[] =
   {"acpr",4,1,2,0,uif_cmd_ac97_pr,"AC97 Patch Register","addr <data>"},
 #endif
 #endif
+#if defined(CONFIG_USB_UHCI) || defined(CONFIG_USB_OHCI) || defined(CONFIG_USB_EHCI)
+  {"usb",3,0,4,0,uif_cmd_usb,"USB sub-system","<cmd ...>"},
+#endif
   {"cb",2,0,1,0,uif_cmd_cb,"Clear Breakpoint","<index>"},
   {"db",2,0,UIF_MAX_ARGS-1,0,uif_cmd_db,"Define Breakpoint","<addr> <-c|t value> <-r addr..> <-i> <-m>"},
   {"dm",2,0,2,UIF_CMD_FLAG_REPEAT,uif_cmd_md,"Display Memory","begin <end>"},
   {"md",2,0,2,UIF_CMD_FLAG_REPEAT|UIF_CMD_FLAG_HIDDEN,uif_cmd_md,"Memory Display","begin <end>"},
   {"dis",2,0,1,UIF_CMD_FLAG_REPEAT,uif_cmd_dis,"Disassemble","<addr>"},
   {"dr",2,0,0,0,uif_cmd_dr,"Display Registers CF68KLIB",""},
-  {"go",1,0,0,0,uif_cmd_go,"Execute, Insert Breakpt",""},
+  {"go",1,0,1,0,uif_cmd_go,"Execute, Insert Breakpt",""},
   {"lb",2,0,0,0,uif_cmd_lb,"List Breakpoints",""},
   {"pm",2,1,2,0,uif_cmd_pm,"Patch Memory","addr <data>"},
   {"qt",2,0,0,UIF_CMD_FLAG_REPEAT,uif_cmd_qt,"Query Tasks",""},
@@ -3239,12 +3304,14 @@ static int run_cmd(void)
 /* FTP Server                                                          */
 /*---------------------------------------------------------------------*/
 
+#ifdef FTP_SERVER
 static portTASK_FUNCTION(vFTPd, pvParameters)
 {
   if(pvParameters);
   ftpd_start(FTP_USERNAME, FTP_PASSWORD);
   vTaskDelete(0);
 }
+#endif
 
 /*---------------------------------------------------------------------*/
 /* TFTP Server                                                         */
@@ -4003,7 +4070,9 @@ void init_lwip(void)
   xTaskCreate(vTELNETd, "TELNETd", STACK_DEFAULT, NULL, TELNET_TASK_PRIORITY, &tid_TELNET);
   breakpoint_init();
 #endif
+#ifdef FTP_SERVER
   xTaskCreate(vFTPd, "FTPd", STACK_DEFAULT, NULL, FTP_TASK_PRIORITY, NULL);
+#endif
   xTaskCreate(vTFTPd, "TFTPd", STACK_DEFAULT, NULL, TFTP_TASK_PRIORITY, NULL);
   /* Start the webserver */
   xTaskCreate(vBasicWEBServer, "HTTPd", STACK_DEFAULT, NULL, WEB_TASK_PRIORITY, NULL);
@@ -4012,7 +4081,6 @@ void init_lwip(void)
 
 static portTASK_FUNCTION(vTOS, pvParameters)
 {
-  /* The parameters are not used in this function */
   void (*return_address)(void) = (void (*)(void))pvParameters;
   vTaskDelay(configTICK_RATE_HZ/10);
   return_address();
@@ -4021,6 +4089,12 @@ static portTASK_FUNCTION(vTOS, pvParameters)
 
 static portTASK_FUNCTION(vROOT, pvParameters)
 {
+#ifdef CONFIG_USB_OHCI
+  extern char ohci_inited;
+#endif
+#ifdef CONFIG_USB_EHCI
+  extern char ehci_inited;
+#endif
 #ifdef USB_DEVICE
 #ifndef MCF5445X
 #ifndef MCF547X
@@ -4028,11 +4102,13 @@ static portTASK_FUNCTION(vROOT, pvParameters)
 #endif
 #endif
 #endif
-  int error = 0;
+//  int error = 0;
+#ifdef USE_RTC
 #ifndef MCF5445X
 #ifndef MCF547X
-	extern void RTC_task(void);
+  extern void RTC_task(void);
   xTaskCreate((pdTASK_CODE)RTC_task, "RTCd", STACK_DEFAULT, NULL, RTC_TASK_PRIORITY, NULL);
+#endif
 #endif
 #endif
   restart_debug = 0;
@@ -4060,8 +4136,9 @@ static portTASK_FUNCTION(vROOT, pvParameters)
     {
       restart_debug = 0;
       vTaskDelay(configTICK_RATE_HZ/2);
-       start_debug();
+      start_debug();
     }
+#if 0
     if(!error
      && (*(unsigned long *)VBL_VEC >= (unsigned long)__SDRAM_SIZE))
     {
@@ -4069,6 +4146,34 @@ static portTASK_FUNCTION(vROOT, pvParameters)
        error = 1;
     }
 #endif
+#endif /* DBUG */
+#if defined(CONFIG_USB_UHCI) || defined(CONFIG_USB_OHCI) || defined(CONFIG_USB_EHCI)
+    if(1
+#ifdef CONFIG_USB_OHCI
+     && ohci_inited
+#endif
+#ifdef CONFIG_USB_EHCI
+//     && ehci_inited // actually no interrupts for only Mass Storage
+#endif
+    )
+    {
+#ifndef CONFIG_USB_INTERRUPT_POLLING
+#ifndef MCF5445X
+#ifndef MCF547X
+      /* move INT7 to native interrupt (M5484LITE/M5485EVB) */
+      /* INT7 call INT2 who is masked by other task than TOS (level 3) */
+      if((save_imrl & (1 << 7)) && !(save_imrl_tos & (1 << 7)))
+      {
+        int level = asm_set_ipl(7); /* disable interrupts */
+        *(unsigned long *)(((64+7) * 4) + coldfire_vector_base) = *(unsigned long *)((64+7+OFFSET_INT_CF68KLIB) * 4);
+        MCF_INTC_IMRL &= ~MCF_INTC_IMRL_INT_MASK7; /* enable interrupt */
+        asm_set_ipl(level);
+      }
+#endif /* MCF547X */
+#endif /* MCF5445X */
+#endif /* CONFIG_USB_INTERRUPT_POLLING */
+    }
+#endif /* CONFIG_USB_UHCI || CONFIG_USB_OHCI || CONFIG_USB_EHCI */
     vTaskDelay(1);
   }
 } 
@@ -4098,19 +4203,6 @@ void xSemaphoreGiveBDOS(void)
 //  xSemaphoreBDOS = 0;  
   xSemaphoreAltGive(xSemaphoreBDOS);
 }
-
-#if 0
-void xSemaphoreTakeRADEON(void)
-{
-  while(test_semaphore(&xSemaphoreRADEON))
-    vTaskDelay(1);
-}
-
-void xSemaphoreGiveRADEON(void)
-{
-  xSemaphoreRADEON = 0;
-}
-#endif
 
 int tftpreceive(unsigned char *server, char *sname, short handle)
 {
@@ -4194,7 +4286,6 @@ int init_rtos(void *return_address)
   *(unsigned short *)_timer_ms = 0;
 //  xSemaphoreBDOS = 0;
   vSemaphoreCreateBinary(xSemaphoreBDOS);
-  xSemaphoreRADEON = 0;
   init_dma();
   xTaskCreate(vROOT, "ROOT", STACK_DEFAULT, return_address, ROOT_TASK_PRIORITY, NULL);
   vTaskStartScheduler();

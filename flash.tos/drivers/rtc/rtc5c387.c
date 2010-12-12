@@ -53,6 +53,7 @@ struct rtc_tm {
 #define RTC5C387_CTRL2_VDET    (1<<6)
 #define RTC5C387_CTRL2_VDSL    (1<<7)
 
+#ifdef USE_RTC
 #ifdef NETWORK
 #ifdef LWIP
 
@@ -214,7 +215,7 @@ void I2CsendByte(unsigned char data, unsigned char address, unsigned char id)
 	MCF_I2C_I2CR |= MCF_I2C_I2CR_MSTA;
 	MCF_I2C_I2DR = id;                    /* set device ID to write */
 	/* wait until one byte transfer completion */
-	while( !(MCF_I2C_I2SR & MCF_I2C_I2SR_IIF ));
+	while(!(MCF_I2C_I2SR & MCF_I2C_I2SR_IIF));
 	/* clear the completion transfer flag */
 	MCF_I2C_I2SR &= ~MCF_I2C_I2SR_IIF;
 	/* Wait for a bit */
@@ -237,7 +238,7 @@ void I2CsendByte(unsigned char data, unsigned char address, unsigned char id)
 	MCF_I2C_I2DR = data;						/* memory data */
 	/* wait until one byte transfer completion */
 	timeout = ReadTimer();
-	while( !(MCF_I2C_I2SR & MCF_I2C_I2SR_IIF ))
+	while(!(MCF_I2C_I2SR & MCF_I2C_I2SR_IIF))
   {
     if(timeout-ReadTimer() >= TIMEOUT)
     {
@@ -387,6 +388,7 @@ void RTC_task(void)
   }
 }
 
+#endif
 #endif
 #endif
 

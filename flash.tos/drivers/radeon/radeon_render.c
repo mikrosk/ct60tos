@@ -1,6 +1,6 @@
-#include <sysvars.h>
-#include <string.h>
 #include "radeonfb.h"
+
+#ifdef RADEON_RENDER
 
 extern void blit_copy(unsigned char *src_addr, int src_line_add, unsigned char *dst_addr, int dst_line_add, int w, int h, int bpp);
 extern int blit_copy_ok(void);
@@ -184,7 +184,7 @@ static void RenderCallback(struct radeonfb_info *rinfo)
 {
 	if((*_hz_200 > rinfo->RenderTimeout) && rinfo->RenderTex)
 	{
-		radeon_offscreen_free(rinfo, (long)rinfo->RenderTex); 
+		offscreen_free(rinfo->info, (long)rinfo->RenderTex); 
 		rinfo->RenderTex = NULL;
 	}
 	if(!rinfo->RenderTex)
@@ -201,21 +201,21 @@ static int AllocateLinear(struct radeonfb_info *rinfo, int sizeNeeded)
 			return TRUE;
 		else
 		{
-			void *NewRenderTex = (void *)radeon_offscreen_alloc(rinfo, sizeNeeded + 32);
+			void *NewRenderTex = (void *)offscreen_alloc(rinfo->info, sizeNeeded + 32);
 			if(NewRenderTex != NULL)
 			{
 				memcpy(NewRenderTex, rinfo->RenderTex, rinfo->RenderTexSize);
-				radeon_offscreen_free(rinfo, (long)rinfo->RenderTex);
+				offscreen_free(rinfo->info, (long)rinfo->RenderTex);
 				rinfo->RenderTex = NewRenderTex;
 				rinfo->RenderTexOffset = RADEON_ALIGN((unsigned long)rinfo->RenderTex - (unsigned long)rinfo->fb_base, 32);
 				return TRUE;			
 			}
-			radeon_offscreen_free(rinfo, (long)rinfo->RenderTex); 				
+			offscreen_free(rinfo->info, (long)rinfo->RenderTex); 				
 			rinfo->RenderTex = NULL;
 		}
 	}
 	rinfo->RenderTexSize = sizeNeeded + 32;
-	rinfo->RenderTex = (void *)radeon_offscreen_alloc(rinfo, rinfo->RenderTexSize);
+	rinfo->RenderTex = (void *)offscreen_alloc(rinfo->info, rinfo->RenderTexSize);
 	rinfo->RenderTexOffset = RADEON_ALIGN((unsigned long)rinfo->RenderTex - (unsigned long)rinfo->fb_base, 32);
 	return(rinfo->RenderTex != NULL);
 }
@@ -367,9 +367,10 @@ static int RADEONSetupTextureMMIO(struct radeonfb_info *rinfo,
 	return TRUE;
 }
 
-int RADEONSetupForCPUToScreenAlphaTextureMMIO(struct radeonfb_info *rinfo, 
+int RADEONSetupForCPUToScreenAlphaTextureMMIO(struct fb_info *info, 
     int op, unsigned short red, unsigned short green, unsigned short blue, unsigned short alpha, unsigned long maskFormat, unsigned long dstFormat, unsigned char *alphaPtr, int alphaPitch, int width, int height, int flags)
 {
+	struct radeonfb_info *rinfo = info->par;
 	unsigned long colorformat, srccolor, blend_cntl;
 	if(rinfo->family >= CHIP_FAMILY_R300)
 	{
@@ -418,9 +419,10 @@ int RADEONSetupForCPUToScreenAlphaTextureMMIO(struct radeonfb_info *rinfo,
 	}
 }
 
-int RADEONSetupForCPUToScreenTextureMMIO(struct radeonfb_info *rinfo,
+int RADEONSetupForCPUToScreenTextureMMIO(struct fb_info *info,
     int op, unsigned long srcFormat, unsigned long dstFormat, unsigned char *texPtr, int texPitch, int width, int height, int flags)
 {
+	struct radeonfb_info *rinfo = info->par;
 	unsigned long colorformat, blend_cntl;
 	if(rinfo->family >= CHIP_FAMILY_R300)
 	{
@@ -472,10 +474,10 @@ int RADEONSetupForCPUToScreenTextureMMIO(struct radeonfb_info *rinfo,
 	return TRUE;
 }
 
-void RADEONSubsequentCPUToScreenTextureMMIO(struct radeonfb_info *rinfo,
+void RADEONSubsequentCPUToScreenTextureMMIO(struct fb_info *info,
      int dstx, int dsty, int srcx, int srcy, int width, int height)
 {
-	struct fb_info *info = rinfo->info;
+	struct radeonfb_info *rinfo = info->par;
 	int byteshift;
 	unsigned long fboffset;
 	float l, t, r, b, fl, fr, ft, fb;
@@ -546,3 +548,4 @@ void RADEONSubsequentCPUToScreenTextureMMIO(struct radeonfb_info *rinfo,
 	FINISH_ACCEL();
 }
 
+#endif

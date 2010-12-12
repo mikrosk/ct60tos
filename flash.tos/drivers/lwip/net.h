@@ -17,9 +17,15 @@
 #define vuint8 volatile unsigned char
 #define vuint16 volatile unsigned short
 #define vuint32 volatile unsigned long
+#ifndef NULL
 #define NULL (void *)0
+#endif
+#ifndef FALSE
 #define FALSE 0
+#endif
+#ifndef TRUE
 #define TRUE 1
+#endif
 
 /*
  * Ethernet Info

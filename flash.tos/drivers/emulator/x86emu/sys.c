@@ -42,6 +42,7 @@
 /* $XFree86: xc/extras/x86emu/src/x86emu/sys.c,v 1.5 2000/08/23 22:10:01 tsi Exp $ */
 
 #include "../../radeon/radeonfb.h"
+#include "../../include/pci_bios.h" /* for LITTLE_ENDIAN_LANE_SWAPPED */
 #include <pcixbios.h>
 
 #ifdef DEBUG_X86EMU
@@ -59,12 +60,26 @@
 #define NULL ((void *)0)
 #endif
 
+#ifdef COLDFIRE
+#ifdef LITTLE_ENDIAN_LANE_SWAPPED /* PCI BIOS */
+#define DIRECT_ACCESS
+#endif
+#ifndef PCI_XBIOS
+#define PCI_XBIOS // else sometimes system is locked ???
+#endif
+#else /* !COLDFIRE */
+#ifdef LITTLE_ENDIAN_LANE_SWAPPED /* PCI BIOS */
+#define DIRECT_ACCESS
+#endif
+#endif /* COLDFIRE */
+
 extern u8 inb(u16 port);
 extern u16 inw(u16 port);
 extern u32 inl(u16 port);
 extern void outb(u8 val, u16 port);
 extern void outw(u16 val, u16 port);
 extern void outl(u32 val, u16 port);
+extern u16 swap_short(u16 val);
 extern u32 swap_long(u32 val);
 
 /*------------------------- Global Variables ------------------------------*/
@@ -72,6 +87,7 @@ extern u32 swap_long(u32 val);
 X86EMU_sysEnv _X86EMU_env;	/* Global emulator machine state */
 X86EMU_intrFuncs _X86EMU_intrTab[256];
 extern struct radeonfb_info *rinfo_biosemu;
+extern u32 offset_mem;
 
 /*----------------------------- Implementation ----------------------------*/
 
@@ -94,10 +110,14 @@ u8 X86API rdb(u32 addr)
 #ifdef DEBUG_X86EMU_PCI
 		DPRINTVALHEX("rdb(", addr);
 #endif
-#ifdef PCI_XBIOS
-		val = fast_read_mem_byte(rinfo_biosemu->handle, rinfo_biosemu->io_base_phys+addr-0xA0000);
+#ifdef DIRECT_ACCESS
+		val = *(u8 *)(offset_mem+addr);
 #else
-		val = Fast_read_mem_byte(rinfo_biosemu->handle, rinfo_biosemu->io_base_phys+addr-0xA0000);
+#ifdef PCI_XBIOS
+		val = fast_read_mem_byte(rinfo_biosemu->handle, offset_mem+addr);
+#else
+		val = Fast_read_mem_byte(rinfo_biosemu->handle, offset_mem+addr);
+#endif
 #endif
 #ifdef DEBUG_X86EMU_PCI
 		DPRINTVALHEX(") = ", val);
@@ -153,10 +173,14 @@ u16 X86API rdw(u32 addr)
 #ifdef DEBUG_X86EMU_PCI
 		DPRINTVALHEX("rdw(", addr);
 #endif
-#ifdef PCI_XBIOS
-		val = fast_read_mem_word(rinfo_biosemu->handle, rinfo_biosemu->io_base_phys+addr-0xA0000);
+#ifdef DIRECT_ACCESS
+		val = swap_short(*(u16 *)(offset_mem+addr));
 #else
-		val = Fast_read_mem_word(rinfo_biosemu->handle, rinfo_biosemu->io_base_phys+addr-0xA0000);
+#ifdef PCI_XBIOS
+		val = fast_read_mem_word(rinfo_biosemu->handle, offset_mem+addr);
+#else
+		val = Fast_read_mem_word(rinfo_biosemu->handle, offset_mem+addr);
+#endif
 #endif
 #ifdef DEBUG_X86EMU_PCI
 		DPRINTVALHEX(") = ", val);
@@ -213,10 +237,14 @@ u32 X86API rdl(u32 addr)
 #ifdef DEBUG_X86EMU_PCI
 		DPRINTVALHEX("rdl(", addr);
 #endif
-#ifdef PCI_XBIOS
-		val = fast_read_mem_longword(rinfo_biosemu->handle, rinfo_biosemu->io_base_phys+addr-0xA0000);
+#ifdef DIRECT_ACCESS
+		val = swap_long(*(u32 *)(offset_mem+addr));
 #else
-		val = Fast_read_mem_longword(rinfo_biosemu->handle, rinfo_biosemu->io_base_phys+addr-0xA0000);
+#ifdef PCI_XBIOS
+		val = fast_read_mem_longword(rinfo_biosemu->handle, offset_mem+addr);
+#else
+		val = Fast_read_mem_longword(rinfo_biosemu->handle, offset_mem+addr);
+#endif
 #endif
 #ifdef DEBUG_X86EMU_PCI
 		DPRINTVALHEX(") = ", val);
@@ -271,10 +299,14 @@ void X86API wrb(u32 addr, u8 val)
 		DPRINTVALHEX(") = ", val);
 		DPRINT("\r\n");
 #endif
-#ifdef PCI_XBIOS
-		write_mem_byte(rinfo_biosemu->handle,rinfo_biosemu->fb_base_phys+addr-0xA0000,val);
+#ifdef DIRECT_ACCESS
+		*(u8 *)(offset_mem+addr) = val;
 #else
-		Write_mem_byte(rinfo_biosemu->handle,rinfo_biosemu->fb_base_phys+addr-0xA0000,val);
+#ifdef PCI_XBIOS
+		write_mem_byte(rinfo_biosemu->handle, offset_mem+addr, val);
+#else
+		Write_mem_byte(rinfo_biosemu->handle, offset_mem+addr, val);
+#endif
 #endif
 	}
 	else
@@ -321,10 +353,14 @@ void X86API wrw(u32 addr, u16 val)
 		DPRINTVALHEX(") = ", val);
 		DPRINT("\r\n");
 #endif
-#ifdef PCI_XBIOS
-		write_mem_word(rinfo_biosemu->handle,rinfo_biosemu->fb_base_phys+addr-0xA0000,val);
+#ifdef DIRECT_ACCESS
+		*(u16 *)(offset_mem+addr) = swap_short(val);
 #else
-		Write_mem_word(rinfo_biosemu->handle,rinfo_biosemu->fb_base_phys+addr-0xA0000,val);
+#ifdef PCI_XBIOS
+		write_mem_word(rinfo_biosemu->handle, offset_mem+addr, val);
+#else
+		Write_mem_word(rinfo_biosemu->handle, offset_mem+addr, val);
+#endif
 #endif
 	}
 	else
@@ -373,10 +409,14 @@ void X86API wrl(u32 addr, u32 val)
 		DPRINTVALHEX(") = ", val);
 		DPRINT("\r\n");
 #endif
-#ifdef PCI_XBIOS
-		write_mem_longword(rinfo_biosemu->handle,rinfo_biosemu->fb_base_phys+addr-0xA0000,val);
+#ifdef DIRECT_ACCESS
+		*(u32 *)(offset_mem+addr) = swap_long(val);
 #else
-		Write_mem_longword(rinfo_biosemu->handle,rinfo_biosemu->fb_base_phys+addr-0xA0000,val);
+#ifdef PCI_XBIOS
+		write_mem_longword(rinfo_biosemu->handle, offset_mem+addr, val);
+#else
+		Write_mem_longword(rinfo_biosemu->handle, offset_mem+addr, val);
+#endif
 #endif
 	}
 	else

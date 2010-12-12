@@ -24,8 +24,8 @@
 
 #include "config.h"
 #include <string.h>
-#include <osbind.h>
-#include <sysvars.h>
+#include <mint/osbind.h>
+#include <mint/sysvars.h>
 #include <errno.h>
 #include "core.h"
 #include "pcm.h"

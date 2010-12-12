@@ -11,13 +11,12 @@
 
 #define __KERNEL__ // for negative errors
 #include <errno.h>
-#include <string.h>
+#include "fb.h"
 #include "radeonfb.h"
 #include "ati_ids.h"
 #include "vidix.h"
 #include "fourcc.h"
 
-#define rinfo rinfo_fvdi
 #undef radeon_engine_flush
 
 extern long Isin(long x);
@@ -28,7 +27,7 @@ extern long c_get_width_virtual(void);
 extern long c_get_height_virtual(void);
 extern long c_get_bpp(void);
 extern unsigned long swap_long(unsigned long val);
-extern struct radeonfb_info *rinfo_fvdi;
+extern struct fb_info *info_fvdi;
 
 #define radeon_vid_get_dbpp c_get_bpp
 #define radeon_get_xres c_get_width
@@ -129,11 +128,13 @@ static unsigned long SAVED_CONFIG_CNTL;
 
 static unsigned long inreg(unsigned long addr)
 {
+	struct radeonfb_info *rinfo = info_fvdi->par;
 	return(INREG(addr));
 }
 
 static void outreg(unsigned long addr, unsigned long val)
 {
+	struct radeonfb_info *rinfo = info_fvdi->par;
 	OUTREG(addr,val);
 }
 
@@ -164,6 +165,7 @@ static float floor(float val)
 
 static inline unsigned long INPLL(unsigned long addr)
 {
+	struct radeonfb_info *rinfo = info_fvdi->par;
 	OUTREG8(CLOCK_CNTL_INDEX, addr & 0x0000001f);
 	return(INREG(CLOCK_CNTL_DATA));
 }
@@ -180,6 +182,7 @@ static inline unsigned long INPLL(unsigned long addr)
 
 static unsigned long radeon_vid_get_dbpp(void)
 {
+	struct radeonfb_info *rinfo = info_fvdi->par;
 	unsigned long dbpp,retval;
 	dbpp = (INREG(CRTC_GEN_CNTL) >> 8) & 0xF;
 	switch(dbpp)
@@ -196,7 +199,8 @@ static unsigned long radeon_vid_get_dbpp(void)
 static unsigned long radeon_get_xres(void)
 {
 	/* FIXME: currently we extract that from CRTC!!!*/
-	unsigned long xres,h_total;
+	struct radeonfb_info *rinfo = info_fvdi->par;
+	unsigned long xres, h_total;
 	h_total = INREG(CRTC_H_TOTAL_DISP);
 	xres = (h_total >> 16) & 0xffff;
 	return((xres + 1) * 8);
@@ -205,7 +209,8 @@ static unsigned long radeon_get_xres(void)
 static unsigned long radeon_get_yres(void)
 {
 	/* FIXME: currently we extract that from CRTC!!!*/
-	unsigned long yres,v_total;
+	struct radeonfb_info *rinfo = info_fvdi->par;
+	unsigned long yres, v_total;
 	v_total = INREG(CRTC_V_TOTAL_DISP);
 	yres = (v_total >> 16) & 0xffff;
 	return(yres + 1);
@@ -235,6 +240,7 @@ static void radeon_wait_vsync(void)
 
 static inline void radeon_engine_flush(void)
 {
+	struct radeonfb_info *rinfo = info_fvdi->par;
 	int i;
 	/* initiate flush */
 	OUTREGP(RB2D_DSTCACHE_CTLSTAT, RB2D_DC_FLUSH_ALL, ~RB2D_DC_FLUSH_ALL);
@@ -247,11 +253,14 @@ static inline void radeon_engine_flush(void)
 
 static void _radeon_engine_idle(void);
 static void _radeon_fifo_wait(unsigned);
+#undef radeon_engine_idle
+#undef radeon_fifo_wait
 #define radeon_engine_idle()		_radeon_engine_idle()
 #define radeon_fifo_wait(entries)	_radeon_fifo_wait(entries)
 
 static void radeon_engine_reset(void)
 {
+	struct radeonfb_info *rinfo = info_fvdi->par;
 	unsigned long clock_cntl_index, mclk_cntl, rbbm_soft_reset;
 	radeon_engine_flush();
 	clock_cntl_index = INREG(CLOCK_CNTL_INDEX);
@@ -270,6 +279,7 @@ static void radeon_engine_reset(void)
 
 static void radeon_engine_restore(void)
 {
+	struct radeonfb_info *rinfo = info_fvdi->par;
 	int pitch64;
 	unsigned long xres,yres,bpp;
 	radeon_fifo_wait(1);
@@ -577,6 +587,7 @@ vidix_capability_t def_cap =
 
 int vixProbe(int verbose,int force)
 {
+	struct radeonfb_info *rinfo = info_fvdi->par;
 #ifdef VIDIX_ENABLE_BM
 	PCI_RSC_DESC *pci_rsc_desc;
 	unsigned long temp;
@@ -586,13 +597,13 @@ int vixProbe(int verbose,int force)
 //	DPRINT("VIDIX: vixProbe\r\n");
 	if(verbose);
 	if(force);
-	radeon_mmio_base = rinfo_fvdi->mmio_base;
-  radeon_ram_size = rinfo_fvdi->video_ram;
-	radeon_mem_base = rinfo_fvdi->fb_base;
-	radeon_mem_base_phys = rinfo_fvdi->fb_base_phys;
+	radeon_mmio_base = rinfo->mmio_base;
+  radeon_ram_size = rinfo->video_ram;
+	radeon_mem_base = rinfo->fb_base;
+	radeon_mem_base_phys = rinfo->fb_base_phys;
 #ifdef VIDIX_ENABLE_BM
 	host_mem_base_phys=0;
-	if(read_config_longword(rinfo_fvdi->handle,PCIIDR,&temp) >= 0)
+	if(read_config_longword(rinfo->handle,PCIIDR,&temp) >= 0)
 	{
 		vendor_id = (unsigned short)temp;
 		device_id = (unsigned short)(temp>>16);
@@ -636,16 +647,17 @@ int vixInit(void)
 	int i;
 	unsigned long offset;
 #endif
+	struct radeonfb_info *rinfo = info_fvdi->par;
 //	DPRINT("VIDIX: vixInit\r\n");
-	radeon_mmio_base = rinfo_fvdi->mmio_base;
-  radeon_ram_size = rinfo_fvdi->video_ram;
-	radeon_mem_base = rinfo_fvdi->fb_base;
-	radeon_mem_base_phys = rinfo_fvdi->fb_base_phys;
+	radeon_mmio_base = rinfo->mmio_base;
+  radeon_ram_size = rinfo->video_ram;
+	radeon_mem_base = rinfo->fb_base;
+	radeon_mem_base_phys = rinfo->fb_base_phys;
 	radeon_overlay_off = 0;
 	memset(&besr,0,sizeof(bes_registers_t));
-	besr.family = (unsigned)rinfo_fvdi->family;
-	besr.mobility = (unsigned )rinfo_fvdi->is_mobility;
-	besr.big_endian = (int)rinfo_fvdi->big_endian;
+	besr.family = (unsigned)rinfo->family;
+	besr.mobility = (unsigned )rinfo->is_mobility;
+	besr.big_endian = (int)rinfo->big_endian;
 	radeon_vid_make_default();
 #ifdef VIDIX_ENABLE_BM
 //	dma_phys_addrs = (unsigned long *)Mxalloc((4096*VID_PLAY_MAXFRAMES)+4095,3);
@@ -1771,6 +1783,7 @@ const float MinHScaleHard=0.75;
 
 static int radeon_vid_init_video(vidix_playback_t *config)
 {
+	struct radeonfb_info *rinfo = info_fvdi->par;
 	float H_scale_ratio, V_scale_ratio;
 	unsigned long i, src_w, src_h,dest_w, dest_h, pitch, left, leftUV, top, h_inc;
 	unsigned long val_OV0_P1_H_INC, val_OV0_P1_H_STEP_BY, val_OV0_P23_H_INC, val_OV0_P23_H_STEP_BY;
@@ -2301,6 +2314,8 @@ int vixConfigPlayback(vidix_playback_t *info)
 #if 0
 	DPRINTVAL(" src.w: ", info->src.w);	
 	DPRINTVAL(" src.h: ", info->src.h);	
+	DPRINTVAL(" dest.x: ", info->dest.x);	
+	DPRINTVAL(" dest.y: ", info->dest.y);	
 	DPRINTVAL(" dest.w: ", info->dest.w);	
 	DPRINTVAL(" dest.h: ", info->dest.h);	
 	DPRINTVAL(" dest.pitch.y: ", info->dest.pitch.y);
@@ -2317,7 +2332,7 @@ int vixConfigPlayback(vidix_playback_t *info)
 	DPRINTVALHEX(" adrs_u: ", besr.vid_buf_base_adrs_u[0]);
 	DPRINTVALHEX(" adrs_v: ", besr.vid_buf_base_adrs_v[0]);
 	DPRINT("\r\n");
-	Cconin();
+//	Cconin();
 #endif
 	return(0);
 }

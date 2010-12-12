@@ -1,0 +1,125 @@
+CT60 boot from reset
+====================
+mask interrupts
+enable FPU and superscalar inside PCR
+disable caches
+set default to copyback inside TCR
+set zone at 0x00000000 to 0x00FFFFFF in writethrough (STRAM/FLASH)
+set zone at 0x80000000 to 0xFFFFFFFF in cache inhibit precise
+ (overwrited later by init pmmu)
+test 0xFA52235F at cartridge port
+init PSG ports
+clear MFP registers
+init VIDEL palette
+set stack to 0x8870
+set all vectors to clear lower memory and reset
+set TRAPV to rte
+set INT0-7 to rte
+read F030 config 0xFFFF8006 for get STRAM size
+enable all caches
+configure CT60 SDRAM from EEPROM read and get SDRAM size
+little SDRAM test
+if SDRAM OK
+  check 2nd part of the flash and _LZ_ id and uncompress data if found
+  copy TOS404 from flash to SDRAM and apply patches (512KB)
+  copy boot from flash and uncompressed data found (drivers) to SDRAM (512KB + 192KB)
+else
+  copy TOS404 from flash to STRAM and apply patches (512KB)
+  copy boot from flash in STRAM (512KB)
+init pmmu => now TOS run in ram
+if cold start from 0xFFFF8007
+  init STRAM (clear memory)
+  set phystop
+  set ramtop  
+else
+  check resvalid and call resvector
+  check memvalid/memval2/memval3
+  if bad
+    init STRAM (clear memory)
+    set phystop
+    set ramtop  
+goto 0x00E001DA
+
+....
+
+videl boot picture (2 seconds)
+
+....
+
+0xE00632 patch entry
+flush and enable caches
+set access fault to  0xE00FB6
+check monitor from 0xFFFF8006
+if _FRQ and _FRE cookie goods select external clock at 32 MHz
+get CT60_BLITTER_SPEED and set 0xFFFF8007
+check LSHIFT-RSHIFT if pressed boot like before without SDRAM else
+if ramtop OK set ramvalid (SDRAM)
+get CT60_CLOCK / CT60_USER_DIV_CLOCK values, check CTRL/ALT, and configue CT60 / user clocks
+if not CTRL/ALT init PCI BIOS
+if CTPCI found (return from PCI BIOS init)
+  read CT60_PARAM_CTPCI and swap or not IDE address
+  if _PCI id found (from uncompressed data) call init devices inside drivers part
+                   (init devices can replace normal TOS devices)
+clear screen (white) 
+display processor / check frequency / frequency infos
+if _PCI cookie found (return from PCI BIOS init)
+  configure itf (IDE fast timing)
+display infos about hardware (return from PCI BIOS init)
+display info about clock generator
+if configure CT60 SDRAM error display error code infos and wait key loop else
+get CT60_SAVE_NVRAM_1 and if valid display NVRAM restored
+
+...
+
+0xE0096E patch entry
+display boot version
+if drivers part display drivers version
+keyboard test
+if ramvalid
+  init SDRAM (clear memory)
+  add memory to the system
+  create _FRB/XFRB cookies
+display PCI devices (return from PCI BIOS init), if error wait key
+if _PCI id found (from uncompressed data)
+  2nd call inside drivers part
+set memvalid/memval2/memval3
+call hdv_init
+
+...
+
+
+
+===========================================================================================
+
+PCI BIOS init
+=============
+if cold reset
+  write long (1 - reset) at 0xE0000020
+  if access fault return error
+  delay 1 second
+  select normal PCI space (4) at 0xE0000020
+  write base vector at 0xE0000003
+  mask interrupts at 0xE0000001
+  delay 2 seconds
+else
+  write base vector at 0xE0000003
+  mask interrupts at 0xE0000001
+  if access fault return error
+--try-again--
+init PLX
+on 1st access read PCIIDR PLX if access fault return error
+if lowest PCI zones check Ethernat/Supervidel
+create cookie _PCI
+PCI scan and init devices
+if access fault during PCI scan and init devices
+ (on 1st access read PCIIDR <=> config cycles with I/O zone)
+ if lowest PCI zones goto --try-again-- with biggest zones
+ else return error
+return OK
+
+
+
+
+
+
+

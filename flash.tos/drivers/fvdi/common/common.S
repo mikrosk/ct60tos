@@ -12,42 +12,41 @@
 * of license.
 ****/
 
-#define both			1	// Write in both FastRAM and on screen
+#define both			0	// Write in both FastRAM and on screen
 #define upto8		0	// Handle 8 bit drawing
 
 #include		"vdi.inc"
 #include		"macros.inc"
 
-//	.xdef		_line
-//	.xdef		_set_pixel
-//	.xdef		_get_pixel
-//	.xdef		_expand
-//	.xdef		_fill
-//	.xdef		_fillpoly
-//	.xdef		_blit
-//	.xdef		_text
+	.xdef		_line
+	.xdef		_set_pixel
+	.xdef		_get_pixel
+	.xdef		_expand
+	.xdef		_fill
+	.xdef		_fillpoly
+	.xdef		_blit
+	.xdef		_text
 	.xdef		_mouse
-//	.xdef		_set_palette
-//	.xdef		_colour
-//	.xdef		_initialize_palette
-//	.xdef		get_colour_masks
+	.xdef		_set_palette
+	.xdef		_colour
+	.xdef		_initialize_palette
+	.xdef		get_colour_masks
 
-//	.xref		_line_draw_r,_write_pixel_r,_read_pixel_r,_expand_area_r
-//	.xref		_fill_area_r,_fill_poly_r,_blit_area_r,_text_area_r
+	.xref		_line_draw_r,_write_pixel_r,_read_pixel_r,_expand_area_r
+	.xref		_fill_area_r,_fill_poly_r,_blit_area_r,_text_area_r
 	.xref		_mouse_draw_r
 	.xref		_set_colours_r,_get_colour_r
-//	.xref		_fallback_line,_fallback_text,_fallback_fill
-//	.xref		_fallback_fillpoly,_fallback_expand,_fallback_blit
-//	.xref		clip_line
-//	.xref		_mask
+	.xref		_fallback_line,_fallback_text,_fallback_fill
+	.xref		_fallback_fillpoly,_fallback_expand,_fallback_blit
+	.xref		clip_line
+	.xref		_mask
+	.xref		_update_mono
 
 
 	.text
 
-#if 0
-
-	.asciz		"set_pixel"
-	.align		2
+//	.asciz		"set_pixel"
+//	.align		2
 /*--------
 * Set a coloured pixel
 * In:	a0	VDI struct, destination MFDB (odd address marks table operation)
@@ -61,11 +60,18 @@
 *-------*/
 _set_pixel:
 set_pixel:
+#ifndef COLDFIRE
 	movem.l		d0-d7/a0-a6,-(a7)	// Used to have -3/4/6 for normal/both/upto8
 
 	move.l		a0,a1
 
+#ifdef COLDFIRE
+	.chip		68060
+	jsr		([_write_pixel_r])
+	.chip		5200
+#else
 	ijsr		_write_pixel_r
+#endif
 	tst.l		d0
 	bgt		.write_done
 
@@ -83,18 +89,25 @@ set_pixel:
 	move.l		a2,2(a7)
 	move.l		6(a7),a1
 	move.l		10+0(a7),d0		// Fetch d0
+#ifdef COLDFIRE
+	.chip		68060
+	jsr		([_write_pixel_r])
+	.chip		5200
+#else
 	ijsr		_write_pixel_r
+#endif
 	subq.w		#1,(a7)
 	bne		.write_loop
 	add.w		#10,a7
 .write_done:
 
 	movem.l		(a7)+,d0-d7/a0-a6
+#endif
 	rts
 
 
-	.asciz		"get_pixel"
-	.align		2
+//	.asciz		"get_pixel"
+//	.align		2
 /*--------
 * Get a coloured pixel
 * In:	a0	VDI struct, source MFDB
@@ -107,18 +120,26 @@ set_pixel:
 *-------*/
 _get_pixel:
 get_pixel:
+#ifndef COLDFIRE
 	movem.l		d1-d7/a0-a6,-(a7)	// Used to have -3/4/6 for normal/both/upto8
 
 	move.l		a0,a1
 	
+#ifdef COLDFIRE
+	.chip		68060
+	jsr		([_read_pixel_r])
+	.chip		5200
+#else
 	ijsr		_read_pixel_r
+#endif
 
 	movem.l		(a7)+,d1-d7/a0-a6
+#endif
 	rts
 
 
-	.asciz		"line"
-	.align		2
+//	.asciz		"line"
+//	.align		2
 /*--------
 * Draw a colored line between 2 points
 * In:	a0	VDI struct (odd address marks table operation)
@@ -140,12 +161,19 @@ get_pixel:
 *-------*/
 _line:
 line:
+#ifndef COLDFIRE
 	movem.l		d0-d7/a0-a6,-(a7)	// Used to have -3/4/6 for normal/both/upto8
 
 	move.l		a0,a1
 	exg		d0,d6
 
+#ifdef COLDFIRE
+	.chip		68060
+	jsr		([_line_draw_r])
+	.chip		5200
+#else
 	ijsr		_line_draw_r
+#endif	
 	tst.l		d0
 	lbgt		.line1
 	lbmi		.line2
@@ -153,6 +181,7 @@ line:
 	bra		give_up
 
 .line1:
+	jsr		_update_mono
 	movem.l		(a7)+,d0-d7/a0-a6
 	rts
 
@@ -199,7 +228,13 @@ line:
 	move.l		5*4(a7),d5		// Pattern
 	move.l		6*4(a7),d0		// Mode
 	movem.l		d7/a1-a2/a6,-(a7)
+#ifdef COLDFIRE
+	.chip		68060
+	jsr		([_line_draw_r])
+	.chip		5200
+#else
 	ijsr		_line_draw_r
+#endif
 	movem.l		(a7)+,d7/a1-a2/a6
 .no_draw:
 	tst.w		d7
@@ -226,12 +261,14 @@ line:
 	subq.w		#1,2*4(a7)
 	bgt		.line_loop
 .line_done:
+	jsr		_update_mono
 	movem.l		(a7)+,d0-d7/a0-a6
+#endif
 	rts
 
 
-	.asciz		"expand"
-	.align		2
+//	.asciz		"expand"
+//	.align		2
 /*---------
 * Expand a monochrome area to multiple bitplanes
 * In:	a0	VDI struct, destination MFDB, VDI struct, source MFDB
@@ -247,6 +284,7 @@ line:
 *-------*/
 _expand:
 expand:
+#ifndef COLDFIRE
 	movem.l		d0-d7/a0-a6,-(a7)	// Used to have -3(/6)/4(/6)/6 for normal/both/upto8
 
 	move.l		a0,a1
@@ -259,7 +297,13 @@ expand:
 	sub.w		d3,d0
 	addq.w		#1,d0
 
+#ifdef COLDFIRE
+	.chip		68060
+	jsr		([_expand_area_r])
+	.chip		5200
+#else
 	ijsr		_expand_area_r
+#endif
 	tst.l		d0
 	lbgt		.expand1
 	move.l		_fallback_expand,d0
@@ -267,11 +311,12 @@ expand:
 
 .expand1:
 	movem.l		(a7)+,d0-d7/a0-a6
+#endif
 	rts
 
 
-	.asciz		"fill"
-	.align		2
+//	.asciz		"fill"
+//	.align		2
 /*--------
 * Fill a multiple bitplane area using a monochrome pattern
 * In:	a0	VDI struct (odd address marks table operation)
@@ -294,6 +339,7 @@ expand:
 *-------*/
 _fill:
 fill:
+#ifndef COLDFIRE
 	movem.l		d0-d7/a0-a6,-(a7)	// Used to have -3/4/6 for normal/both/upto8
 
 	move.l		a0,a1
@@ -345,7 +391,13 @@ fill:
 
 	move.l		d5,d3
 
+#ifdef COLDFIRE
+	.chip		68060
+	jsr		([_fill_area_r])
+	.chip		5200
+#else
 	ijsr		_fill_area_r
+#endif
 	tst.l		d0
 	lbgt		.fill1
 	lbmi		.fill2
@@ -369,6 +421,7 @@ fill:
 	addq.l		#8,a7
     .endc
   .endc
+	jsr		_update_mono
 	movem.l		(a7)+,d0-d7/a0-a6
 	rts
 
@@ -393,17 +446,25 @@ fill:
 	move.l		5*4(a7),d3
 	move.l		0(a7),d4
 	movem.l		a1-a2,-(a7)
+#ifdef COLDFIRE
+	.chip		68060
+	jsr		([_fill_area_r])
+	.chip		5200
+#else
 	ijsr		_fill_area_r
+#endif
 	movem.l		(a7)+,a1-a2
 	subq.w		#1,2*4(a7)
 	bne		.fill_loop
 .fill_done:
+	jsr		_update_mono
 	movem.l		(a7)+,d0-d7/a0-a6
+#endif
 	rts
 
 
-	.asciz		"fillpoly"
-	.align		2
+//	.asciz		"fillpoly"
+//	.align		2
 /*--------
 * Fill a multiple bitplane polygon using a monochrome pattern
 * In:	a0	VDI struct (odd address marks table operation)
@@ -427,6 +488,7 @@ fill:
 *-------*/
 _fillpoly:
 fillpoly:
+#ifndef COLDFIRE
 	movem.l		d0-d7/a0-a6,-(a7)	// Used to have -3/4/6 for normal/both/upto8
 
 	move.l		a0,a1
@@ -474,7 +536,13 @@ fillpoly:
 	move.l	d3,d2
 	move.l	d5,d3
 
+#ifdef COLDFIRE
+	.chip		68060
+	jsr		([_fill_poly_r])
+	.chip		5200
+#else
 	ijsr		_fill_poly_r
+#endif
 	tst.l		d0
 	lbgt		.fillpoly1
 
@@ -499,11 +567,12 @@ fillpoly:
     .endc
   .endc
 	movem.l		(a7)+,d0-d7/a0-a6
+#endif
 	rts
 
 
-	.asciz		"blit"
-	.align		2
+//	.asciz		"blit"
+//	.align		2
 /*--------
 * Blit an area
 * In:	a0	VDI struct, destination MFDB, VDI struct, source MFDB
@@ -518,6 +587,7 @@ fillpoly:
 *-------*/
 _blit:
 blit:
+#ifndef COLDFIRE
 	movem.l		d0-d7/a0-a6,-(a7)	// Used to have -3/4/6 for normal/both/upto8
 
 	move.l		a0,a1
@@ -532,7 +602,13 @@ blit:
 	sub.w		d3,d0
 	addq.w		#1,d0
 
+#ifdef COLDFIRE
+	.chip		68060
+	jsr		([_blit_area_r])
+	.chip		5200
+#else
 	ijsr		_blit_area_r
+#endif
 	tst.l		d0
 	lbgt		.blit1
 	move.l		_fallback_blit,d0
@@ -540,11 +616,12 @@ blit:
 
 .blit1:
 	movem.l		(a7)+,d0-d7/a0-a6
+#endif
 	rts
 
 
-	.asciz		"text"
-	.align		2
+//	.asciz		"text"
+//	.align		2
 /*--------
 * Draw some text
 * In:	a0	VDI struct
@@ -560,6 +637,7 @@ blit:
 *-------*/
 _text:
 text:
+#ifndef COLDFIRE
 	movem.l		d0-d7/a0-a6,-(a7)	// Was d2-d7/a3-a6
 
 	move.l		a1,a4
@@ -569,7 +647,13 @@ text:
 	swap		d1
 	move.w		d1,d3
 
+#ifdef COLDFIRE
+	.chip		68060
+	jsr		([_text_area_r])
+	.chip		5200
+#else
 	ijsr		_text_area_r
+#endif
 	tst.l		d0
 	lbgt		.text1
 	move.l		_fallback_text,d0
@@ -577,12 +661,12 @@ text:
 
 .text1:
 	movem.l		(a7)+,d0-d7/a0-a6
+#endif
 	rts
 
-#endif
 
-	.asciz		"mouse"
-	.align		2
+//	.asciz		"mouse"
+//	.align		2
 /*--------
 * Draw the mouse
 * In:	a1	Pointer to Workstation struct
@@ -597,13 +681,18 @@ text:
 *-------*/
 _mouse:
 mouse:
+#ifdef COLDFIRE
+	.chip		68060
+	jsr		([_mouse_draw_r])
+	.chip		5200
+#else
 	ijsr		_mouse_draw_r
+#endif
 	rts
 
-#if 0
 
-	.asciz		"set_palette"
-	.align		2
+//	.asciz		"set_palette"
+//	.align		2
 /*--------
 * Set palette colours
 * In:	a0	VDI struct
@@ -613,16 +702,24 @@ mouse:
 *-------*/
 _set_palette:
 set_palette:
+#ifndef COLDFIRE
 	movem.l		d0-d7/a0-a6,-(a7)	// Overkill
 
+#ifdef COLDFIRE
+	.chip		68060
+	jsr		([_set_colours_r])
+	.chip		5200
+#else
 	ijsr		_set_colours_r
+#endif
 
 	movem.l		(a7)+,d0-d7/a0-a6
+#endif
 	rts
 
 
-	.asciz		"colour"
-	.align		2
+//	.asciz		"colour"
+//	.align		2
 /*--------
 * Get palette colour
 * In:	a0	VDI struct
@@ -631,22 +728,31 @@ set_palette:
 *-------*/
 _colour:
 colour:
+#ifndef COLDFIRE
 	movem.l		d1-d7/a0-a6,-(a7)
 
+#ifdef COLDFIRE
+	.chip		68060
+	jsr		([_get_colour_r])
+	.chip		5200
+#else
 	ijsr		_get_colour_r
+#endif
 
 	movem.l		(a7)+,d1-d7/a0-a6
+#endif
 	rts
 
   .ifne	1
-	.asciz		"initialize_palette"
-	.align		2
+//	.asciz		"initialize_palette"
+//	.align		2
 /*--------
 * Set palette colours
 * initialize_palette(Virtual *vwk, int start, int n, int requested[][3], Colour palette[])
 * To be called from C
 *-------*/
 _initialize_palette:
+#ifndef COLDFIRE
 	movem.l		d0-d7/a0-a6,-(a7)	// Overkill
 
 	move.l		15*4+4(a7),a0
@@ -657,11 +763,19 @@ _initialize_palette:
 	move.l		15*4+16(a7),a1
 	move.l		15*4+20(a7),a2
 
+#ifdef COLDFIRE
+	.chip		68060
+	jsr		([_set_colours_r])
+	.chip		5200
+#else
 	ijsr		_set_colours_r
+#endif
 
 	movem.l		(a7)+,d0-d7/a0-a6
+#endif
 	rts
   .endc
+  
 
 /*---------
 * Get colour masks
@@ -673,6 +787,7 @@ _initialize_palette:
 * XXX:	d0
 *-------*/
 get_colour_masks:
+#ifndef COLDFIRE
 	lea		_mask,a3
   .ifne	upto8
 	move.w		d0,a2
@@ -690,8 +805,10 @@ get_colour_masks:
 	move.l		0(a3,d0.w),a2
 	move.l		4(a3,d0.w),a3
 	move.l		(a7)+,d0
+#endif
 	rts
 
+#ifndef COLDFIRE
 /*---------
 * Give up and try other function
 * This routine should only be branched to, it's not a subroutine!
@@ -706,5 +823,4 @@ give_up:
 .return:
 	movem.l	(a7)+,d0-d7/a0-a6
 	rts
-
 #endif

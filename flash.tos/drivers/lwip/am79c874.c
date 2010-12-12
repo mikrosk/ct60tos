@@ -48,7 +48,12 @@ int am79c874_init(uint8 fec_ch, uint8 phy_addr, uint8 speed, uint8 duplex)
 #endif
 	/* Reset the PHY */
 	if(!fec_mii_write(fec_ch, phy_addr, MII_AM79C874_CR, MII_AM79C874_CR_RESET))
+	{
+#ifdef DEBUG
+		conws_debug("PHY error reset\r\n");
+#endif
 		return 0;
+	}
 	/* Wait for the PHY to reset */
 	for(timeout = 0; timeout < FEC_MII_TIMEOUT; timeout++)
 	{
@@ -57,7 +62,12 @@ int am79c874_init(uint8 fec_ch, uint8 phy_addr, uint8 speed, uint8 duplex)
 			break;
 	}
 	if(timeout >= FEC_MII_TIMEOUT)
+	{
+#ifdef DEBUG
+		conws_debug("PHY error reset timeout\r\n");
+#endif
 		return 0;
+	}
 #ifdef DEBUG
 	conws_debug("PHY reset OK\r\n");
 #endif
@@ -66,7 +76,12 @@ int am79c874_init(uint8 fec_ch, uint8 phy_addr, uint8 speed, uint8 duplex)
 #endif
 	/* Enable Auto-Negotiation */
 	if(!fec_mii_write(fec_ch, phy_addr, MII_AM79C874_CR, MII_AM79C874_CR_AUTON | MII_AM79C874_CR_RST_NEG))
+	{
+#ifdef DEBUG
+		conws_debug("PHY error enable Auto-Negotiation\r\n");
+#endif
 		return 0;
+	}
 #ifdef DEBUG
 	conws_debug("PHY Wait for auto-negotiation to complete\r\n");
 #endif
@@ -85,7 +100,12 @@ int am79c874_init(uint8 fec_ch, uint8 phy_addr, uint8 speed, uint8 duplex)
 #endif
 		/* Set the default mode (Full duplex, 100 Mbps) */
 		if(!fec_mii_write(fec_ch, phy_addr, MII_AM79C874_CR, MII_AM79C874_CR_100MB | MII_AM79C874_CR_DPLX))
+		{
+#ifdef DEBUG
+			conws_debug("PHY error set default mode\r\n");
+#endif
 			return 0;
+		}
 	}
 #ifdef DEBUG
 	settings = 0;
