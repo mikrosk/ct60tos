@@ -1,0 +1,4147 @@
+@subject "Documentation"
+@author "Didier MEQUIGNON"
+@database "Documentation of the CT60"
+@$VER: Version 2.01 (July 24, 2011)
+
+@node "Title"
+@{U}Title                                                             CT60@{u}
+
+
+@autorefoff
+                         Documentation of the
+
+
+@limage G:\TOS060\DOC\CT60\ENGLISH\..\img\ct60.img 19
+                             Version 2.01
+                            July 24, 2011
+
+                                  by
+
+                           Didier MEQUIGNON
+                        25, rue de l'Ascenseur
+                         62510 ARQUES FRANCE
+
+                         aniplay@@wanadoo.fr
+@autorefon
+
+
+                               Contents
+@endnode
+
+
+@node Main "Contents"
+@symbol "Contents"
+@toc "Title"
+@{U}Contents                                                          CT60@{u}
+
+
+ 1  Presentation
+    1.1  Features
+    1.2  Processor
+    1.3  RAM
+    1.4  Overclocking the FALCON mainboard !
+    1.5  Solders free !
+    1.6  BUS SLOT
+    1.7  FALCON BUS cards
+    1.8  ATX Power Supply
+    1.9  ATX Tower
+    1.10  FALCON Mode
+
+ 2  SDRAM
+
+ 3  Fitting
+    3.1  CT60
+    3.2  CT60-100 clock
+    3.3  Programmable clock generator
+         3.3.1  The ak-modul-bus module with a CY27EE16
+         3.3.2  The CTCM module with a DS1085Z-50
+
+ 4  TOS in Flash
+    4.1  Technical
+    4.2  Boot menu
+         4.2.1  Bootargs extension (Linux)
+    4.3  SDRAM identification
+    4.4  SDRAM test
+
+ 5  Atari Diagnostics
+    5.1  Main Keys
+    5.2  Help
+    5.3  Error Codes Quick Reference
+         5.3.1  Initialisation (Errors occuring before the title and menu appear)
+         5.3.2  Exceptions (may occur at any time)
+         5.3.3  SRAM (DSP), ST-RAM and SDRAM
+         5.3.4  MIDI
+         5.3.5  Serial Ports
+         5.3.6  SCC Interrupt Errors
+         5.3.7  Timming
+         5.3.8  Blitter
+         5.3.9  Real-Time Clock
+         5.3.10  SCSI
+         5.3.11  Keyboard
+         5.3.12  IDE
+         5.3.13  Printer and Joystick Ports
+         5.3.14  Floppy Disk Drive
+         5.3.15  Expansion Port
+         5.3.16  DSP Port Error Codes
+         5.3.17  EEPROM SDRAM
+
+ 6  Flash Tool
+    6.1  Use Flash Tool
+    6.2  JTAG CT60 connector
+    6.3  JTAG/parallel download cable
+
+ 7  Configuration
+    7.1  Introduction
+    7.2  Average load
+    7.3  Temperature
+    7.4  Memory / uP
+         7.4.1  Change the CT60 frequency
+    7.5  Boot
+         7.5.1  Selection TOS in RAM (obsolete)
+    7.6  Stop/Misc
+    7.7  Langage
+    7.8  Video
+    7.9  CT60TEMP.APP
+    7.10  Informations about the SDRAM
+    7.11  BubbleGEM
+
+ 8  Cache
+    8.1  The 68060's caches
+    8.2  GENERAL6.CPX
+    8.3  XCONTROL, ZCONTROL, COPS, and SDRAM in copyback
+    8.4  PARX.SYS modules and the copyback
+    8.5  TSR programs who crashes in the AUTO folder
+    8.6  Programs packed by Ice
+
+ 9  Compatibility
+    9.1  Crashes
+    9.2  DSP
+    9.3  Patchs
+         9.3.1  MagiC
+    9.4  Solutions
+
+10  CT60 HARDWARE GUIDE
+   10.1  FUNCTIONAL BLOCK DIAGRAM
+   10.2  ADDRESSES & REGISTERS
+        10.2.1  68030 VIEW 24-Bit MAP
+        10.2.2  68060 VIEW 32-Bit MAP
+        10.2.3  REGISTERS SUMMARY
+        10.2.4  SDR60 REGISTERS DETAILS
+        10.2.5  ABE60 REGISTERS DETAILS
+   10.3  060 BUS SLOT
+   10.4  HARDWARE EMULATION
+   10.5  THERMAL SENSOR
+   10.6  DIMM EEPROM
+        10.6.1  EEPROM DATA
+        10.6.2  I2C 2-wire PROTOCOL
+        10.6.3  RANDOM READ PROTOCOL & SOFTWARE
+   10.7  DIMM SDRAM for CT60
+   10.8  060 BURST with SDRAM
+   10.9  INTERRUPTS
+   10.10  CHIPSETS pinouts
+        10.10.1  SDR-60
+        10.10.2  ABE-60
+
+11  Annexes
+   11.1  Board
+   11.2  Connectors
+   11.3  TOS Keyboard shortcuts
+
+12  Contacts
+@endnode
+
+
+@node "Presentation"
+@toc "Main"
+@{U}1  Presentation                                                   CT60@{u}
+
+@{B} By Rodolphe Czuba @{b}
+
+You have more than enough to compile at the speed of a snail?
+
+You want to surf quickly on Web?
+
+You want calculate pictures under POV, make DTP or Graphics in a
+highly speed?
+
+You want to run suitably applications as one to encode MP3 or a
+console Java under Mint?
+
+You want keep totality of your software library?
+
+You do not want you separate from all which makes the charm of your
+Falcon, his sound system, DSP, and all the connectique (SCSI, MIDI,
+Joystick ports, etc...)?
+
+You have not an accelerator or you search for an new fast
+accelerator, seize the opportunity !
+
+Don't send your Falcon at the retirement !
+
+ 1.1  Features
+ 1.2  Processor
+ 1.3  RAM
+ 1.4  Overclocking the FALCON mainboard !
+ 1.5  Solders free !
+ 1.6  BUS SLOT
+ 1.7  FALCON BUS cards
+ 1.8  ATX Power Supply
+ 1.9  ATX Tower
+ 1.10  FALCON Mode
+
+@endnode
+
+
+@node "Features"
+@toc "Presentation"
+@{U}1.1  Features                                                     CT60@{u}
+
+   ù SOCKETED 060 FULL(COPRO & PMMU) or LC (NO COPRO) at 66 MHz (mask
+     1F43G) or 100 MHz (mask 1E41J).
+
+   ù Bus CT60 at 66 MHz or 100 MHz (SDRAM & 060 BUS accesses).
+
+   ù SDRAM PC100/133 at 66 MHz or more with READ & WRITE BURST
+     accesses.
+
+   ù 1 SDRAM PC100/133 socket for 64 MB to 512 MB.
+
+   ù FLASH of 1MB with BOOT, SETUP, 060 INIT and patchs for TOS. Can
+     be easely updated !
+
+   ù Switch to commute between the 060 and the 030 of the Falcon.
+
+   ù 100% Falcon 030 mode available. The 68882 is available with the
+     030 mode.
+
+   ù Easy fitting WITHOUT SOLDERS in the original Falcon case,
+     without the Falcon power supply that is replaced by an external
+     standard ATX power supply (or into an ATX tower).
+
+   ù 060 Bus Slot for adding a daughter card (PCI/AGP, PowerPC, ...).
+
+   ù OPTION to boost the Falcon mainboard with 6 wires to be soldered
+     : DSP & VIDEL at 40 MHz, Bus at 20 MHz.
+
+@endnode
+
+
+@node "Processor"
+@toc "Presentation"
+@{U}1.2  Processor                                                    CT60@{u}
+
+With its FULL (FL) version, the 68060, like the 68040, integrates a
+FPU (Coprocessor) that is really more powerfull than the old 68882.
+
+With the LC version, the 060 has no FPU, this processor is not
+supported since the boot 2.00.
+
+With the EC version, the 060 has no FPU and no PMMU, this processor
+is not supported since the boot 2.00.
+
+The 060 is a dream and the first reason is its wonderfull computing
+power regarding the previous ones in the 68K familly :
+
+
+@line 6 0 11
+@line 51 0 11
+@line 57 0 11
+@line 65 0 11
+@line 6 59 0
+      CPU                                          MIPS  FACTOR 
+@line 6 59 0
+      68060 @@ 100 MHz (CT60-100)                   147   25.5   
+      68060 @@ 75 MHz (from Motorola 2001)          110   19.1   
+      68060 @@ 66 MHz (CT60)                        96.8  16.8   
+      68060 @@ 59 MHz (HADES60)                     86.5  15.0   
+      68040 @@ 40 MHz (AB40 at 40 / Motorola 2001)  44    7.6    
+      68040 @@ 32 MHz (HADES40 & AB40 at 32)        35.2  6.1    
+      68040 @@ 25 MHz (MILAN40)                     27.5  4.8    
+      68030 @@ 50 MHz (CT2)                         18    3.1    
+      68030 @@ 32 MHz (TT030)                       11.5  2.0    
+      68030 @@ 16 MHz (Falcon/Motorola 2001)        5.76  1.0    
+@line 6 59 0
+
+
+@endnode
+
+
+@node "RAM"
+@toc "Presentation"
+@{U}1.3  RAM                                                          CT60@{u}
+
+Upper 40 MHz, the SDRAM is accessed with 1 cycle while the EDO need 2
+cycles.
+
+The RAM of the CT60 is equivalent with the TT-Ram (same address :
+$01000000).
+
+CT60 is the only one product that uses the SDRAM ! The consequences
+on performances are clear :
+
+
+@line 1 0 14
+@line 17 0 14
+@line 27 0 14
+@line 34 0 14
+@line 46 0 14
+@line 58 0 14
+@line 71 0 14
+@line 1 70 0
+ PRODUCT         BUS       RAM    READ        WRITE       FACTOR      
+@line 1 70 0
+ CT60-95-CTPCI   95 MHz    SDRAM  92.9 Mo/s   91.6 Mo/S   20.4 - 16.6 
+ CT60-100        100 MHz   SDRAM  104.4 MB/s  102.8 MB/s  22.9 - 18.7 
+ CT60            66 MHz    SDRAM  73.8 MB/s   72.6 MB/s   16.2 - 13.2 
+ HADES60 FPM     29.5 MHz  FPM    43.0 MB/s   33.5 MB/s   9.5 - 6.1   
+ HADES40 FPM     32 MHz    FPM    46.5 MB/s   36.2 MB/s   10.2 - 6.6  
+ MILAN40         25 MHz    EDO    35.7 MB/s   21.5 MB/s   7.8 - 3.9   
+ CT2b            50 MHz    EDO    32.4 MB/s   38.7 MB/s   7.1 - 7.0   
+ AB40            32 MHz    FPM    34.6 MB/s   17.0 MB/s   7.6 - 3.1   
+ MEDUSA T40      16 MHz    FPM    20.0 MB/s   21.9 MB/s   4.4 - 4.0   
+ TT030 TT-RAM    16 MHz    FPM    12.6 MB/s   15.6 MB/s   2.8 - 2.8   
+ TT030 ST-RAM    16 MHz    FPM    7.9 MB/s    7.9 MB/s    1.7 - 1.4   
+ FALCON+MAGNUM   16 MHz    FPM    5.7 MB/s    6.9 MB/s    1.25 - 1.25 
+ FALCON(VGA16c)  16 MHz    FPM    4.55 MB/s   5.5 MB/s    1.00 - 1.00 
+@line 1 70 0
+
+
+(MB=MegaBytes) - ALL TESTS REALIZED WITH NEMBENCH 2.1 in 2003 and
+2010 for the CTPCI
+
+@endnode
+
+
+@node "Overclocking the FALCON mainboard !"
+@toc "Presentation"
+@{U}1.4  Overclocking the FALCON mainboard !                          CT60@{u}
+
+It is possible to boost the Falcon mainboard from 16 to 20 MHz. In
+such case, the DSP and VIDEL are clocked at 40 MHz. In this case, 6
+wires have to be soldered on the mainboard...
+
+@endnode
+
+
+@node "Solders free !"
+@toc "Presentation"
+@{U}1.5  Solders free !                                               CT60@{u}
+
+CT60 is PLUG'N PLAY !
+
+The previous accelerator boards always required you cut and solder on
+the motherboard, but now thanks to a revolutionnary hardware design,
+the mainboard is not touched by the fitting.
+
+From a base Falcon, there are ANY SOLDERS to fit the CT60 ! In this
+case, the Falcon mainboard is not boosted.
+
+The CT60 is compatible with all boosted Falcon mainboards, except
+those boosted by a CT2...
+
+From a CT2 accelerated Falcon, it is necessary to assemble back the
+Falcon in base state. This means if you remove a CT2, you have to put
+again the GAL chips U62,63,67,68 and U44, and the CPU if it was
+unsoldered. The timings of the equations in those GAL were not
+compatible with the accesses at 50 MHz by the CT2, especially for the
+DSP. But CT60 accesses the Falcon at 16 MHz and this didn't ever
+cause a problem in those GAL. If you didn't keep these components,
+they will be furnished and the CPU will be freely soldered.
+
+@endnode
+
+
+@node "BUS SLOT"
+@toc "Presentation"
+@{U}1.6  BUS SLOT                                                     CT60@{u}
+
+CT60 is evolutive ! The 060 busses (Data, Add & Control) are present
+on two HE13 Male connectors of 2x25 pins, giving a total of 100 pins.
+
+The first add-on card that will be available is a PCI adaptor. This
+one will be very performant because of the 060 accesses with 32-bit
+wide data at 66 MHz, what is 8 times faster than the slow rate of the
+actual or futur (?) Eclipse adaptor connected on the Falcon bus 16-
+bit wide at 16 MHz : 66/16 MHz = 4.1 and 32/16 bits = 2. Sure, a new
+Eclipse with 32-bit Data & 060 protocol could be a good solution...
+
+And why not a AGP 1x adaptor at 66 MHz...
+
+A PPC card is too possible because the 060 SLOT has MASTER
+capabilities, the arbitration with the 060 being already included in
+the CT60 logic.
+
+In all case, the software & hardware developers are welcome.
+
+@endnode
+
+
+@node "FALCON BUS cards"
+@toc "Presentation"
+@{U}1.7  FALCON BUS cards                                             CT60@{u}
+
+ALL actual and old Falcon BUS add-on cards are compatible with the
+CT60 !
+
+Screen Eyes, Expose, Nova, Eclipse, Tempest (why not) can be used
+with CT60 because CT60 don't modify the hardware of Falcon Bus (no
+solders for the fitting).
+
+The CT60 don't give you a new Falcon bus slot because it is not
+needed ! The method is simple : keep your Falcon daughter card on the
+Falcon slot and solder 2 Male/Male HE13 connectors (2x15 & 2x25) on
+your 'old' card and plug the CT60 on it ! Sure, in this configuration
+the keyboard is out of the Falcon case !
+
+@endnode
+
+
+@node "ATX Power Supply"
+@toc "Presentation"
+@{U}1.8  ATX Power Supply                                             CT60@{u}
+
+CT60 needs a voltage of 3.3V and 8 Amperes at least for the 060, the
+SDRAM, the 060 BUS port, the logic and the buffers, and the Falcon
+power supply would have been not sufficient in the case of a 5V->3.3V
+expensive voltage regulator on the CT60. An ATX power supply is
+absolutely required to replace the Falcon power supply and free the
+area for the CT60.
+
+ATX power supplies of 250 Watts, with an ON/OFF AC switch, are
+available anywhere for about 29 EUR.
+
+@endnode
+
+
+@node "ATX Tower"
+@toc "Presentation"
+@{U}1.9  ATX Tower                                                    CT60@{u}
+
+The CT60 is featured with a HE13 connector for the features found on
+the front of a modern tower : POWER Led, IDE Led, RESET push button,
+POWER push button. Plus (no more present on the ATX tower) a
+NORMAL/TURBO switch you will have to fix somewhere.
+
+With the POWER switch, you can power on your falcon. You have to
+understand that the ATX power supplies (in the major cases) have no
+more 120/240V ON/OFF switch because they are drived by the ACPI
+modern OS functions allowing to set the computer in a 'standby' or
+'suspend' mode instead of turning OFF the power supply. This low
+power setting is done by the power push button of the tower, and the
+CT60 is managing this feature !
+
+A SLEEP function (SLP) was even added in the hardware and manageable
+by a software (an ACC or a CPX) to 'sleep" the machine (like the
+windows menu).
+
+The Power Led has a double utility managed by the CT60 : When the
+power supply is ON, the led lighting normally, and when the power
+supply is suspended (off in fact), the led is lighting weakly
+indicating that your machine is OFF but stills connected to AC power.
+
+@endnode
+
+
+@node "FALCON Mode"
+@toc "Presentation"
+@{U}1.10  FALCON Mode                                                 CT60@{u}
+
+The 030 allows you to launch the old software that cannot run on the
+060 and to copy/patch the TOS in the CT60 Flash.
+
+The PMMU and DSP routs patchs are necessary, by example.
+
+The Flash can be accessed by the 030 and by the 060 and will allow
+all developers to modify and personalize their machine as they want.
+
+The Falcon mode is your original Falcon and give you the inssurance
+that software run like previously.
+
+The small problems of the CT2, as the DSP INT, the FAST-Ram mapped by
+the PMMU and the Bus Error under $400 are solved.
+
+@endnode
+
+
+@node "SDRAM"
+@toc "Main"
+@{U}2  SDRAM                                                          CT60@{u}
+
+@{B} By Rodolphe Czuba @{b}
+
+CT60 don't run without SDRAM !
+
+The CT60 supports the PC100 & PC133 standard SDRAM DIMMs, but some
+obsolet or uneeded DIMMs are not accepted.
+
+In general, PC market provides Unbuffured 64-bits models, what you
+need for CT60.
+
+ATTENTION :
+
+Don't confuse SDRAM (logical) banks (2 or 4 into a chip) with DIMM
+(physical) banks (Single or double side DIMM) !
+
+SDRAM DIMMs for CT60 :
+
+   ù Must be PC100 or PC133 CL2.
+
+   ù Must be UNBUFFURED.
+
+   ù Must be populated with 4 logical banks chips (2 banks, obsolet,
+     are refused). All DIMM > 32MB use 4 banks chips.
+
+   ù 64 Bits (no Parity / ECC = 72 / 80 bits).
+
+
+@line 10 0 13
+@line 18 0 13
+@line 29 0 13
+@line 40 0 13
+@line 55 0 13
+@line 61 0 13
+@line 10 51 0
+          Module  Nbr chips  Nbr sides  Organization   PAGE 
+@line 10 51 0
+          64 MB       4          2      4M x 16 bits   4KB  
+          64 MB       8          1      8M x 8 bits    8KB  
+          64 MB       4          1      8M x 16 bits   8KB  
+          128 MB      8          2      8M x 8 bits    8KB  
+          128 MB      4          2      8M x 16 bits   8KB  
+          128 MB      8          1      16M x 8 bits   16KB 
+          128 MB      4          1      16M x 16 bits  8KB  
+          256 MB      8          2      16M x 8 bits   16KB 
+          256 MB      4          2      16M x 16 bits  8KB  
+          256 MB      8          1      32M x 8 bits   16KB 
+          512 MB      8          2      32M x 8 bits   16KB 
+          512 MB      4          2      32M x 16 bits  16KB 
+@line 10 51 0
+
+
+NOT SUPPORTED SDRAM DIMMs :
+
+   ù All OBSOLET models : 8MB, 16MB & 32MB DIMMs.
+
+   ù All DIMMs with 2 logical banks chips (needs 4 banks chips).
+
+   ù REGISTERED / BUFFURED DIMMs (generally for Work Stations &
+     Servers, not consumer PC).
+
+   ù All DIMM with only TWO chips on one side (32-bit data width
+     chips).
+
+   ù 512 MB DIMM with chips on 1 side.
+
+@endnode
+
+
+@node "Fitting"
+@toc "Main"
+@{U}3  Fitting                                                        CT60@{u}
+
+ 3.1  CT60
+ 3.2  CT60-100 clock
+ 3.3  Programmable clock generator
+      3.3.1  The ak-modul-bus module with a CY27EE16
+      3.3.2  The CTCM module with a DS1085Z-50
+
+@endnode
+
+
+@node "CT60"
+@toc "Fitting"
+@{U}3.1  CT60                                                         CT60@{u}
+
+The CT60 is PLUG'N PLAY !
+
+Look at http://www.czuba-tech.com for informations.
+
+@endnode
+
+
+@node "CT60-100 clock"
+@toc "Fitting"
+@{U}3.2  CT60-100 clock                                               CT60@{u}
+
+For get a better clock and remove crash at 100 MHz, you need this
+modification :
+
+At the left of the 100 MHz oscillator, there are IC3, a CY2309.
+
+Inside this chip there are a PLL (Phase Locked Loop), it's possible
+to use a part of this chip for obtain a better clock.
+
+The pin 9 is connect to the ground, cut this pin.
+
+
+  | | | | | | | | |        +------+
+ +-----------------+       |      |
+ |8               1|       |100MHz|
+ |   CY2309       (        |      |
+ |9              16|       | OSC  |
+ +------------------       |      |
+  X | | | | | | | |        +------+
+
+  ^
+  |
+
+ here
+
+@endnode
+
+
+@node "Programmable clock generator"
+@toc "Fitting"
+@{U}3.3  Programmable clock generator                                 CT60@{u}
+
+There are two solutions for install a programmable clock generator on
+the CT60 :
+
+   ù The first, more precise, use a german module ak-modul-bus with a
+     chip Cypress CY27EE16 (quartz reference and phase looked loop
+     PLL).
+
+   ù The second, less expensive on a little board, use a CTCM module
+     with a chip Dallas DS1085Z-50 (voltage control oscillator VCO).
+
+ 3.3.1  The ak-modul-bus module with a CY27EE16
+ 3.3.2  The CTCM module with a DS1085Z-50
+
+@endnode
+
+
+@node "The ak-modul-bus module with a CY27EE16"
+@toc "Programmable clock generator"
+@{U}3.3.1  The ak-modul-bus module with a CY27EE16                    CT60@{u}
+
+It's possible to add a programmable clock generator by step of 125
+KHz on the CT60. The module use a CY27EE16 connected on the CT60
+oscillator socket and two SDRAM module I2C signals SDA (82) and SLC
+(83) found on R11 / R12.
+
+Because the module need a DIL24 socket and the CT60 clock has a DIL14
+socket, you can use some wires for connect the module to the CT60
+like this :
+
+
+@limage G:\TOS060\DOC\CT60\ENGLISH\..\img\pclock.img 3
+
+
+@{U} ATTENTION ! @{u}
+
+If you think you're not ready to solder two very fine wires on R11
+and R12, return the CT60 and put the 2 wires on the pins 82 and 83 of
+the SDRAM socket (front right). Rodolphe suggest to use the DIL14
+socket by the pins 2 (SCL to the pin 83 of the SDRAM socket) and 3
+(SDA to the pin 83 of the SDRAM socket) in order to remove easily the
+clock module.
+
+
+@limage G:\TOS060\DOC\CT60\ENGLISH\..\img\dimm168p.img 17
+
+@limage G:\TOS060\DOC\CT60\ENGLISH\..\img\ct60_clk.img 23
+
+
+Reduce the wire CLK at the minimum size, the best is to put the top
+of the module (pins 18 to 24) on the CT60 clock socket (pins 8 to 14)
+with an extension connector. You must at minimum to cut the pins
+21/23 on the module, otherwise there are a short circuit with the
+CT60 CLK and the 3V3.
+
+
+  +------------------------------------------+
+  |                                        +5V 3V3   CLK      CLK
+  |                                        14o__o__o__o__o__o__o
+  |                 +------------------------------------------'8
+ +5V   CLK6  CLK5  CLK4  GND   GND           |                 |
+  o__o__o__o__o__o__o__o__o__o__o__o_____     )   CT60 clock   |
+24| GND   GND   GND   GND   GND   GND    |   |      socket     |
+  |                                 |o  o|  1|                 |7
+  |                                 |o  o|   o--o--o--o--o--o--o
+   )            Module              |o  o|           GND      GND
+  |         with a CY27EE16         |o  o|                     |
+  |                                 |o  o|                     |
+ 1| GND   GND   GND   GND   GND   GND    |                     |
+  o--o--o--o--o--o--o--o--o--o--o--o-----                      |
++3V3   CLK1  CLK2  CLK3  SCL   SDA +---------------------------+
+                         |     |
+                         |     |
+                         v     v
+                        R12   R11 (or pin 82 of the SDRAM socket)
+            (or pin 83 of the SDRAM socket)
+
+@{B} Synoptic @{b}
+
+
+@limage G:\TOS060\DOC\CT60\ENGLISH\..\img\cy_clock.img 1
+
+
+   ù The programmable CT60 clock output is CLK1 or CLK4.
+
+   ù CLK2 and CLK 3 are disabled.
+
+   ù CLK5 and CLK6 can be used for a user clock, but there are always
+     a link with the CT60 clock with a divider from 2 to 6, excepted
+     for a frequency <= 66 MHz :
+
+
+@line 15 0 6
+@line 33 0 6
+@line 47 0 6
+@line 56 0 6
+@line 15 41 0
+               CT60 clock (MHz)  CLK5/6 (MHz)  Divider 
+@line 15 41 0
+                    50.000          25.000       /2    
+                    66.000          33.000       /2    
+@line 15 41 0
+                    66.600          16.650       /4    
+                    66.000          33.000       /2    
+                    99.000          33.000       /3    
+@line 15 41 0
+
+
+The TOS check if the module exist and can change the clock between 50
+and 110 MHz (see also the part 'Change the CT60 frequency').
+
+Look at http://www.ak-modul-bus.de for more informations about this
+module.
+
+@{B} Schematic @{b}
+
+
+@limage G:\TOS060\DOC\CT60\ENGLISH\..\img\sc_clock.img 1
+
+
+@{B} List of components : @{b}
+
+1 x CY27EE16FZEC.
+1 x LM317LZ.
+2 x Zener 4V7/500mW.
+1 x Quartz 10 MHz.
+1 x 180 ohms.
+1 x 110 ohms.
+2 x 4.7 Kohms.
+3 x 100 nF.
+1 x male connector HE10 (or HE14) 2x5.
+
+1 x female connector HE10 2x5.
+1 x flat cable 10 wires.
+1 x female SUBD 9 pins.
+
+@{B} Remark : @{b} For the frequency to 100 MHz, you must fix the CT60 clock
+(look at 'CT60-100 clock').
+
+@endnode
+
+
+@node "The CTCM module with a DS1085Z-50"
+@toc "Programmable clock generator"
+@{U}3.3.2  The CTCM module with a DS1085Z-50                          CT60@{u}
+
+It's possible to add a programmable clock generator by step of 50 KHz
+on the CT60. The module use a DS1085Z-50 connected on the CT60
+oscillator socket and two SDRAM module I2C signals SDA (82) and SLC
+(83).
+
+
+@limage G:\TOS060\DOC\CT60\ENGLISH\..\img\dimm168p.img 17
+
+@limage G:\TOS060\DOC\CT60\ENGLISH\..\img\ct60_clk.img 23
+@{U} ATTENTION ! @{u}
+
+The CTCM module use the two unused pins on the DIL14 socket by the
+pins 2 SCL to the pin 83 of the SDRAM socket, and 3 SDA to the pin 83
+of the SDRAM socket in order to remove easily the clock module.
+Solder two very fine wires.
+
+
+@limage G:\TOS060\DOC\CT60\ENGLISH\..\img\ctcm.img 20
+
+               +-------------+
+               |            +5V      CLK      CLK
+               |           14o__o__o__o__o__o__o
+               |        +-------------'        |8
+               |        |    |                 |
+               |        |     )   CT60 clock   |
+   ____________o__o__o__o_   |      socket     |
+  |strap      +5V      OUT  1|SCL SDA          |7
+  |  X                  0|   o--o--o--o--o--o--o
+  |        CTCM   +-------------+  | GND      GND
+  |       module  |      |         |  |
+  |               |  +-------------+  |
+  +---------------o--o--o-GND         |
+                SCL SDA +-------------+
+
+@{B} Synoptic @{b}
+
+
+@limage G:\TOS060\DOC\CT60\ENGLISH\..\img\ds_clock.img 1
+
+
+   ù The programmable CT60 clock output is OUT0. If the CTRL0 input
+     is at 1 the clock is between 33 and 66 MHz (strap cut). If the
+     CTRL0 input is at 0 the clock is between 66 and 110 MHz (strap
+     put).
+
+     @{B}WARNING! The boot 2.0 not support this jumper because the CTCM
+     clock is not stable (no PLL) and it's impossible to read the
+     state of the jumper.@{b} So the frequency range is 66 to 110 MHz
+     (the DALLAS used on the CTCM isn't certified for work below 66
+     MHz).
+
+   ù OUT1 can be used for user clock, but there are always a link
+     with the CT60 clock with a divider from 2 to 6, excepted for a
+     frequency <= 66 MHz :
+
+
+@line 16 0 5
+@line 34 0 5
+@line 46 0 5
+@line 55 0 5
+@line 16 39 0
+                CT60 clock (MHz)  OUT1 (MHz)  Divider 
+@line 16 39 0
+                     66.000         33.000      /2    
+@line 16 39 0
+                     66.600         16.650      /4    
+                     66.000         33.000      /2    
+                     99.000         33.000      /3    
+@line 16 39 0
+
+
+@{B} Remark : @{b} This possibility is disabled on the CTCM module because
+the CTRL1 pin is at 1 (connected to the +5V).
+
+The TOS check if the module exist and can change the clock between 33
+and 66 MHz or 66 and 110 MHz according to the strap on the module
+(see also the part 'Change the CT60 frequency').
+
+Look at http://www.czuba-tech.com for more informations about this
+module.
+
+@{B} Remark : @{b} For the frequency to 100 MHz, you must fix the CT60 clock
+(look at 'CT60-100 clock').
+
+@endnode
+
+
+@node "TOS in Flash"
+@toc "Main"
+@{U}4  TOS in Flash                                                   CT60@{u}
+
+ 4.1  Technical
+ 4.2  Boot menu
+      4.2.1  Bootargs extension (Linux)
+ 4.3  SDRAM identification
+ 4.4  SDRAM test
+
+@endnode
+
+
+@node "Technical"
+@toc "TOS in Flash"
+@{U}4.1  Technical                                                    CT60@{u}
+
+This is a TOS 4.04 patched by the boot (2.0+), in this order there
+are :
+
+   ù The validation of the superscalar dispatcher on the 68060 (PCR).
+
+   ù The initialization of the translation registers (on all 68060's
+     types), the first zone mapped to 0 at $7FFFFFFF in copyback
+     excepted for the zone mapped to 0 … $FFFFFF in writethrough, and
+     the second zone mapped to $40000000 at $FFFFFFFF in cache
+     inhibed.
+
+   ù The reading and the display of the SDRAM's type from his EEPROM.
+
+   ù The copy of the TOS in SDRAM after apply the patches.
+
+   ù The initialization of the PMMU tree. All the ST-RAM is in
+     writethrough and the SDRAM declaration in copyback.
+
+   ù The installation of the cookies '_CPU', '_FPU', 'CT60', and also
+     '_FRQ' (internal clock) and '_FRE' (external clock) if the videl
+     need to use an external 32 MHz clock for RGB monitors. The CT60
+     cookie can return the speed frequency of a fan connected on IO3
+     MFP.
+
+   ù The patchs for cache, PMMU, address in $00FFxxxx, and the
+     instructions movep replaced.
+
+   ù The bombs inside exceptions displayed with texts in clear of a
+     crash.
+
+   ù The emulation of unimplemented instructions (integers and FPU).
+
+   ù The XBIOS CT60 function $C60A to $C60D (temperature, parameters
+     in Flash, cache...), and the DSP (functions with handshake).
+
+   ù The needful patchs for the blitter, the system fonts and the
+     Atari logo copied at the top of the ST-RAM (needed if the TOS in
+     ROM is a 4.02).
+
+   ù The replacement of the XBIOS Bconout routine (display texts).
+
+   ù The picture in 65K colors displayed during 2 seconds.
+
+   ù Check and fix the modecode get from NVM.
+
+   ù Check and set the serial programmable clock (I2C port).
+
+   ù Start the PCI BIOS and the drivers (if drivers.hex is loaded).
+
+   ù The display of the 68060's type (revision, mask and frequency).
+
+   ù The modification of PCR for the bugged types revision 1.
+
+   ù The declaration of the SDRAM to the TOS.
+
+   ù The initialization of the SDRAM, and the MB/s during writing
+     displayed.
+
+   ù The fastram buffer created and his cookie '_FRB'.
+
+   ù The extended fastram buffer created and his cookie 'XFRB'.
+
+   ù Lot of infos displayed about the SDRAM module.
+
+   ù The patch for the boot order of the drives IDE and SCSI (8
+     choices).
+
+   ù Extra boot features :
+
+        - Add identify device procedure for SCSI and IDE drives, the
+          boot wait if a removable drive is not ready.
+
+        - Add IDE slave support.
+
+        - Add CompactFlash support.
+
+        - Add combined MSDOS/TOS root and partition support, this
+          feature support byte swapping needed by MSDOS format and
+          search a *.SYS for load the disk driver.
+
+        - Add speed test for bootables devices.
+
+   ù The patch for the boot menu.
+
+   ù The displays redirection of the AUTO programs to a file
+     boot.log.
+
+   ù The patch for the Pexec function for the copyback (cpush after
+     the relocation).
+
+   ù The blitter patchs of the VDI functions, vro_cpyfm, vr_trnfm,
+     and vrt_cpyfm for work in SDRAM (an intermediate buffer inside
+     ST-RAM is used).
+
+   ù The AES patchs for change the Newdesk buffer of 4 KB to 32 KB.
+
+   ù Scan-codes used with the Eiffel card :
+
+        - PAGE UP/DOWN.
+
+        - PRINT SCREEN.
+
+        - POWER (set 2 only, Eiffel 1.0.5).
+
+        - VOLUME UP/DOWN (set 2 only, Eiffel 1.0.5).
+
+@endnode
+
+
+@node "Boot menu"
+@toc "TOS in Flash"
+@{U}4.2  Boot menu                                                    CT60@{u}
+
+The TOS can replace magxboot (MagiC) or ataboot (Linux) in the AUTO
+folder for a fast boot (no programs inside the AUTO folder to start).
+You can enable a boot menu with the configuration CPX. This menu
+arrives if the entry of the favourite OS inside is <> '-'.
+
+You can select TOS, MagiC or Linux, value is stored inside the NVM.
+
+   ù With MagiC, the TOS try to found MAGIC.RAM inside the main
+     directory of the boot folder.
+
+   ù With Linux, the TOS try to found BOOTARGS inside the main
+     directory of the boot folder. Tested with the kernel 2.4.25.
+
+Sure you can always use MAGXBOOT.PRG or ATABOOT.PRG inside the AUTO
+folder.
+
+@{U} ATTENTION ! @{u}
+
+Under the 030 mode, set the default mode to '-'.
+
+ 4.2.1  Bootargs extension (Linux)
+
+@endnode
+
+
+@node "Bootargs extension (Linux)"
+@toc "Boot menu"
+@{U}4.2.1  Bootargs extension (Linux)                                 CT60@{u}
+
+There are a new option for Linux and the bootargs file :
+
+-V <value>: Extended video modecode.
+
+Value is in decimal or hexadecimal C format (0x).
+
+Because the kernel command line has a video=atafb:keep feature,
+during boot it's better to get extended video modes.
+
+This is the detail of this extended @{B} modecode: @{b}
+
+
+@line 1 0 21
+@line 6 0 21
+@line 18 0 21
+@line 26 0 21
+@line 52 0 21
+@line 75 0 21
+@line 1 74 0
+ Bit  Name         Value  Comment                   Examples              
+@line 1 74 0
+                     0x0  1 plane, 2 colors                               
+  0   BPS            0x1  2 planes, 4 colors                              
+  1                  0x2  4 planes, 16 colors                             
+                     0x3  8 planes, 256 colors                            
+  2                  0x4  Near True Color 65K col.                        
+@line 1 74 0
+  3   COL80          0x8  double width                                    
+@line 1 74 0
+  4   VGA_FALCON    0x10  VGA flag                                        
+@line 1 74 0
+  5   PAL           0x20  50/60 Hz                                        
+@line 1 74 0
+  6   OVERSCAN      0x40  TV                        MONO: 768 x 560       
+@line 1 74 0
+                          320 x 200 16 colors                             
+  7   STMODES       0x80  640 x 200 4 colors        640 x 400 65K c 50MHz 
+                          640 x 400 2 colors        (BPS = 4)             
+@line 1 74 0
+  8   VERTFLAG     0x100  double line / interlaced  MONO: int. 896 x 1120 
+@line 1 74 0
+  9   HORFLAG      0x200  double width              TV: 1280 x 640 or     
+                                                    1536 x 560 OVERSCAN   
+@line 1 74 0
+                                                    TV: 960 x 640 (x1.5)  
+ 10   HORFLAG2     0x400  width increased           VGA: 896x480/608/768  
+                                                    MONO: 896 x 560       
+@line 1 74 0
+ 11   VESA         0x800  SVGA 608 lines            \ 1024 x 768          
+@line 1 74 0
+ 12   ULTRA_VGA   0x1000  SVGA 768 lines            / VESA & ULTRA_VGA    
+@line 1 74 0
+
+
+@{U} SVGA list in 16 colors : @{u}
+
+(modecode 16 colors, width x high, vert. freq., horiz. freq., clock)
+
+0x0112, 320 x 240, 60Hz, 31KHz, 25MHz (internal clock)
+0x0012, 320 x 480, 60Hz, 31KHz, 25MHz (internal clock)
+0x011A, 640 x 240, 60Hz, 31KHz, 25MHz (internal clock)
+0x001A, 640 x 480, 60Hz, 31KHz, 25MHz (internal clock)
+
+0x0512, 448 x 240, 60Hz, 31KHz, 32/36/38/40MHz (internal/external clock)
+0x0412, 448 x 480, 60Hz, 31KHz, 32/36/38/40MHz (internal/external clock)
+0x051A, 896 x 240, 60Hz, 31KHz, 32/36/38/40MHz (internal/external clock)
+0x041A, 896 x 480, 60Hz, 31KHz, 32/36/38/40MHz (internal/external clock)
+
+0x0912, 384 x 304, 57Hz, 35KHz, 32/36/38/40MHz (internal/external clock)
+0x0812, 384 x 608, 57Hz, 35KHz, 32/36/38/40MHz (internal/external clock)
+0x091A, 768 x 304, 57Hz, 35KHz, 32/36/38/40MHz (internal/external clock)
+0x081A, 768 x 608, 57Hz, 35KHz, 32/36/38/40MHz (internal/external clock)
+
+0x0D12, 448 x 304, 56Hz, 34KHz, 38/40MHz (internal/external clock)
+0x0C12, 448 x 608, 56Hz, 34KHz, 38/40MHz (internal/external clock)
+0x0D1A, 896 x 304, 56Hz, 34KHz, 38/40MHz (internal/external clock)
+0x0C1A, 896 x 608, 56Hz, 34KHz, 38/40MHz (internal/external clock)
+
+0x1112, 384 x 384, 86Hz, 34KHz, 32/36/38/40MHz (int/ext clock, interlaced)
+0x1012, 384 x 768, 86Hz, 34KHz, 32/36/38/40MHz (int/ext clock, interlaced)
+0x111A, 768 x 384, 86Hz, 34KHz, 32/36/38/40MHz (int/ext clock, interlaced)
+0x101A, 768 x 768, 86Hz, 34KHz, 32/36/38/40MHz (int/ext clock, interlaced)
+0x1112, 384 x 384, 60Hz, 49KHz, 50MHz (internal clock, not interlaced)
+0x1012, 384 x 768, 60Hz, 49KHz, 50MHz (internal clock, not interlaced)
+0x111A, 768 x 384, 60Hz, 49KHz, 50MHz (internal clock, not interlaced)
+0x101A, 768 x 768, 60Hz, 49KHz, 50MHz (internal clock, not interlaced)
+
+0x1512, 448 x 384, 87Hz, 34KHz, 38/40MHz (int/ext clock, interlaced)
+0x1412, 448 x 768, 87Hz, 34KHz, 38/40MHz (int/ext clock, interlaced)
+0x151A, 896 x 384, 87Hz, 34KHz, 38/40MHz (int/ext clock, interlaced)
+0x141A, 896 x 768, 87Hz, 34KHz, 38/40MHz (int/ext clock, interlaced)
+0x1512, 448 x 384, 54Hz, 44KHz, 50MHz (internal clock, not interlaced)
+0x1412, 448 x 768, 54Hz, 44KHz, 50MHz (internal clock, not interlaced)
+0x151A, 896 x 384, 54Hz, 44KHz, 50MHz (internal clock, not interlaced)
+0x141A, 896 x 768, 54Hz, 44KHz, 50MHz (internal clock, not interlaced)
+
+0x1912, 512 x 384, 78Hz, 31KHz, 38/40MHz (int/ext clock, interlaced)
+0x1812, 512 x 768, 78Hz, 31KHz, 38/40MHz (int/ext clock, interlaced)
+0x191A,1024 x 384, 78Hz, 31KHz, 38/40MHz (int/ext clock, interlaced)
+0x181A,1024 x 768, 78Hz, 31KHz, 38/40MHz (int/ext clock, interlaced)
+Experimental because limitations with ST-RAM bandwidth,
+ 256 colors not works, but 16 colors normally :
+0x1912, 512 x 384, 56Hz, 46KHz, 60MHz (not interlaced, int. clock 50 MHz)
+0x1812, 512 x 768, 56Hz, 46KHz, 60MHz (not interlaced, int. clock 50 MHz)
+0x191A,1024 x 384, 56Hz, 46KHz, 60MHz (not interlaced, int. clock 50 MHz)
+0x181A,1024 x 768, 56Hz, 46KHz, 60MHz (not interlaced, int. clock 50 MHz)
+
+For example, with -V 0x141A (hex format), you get 896 x 768 16
+colors: BPS=2, COL80, VGA_FALCON, HORFLAG2, ULTRA_VGA
+
+You must use COL80 with 2 colors. It's not possible to use 65K colors
+with COL80.
+
+@{U} Disclaimer @{u}
+
+THIS FEATURE COMES WITH ABSOLUTELY NO WARRANTY!
+IT MIGHT EASILY DAMAGE YOUR SVGA MONITOR!
+IF YOU RUN IT, YOU DO SO AT YOUR OWN RISK!
+ELSE NOT USE -V.
+
+If the Radeon/CTPCI are used, it is possible to avoid that the kernel
+use the Videl, for example with bootargs :
+
+-V 0x4303 -k vmlinuz root=/dev/hda9
+video=atafb:external:1920;1080;8;p;0x40000000
+
+0x4303 is the modecode for the Radeon driver (Vsetscreen) used inside
+Ataboot. external is here for the send infos to the kernel
+(0x40000000 isthe screen address, 'p' for packed pixels, 't' for true
+color).
+
+@endnode
+
+
+@node "SDRAM identification"
+@toc "TOS in Flash"
+@{U}4.3  SDRAM identification                                         CT60@{u}
+
+The TOS found the informations inside the EEPROM of the SDRAM for
+configure the SDRAM controler (SDR60). If an error arrive (see the
+SDRAM part for see the types who works) you need to press a key for
+see this 'Informations about the SDRAM'.
+
+@endnode
+
+
+@node "SDRAM test"
+@toc "TOS in Flash"
+@{U}4.4  SDRAM test                                                   CT60@{u}
+
+If the reading and the display of the SDRAM's type from his EEPROM is
+good but for example if the TOS logo not appears, maybe than the
+SDRAM is defective or not adapted for the CT60.
+
+For test the SDRAM :
+
+   ù In normal mode and with the configuration CPX for the CT60, set
+     the delay at boot to 60 seconds.
+
+   ù Switch off the computer.
+
+   ù Set the turbo mode.
+
+   ù Set the power to on.
+
+   ù After the SDRAM initialization (to 0), begin the ST-RAM test and
+     after the TT-RAM test (the SDRAM here), if the 'X' characters
+     replaces the '-' characters, the SDRAM is defective.
+
+For see 'Informations about the SDRAM' :
+
+During boot the Atari logo is displayed, press the right SHIFT key.
+
+@endnode
+
+
+@node "Atari Diagnostics"
+@toc "Main"
+@{U}5  Atari Diagnostics                                              CT60@{u}
+
+Inside the second part of the Flash (in $00ED0000-$00EEFFFF) there
+are the Atari Diagnostics updated for the CT60 (SDRAM added and 68060
+fix).
+
+CTRL-ALT-SHIFTL-SHIFTR start the Atari Diagnostics if pressed before
+the Atari logo.
+
+@{U} WARNING ! @{u}
+
+@{U} Abnormal termination in this tests may result in lost data : @{u}
+
+   ù RTC/NVRAM.
+
+   ù IDE.
+
+   ù SCSI.
+
+@{U} If you have a CTPCI and you have loaded drivers.hex, the diagnostics
+are not available. @{u}
+
+ 5.1  Main Keys
+ 5.2  Help
+ 5.3  Error Codes Quick Reference
+      5.3.1  Initialisation (Errors occuring before the title and menu appear)
+      5.3.2  Exceptions (may occur at any time)
+      5.3.3  SRAM (DSP), ST-RAM and SDRAM
+      5.3.4  MIDI
+      5.3.5  Serial Ports
+      5.3.6  SCC Interrupt Errors
+      5.3.7  Timming
+      5.3.8  Blitter
+      5.3.9  Real-Time Clock
+      5.3.10  SCSI
+      5.3.11  Keyboard
+      5.3.12  IDE
+      5.3.13  Printer and Joystick Ports
+      5.3.14  Floppy Disk Drive
+      5.3.15  Expansion Port
+      5.3.16  DSP Port Error Codes
+      5.3.17  EEPROM SDRAM
+
+@endnode
+
+
+@node "Main Keys"
+@toc "Atari Diagnostics"
+@{U}5.1  Main Keys                                                    CT60@{u}
+
+ R : SDRAM, ST-RAM and DSP SRAM.
+ O : O.S. ROM.
+ M : MIDI.
+ S : SCC Serial.
+ T : Timing MFP.
+ D : SDMA / DSP Port.
+ F : Floppy Disk.
+ P : Printer/Joy/Game.
+ L : Real Time Clock / NVRAM.
+ G : Short Blitter.
+ I : SCSI Port.
+ X : Expansion Bus.
+
+ A : Audio.
+ V : Video.
+ K : Keyboard.
+ Y : Floppy Disk (Write Protect).
+ H : IDE Hard Disk.
+
+ E : Examine / Modify System.
+ ? : Help.
+ $ : Version / Date.
+ UNDO : Goto TOS.
+
+ D : Diagnostic Field Service Menu.
+ E : Error Report.
+ > : Force Pass.
+
+ P : Pre Burn-In.
+ B : Burn-In.
+ F : Post Burn-In.
+ I : In Process Assembly.
+ U : Assembled Unit.
+ W : Erase Status and Start Over.
+
+@endnode
+
+
+@node "Help"
+@toc "Atari Diagnostics"
+@{U}5.2  Help                                                         CT60@{u}
+
+Select a single test or any combination of tests by typing the
+corresponding letter or letters, then typing the RETURN key. To run
+repeated cycles of the test or (tests), follow the last letter with
+the number of cycles to run. For example, "RSM25", will run RAM,
+Serial, and MIDI tests 25 times. If 0 is entered, testing will be
+continuous.
+
+Use the ESC key to quit the test cycle. In some cases there will be a
+delay before control returns to the keyboard.
+
+An RS232 terminal may be used for input and display. The Serial RS232
+test will not pass if a terminal is installed in place of the
+loopback plug.
+
+Normally a color monitor is used for all tests accept high
+resolution. If an error occurs, an error message will be displayed
+and the screen will turn red. When the test completes, Pass or Fail
+will be displayed, and the screen will turn green or red.
+
+If multiple tests are run and an error occurs on any test, the screen
+will remain red, although successive tests pass. Once the test has
+halted, the SPACE BAR is used to return to the menu.
+
+The DMA and Printer/joystick/game port tests require that the port
+test fixtures be connected.
+
+The O.S. ROM test calculates a checksum/CRC of the ROMs and compares
+the resultant CRC with the value found in the ROMs.
+
+If the RAM test fails, the error code, address, data written, data
+read and bad bits (0-15) are displayed.
+
+The short Blitter test does not display any graphics on the screen.
+The long Blitter test, while appearing not to finish the rectangle,
+is ok.
+
+@{B} OPERATOR REQUIRED TESTS @{b}
+
+The Audio, Video, Keyboard, and IDE Hard Disk tests have few error
+messages. The operator must determine if the output results are
+acceptable.
+
+The Gen/lock test is run twice. Toggling the switch on the gen/lock
+fixture should switch between the normal menu and no menu. With no
+menu a "sweeping" cycle should be heard. Reset the computer with each
+change of the gen/lock switch.
+
+NOTE - RUN THIS TEST ONLY WITH A COLOR MONITOR.
+
+@endnode
+
+
+@node "Error Codes Quick Reference"
+@toc "Atari Diagnostics"
+@{U}5.3  Error Codes Quick Reference                                  CT60@{u}
+
+From the
+
+@{B} Falcon 030 Production Diagnostic Manual (c) 1992, Atari Microsystems
+@{b}
+
+This is a brief summary of all error codes which may occur when
+running the diagnostic.
+
+ 5.3.1  Initialisation (Errors occuring before the title and menu appear)
+ 5.3.2  Exceptions (may occur at any time)
+ 5.3.3  SRAM (DSP), ST-RAM and SDRAM
+ 5.3.4  MIDI
+ 5.3.5  Serial Ports
+ 5.3.6  SCC Interrupt Errors
+ 5.3.7  Timming
+ 5.3.8  Blitter
+ 5.3.9  Real-Time Clock
+ 5.3.10  SCSI
+ 5.3.11  Keyboard
+ 5.3.12  IDE
+ 5.3.13  Printer and Joystick Ports
+ 5.3.14  Floppy Disk Drive
+ 5.3.15  Expansion Port
+ 5.3.16  DSP Port Error Codes
+ 5.3.17  EEPROM SDRAM
+
+@endnode
+
+
+@node "Initialisation (Errors occuring before the title and menu appear)"
+@toc "Error Codes Quick Reference"
+@{U}5.3.1  Initialisation (Errors occuring before the title and me... CT60@{u}
+
+I1 RAM data line is stuck.
+I2 RAM disturbance. Location is altered by write to another location.
+I3 RAM addresing. Wrong location is being addressed.
+I4 MMU chip error. No DTACK after RAM access.
+I5 RAM sizing error. Uppermost address fails.
+I6 Bus Error handling failed. Bus Error occured (on purpose), but caused a
+   crash (e.g. system was unable to read the vector from RAM).
+I7 Bus Error not detected. COMBEL not asserting Bus Error or the signal is
+   not reaching the 680xx.
+
+@endnode
+
+
+@node "Exceptions (may occur at any time)"
+@toc "Error Codes Quick Reference"
+@{U}5.3.2  Exceptions (may occur at any time)                         CT60@{u}
+
+E1-E5 Not used.
+E6    Autovector error. IPL0 is grounded or 680xx is bad.
+E7    Spurious interrupt. Bus error during exception processing. Device
+      interrupted, but did not provide interrupt vector.
+E8    Internal Exception (generated by 680xx).
+E9    Bad Instruction Fetch.
+EA    Address error. Tried to read an instruction from an odd address.
+EB    Bus Error (Access Fault on a 68060). Generated internally by the
+      680xx or externally by COMBEL. Usually caused by device not
+      responding. Displays the address of the device being accessed.
+
+@endnode
+
+
+@node "SRAM (DSP), ST-RAM and SDRAM"
+@toc "Error Codes Quick Reference"
+@{U}5.3.3  SRAM (DSP), ST-RAM and SDRAM                               CT60@{u}
+
+R0   Low memory failed while setting up to run test.
+R1   Failed walking 1s or 0s.
+R2   Failed address (counting pattern).
+R3   Failed 64K boundary test. Probable failure in Memory Controller.
+R4   Failed while displaying area tested (video RAM).
+DSP4 SRAM Test Timeout; test started but never completed.
+DSP5 SRAM Failure; RAM failure during SRAM test.
+
+@endnode
+
+
+@node "MIDI"
+@toc "Error Codes Quick Reference"
+@{U}5.3.4  MIDI                                                       CT60@{u}
+
+M0 Data not received. Indicates a broken data path.
+M1 Write/Read data mismatch. The data written was not the same as the data
+   read.
+M2 Input frame error. Noisy signal.
+M3 Input parity error. Noisy signal.
+M4 Input data overrun. The 6850 received a byte before the previous byte
+   was read. The MFP may not be responding to the interrupt request.
+
+@endnode
+
+
+@node "Serial Ports"
+@toc "Error Codes Quick Reference"
+@{U}5.3.5  Serial Ports                                               CT60@{u}
+
+@{B} Port A Errors: @{b}
+
+SCC A internal loopback: Transmitter time-out Transmitter failed.
+SCC A internal loopback: Receiver time-out    Receiver failed.
+SCC A internal loopback: Overrun              A byte was received before
+                                              the CPU read the previous
+                                              byte.
+SCC A internal loopback: Framing error        Incorrect time between start
+                                              and stop bits.
+SCC A internal loopback: Parity error         Input data had incorrect
+                                              parity.
+SCC A internal loopback: Data compare         Data read was not what was
+                                              sent.
+Port A has no loopback connector              The loopback connector is
+                                              not installed on a Port A.
+LAN has no loopback connector                 The loopback connector is
+                                              not installed on the LAN
+                                              port.
+LAN ERROR: DCD IS ACTIVE WITHOUT              The carrier detect signal is
+RTS ON                                        active without a request to
+                                              send.
+LAN ERROR: RTS IS ACTIVE BUT DCD IS           The request to send signal is
+NOT RESPONDING                                on but no carrier is active.
+Port A async mode: Transmitter time-out       Transmitter failed.
+Port A async mode: Receiver time-out          Receiver failed.
+Port A async mode: Overrun                    A byte was received before
+                                              the CPU read the previous
+                                              byte.
+Port A async mode: Framing error              Incorrect time between
+                                              start and stop bits.
+Port A async mode: Parity error               Input data had incorrect
+                                              parity.
+Port A async mode: Data compare               Data read was not what was
+                                              sent.
+Port A modem control error: DTR-DCD           Signal sent at DTR is not
+                                              detected at DCD.
+Port A modem control error: DTR-DSR           Signal sent at DTR is not
+                                              detected at DSR.
+Port A modem control error: RTS-CTS           Signal sent at RTS is not
+                                              detected at CTS.
+
+@{B} Port B Errors: @{b}
+
+SCC B internal loopback: Transmitter time-out Transmitter failed.
+SCC B internal loopback: Receiver time-out    Receiver failed.
+SCC B internal loopback: Overrun              A byte was received before
+                                              the CPU read the previous
+                                              byte.
+SCC B internal loopback: Framing error        Incorrect time between start
+                                              and stop bits.
+SCC B internal loopback: Parity error         Input data had incorrect
+                                              parity.
+SCC B internal loopback: Data compare         Data read was not what was
+                                              sent.
+Port B has no loopback connector              The loopback connector is
+                                              not installed on a Port A.
+LAN has no loopback connector                 The loopback connector is
+                                              not installed on the LAN
+                                              port.
+LAN ERROR: DCD IS ACTIVE WITHOUT              The carrier detect signal is
+RTS ON                                        active without a request to
+                                              send.
+LAN ERROR: RTS IS ACTIVE BUT DCD IS           The request to send signal is
+NOT RESPONDING                                on but no carrier is active.
+Port B async mode: Transmitter time-out       Transmitter failed.
+Port B async mode: Receiver time-out          Receiver failed.
+Port B async mode: Overrun                    A byte was received before
+                                              the CPU read the previous
+                                              byte.
+Port B async mode: Framing error              Incorrect time between
+                                              start and stop bits.
+Port B async mode: Parity error               Input data had incorrect
+                                              parity.
+Port B async mode: Data compare               Data read was not what was
+                                              sent.
+Port B modem control error: DTR-DCD           Signal sent at DTR is not
+                                              detected at DCD.
+Port B modem control error: DTR-DSR           Signal sent at DTR is not
+                                              detected at DSR.
+Port B modem control error: RTS-CTS           Signal sent at RTS is not
+                                              detected at CTS.
+
+@endnode
+
+
+@node "SCC Interrupt Errors"
+@toc "Error Codes Quick Reference"
+@{U}5.3.6  SCC Interrupt Errors                                       CT60@{u}
+
+SCC interrupt error: Transmitter time-out  Transmitter failed.
+SCC interrupt error: Receiver time-ou      Receiver failed.
+SCC interrupt error: Overrun               A byte was received before the
+                                           CPU read the previous byte.
+SCC interrupt error: Framing error         Incorrect time between start
+                                           and stop bits.
+SCC interrupt error: Parity error          Input data had incorrect
+                                           parity.
+SCC interrupt error: Data compare          Data read was not what was
+                                           sent.
+No Tx interrupt                            A transmit command was issued
+                                           but no interrupt occured.
+No Rx interrupt                            A receive command was issued
+                                           but no interrupt occured.
+
+@endnode
+
+
+@node "Timming"
+@toc "Error Codes Quick Reference"
+@{U}5.3.7  Timming                                                    CT60@{u}
+
+T0 MFP Timer error. One or more of the four timers in the MFP did not
+   generate an interrupt on counting down.
+T1 Vertical Sync. VIDEL is not generating vertical sync in the required
+   time period.
+T2 Horizontal Sync. VIDEL is not generating horizontal sync in the
+   required time period.
+T3 Display Enable. VIDEL is not generating DE output or the MFP is not
+   generating an interrupt.
+T4 Video Counter Error. The COMPO IC is not generating the correct
+   addresses for the display. This will result in a broken-up display in
+   some or all display modes.
+T5 PSG Bus Error. The PSG chip is defective.
+T6 AJAX Bus Error. The AJAX chip is defective.
+
+@endnode
+
+
+@node "Blitter"
+@toc "Error Codes Quick Reference"
+@{U}5.3.8  Blitter                                                    CT60@{u}
+
+G1                    Halftone RAM (Internal RAM in BLiT portion of
+                      COMBEL).
+G2                    Endmask.
+G3                    Operation.
+G4                    Halftone Op.
+G5                    Skew.
+G6                    Reverse Bit.
+G7                    Force Extra Source Read.
+G8                    Smudge.
+G9                    X Count.
+GA                    Y Count.
+GB                    Time-out.
+GC                    Address Count.
+BUS ERROR during BLiT Replace COMBEL chip.
+Test
+
+@endnode
+
+
+@node "Real-Time Clock"
+@toc "Error Codes Quick Reference"
+@{U}5.3.9  Real-Time Clock                                            CT60@{u}
+
+C0 No real-Time Clock.
+C1 Increment Error.
+
+@endnode
+
+
+@node "SCSI"
+@toc "Error Codes Quick Reference"
+@{U}5.3.10  SCSI                                                      CT60@{u}
+
+ERROR - SCSI STATUS CODE - XX      SCSI controller has reported error
+                                   number XX.
+ERROR - CONNOT SELECT SCSI DISK    Cannot win arbitration for SCSI bus.
+ERROR PRG MODE - READ AND WRITE    Data in the two RAM buffers are not
+BUFFERS DO NOT COMPARE             the same.
+ERROR DMA MODE - 5380 OR SCSI DISK An Attempt to poll the SCSI drive
+IS NOT RESPONDING                  failed.
+ERROR DMA MODE - READ AND WRITE    Data in the two RAM buffers are not
+BUFFERS DO NOT COMPARE             the same.
+ERROR - DMA BLOCK MOVE TIME-OUT    DMA block move operation timed out.
+ERROR - TIME-OUT SCSI BUS ALWAYS   Interrupt not seen by MFP.
+BUSY
+
+@endnode
+
+
+@node "Keyboard"
+@toc "Error Codes Quick Reference"
+@{U}5.3.11  Keyboard                                                  CT60@{u}
+
+K0 Stuck key. A key closure was detected while the keyboard self test was
+   executing.
+K1 Keyboard not responding. A command was sent to the keyboard processor
+   and no status was returned within the allowed time.
+K2 Keyboard status error. The selft test command was sent to the keyboard,
+   on completion of the test, the keyboard sent an error status.
+
+@endnode
+
+
+@node "IDE"
+@toc "Error Codes Quick Reference"
+@{U}5.3.12  IDE                                                       CT60@{u}
+
+Read error on sector.
+Write error on sector.
+Data compare error (wrote, read, hex offset).
+Controller not responding.
+Operation timed-out.
+Command error.
+Status = XX.
+DMA count error.
+Error restoring data.
+DMA address error - Data written outside data buffers.
+Error on command access of disk.
+Reading buffer.
+Failed read of original data from disk.
+Read buffer full - start next cycle.
+Failed writing test data to disk.
+Failed reading test data to disk.
+
+@endnode
+
+
+@node "Printer and Joystick Ports"
+@toc "Error Codes Quick Reference"
+@{U}5.3.13  Printer and Joystick Ports                                CT60@{u}
+
+P0 Printer port error. Data read from the printer port was not what was
+   written.
+P1 Busy interrupt error. The input to the MFP is not being read, or the
+   STROBE output from the PSG is not functioning, or Joystick 0 pin 3 not
+   connected.
+J0 Joystick Port 0. The keyboard input is not functioning.
+J1 Joystick Port 1. The keyboard input is not functioning.
+J2 Joystick time-out. Joystick inputs were simulated by outputting data on
+   the printer port and routing it via the test fixture to the joystick
+   ports. Joysticks inputs are detected by the keyboard and sent to the CPU
+   via the 6850. This error can be caused by printer port failure (code
+   P0), keyboard failure, or keyboard-CPU communication line.
+J3 Left button input. Not seen by the test keyboard.
+J4 Right button input. Not seen by the test keyboard.
+J5 Aux Joystick Direction. Game controller port (J500, J501) direction
+   bits. U511 is used to drive the input via test fixture. The hexadecimal
+   data following corresponds to bits read from latches U510 and U512,
+   where a one indicates an error. For example, 0002 indicates and erreur
+   at J500 pin 3.
+J6 Aux Fire Button. Fire buttons are read from U509. Signal is driven via
+   the test fixture from the output of U511.
+J7 Paddle. The inputs are driven by either 5V/100 ohms or 5V/1M on the
+   test fixture. This current charges the RC network on the FALCON030,
+   varying the output pulse of the LM556.
+J8 Light gun. The light gun (XPEN) input is toggled at three points on the
+   screen (the video address counter is used to find the position of the
+   screen). The COMBEL should return the X/Y coordinates of the screen
+   position.
+
+@endnode
+
+
+@node "Floppy Disk Drive"
+@toc "Error Codes Quick Reference"
+@{U}5.3.14  Floppy Disk Drive                                         CT60@{u}
+
+No floppy connected The controller cannot read index pulses. Indicates the
+                    cable may be improperly connected, or the drive has no
+                    power, or the drive is faulty.
+F0                  Drive not selected. Drive was installed, but failed
+                    attempting restore (seek to track 0).
+
+The general error messages
+"Error Wrinting" (or reading
+or formatting), are combined
+with a more specific error
+message, e.g., "F9 CRC error".
+
+F4                  Seek error. Error occured during a seek.
+F5                  Write protected. Indicates the floppy is write
+                    protected.
+F6                  Read compare error. Data read from the disk was not
+                    what was supposed to be written.
+F7                  DMA error. DMA Controller could not respond to a
+                    request for DMA.
+F8                  DMA count error. Amount of bytes transferred is not
+                    correct.
+F9                  CRC erreur. The floppy could not read a sector header.
+FA                  Recorder not found. The floppy could not read a sector
+                    header.
+FB                  Side select error - single sided drive. The test tried
+                    to write both sides of the diskette, but writing side
+                    1 caused side 0 to be overwritten.
+FC                  Lost data. Data was transferred to the AJAX chip
+                    faster than the AJAX could transfer to the DMA
+                    Controller.
+FD                  Drive not ready. The format/write/read operation
+                    timed-out.
+
+@endnode
+
+
+@node "Expansion Port"
+@toc "Error Codes Quick Reference"
+@{U}5.3.15  Expansion Port                                            CT60@{u}
+
+Spurious interrupt 5        A Spurious Interrupt was received on level 5.
+                            Check MFP, COMBO, and Interrupt line 5.
+Spurious interrupt 1        A Spurious Interrupt was received on level 1.
+                            Check MFP, COMBO, and Interrupt line 1.
+Spurious interrupt 6        A Spurious Interrupt was received on level 6.
+                            Check MFP, COMBO, and Interrupt line 6.
+Bus error from int level 6  A Bus Error was asserted while accessing
+                            Interrupt level 6. Check MFp, COMBO, and
+                            Interrupt line 6.
+Bus error                   A Bus Error occurred during testing. Check
+                            COMBO.
+Spurious Interrupt          A Spurious Interrupt was received during
+                            testing. Check MFP, COMBO, and Interrupt
+                            lines.
+Address Error               An Address Error occurred during testing. Check
+                            COMBO, MC680xx, and all address lines for
+                            shorts or opens.
+Halt Test failed            A halt operation failed to take place when
+                            programmed. Check COMBO, HALT line, and
+                            MC680xx.
+500 KHz clock stuck low     The 500 KHz line is stuck. Check COMBO and
+                            clock line.
+500 KHz clock stuck high    The 500 KHz line is stuck. Check COMBO and
+                            clock line.
+Printer is not responding   The printer port did not respond to command.
+                            Check printer data line, SDMA, COMBO, and PSG.
+Bus error signal stuck low  The Bus Error line is stuck. Check COMBO, and
+                            Bus Error line.
+Bus error signal stuck high The Bus Error line is stuck. Check COMBO, and
+                            Bus Error line.
+Blitter test failed         Expansion Blitter test failed. Check COMBO,
+                            address lines, and data lines.
+Expansion port is not       Expansion test fixture not installed. Check
+connected                   connection of Expansion Test Fixture.
+Address Latch failed at     Address Latch failed. Check COMBO.
+addr\exp\read:
+Interrupt level 1 failed    Interrupt failed on level 1. Check MFP, COMBO,
+                            and Interrupt line 1.
+Interrupt level 3 failed    Interrupt failed on level 3. Check MFP, COMBO,
+                            and Interrupt line 3.
+Interrupt level 5 failed    Interrupt failed on level 5. Check MFP, COMBO,
+                            and Interrupt line 5.
+Interrupt level 6 failed    Interrupt failed on level 6. Check MFP, COMBO,
+                            and Interrupt line 6.
+Interrupt priority failed   Interrupt priority test failed. Check MFP,
+                            COMBO, and Interrupt lines.
+RAM failed addr.write.read: RAM test failed. Check COMBO and RAM address
+                            and data lines.
+
+@endnode
+
+
+@node "DSP Port Error Codes"
+@toc "Error Codes Quick Reference"
+@{U}5.3.16  DSP Port Error Codes                                      CT60@{u}
+
+DSP0 - DSP Not Executing Program  DSP not responding.
+DSP1 - SSI Test Timeout           Serial port timeout.
+DSP2 - SSI Loopback Timeout       Data not completing loopback.
+DSP3 - SSI Bad Data               Data mismatch after loopback.
+
+@endnode
+
+
+@node "EEPROM SDRAM"
+@toc "Error Codes Quick Reference"
+@{U}5.3.17  EEPROM SDRAM                                              CT60@{u}
+
+EE SDRAM not found. SDRAM not connected.
+EE SDRAM chip density error. This SDRAM not works on the CT60.
+EE SDRAM number of banks error. This SDRAM not works on the CT60.
+EE SDRAM density error. This SDRAM not works on the CT60.
+EE SDRAM burst length error. This SDRAM not works on the CT60.
+EE SDRAM data width error. This SDRAM not works on the CT60.
+EE SDRAM voltage error. This SDRAM not works on the CT60.
+EE SDRAM type error. This SDRAM not works on the CT60.
+EE SDRAM refresh rate error. This SDRAM not works on the CT60.
+
+@endnode
+
+
+@node "Flash Tool"
+@toc "Main"
+@{U}6  Flash Tool                                                     CT60@{u}
+
+ 6.1  Use Flash Tool
+ 6.2  JTAG CT60 connector
+ 6.3  JTAG/parallel download cable
+
+@endnode
+
+
+@node "Use Flash Tool"
+@toc "Flash Tool"
+@{U}6.1  Use Flash Tool                                               CT60@{u}
+
+
+@limage G:\TOS060\DOC\CT60\ENGLISH\..\img\flash1.img 18
+
+
+The main task of this program is to put TOS binary (.BIN) or Srecord
+files (.HEX) inside the flash. It's also possible to update the flash
+with the 68060 (turbo mode).
+
+Since the BOOT v2.0, it's possible to load separate files for the
+TOS404, the BOOT and the PCI drivers for the CTPCI:
+
+   ù CT60TOS.BIN: contains BOOT + TOS404 + Atari Diagnostics (must
+     disappear).
+
+   ù BOOT.HEX: contains the BOOT.
+
+   ù DIAG.HEX: contains the Atari Diagnostics.
+
+   ù DRIVERS.HEX: contains the PCI drivers (GPL licence, overwrites
+     DIAG.HEX).
+
+   ù TOS404.BIN (not in the archive): just for put the TOS in flash,
+     in the case of CT60TOS.BIN isn't used.
+
+
+@limage G:\TOS060\DOC\CT60\ENGLISH\..\img\flash2.img 18
+
+
+The second task is to update the CT60 hardware with two jedec files
+(.JED) for ABE60, SDR60 and CTPCI chips (XILINX XC95144XL / XC95288XL
+CPLD). The update V2.01 allows to program the ETHERNAT (XC9572XL).
+
+   ù You need to make the cable for the JTAG CT60 connector linked to
+     // port, look at 'JTAG/parallel download cable'.
+
+   ù Normally the cable must be attached and powered (by the CT60)
+     for proper verification. Only SDR60 can be programmed (or
+     verified) when the CT60 is connected to the mother board in
+     normal 030 mode (if you use the same machine CT60/F030 ;-) ). If
+     you update the ABE60 chip you need to remove the CT60 from the
+     bus excepted if there are a 1Kohms resistor between GND (Ground)
+     and the pin #1 of one of the three 74LVC245 chips. In this case
+     the blitter must not be used (NVDI installed).
+
+   ù If you load the good jedec files, another button appears
+     'verify'. You can use this button for compare the jedec file
+     with the chip. The 'program' button erase, program, and verify
+     his flash.
+
+@endnode
+
+
+@node "JTAG CT60 connector"
+@toc "Flash Tool"
+@{U}6.2  JTAG CT60 connector                                          CT60@{u}
+
+This is the pins of tower connector not used (you see 'RESERVED' on
+the board) :
+
+
+@line 9 0 8
+@line 19 0 8
+@line 29 0 8
+@line 63 0 8
+@line 9 54 0
+         Pin Card  Signal    Pin JTAG/parallel download cable 
+@line 9 54 0
+            12     JTAG_VCC  1                                
+            13     JTAG_GND  2                                
+            14     JTAG_KEY  (no pin !)                       
+            15     JTAG_TCK  3                                
+            16     JTAG_TDO  4                                
+            17     JTAG_TDI  5                                
+            18     JTAG_TMS  6                                
+@line 9 54 0
+
+
+For information, this is the other pins of this connector :
+
+
+@line 19 0 12
+@line 29 0 12
+@line 39 0 12
+@line 53 0 12
+@line 19 34 0
+                   Pin Card  Signal    Comment      
+@line 19 34 0
+                      1      PWR_SW+   Power Switch 
+                      2      PWR_SW-                
+                      3      TRB_SW+   Turbo Switch 
+                      4      TRB_SW-                
+                      5      IDE_LED+  Led IDE      
+                      6      IDE_LED-               
+                      7      RST_SW+   Reset Switch 
+                      8      RST_SW-                
+                      9      PWR_LED+  Power led    
+                      10     NC                     
+                      11     PWR_LED-               
+@line 19 34 0
+
+
+@endnode
+
+
+@node "JTAG/parallel download cable"
+@toc "Flash Tool"
+@{U}6.3  JTAG/parallel download cable                                 CT60@{u}
+
+
+@limage G:\TOS060\DOC\CT60\ENGLISH\..\img\schema.img 1
+
+
+You need a 74HC125 or 74AHC125 and not a 74HCT125 or 74AHCT125
+because the power of the cable from the CT60 is in 3.3V.
+
+@endnode
+
+
+@node "Configuration"
+@toc "Main"
+@{U}7  Configuration                                                  CT60@{u}
+
+ 7.1  Introduction
+ 7.2  Average load
+ 7.3  Temperature
+ 7.4  Memory / uP
+      7.4.1  Change the CT60 frequency
+ 7.5  Boot
+      7.5.1  Selection TOS in RAM (obsolete)
+ 7.6  Stop/Misc
+ 7.7  Langage
+ 7.8  Video
+ 7.9  CT60TEMP.APP
+ 7.10  Informations about the SDRAM
+ 7.11  BubbleGEM
+
+@endnode
+
+
+@node "Introduction"
+@toc "Configuration"
+@{U}7.1  Introduction                                                 CT60@{u}
+
+The CT60's configuration is set with a CPX, used normally with
+XCONTROL, ZCONTROL, or COPS.
+
+This CPX allows to :
+
+   ù Configure the Non Volatile Memory.
+
+   ù Configure the boot in Flash Eprom.
+
+   ù Measure MIPS.
+
+   ù See the load of the system (MiNT or MagiC only).
+
+   ù Measure the temperature of the 68060 (for overclocking) => With
+     the driver CT60XBIO.PRG or the TOS in flash.
+
+   ù Switch off the computer.
+
+   ù See 'Informations about the SDRAM'.
+
+
+@limage G:\TOS060\DOC\CT60\ENGLISH\..\img\cpx2.img 19
+
+
+There are five common buttons on this CPX :
+
+   ù Save : Button for save adjustments on the disk.
+
+   ù Load : Button for load adjustments saved on the disk.
+
+   ù OK : Button for validate the values changed into the non
+     volatile ram and the flash parameters.
+
+   ù Cancel : Button for not change values to the configuration.
+
+   ù i : Button for display informations (authors and SDRAM).
+
+For check the temperature, use curves, get a CPU average load, stop
+the computer, or blank the screen (Radeon/CTPCI), the CPX :
+
+   ù Under TOS create a desk-accessory CT60TEMP.ACC and ask to
+     reboot.
+
+   ù Under MiNT create the program CT60TEMP.APP and start this
+     program.
+
+   ù Under MagiC start a thread.
+
+Note : On the CT63, the temperature level is to 0 (hardware wired by
+Rodolphe).
+
+@endnode
+
+
+@node "Average load"
+@toc "Configuration"
+@{U}7.2  Average load                                                 CT60@{u}
+
+
+@limage G:\TOS060\DOC\CT60\ENGLISH\..\img\cpx1.img 19
+
+
+At this page you can see for MiNT and MagiC :
+
+   ù The current value of CPU average load.
+
+   ù The level of CPU average load.
+
+   ù The curve of CPU average load during the last hour. Without MiNT
+     1.11 or more, this curve is very approximate.
+
+@endnode
+
+
+@node "Temperature"
+@toc "Configuration"
+@{U}7.3  Temperature                                                  CT60@{u}
+
+
+@limage G:\TOS060\DOC\CT60\ENGLISH\..\img\cpx2.img 19
+
+
+At this page you can see :
+
+   ù The current value of the 68060's temperature.
+
+   ù The level of the 68060's temperature, Red = Danger.
+
+   ù The curve of 68060's temperature during the last hour. This
+     curve is normally in green or yellow and change to red when the
+     68060's temperature is dangerous.
+
+   ù On occasion the tower's temperature during the last hour if you
+     have an Eiffel card (with the cookie 'Temp'). This curve is
+     normally in blue and change to magenta if the fan of the tower
+     works (set to on by the Effeil card).
+
+At this page you can change :
+
+   ù The trigger level for the temperature alarm.
+
+   ù If necessary the offset of the analog converter on the CT60 with
+     a double-click on the level (offset TLV).
+
+Notes :
+
+   ù On the CT63, the temperature level is always at 0 (modification
+     of Rodolphe).
+
+   ù The level is saved inside the CPX with the 'Save' button (and
+     not in NVRAM or flash parameters). It's CT60TEMP.ACC/APP
+     feature.
+
+   ù The offset is writed inside a flash parameter with the 'OK'
+     button.
+
+@endnode
+
+
+@node "Memory / uP"
+@toc "Configuration"
+@{U}7.4  Memory / uP                                                  CT60@{u}
+
+
+@limage G:\TOS060\DOC\CT60\ENGLISH\..\img\cpx3.img 19
+
+
+At this page you can :
+
+   ù See the total capacity of the ST-Ram.
+
+   ù See the total capacity of the Fast-Ram.
+
+   ù See the number of free bytes for the ST-Ram.
+
+   ù See the number of free bytes for the Fast-Ram.
+
+   ù See the number of millions instructions by second worked out by
+     the microprocessor (BogoMips).
+
+   ù Select with/without FPU.
+
+   ù If necessary change the CT60 frequency.
+
+   ù If necessary change the user clock divider from 2 to 6.
+
+   ù If necessary see the speed of the fan or the pump (if
+     watercooling) with a 3 wires connector :
+
+                            1N4148
+     * Yellow ---<47 ohms>---|<|---> IO3 MFP pin 28
+     * Red    ---------------------> +12V CT60 FAN connector
+     * Black  --------------------->  GND CT60 FAN connector
+
+ 7.4.1  Change the CT60 frequency
+
+@endnode
+
+
+@node "Change the CT60 frequency"
+@toc "Memory / uP"
+@{U}7.4.1  Change the CT60 frequency                                  CT60@{u}
+
+With the slider inside the page 'Memory / uP' of the CPX, if
+necessary it's possible to change the CT60 frequency.
+
+For do this task, a programmable clock generator module using a
+CY27EE16 or a DS1085Z-50 must be connected on the CT60's I2C port
+with some wires (see also the part 'Programmable clock generator').
+
+The adjustment works by step of 125 KHz between 50 and 110 MHz for
+the CY27EE16 (ak-modul-bus module), or by step of 50 KHz between 66
+and 110 MHz for the DALLAS DS1085Z-50 (CTCM module), the value is
+writed in RAM for a test after 'OK'. The TOS during the boot when the
+Atari logo arrive send equally this value to the clock, but in case
+of a problem it's possible to bypass this feature and use the
+original frequency by press CTRL or ALT.
+
+A user clock is available, this is the CT60 frequency divided from 2
+to 6.
+
+@{U} ATTENTION ! @{u}
+
+So long as you not cut the power on the machine, the clock gererator
+works with the latest frequency writed inside his RAM. During the
+power on sequency, the clock generator copy himself inside his RAM
+the original frequency saved in his EEPROM. Press on CTRL or ALT has
+no effect if you not cut the power before. You can also use CTRL-ALT-
+UNDO for restore NVRAM/Flash parameters or use the 030 mode for
+select another frequency.
+
+@{U} Initialisation @{u}
+
+The original frequency saved in EEPROM is also modifiable after a
+confirmation with a double click on 'Save' but it's very dangerous !
+
+Yet, when it's impossible to restart the computer, the last solution
+is to connect the @{B} ak-modul-bus module @{b} on the MODEM 2 port with a
+link HE10 SUBD and reprogram in 030 mode the EEPROM of the module
+with the 'Save' button. This operation is essential for load a new
+module. @{B} The module must be powered by the CT60 and the signals SDA
+and SCL must be disconnected because during the 030 mode the CT60
+force these signals to 0 ! @{b}
+
+
+@limage G:\TOS060\DOC\CT60\ENGLISH\..\img\subd.img 12
+
+
+When it's impossible to restart the computer with the @{B} CTCM module @{b}
+you must cut the strap for divide by two the frequency (clock between
+33 and 66 MHz), and after reprogram again the module with the CT60 by
+saving a new value inside the EEPROM. Now, the frequency is
+multiplyed by two when the strap is again in place !
+
+The CT60 not start with the Falcon boost if the strap is removed
+(F030 frequency > CT60 frequency so 33 MHz).
+
+Like the @{B} ak-modul-bus module @{b}, the last solution is to connect the @{B}
+CTCM module @{b} on the MODEM 2 port with a link HE10 SUBD and reprogram
+in 030 mode the EEPROM of the module with the 'Save' button.
+
+@{B}WARNING! The boot 2.0 not support this jumper because the CTCM clock
+is not stable (no PLL) and it's impossible to read the state of the
+jumper.@{b} So the frequency range is 66 to 110 MHz (the DALLAS used on
+the CTCM isn't certified for work below 66 MHz).
+
+
+@limage G:\TOS060\DOC\CT60\ENGLISH\..\img\modem2.img 13
+
+
+@endnode
+
+
+@node "Boot"
+@toc "Configuration"
+@{U}7.5  Boot                                                         CT60@{u}
+
+
+@limage G:\TOS060\DOC\CT60\ENGLISH\..\img\cpx4.img 19
+
+
+At this page you can :
+
+   ù Select the boot order on the IDE and SCSI drives (8 choices).
+
+   ù Select at boot the operating system by default.
+
+   ù Select at boot the SCSI arbitration.
+
+   ù Select at boot the SCSI identificator (0 to 7).
+
+   ù Set the delay at boot in seconds (you need lot of time if you
+     want test the ST-RAM and the SDRAM).
+
+   ù Change the speed of the blitter.
+
+   ù Set the transfer of TOS 4.0x in RAM with using of the PMMU
+     (obsolete).
+
+   ù Under TOS, remove the caches during 5 seconds when a program is
+     started or remove the copyback alert box.
+
+   ù Redirect displays of the AUTO folder's programs to a file
+     boot.log.
+
+   ù With a Radeon/CTPCI get a debug file video.log:
+
+
+@limage G:\TOS060\DOC\CT60\ENGLISH\..\img\cpx4_pci.img 20
+   ù With a CTPCI swap the two IDE ports (CTPCI and FALCON).
+
+Note : Theses settings are writed inside the NVRAM or flash
+parameters with the 'OK' button.
+
+ 7.5.1  Selection TOS in RAM (obsolete)
+
+@endnode
+
+
+@node "Selection TOS in RAM (obsolete)"
+@toc "Boot"
+@{U}7.5.1  Selection TOS in RAM (obsolete)                            CT60@{u}
+
+@{B}This option is only available with the boot version is less than
+2.00.@{b} Since this version the boot run the patches on the TOS and copy
+it in SDRAM.
+
+When this option is set, the TOS is copied in SDRAM $E00000 to
+$EEFFFF (the last sector of the flash $EE0000 to $EFFFFF is used for
+save 16 parameters).
+
+   ù If only the TOS is used you can set this option for increase
+     speed.
+
+   ù If the memory protection is used under MiNT, don't set this
+     option. The PMMU tree is always created, but the cookie 'PMMU'
+     not exists when this option is removed.
+
+@endnode
+
+
+@node "Stop/Misc"
+@toc "Configuration"
+@{U}7.6  Stop/Misc                                                    CT60@{u}
+
+
+@limage G:\TOS060\DOC\CT60\ENGLISH\..\img\cpx5.img 19
+
+
+At this page you can :
+
+   ù Select the mode of the stop programmed after a shutdown
+     procedure.
+
+   ù Enter the time if the mode of stop is actived.
+
+   ù Enable the alarm beep for the stop procedure.
+
+
+@limage G:\TOS060\DOC\CT60\ENGLISH\..\img\cpx5_pci.img 20
+
+
+If the video display use the Radeon/CTPCI you can :
+
+   ù Select the mode of the stop programmed after a shutdown
+     procedure.
+
+   ù Enter the time if the mode of stop is actived.
+
+   ù Enable the alarm beep for the stop procedure.
+
+   ù Set a delay for blank monitor (disabled if set to 0).
+
+Note : Theses settings are saved inside the CPX with the 'Save'
+button (and not in NVRAM or flash parameters). It's CT60TEMP.ACC/APP
+features.
+
+@endnode
+
+
+@node "Langage"
+@toc "Configuration"
+@{U}7.7  Langage                                                      CT60@{u}
+
+
+@limage G:\TOS060\DOC\CT60\ENGLISH\..\img\cpx6.img 19
+
+
+At this page you can :
+
+   ù Select at boot the language by default.
+
+   ù Select at boot the keyboard type.
+
+   ù Select at boot the date format.
+
+   ù Select at boot the time format 12 or 24 hours.
+
+   ù Select at boot the date separator.
+
+Note : Theses settings are writed inside the NVRAM with the 'OK'
+button.
+
+@endnode
+
+
+@node "Video"
+@toc "Configuration"
+@{U}7.8  Video                                                        CT60@{u}
+
+
+@limage G:\TOS060\DOC\CT60\ENGLISH\..\img\cpx7.img 19
+
+
+At this page you can :
+
+   ù Select at boot the monitor type.
+
+   ù Select at boot the display's mode : NTSC = 60 Hz, PAL = 50 Hz.
+
+   ù Select at boot the screen resolution.
+
+   ù Select at boot the numbers of colors.
+
+   ù Select at boot the ST compatibility mode.
+
+   ù Select at boot the overscan mode on TV.
+
+   ù Replace the NVRAM reading by TOS values saved in the Flash and
+     use the IKBD clock instead of the RTC. This feature is for fix
+     NVM problems caused by a battery failure.
+
+Note : Theses settings are writed inside the NVRAM with the 'OK'
+button.
+
+
+@limage G:\TOS060\DOC\CT60\ENGLISH\..\img\cpx7_pci.img 20
+
+
+If the video display use the Radeon/CTPCI you can :
+
+   ù Select at boot the screen resolution, if the prefered video mode
+     is found on the monitor, the mode added to the list.
+
+   ù Select at boot the numbers of colors (256/65K/16M).
+
+   ù Select at boot the monitor layout (MON.1,MON.2) :
+
+        - DEFAULT (automatic mode)
+
+        - CRT,NONE
+
+        - CRT,CRT
+
+        - CRT,TMDS
+
+        - TMDS,CRT
+
+        - TMDS,TMDS
+
+   ù Select using DMA for boost display (WARNING! Actually sometimes
+     this option can freeze your system - hardware bug).
+
+   ù Replace the NVRAM reading by TOS values saved in the Flash and
+     use the IKBD clock instead of the RTC. This feature is for fix
+     NVM problems caused by a battery failure.
+
+Note : The Radeon/CTPCI mode not overwrite the Videl mode, the mode
+is writed inside a flash parameter with the 'OK' button.
+
+@endnode
+
+
+@node "CT60TEMP.APP"
+@toc "Configuration"
+@{U}7.9  CT60TEMP.APP                                                 CT60@{u}
+
+This program is created by the CPX. For check the temperature, use
+curves, get a CPU average load, stop the computer, or blank the
+screen (Radeon/CTPCI), the CPX :
+
+   ù Under TOS create a desk-accessory CT60TEMP.ACC and ask to
+     reboot.
+
+   ù Under MiNT create the program CT60TEMP.APP and start this
+     program.
+
+   ù Under MagiC start a thread.
+
+Some is the solution used (thead, accessory or application), it's
+possible to use the multimedia keys features of the Eiffel PS/2
+interface (http://eiffel3.atari.org), especially with the set number
+2 PS/2. The @{B} POWER @{b} key start a stop after a shutdown procedure.
+
+If CT60TEMP.APP is used under MagiC or MiNT (for MagiC boot under TOS
+and copy CT60TEMP.ACC to CT60TEMP.APP), by using environment
+variables, it's possible to use others multimedia keys of the Eiffel
+PS/2 interface :
+
+   ù @{B} WWW HOME : @{b} Start the internet navigator with the environment
+     variable BROWSER.
+
+   ù @{B} E-MAIL : @{b} Start the email program with the environment variable
+     MAILER.
+
+   ù @{B} WWW SEARCH : @{b} Start the internet navigator with the environment
+     variable BROWSER with the home page of Google.
+
+   ù @{B} MY COMPUTER : @{b} Start the hypertexte viewer with the environment
+     variable HELPVIEWER with the documentation of the CT60.
+
+You must install the program E_TEMP.PRG inside the AUTO folder (the
+'Eiff' cookie is used).
+
+@endnode
+
+
+@node "Informations about the SDRAM"
+@toc "Configuration"
+@{U}7.10  Informations about the SDRAM                                CT60@{u}
+
+At this page you can see :
+
+   ù The Memory Type (SDRAM).
+
+   ù The Number of Row Addresses.
+
+   ù The Number of Column Addresses.
+
+   ù The Number of DIMM Banks (1 or 2).
+
+   ù The Module Data Width (64).
+
+   ù The Voltage Interface Level (LVTTL).
+
+   ù The SDRAM Cycle Time (for example 10 nS if PC100).
+
+   ù The SDRAM Access from Clock.
+
+   ù The SDRAM Configuration Type (no parity).
+
+   ù The SDRAM Refresh Rate (15.625 uS or 7.8 uS).
+
+   ù The Number of Banks.
+
+   ù The CAS Latency (2).
+
+   ù The CS Latency (0).
+
+   ù The WE Latency (0).
+
+   ù The SDRAM Module Attributes (unbuffered).
+
+   ù The Minimum Row Precharge Time.
+
+   ù The Minimum Row Active to Active Delay.
+
+   ù The Minimum RAS to CAS Delay.
+
+   ù The Minimum RAS Pulse Width.
+
+   ù The Module Bank Density (in MB).
+
+   ù The Module Manufacturers ID (in hexa/ASCII).
+
+   ù The Module Part Number (in ASCII).
+
+   ù The Module Manufacturing Date (week/year).
+
+This values are stored inside a little EEPROM on the module.
+
+@endnode
+
+
+@node "BubbleGEM"
+@toc "Configuration"
+@{U}7.11  BubbleGEM                                                   CT60@{u}
+
+Under a multitasking operating system (for example MagiC, MultiTOS,
+Geneva etc) BubbleGEM can be placed in the auto start folder where it
+will be automatically started as a GEM program on booting the system.
+
+Under single TOS BubbleGEM can be run as a desk accessory by renaming
+BUBBLE.APP to BUBBLE.ACC and copying it to the root directory of your
+boot partition, then rebooting.
+
+BubbleGEM-aware programs send a message and pass a character string
+to BubbleGEM if the user clicks with the right mouse button on an
+icon, button or window area. BubbleGEM then displays the character
+string, formatted in a cute speech bubble which remains displayed
+until the user moves the mouse pointer to another window area, or
+until the user clicks again to burst the bubble.
+
+Optionally bubbles can be displayed by clicking and holding down the
+right mouse button; in this case the bubble bursts as soon as the
+button is released again.
+
+While a bubble is open two keyboard shortcuts are active:
+
+<CTRL C> : The content of the bubble is copied to the clipboard and
+           the bubble remains open.
+<CTRL X> : The content of the bubble is copied to the clipboard and
+           the bubble is closed.
+
+The author of BubbleGEM is Thomas Much; his email address is:
+
+Thomas.Much@@stud.uni-karlsruhe.de
+
+@endnode
+
+
+@node "Cache"
+@toc "Main"
+@{U}8  Cache                                                          CT60@{u}
+
+ 8.1  The 68060's caches
+ 8.2  GENERAL6.CPX
+ 8.3  XCONTROL, ZCONTROL, COPS, and SDRAM in copyback
+ 8.4  PARX.SYS modules and the copyback
+ 8.5  TSR programs who crashes in the AUTO folder
+ 8.6  Programs packed by Ice
+
+@endnode
+
+
+@node "The 68060's caches"
+@toc "Cache"
+@{U}8.1  The 68060's caches                                           CT60@{u}
+
+There are two caches of 8KB inside the 68060, data and instruction.
+
+The ST-RAM is in writethrough, at each time than the 68060 write to
+the RAM, he write in the same time than the data cache.
+
+The SDRAM is in copyback, the 68060 write always inside his data
+cache, he write in the memory the old data of his cache for found
+some place for the new data.
+
+The 68060 has also an instruction cache, witch the direct link with
+the data cache is only the memory. The result is than it's possible
+to obtain incoherency between the data cache and the instruction
+cache. The example is the excecution of a relocated program, without
+precaution and without system call this is a crash.
+
+The 68060 has the ability to watch or snoop the external bus during
+accesses by other bus masters (like DMA or blitter), maintaining
+coherency between the 68060's caches and external memory.
+
+@endnode
+
+
+@node "GENERAL6.CPX"
+@toc "Cache"
+@{U}8.2  GENERAL6.CPX                                                 CT60@{u}
+
+This CPX is a patched version of the Falcon GENERAL.CPX for the
+68060. The cache on/off selection now uses XBIOS calls, there are no
+problems under TOS because this XBIOS is inside the FLASH but under
+MagiC if you use this CPX you need to install CT60XBIO.PRG inside the
+AUTO folder. This program install the XBIOS for the CT60 if the
+cookie 'CT60' isn't found.
+
+@endnode
+
+
+@node "XCONTROL, ZCONTROL, COPS, and SDRAM in copyback"
+@toc "Cache"
+@{U}8.3  XCONTROL, ZCONTROL, COPS, and SDRAM in copyback              CT60@{u}
+
+   ù COPS only flush caches after load the CPX and works fine.
+
+   ù ZCONTROL works under MiNT 1.16/Xaaes.
+
+   ù XCONTROL crashes.
+
+   ù The patched XCONTROL.ACC fix this problem by a new XBIOS call
+     but under MagiC if you use this ACC you need to install
+     CT60XBIO.PRG inside the AUTO folder.
+
+@endnode
+
+
+@node "PARX.SYS modules and the copyback"
+@toc "Cache"
+@{U}8.4  PARX.SYS modules and the copyback                            CT60@{u}
+
+If a program who use PARX.SYS crashes at start, you can try to remove
+the caches with GENERAL6.CPX, load the program and set to on the
+caches after. For example PICCOLO works with this method.
+
+A global solution is to remove the caches during 5 seconds when a
+program is started under TOS with the Boot menu inside the
+configuration CPX, but this method penalize all programs.
+
+@endnode
+
+
+@node "TSR programs who crashes in the AUTO folder"
+@toc "Cache"
+@{U}8.5  TSR programs who crashes in the AUTO folder                  CT60@{u}
+
+Like CPX, the programs who not uses the Pexec function for load
+modules crashes with the SDRAM in copyback, so the best way is to
+load the program in ST-RAM (cache in writethrough). You can use
+FILEINFO.CPX for change the flags.
+
+For example you must remove TT-ram flags of METAXBS.PRG (Metados)
+because when the OVL modules are loaded there are no flush after
+relocation, it's not compatible with the SDRAM and the CPU cache in
+copyback.
+
+A global solution is to remove the caches during 5 seconds when a
+program is started under TOS with the Boot menu inside the
+configuration CPX, but this method penalize all programs.
+
+@endnode
+
+
+@node "Programs packed by Ice"
+@toc "Cache"
+@{U}8.6  Programs packed by Ice                                       CT60@{u}
+
+The TOS test the programs packed by Ice, there are a patch for flush
+caches (inside the Pexec function). Without this patch, programs
+packed by Ice crashes with the copyback cache (SDRAM). This problem
+is not solved under MagiC or MiNT.
+
+@endnode
+
+
+@node "Compatibility"
+@toc "Main"
+@{U}9  Compatibility                                                  CT60@{u}
+
+ 9.1  Crashes
+ 9.2  DSP
+ 9.3  Patchs
+      9.3.1  MagiC
+ 9.4  Solutions
+
+@endnode
+
+
+@node "Crashes"
+@toc "Compatibility"
+@{U}9.1  Crashes                                                      CT60@{u}
+
+You can try to remove the caches with GENERAL6.CPX, start the program
+who causes crashes, load the program and set to on the caches after.
+
+You can use FILEINFO.CPX for change the flags and force the program
+to use ST-RAM.
+
+For more informations, you can read the part 'Cache'.
+
+@endnode
+
+
+@node "DSP"
+@toc "Compatibility"
+@{U}9.2  DSP                                                          CT60@{u}
+
+The 68060 is lot of faster than the DSP, so some problems arrives
+with the host port. The XBIOS fonctions of the TOS fix this problem
+by test the handshake bit during each word send or received. Under
+MagiC you must install the program DSPXBIOS inside the AUTO folder.
+
+The programs who use direct access to the DSP without use the XBIOS
+functions can create problems. For continue to work with this
+programs, you must set the caches to OFF with the CPX GENERAL6.CPX.
+
+@endnode
+
+
+@node "Patchs"
+@toc "Compatibility"
+@{U}9.3  Patchs                                                       CT60@{u}
+
+ 9.3.1  MagiC
+
+@endnode
+
+
+@node "MagiC"
+@toc "Patchs"
+@{U}9.3.1  MagiC                                                      CT60@{u}
+
+This MAGXBOOT.PRG a rewrited for the normal mode (68030) and the
+turbo mode (68060), and in turbo MAGIC.RAM is patched for not
+overwrite some parts of the TOS like FPU emulation, etc... You must
+install this program in the AUTO folder. Tested under MagiC 6.10.
+
+You must use the Centek MAGIC.RAM patch (with MAGIC_P.PRG) before use
+MagiC.
+
+You need to install CT60XBIO.PRG and DSPXBIOS.PRG inside the AUTO
+folder.
+
+If you have the Radeon/CTPCI and drivers.hex loaded, the VDI and the
+XBIOS of the TOS are used for the display.
+
+@endnode
+
+
+@node "Solutions"
+@toc "Compatibility"
+@{U}9.4  Solutions                                                    CT60@{u}
+
+
+@line 1 0 40
+@line 19 0 40
+@line 38 0 40
+@line 72 0 40
+@line 1 71 0
+ @{B}Software@{b}          @{B}Problem@{b}            @{B}Solution@{b}                         
+@line 1 71 0
+ Boot >= 2.00      Not works          Buy a full 68060.                
+ and 68060 EC                                                          
+@line 1 71 0
+ TOS drivers       Delay too long     The 15-20 seconds added          
+ Radeon/CTPCI      for booting        are for initialize the           
+                                      board with an X86 emulator.      
+@line 1 71 0
+ HD Driver 8 and   Crashes with       Update the ABE060 chip           
+ SCSI drive or     "SCSI Processor    to v5K or more.                  
+ the floppy disk   Device"                                             
+@line 1 71 0
+ HD Driver 8 and   Problems when the  Update HD Driver (8.13 or more). 
+ IO7 MFP 1 bug     SDMA runs with                                      
+                   D2D programs                                        
+@line 1 71 0
+ SpeedoGDOS 5      Crashes            Use the launcher SPDGDOS.PRG     
+                                      who disable the caches during    
+                                      exec of the real SPDGDOS.PRG.    
+@line 1 71 0
+ SpeedoGDOS 5      Not stable         Use NVDI.                        
+@line 1 71 0
+ fVDI/radeon.sys   Slower than TOS    Use NVDI.                        
+@line 1 71 0
+ fVDI/radeon.sys   Filling not works  v_contourfill not implemented    
+                   with graphics app  inside fVDI. Use NVDI.           
+@line 1 71 0
+ NVDI 5            Not works on       Rename all NVDIDRV*.SYS to       
+                   Radeon/CTPCI       NVDIDRV*.SY (for example).       
+@line 1 71 0
+ MagiC 6           Not works          Patch MAGIC.RAM and use the      
+                                      new MAGXBOOT.PRG.                
+                                      Install CT60XBIO.PRG and         
+                                      DSPXBIOS.PRG inside the AUTO     
+                                      folder after MAGXBOOT.PRG.       
+@line 1 71 0
+ MagiC 3-4-5       Ne fonctionne pas  Use MagiC 6.                     
+@line 1 71 0
+ Cubase Audio      Not works          Patch CAF_20x.PRG unpacked by    
+                                      NEW DEPACK and use the new       
+                                      CAF_060.PRG created.             
+                                      Install EXCEP060.PRG inside the  
+                                      AUTO folder, and the MROS3_45    
+                                      patched.                         
+@line 1 71 0
+ Spin METAXBS.PRG  Crashes            Remove the Fast-Ram flags.       
+@line 1 71 0
+ Picollo           Crashes            Remove the caches during start   
+ D2D               Crashes            or remove the Fast-Ram flags     
+ Gemview           Crashes            or use the cache delay inside    
+ Gembench          Crashes            the configuration CPX under TOS. 
+ Swiftel Photo     Crashes                                             
+@line 1 71 0
+ Xcontrol          Crashes            Use the patched version.         
+@line 1 71 0
+
+
+
+@line 1 0 31
+@line 14 0 31
+@line 30 0 31
+@line 76 0 31
+@line 1 75 0
+ @{B}Hard@{b}         @{B}Problem@{b}         @{B}Solution@{b}                                     
+@line 1 75 0
+ F030/DSP     DSP errors      Not use the CT60 clock (wire too long)       
+                              and put a new 50 MHz OSC on the original     
+                              32 MHz DSP OSC.                              
+@line 1 75 0
+ F030/SDMA    DSP errors      Ckeck the SDMA clock.                        
+              on DMA -> DSP                                                
+              transfers or                                                 
+              clicks during                                                
+              SDMA playing                                                 
+@line 1 75 0
+ Blitter      Bad pixels      Try blitter slow inside CT60CONF.CPX.        
+                              Decrease the F030 clock to 20/40 MHz         
+                              or 16/32 MHz.                                
+                              Use NVDI.                                    
+@line 1 75 0
+ Ethernec     Slow and/or     Install CT60 drivers (without movep).        
+              errors          Use only at 16/32 MHz.                       
+@line 1 75 0
+ Eclipse      Not works       Cut the trace between pins 20 and 22.        
+                              Update the ABE060 chip to v5I or more.       
+                              Try only at 16/32 MHz.                       
+@line 1 75 0
+ CTPCI        Not works       Update the ABE/SDR060 chip to v7 or more.    
+@line 1 75 0
+ CTPCI        No PCI board    Ckeck 3V3 and the 2x80 wires ribbon.         
+              detected                                                     
+@line 1 75 0
+ CTPCI        Parity erreur   Reduce the length of the 2x80 wires ribbon.  
+                              Contact Rodolphe.                            
+@line 1 75 0
+ CTPCI        USB / Network   Wait an hardware update from Rodolphe.       
+              PCI boards not                                               
+              works                                                        
+@line 1 75 0
+ Radeon       Not works       Use a Radeon for PC. TOS use an X86 emulator 
+ for MAC                      for initialize the board.                    
+@line 1 75 0
+ Radeon 7000  DVI not work    Clocks over 135 MHz have heat isues with DVI 
+ (RV100)                      on RV100.                                    
+                              Now high modes are rejected (drivers V1.01). 
+@line 1 75 0
+
+
+@endnode
+
+
+@node "CT60 HARDWARE GUIDE"
+@toc "Main"
+@{U}10  CT60 HARDWARE GUIDE                                           CT60@{u}
+
+@{B} Rev 5.2 October 2000 / February 2004 (c) Rodolphe Czuba @{b}
+
+10.1  FUNCTIONAL BLOCK DIAGRAM
+10.2  ADDRESSES & REGISTERS
+     10.2.1  68030 VIEW 24-Bit MAP
+     10.2.2  68060 VIEW 32-Bit MAP
+     10.2.3  REGISTERS SUMMARY
+     10.2.4  SDR60 REGISTERS DETAILS
+     10.2.5  ABE60 REGISTERS DETAILS
+10.3  060 BUS SLOT
+10.4  HARDWARE EMULATION
+10.5  THERMAL SENSOR
+10.6  DIMM EEPROM
+     10.6.1  EEPROM DATA
+     10.6.2  I2C 2-wire PROTOCOL
+     10.6.3  RANDOM READ PROTOCOL & SOFTWARE
+10.7  DIMM SDRAM for CT60
+10.8  060 BURST with SDRAM
+10.9  INTERRUPTS
+10.10  CHIPSETS pinouts
+     10.10.1  SDR-60
+     10.10.2  ABE-60
+
+@endnode
+
+
+@node "FUNCTIONAL BLOCK DIAGRAM"
+@toc "CT60 HARDWARE GUIDE"
+@{U}10.1  FUNCTIONAL BLOCK DIAGRAM                                    CT60@{u}
+
+
+@limage G:\TOS060\DOC\CT60\ENGLISH\..\img\ct60arch.img 1
+@endnode
+
+
+@node "ADDRESSES & REGISTERS"
+@toc "CT60 HARDWARE GUIDE"
+@{U}10.2  ADDRESSES & REGISTERS                                       CT60@{u}
+
+10.2.1  68030 VIEW 24-Bit MAP
+10.2.2  68060 VIEW 32-Bit MAP
+10.2.3  REGISTERS SUMMARY
+10.2.4  SDR60 REGISTERS DETAILS
+10.2.5  ABE60 REGISTERS DETAILS
+
+@endnode
+
+
+@node "68030 VIEW 24-Bit MAP"
+@toc "ADDRESSES & REGISTERS"
+@{U}10.2.1  68030 VIEW 24-Bit MAP                                     CT60@{u}
+
+$xx000000 $xxDFFFFF  14 MB  ST-RAM
+$xxE00000 $xxEFFFFF   1 MB  TOS 4.0x ROM - BOOT
+$xxE00000 $xxEFFFFF   1 MB  CT60 FLASH  CPU SPACE #3
+$xxF00000 $xxF0FFFF  64 KB  I/O IDE
+$xxF10000 $xxF9FFFF 576 KB  F030 BUS SLOT
+$xxFA0000 $xxFBFFFF 128 KB  CARTRIDGE SLOT
+$xxFC0000 $xxFEFFFF 192 KB  Unused
+$xxFF0000 $xxFFFFFF  64 KB  I/O
+
+@endnode
+
+
+@node "68060 VIEW 32-Bit MAP"
+@toc "ADDRESSES & REGISTERS"
+@{U}10.2.2  68060 VIEW 32-Bit MAP                                     CT60@{u}
+
+$00000000 $00DFFFFF   14 MB  ST-RAM               CACHE    - NO BURST
+$00E00000 $00EFFFFF    1 MB  CT60 FLASH           CACHE    - NO BURST
+$00F00000 $00F0FFFF   64 KB  I/O IDE              NO CACHE - NO BURST
+$00F10000 $00F9FFFF  576 KB  F030 BUS SLOT        NO CACHE - NO BURST
+$00FA0000 $00FBFFFF  128 KB  CARTRIDGE SLOT       NO CACHE - NO BURST
+$00FC0000 $00FEFFFF  192 KB  Unused               NO CACHE - NO BURST
+$00FF0000 $00FFFFFF   64 KB  I/O                  NO CACHE - NO BURST
+$01000000 $20FFFFFF  512 MB  SDRAM (TT-RAM)       CACHE    - BURST
+$21000000 $3FFFFFFF  496 MB  Reserved             CACHE    - BURST
+$40000000 $7FFFFFFF 1024 MB  060 BUS SLOT         CACHE    - BURST
+$80000000 $BFFFFFFF 1024 MB  060 BUS SLOT         NO CACHE - NO BURST
+$C0000000 $EFFFFFFF  768 MB  Reserved             NO CACHE - NO BURST
+$F0000000 $FBFFFFFF  192 MB  CT60 I/O             NO CACHE - NO BURST
+$FC000000 $FEFFFFFF   48 MB  Reserved             NO CACHE - NO BURST
+$FF000000 $FFFFFFFF   16 MB  FALCON 24-Bit SHADOW NO CACHE - NO BURST
+
+From the 030, the FLASH chip is accessible (to program and read it)
+by the 030 CPU SPACE #3.
+
+From the 060, the TOS chip is NOT accessible. The FLASH is seen at
+the TOS addresses when booting. When programming the Flash, the 060
+ALTERNATE SPACE #3 must be used.
+
+@endnode
+
+
+@node "REGISTERS SUMMARY"
+@toc "ADDRESSES & REGISTERS"
+@{U}10.2.3  REGISTERS SUMMARY                                         CT60@{u}
+
+@{B} SDR-60 @{b}
+
+EE EECL   $F0000000 I2C port for EEprom DIMM
+   EEDA   $F0800000
+
+TH THCS   $F1000000 THermal sensor of the 060
+   THCK   $F1800000
+   THDA   $F1000000
+
+SDCNF     $F2000000 SDram CoNFiguration
+
+IVR       $F3000000 Int Vector Register
+
+@{B} ABE-60 @{b}
+
+FWEN      $F9000000 Flash Write ENable  (only from the 060/PPC)
+
+SLP       $FA000000 Sleep = Turn OFF the ATX power supply.
+
+@endnode
+
+
+@node "SDR60 REGISTERS DETAILS"
+@toc "ADDRESSES & REGISTERS"
+@{U}10.2.4  SDR60 REGISTERS DETAILS                                   CT60@{u}
+
+@{U} SDRAM EEPROM I2C Port : @{u}
+
+EECL (EEprom serial CLock)
+ Write at $F0000000 : WRITE 0 to EECL line.
+ Write at $F0400000 : WRITE 1 to EECL line.
+ Read  at $F0000000 : READ from the EECL line on the D1 CPU data line.
+
+EEDA (EEprom serial DAta)
+ Write at $F0800000 : WRITE 0 to EEDA line.
+ Write at $F0C00000 : WRITE 1 to EEDA line.
+ Read  at $F0000000 : READ from the EEDA line on the D0 CPU data line.
+
+@{U} 060 THERMAL 3-wires Port : @{u}
+
+THCS (THermal Chip Select)
+ Write at $F1000000 : WRITE 0 to CS line.
+ Write at $F1400000 : WRITE 1 to CS line.
+
+THCK (THermal ClocK)
+ Write at $F1800000 : WRITE 0 to CLK line.
+ Write at $F1C00000 : WRITE 1 to CLK line.
+
+THDA (THermal DAta)
+ Read  at $F1000000 : Read from the DO line on the D0 CPU data line.
+
+@{U} INTERRUPT REGISTER : @{u}
+
+IVR (Interrupt Vector Register)
+ Read at $F3000000
+
+@{U} SDRAM CONTROLLER : @{u}
+
+SDCNF (SDram CoNFiguration)
+ Write a long at $F2xx0000 with xx = [A23..A16]
+
+Chip DensitY (EEPROM Byte #3 & #4)
+A23 = cdy2                                           EEPROM
+A22 = cdy1                                       Byte#3  Byte#4
+     [cdy2,cdy1] = 0,0 --> 8Mx8 / 8x16              $0C $09
+                 = 0,1 --> 16Mx8                    $0C $0A
+                 = 1,0 --> 16Mx16                   $0D $09
+                 = 1,1 --> 32Mx8 / 32Mx16           $0D $0A
+
+Number of DIMM Banks (EEPROM Byte #5)
+A20 = nrb
+     [nrb] = 0 --> 1 bank
+           = 1 --> 2 banks
+
+Module DensitY (EEPROM Byte #31 * EEPROM Byte #5)
+A19 = mdy2
+A18 = mdy1
+     [mdy2,mdy1,mdy0] = 0,0 -->  64MB
+                      = 0,1 --> 128MB
+                      = 1,0 --> 256MB
+                      = 1,1 --> 512MB
+
+ReFresh RaTe (EEPROM Byte #12)
+A16 = rfrt
+     [rfrt] = 0 --> 15.625 uS
+            = 1 --> 7.8125 uS
+
+@endnode
+
+
+@node "ABE60 REGISTERS DETAILS"
+@toc "ADDRESSES & REGISTERS"
+@{U}10.2.5  ABE60 REGISTERS DETAILS                                   CT60@{u}
+
+FWEN (Flash Write ENable)
+ Only for the PowerPC write accesses.
+ Not needed for 030 and 060 write accesses.
+ Write at $F9000000 : Can write
+ Write at $F9800000 : Cant write
+
+SLP (SleeP)
+ Write at $FA800000 : Turn OFF the power supply.
+
+@endnode
+
+
+@node "060 BUS SLOT"
+@toc "CT60 HARDWARE GUIDE"
+@{U}10.3  060 BUS SLOT                                                CT60@{u}
+
+A 060 bus Slot is present on the CT60 for some future daughter cards
+like the PCI adaptor or a PPC developers system.
+
+A minimal and usefull connector was choosen. It has only 100 pins (2
+connectors of 2x25 pins) and furnishes the following signals and
+power lines.
+
+@{B} Signals Groups @{b}
+
+@{U} ADDRESS & DATA @{u}
+
+A31-A0    Address Bus
+D31-D0    Data Bus
+
+@{U} TRANFER CONTROL @{u}
+
+/TS                      Transfer Start
+R/W                      Read Write
+/BS0, BS1/, /BS2, /BS3   Byte Select
+SIZ1, SIZ0               SIZe
+TT1, TT0, TM2, TM1, TM0  Transfer Type & Transfer Modifier
+/TA                      Transfer Acknowledge
+
+@{U} ARBITRATION @{u}
+
+/BR     Bus Request
+/BG     Bus Grant
+/BB     Bus Busy
+
+@{U} INTERRUPTS @{u}
+
+/TEA    Transfer Error Acknowledge
+/RST    ReSeT
+/I6     Interrupt 6 : Sent by the daughter card to the CT60
+/INT    INTerrupt : Sent by CT60 to the daughter card for a PPC
+
+@{U} CLOCK @{u}
+
+CLK     CLocK (CT60 clock : 64MHz or more)
+
+@{U} POWER @{u}
+
+-12V, +12V   Power supplies : used by some PCI cards and the fans (+12).
++3.3V, +5V   Power supplies : used by components and processors.
+             Each pin can drive up to 6 Amperes.
+GND (9)      GrouND pins.
+
+@{B} Pinout @{b}
+
+@{U} Add Connector Data Connector @{u}
+
+#A1  #A2      #D1  #D2
+GND  GND      GND  GND
++5V  /BR      TM0  +12V
+/TS  /BG      TM1  -12V
+R/W  /BB      TM2  +3.3V
+SIZ0 SIZ1     TT0  TT1
+/TA  /TEA     /BS0 /BS1
+     CLK      /BS2 /BS3
+/RST GND      /I6  /INT
+A30  A31      D0   D1
+..   ..       ..   ..
+A0   A1       D30  D31
+GND  GND      GND  GND
+#A49 #A50     #D49 #D50
+
+@endnode
+
+
+@node "HARDWARE EMULATION"
+@toc "CT60 HARDWARE GUIDE"
+@{U}10.4  HARDWARE EMULATION                                          CT60@{u}
+
+The CT60 allows a @{B} Falcon hardware emulation. @{b}
+
+With this Hardware Emulation Window, it is easy to implement a new
+chip replacing the old one of the Falcon motherboard and this at the
+same address(es) !
+
+@{U} Examples : @{u}
+
+   ù SUPER-VIDEL chip in a FPGA with DDR memory.
+
+   ù SDRAM replacement of a part of the ST-RAM at the same addresses.
+
+   ù ACIA for new PS/2 ports with a CPLD/FPGA.
+
+   ù ACIA MIDI with a CPLD/FPGA.
+
+   ù DSP56301 replacing 56001 at same addresses !
+
+   ù FPGA emulating serial & parallel port of the Falcon (Zilog 85C30
+     and Yamaha).
+
+   ù New SDMA for Audio.
+
+There is a time window from the start of the 060 access to the Falcon
+addresses ($00xxxxxx and $FFxxxxxx) up to the start (rising edge) of
+the 7th cycle of the CLK (bus and 060 clock).
+
+When the 060 inserts the addresses and TS to validate, a counter into
+ABE start if the address is somewhere in the Falcon address space.
+Until the counter reaches the end of the 6th cycle, a card on the 060
+slot bus of the CT60 can answer to terminate the access instead of a
+chip of the Falcon mb (with TA/ or TEA/ or both TA/ & TEA/ for a
+RETRY). This termination of the access terminates the counter and
+invalidates the Falcon acccess that was started.
+
+At the begining of the 7th cycle the Falcon READ access continues and
+cannot be stopped. ABE drives data on the CT60 bus.
+
+The time limit for the termination signal sampling is the end of the
+6th cycle.
+
+@{U} If you want to use SDRAM on a daughter card : @{u}
+
+For 66 MHz SDRAM BURST READ you need 5-1-1-1 cycles. The TA arrives
+the 5th cycle (first data) up to 8th (fourth data). This TA arrives
+before the end of the 6th cycle and the F030 access start is
+cancelled.
+
+For 66 MHz SDRM BURST WRITE you need 3-1-1-1 cyles. The TA arrives
+the 3rd cycle (first data) up to 6th (fourth data). This TA arrives
+before the end of the 6th cycle and the F030 access start is
+cancelled.
+
+@{U} For registers accesses on a daughter card, you need 2 or 3 cycles. @{u}
+
+If you want to write both to F030 mb AND your daughter card (an
+address that is present on the two boards), don't send TA from the
+daughter card and the TA from mb will terminate the write access for
+you.
+
+@{U} By example, @{u} this technic allows to write all VIDEL and SUPER VIDEL
+registers in the same time. The emulation is total! The only thing is
+to do is to implement a bit in the daughter board to @{B} switch ON/OFF
+the emulation. @{b}
+
+@{B} If the switch is ON : @{b}
+
+   ù the daugther card address registers are at the same addresses
+     than the F030 mb and :
+
+   ù the TA must not be sent when writting these registers that are
+     common to F030 and the daughter card.
+
+   ù the TA must be sent before the 7th cycle when reading from
+     register that is a common to F030 & daughter card.
+
+@{B} If the switch is OFF : @{b}
+
+   ù the daughter card address registers must be present at some
+     specific addresses (not the same than the F030) and the TA is
+     sent as usual by the daughter card for all read & write
+     accesses.
+
+@{U} Example with $FFFF820E : @{u}
+
+Switch is ON -> Write at $FFFF820E write to daughter card and F030 mb
+and this access is terminated by the TA from Falcon mb (ABE). The
+card don't send TA.
+
+Switch is OFF -> Write at $FFFF820E write only to Falcon mb. You need
+to write to a 'new' address on the card to access the same register.
+
+@endnode
+
+
+@node "THERMAL SENSOR"
+@toc "CT60 HARDWARE GUIDE"
+@{U}10.5  THERMAL SENSOR                                              CT60@{u}
+
+The 68060 contains a Die Temperature Sensor with two external pins
+THERM0 & THERM1. The sensor is done with a temperature sensitive
+resistor which has a 780 ohms value at 25øC and increases/decreases
+by steps of 2.8 ohms per øC unit. By example, a 060 core at 80øC
+gives a resistance of 934 ohms between the two THERMx pins.
+
+@{B} Equations : R60 = 780 + 2.8 x (TEMP 25) or TEMP = (R60 - 710) / 2.8 @{b}
+
+The CT60 uses a small slow Analog/Digital converter (TI TLV0831) to
+obtain a 8-Bit value of the voltage between the THERMs pins.
+
+@{B} The equation is : U60 = (3.34 x R60) / (1000 + R60) @{b} where R60 is
+the value of the core sensor resistor; 3.34 is the power supply and
+1000 is the value of the resistor connected between the 3.34V and the
+positive THERM0/IN+ line.
+
+@{U} TOLERANCES : @{u}
+
+   ù Power supply : 3.3V +/- 4% : From 3.168V to 3.432V. Curently, it
+     is 3.30 to 3.34.
+
+   ù Resistor : 1K +/-1% : From 990 to 1010 Ohms. Curently, it is
+     from 995 to 1005 ohms.
+
+The AD converter uses a REF voltage of 1.800 V. With 0 to 0.007 V
+between the two pins of the AD converter, the digital result is 0.
+With 1.794 to 1.800 V, the result is 255. The value
+increases/decreases by steps of 0.007 V.
+
+@{B} The equation is : Data = INT [U60/0.007]. @{b}
+
+At   0øC : Vin+ = 1.387 V  Data = 197  R60=710
+At  25øC : Vin+ = 1.464 V  Data = 208  R60=780
+At  50øC : Vin+ = 1.535 V  Data = 218  R60=850
+At 100øC : Vin+ = 1.662 V  Data = 236  R60=990
+
+@{U} ATTENTION : The varation of the data is not linear !! @{u}
+
+The CPU must access the TLV831 by a basic bit-by-bit protocol. It is
+the software responsibility to respect the protocol & timings of the
+following chronogram, and assemble the bits.
+
+
+@limage G:\TOS060\DOC\CT60\ENGLISH\..\img\tlv.img 1
+f   : Clock frequency                         10 to 600 kHz (typical = 250)
+tsu : Setup time, CS LOW before CLK goes HIGH 350 ns MIN
+tpd : Propagation delay time :
+      output data after CLK goes HIGH         500 ns MAX (typical = 200)
+twh : Pulse duration, CS HIGH                 220 ns MIN
+tconv : Converstion Time (at 250kHz)          32 us
+
+Three registers are present in the SDR60 chip.
+
+The 060 CPU must drive THCS & THCK and read THDA by these registers.
+
+The address $F1000000, $F1800000 & $F1000000 are used respectively
+for THCS, THCK & THDA.
+
+THCS (Chip Select)
+LONG WRITE at $F1000000   WRITE 0 to CS Rising edge of CS (removed)
+LONG WRITE at $F1400000   WRITE 1 to CS Falling edge of CS (active)
+
+THCK (Clock)
+LONG WRITE at $F1800000   WRITE 0 to CLK Falling edge of CLK
+LONG WRITE at $F1C00000   WRITE 1 to CLK Rising edge of CLK
+
+THDA (Data Output)
+LONG READ at $F1000000   READ from DO
+                         Value is available on D0 of the CPU data bus.
+
+For an example, see the example in the DIMM EEPROM chapter.
+
+@endnode
+
+
+@node "DIMM EEPROM"
+@toc "CT60 HARDWARE GUIDE"
+@{U}10.6  DIMM EEPROM                                                 CT60@{u}
+
+10.6.1  EEPROM DATA
+10.6.2  I2C 2-wire PROTOCOL
+10.6.3  RANDOM READ PROTOCOL & SOFTWARE
+
+@endnode
+
+
+@node "EEPROM DATA"
+@toc "DIMM EEPROM"
+@{U}10.6.1  EEPROM DATA                                               CT60@{u}
+
+The DIMM standard allows the loading of the manufacturer informations
+from a small 128 or 256 bytes EEPROM on the DIMM. Some of these
+informations are needed to configure the SDRAM controller of the
+CT60.
+
+The following bytes are uses by the CT60 :
+
+   ù @{B} Bold @{b} are used by the boot software to configure the SDRAM
+     controller.
+
+   ù Others are used only as user information in a SET UP menu.
+
+
+@line 1 0 33
+@line 13 0 33
+@line 41 0 33
+@line 77 0 33
+@line 1 76 0
+ Byte 2      Memory Type                 FPM, EDO, NIBBLE, SDRAM (=$04)     
+ @{B}                                                                           
+@line 1 76 0
+ Byte 3      Number of Row Addresses     11,12,13,. : $B:11 / $C:12 / $D:13 
+@line 1 76 0
+ Byte 4      Number of Column Addresses  8,9,10,... : $8:8  / $9:9  / $A:10 
+@line 1 76 0
+ Byte 5      Number of DIMM Banks        1 or 2  $01:1 / $02:2              
+@line 1 76 0
+ @{b}                                                                           
+ Byte 6-7    Module Data Width           64, 72 , 80, : $4000               
+@line 1 76 0
+ Byte 8      Voltage Interface Level     TTL, LVTTL (1), HSTL, SSTL3, SSTL2 
+             of this assembly                                               
+@line 1 76 0
+ Byte 9      SDRAM Cycle Time (tCYC)                                        
+@line 1 76 0
+ Byte 10     SDRAM Access from Clock                                        
+             (tAC)                                                          
+@line 1 76 0
+ Byte 11     SDRAM Configuration Type    None, Parity, ECC                  
+ @{B}                                                                           
+@line 1 76 0
+ Byte 12     Refresh Rate                15.625uS:$80, 7.81uS:$82           
+@line 1 76 0
+ @{b}                                                                           
+ Byte 17     Number of Banks             2 or 4 ($04)                       
+             on SDRAM Device                                                
+@line 1 76 0
+ Byte 27     Minimum ROW Precharge                                          
+             Time (tRP)                                                     
+@line 1 76 0
+ Byte 28     Minimum ROW Active to                                          
+             Active Delay (tRRD)                                            
+@line 1 76 0
+ Byte 29     Minimum RAS to CAS Delay                                       
+             (tRCD)                                                         
+ @{B}                                                                           
+@line 1 76 0
+ Byte 31     Module Bank Density         16 ($04), 32 ($08), 64 ($10),      
+                                         128 ($20), 256 ($40), 512 ($80)    
+@line 1 76 0
+ @{b}                                                                           
+ Byte 64-71  Module Manufacturers        EX : $A4000000 = IBM               
+             JEDEC ID Code                                                  
+@line 1 76 0
+ Byte 73-90  Module Part Number                                             
+@line 1 76 0
+ Byte 93-94  Module Manufacturing Date                                      
+@line 1 76 0
+ Byte 95-98  Module Serial Number                                           
+@line 1 76 0
+
+
+Some features are initialized by the logic chip into the DIMM module
+when booting :
+
+   ù BURST Length 1, 2, 4, 8 , Page. 4 is for 060, PPC, X86
+     processors
+
+   ù CAS Latency 2, 3, 4,... 2 is possible with PC100 at 66 up to 80
+     MHz !
+
+@{B} Remarks : @{b}
+
+   ù Don't confuse SDRAM banks (2 or 4) with DIMM banks (1 or 2) !
+
+   ù Bytes 128-255 are open for Customer Use and can be written - Not
+     used with CT60.
+
+   ù DIMM Density = Module Bank Density * Number of DIMM Banks (1 or
+     2).
+
+@endnode
+
+
+@node "I2C 2-wire PROTOCOL"
+@toc "DIMM EEPROM"
+@{U}10.6.2  I2C 2-wire PROTOCOL                                       CT60@{u}
+
+The EEPROM device conforms to the I2C 2-wire protocol. CT60 only uses
+the random read operations with the EEPROM.
+
+During data input, the EEPROM samples the SDA signal on the rising
+edge of the clock (SCL). For correct device operation, the SDA signal
+must be stable during the clock low to high transition and data must
+change only when the clock (SCL) line is low.
+
+
+@limage G:\TOS060\DOC\CT60\ENGLISH\..\img\i2c1.img 3
+@endnode
+
+
+@node "RANDOM READ PROTOCOL & SOFTWARE"
+@toc "DIMM EEPROM"
+@{U}10.6.3  RANDOM READ PROTOCOL & SOFTWARE                           CT60@{u}
+
+
+@limage G:\TOS060\DOC\CT60\ENGLISH\..\img\i2c2.img 1
+The slave address is 1010000. The eight bit is the R/W bit.
+
+Random read operations allow the master to access any memory location
+in a random manner. Before issuing the slave address with the R/W bit
+set to one (Read), the master must first perform a dummy write
+operation. The master issues the start condition, slave address and
+then the word address it is to read. After the word address ACK, the
+master immediately re-issues the start condition and the slave
+address with the R/W bit set to one. This will be followed by an ACK
+from the slave and then by the eight bit word. The master will not
+ACK the transfer but will issue a stop and the slave stops
+transmission and goes into standby.
+
+The device that controls the transfer is referred to as the master
+(SDR60 chip) and the device that receives the data (EEPROM) is
+referred to as the slave device. The master will always start a data
+transfer (SDA line) and will provide the serial clock (SCL line) for
+synchronization.
+
+The 060 CPU must drive the SCL and SDA lines. These lines are
+connected to 2 pins of the logic chip.
+
+The address $F00xxxxx is used for SCL and $F08xxxxx is used for SDA
+signal.
+
+SCL (Clock)
+LONG WRITE at $F0000000   WRITE 0 to SCL Falling edge of SCL
+LONG WRITE at $F0400000   WRITE 1 to SCL Rising edge of SCL
+LONG READ  at $F0000000   READ from SCL
+                          Value is available on D1
+                          of the CPU data bus.
+SDA (Data)
+LONG WRITE at $F0800000   WRITE 0 to SDA
+LONG WRITE at $F0C00000   WRITE 1 to SDA
+LONG READ  at $F0000000   READ from SDA
+                          Value is available on D0
+                          of the CPU data bus.
+
+@{U} EXAMPLE @{u}
+
+If you want to read the Byte #3 from the EEPROM :
+
+START condition
+LONG WRITE at $F0800000   WRITE 0 to SDA
+LONG WRITE at $F0000000   WRITE 0 to SCL Falling edge of SCL
+
+SLAVE ADDRESS (Write at 1010000)
+Write 1
+LONG WRITE at $F0C00000   WRITE 1 to SDA
+LONG WRITE at $F0400000   WRITE 1 to SCL Rising edge of SCL
+LONG WRITE at $F0000000   WRITE 0 to SCL Falling edge of SCL
+Write 0
+LONG WRITE at $F0800000   WRITE 0 to SDA
+LONG WRITE at $F0400000   WRITE 1 to SCL Rising edge of SCL
+LONG WRITE at $F0000000   WRITE 0 to SCL Falling edge of SCL
+...
+Repeat for the values 10000 (the last 0 is for write)
+
+ACK condition
+LONG WRITE at $F0400000   WRITE 1 to SCL Rising edge of SCL
+LONG READ  at $F0000000   READ from SDA If =0, its an ACK
+LONG WRITE at $F0000000   WRITE 0 to SCL Falling edge of SCL
+
+
+WORD ADDRESS DATA (# 3 in this example)
+Write 0
+LONG WRITE at $F0800000   WRITE 0 to SDA
+LONG WRITE at $F0400000   WRITE 1 to SCL Rising edge of SCL
+LONG WRITE at $F0000000   WRITE 0 to SCL Falling edge of SCL
+...
+Repeat 5 times
+
+Write 1
+LONG WRITE at $F0C00000   WRITE 1 to SDA
+LONG WRITE at $F0400000   WRITE 1 to SCL Rising edge of SCL
+LONG WRITE at $F0000000   WRITE 0 to SCL Falling edge of SCL
+...
+Repeat 1 time
+
+ACK condition
+LONG WRITE at $F0400000   WRITE 1 to SCL Rising edge of SCL
+LONG READ  at $F0000000   READ from SDA If =0, its an ACK
+LONG WRITE at $F0000000   WRITE 0 to SCL Falling edge of SCL
+
+START condition immediately after ACK
+LONG WRITE at $F0C00000   WRITE 1 to SDA
+LONG WRITE at $F0400000   WRITE 1 to SCL Rising edge of SCL
+LONG WRITE at $F0800000   WRITE 0 to SDA
+LONG WRITE at $F0000000   WRITE 0 to SCL Falling edge of SCL
+
+SLAVE ADDRESS (Read at 1010000)
+Write 1
+LONG WRITE at $F0C00000   WRITE 1 to SDA
+LONG WRITE at $F0400000   WRITE 1 to SCL Rising edge of SCL
+LONG WRITE at $F0000000   WRITE 0 to SCL Falling edge of SCL
+Write 0
+LONG WRITE at $F0800000   WRITE 0 to SDA
+LONG WRITE at $F0400000   WRITE 1 to SCL Rising edge of SCL
+LONG WRITE at $F0000000   WRITE 0 to SCL Falling edge of SCL
+...
+Repeat same procedure for the values 10001 (the last 1 is for read)
+
+ACK condition
+LONG WRITE at $F0400000   WRITE 1 to SCL Rising edge of SCL
+LONG READ  at $F0000000   READ from SDA If =0, its an ACK
+LONG WRITE at $F0000000   WRITE 0 to SCL Falling edge of SCL
+
+READ WORD DATA
+Bit#7
+LONG WRITE at $F0400000   WRITE 1 to SCL Rising edge of SCL
+LONG READ  at $F0000000   READ from SDA DATA Bit#7
+LONG WRITE at $F0000000   WRITE 0 to SCL Falling edge of SCL
+Bit#6
+LONG WRITE at $F0400000   WRITE 1 to SCL Rising edge of SCL
+LONG READ  at $F0000000   READ from SDA DATA Bit#6
+LONG WRITE at $F0000000   WRITE 0 to SCL Falling edge of SCL
+...
+Repeat 6 times
+
+Clock cycle (NO ACK)
+LONG WRITE at $F0400000   WRITE 1 to SCL Rising edge of SCL
+LONG WRITE at $F0000000   WRITE 0 to SCL Falling edge of SCL
+
+STOP condition
+LONG WRITE at $F0800000   WRITE 0 to SDA
+LONG WRITE at $F0400000   WRITE 1 to SCL Rising edge of SCL
+LONG WRITE at $F0C00000   WRITE 1 to SDA
+
+@endnode
+
+
+@node "DIMM SDRAM for CT60"
+@toc "CT60 HARDWARE GUIDE"
+@{U}10.7  DIMM SDRAM for CT60                                         CT60@{u}
+
+The CT60 supports the modern PC100/133 standard SDRAM DIMMs, and the
+obsolet/uneeded are not accepted.
+
+GOOD SDRAM DIMMs for CT60
+
+   ù PC100 & PC133 CL2.
+
+   ù Must be UNBUFFURED type.
+
+   ù Must be 64-bits (no parity or ECC = 72 / 80 bits).
+
+
+@line 5 0 14
+@line 13 0 14
+@line 20 0 14
+@line 27 0 14
+@line 36 0 14
+@line 42 0 14
+@line 48 0 14
+@line 56 0 14
+@line 67 0 14
+@line 5 62 0
+     Module   Nbr    Nbr   Chip     RAS   CAS     PAGE    Refresh 
+     Config  chips  banks  organiz  Addr  Addr  Lentgh  Rate (uS) 
+@line 5 62 0
+     64 MB     4      2    4Mx16b    12    8      4 KB     15.625 
+     64 MB     8      1    8Mx8b     12    9      8 KB     15.625 
+     64 MB     4      1    8Mx16b    12    9      8 KB     15.625 
+@line 5 62 0
+     128 MB    8      2    8Mx8b     12    9      8 KB     15.625 
+     128 MB    4      2    8Mx16b    12    9      8 KB     15.625 
+     128 MB    8      1    16Mx8b    12    10    16 KB     15.625 
+     128 MB    4      1    16Mx16b   13    9      8 KB     7.8125 
+@line 5 62 0
+     256 MB    8      2    16Mx8b    12    10    16 KB     15.625 
+     256 MB    4      2    16Mx16b   13    9      8 KB     7.8125 
+     256 MB    8      1    32Mx8b    13    10    16 KB     7.8125 
+@line 5 62 0
+     512 MB    8      2    32Mx8b    13    10    16 KB     7.8125 
+     512 MB    4      2    32Mx16b   13    10    16 KB     7.8125 
+@line 5 62 0
+
+
+@{B} NOT SUPPORTED SDRAM DIMMs @{b}
+
+   ù All DIMM with chips density < 64Mbits : 8MB, 16MB & 32MB DIMMs.
+     All DIMMs with 2 logical banks chips = obsolet (CT60 needs 4
+     logical banks chips).
+
+   ù REGISTERED / BUFFURED DIMMs (generally for Work Stations &
+     Servers, not PC).
+
+   ù 512 MB DIMM with one physical bank (only 1 side populated).
+
+@{B} REMARK : @{b}
+
+Don't confuse SDRAM banks (2 or 4) with physical banks (1= Single
+Size or 2 = Double Size) !
+
+@{B} PERFORMANCES : @{b}
+
+The better system performances is obtained with 16 KB page length
+DIMMs.
+
+@endnode
+
+
+@node "060 BURST with SDRAM"
+@toc "CT60 HARDWARE GUIDE"
+@{U}10.8  060 BURST with SDRAM                                        CT60@{u}
+
+The CT60 bus clock = the 060 clock (060 in 'Full Bus mode').
+
+The 060 uses @{B} LINE BURST @{b} to & from the system memory. SDRAM is well
+adapted for a such processor !
+
+A BURST LINE is a length of @{B} 4 LONG-WORDs (16 Bytes) @{b} that are
+transferred with only :
+
+@{B} PAGE HIT @{b} (access to a logical SDRAM page already open) :
+
+   ù 3,1,1,1 = 6 cycles for Burst Writes. Rate is 16 Bytes / 6 cycles
+     = 178 MBytes/s (Each access in the same page).
+
+   ù 5,1,1,1 = 8 cycles for Burst Reads. Rate is 16 Bytes / 8 cycles
+     = 132 MBytes/s (Each access in the same page).
+
+@{B} PAGE MISS @{b} (access to a new logical SDRAM page (must be precharged
+and open) :
+
+   ù 7,1,1,1 = 10 cycles for Burst Writes. Rate is 16 Bytes / 10
+     cycles = 107 MBytes/s (Each access in a new page).
+
+   ù 9,1,1,1 = 12 cycles for Burst Reads. Rate is 16 Bytes / 12
+     cycles = 89 MBytes/s (Each access in a new page).
+
+The CT60 uses the 060 at the top of the possible performances with
+the mighty @{B} COPYBACK @{b} mode ! Instead of the WRITETROUGH mode like
+other TOS machines !
+
+@{B} Copyback mode is active for all SDRAM memory area. @{b}
+
+Copyback mode allows the 060 to write into the cache without writting
+into the SDRAM, what is so more performant ! The cache lines are
+pushed into SDRAM only when needed (060 needs place by example). With
+@{B} two 8Kbytes caches, @{b} it gives to coders the possibility to do some
+incredibly speed routs residing at 100% into the caches !
+
+The 060 uses BURST transfers with SDRAM in 99% of the cases. Here are
+the cases when the 060 don't burst, this means, transfers Bytes,
+Words & Long-Words :
+
+@{B} Byte, Word, and Long-Word READ Transfer Cycles from SDRAM @{b}
+
+Accesses that are implicitly NONCACHABLE :
+
+   ù Locked Read-Modify-Write accesses.
+
+   ù Table Searches.
+
+Accesses that are not allocate in the data cache on a read miss :
+
+   ù Exception Vector Fetches.
+
+   ù Exception stack Deallocation for an RTE Instruction.
+
+@{B} Byte, Word, and Long-Word WRITE Transfer Cycles to SDRAM @{b}
+
+Accesses that are implicitly NONCACHABLE :
+
+   ù Locked Read-Modify-Write accesses.
+
+   ù Table Searches.
+
+Accesses that are not allocate in the data cache on a write miss :
+
+   ù Exception stacking.
+
+Cache Line pushes for lines containing a single dirty Long-word.
+
+Write to WRITETHROUGH pages (ST-RAM !).
+
+@{B} Remark : @{b}
+
+For those of you who are a bit familiar with 64-bit processors like
+PPC, don't forget that the syntax for data size is not the same :
+
+@{B} With 32-Bit processors : @{b}
+
+   ù A WORD designates a 16-Bit entity.
+
+   ù LONG-WORD designates a 32-Bit entity.
+
+@{B} With 64-Bit processors : @{b}
+
+   ù A HALF-WORD designates a 16-Bit entity.
+
+   ù A WORD designates a 32-Bit entity.
+
+   ù A DOUBLE-WORD designates a 64-Bit entity.
+
+@endnode
+
+
+@node "INTERRUPTS"
+@toc "CT60 HARDWARE GUIDE"
+@{U}10.9  INTERRUPTS                                                  CT60@{u}
+
+CT60 adds some new interrupts for the 060 Bus Slot, re-routing of the
+Falcon INT Set to the second CPU (CPU#2 on the Bus Slot).
+
+@{B} The /I6 , and /INT were added on CT60. @{b}
+
+/I6 is the interrupt from the 060 BUS SLOT and is merged with the
+others from the Falcon. See table below for the priority position.
+
+/INT is sent by SDR-60 to the CPU#2 to interrupt it. INT is
+synthetized from the /IPL2, /IPL1 & /IPL0 signals and the I6. It is
+necessary when the CPU#2 has to respond the interrupts instead of the
+primary 060...
+
+@{U} 060 INTERRUPTS PRIORITY TABLE @{u}
+
+
+@line 2 0 10
+@line 10 0 10
+@line 17 0 10
+@line 25 0 10
+@line 35 0 10
+@line 53 0 10
+@line 60 0 10
+@line 70 0 10
+@line 2 68 0
+  NAME    LEVEL  ACTIVE  TYPE      SOURCE            IVR    PRIORITY 
+@line 2 68 0
+  I6        6    Low     Software  CT60 Bus Slot     1,1,1  Highest  
+  INT6      6    Low     Software  F030 Bus Slot     1,1,0     ^     
+  MFPINT    6    Low     Software  F030 MFP          1,1,0     |     
+  DSPREQ    6    Low     Software  F030 DSP          1,1,0     |     
+  INT5      5    Low     Software  F030 SCC          1,0,1     |     
+  VBL       4    Low     Auto      F030 VIDEL VSync  1,0,0     |     
+  INT3      3    High    Software  F030 Bus Slot     0,1,1     |     
+  HBL       2    Low     Auto      F030 VIDEL HSync  0,1,0     v     
+  INT1      1    High    Software  F030 Bus Slot     0,0,1   Lowest  
+@line 2 68 0
+
+
+@{B} INT1 & INT3 are NO MORE SUPPORTED with CT60 ! @{b}
+
+INT6 is also named MFPINT on atari documents because it is daisy
+chained with the MFP.
+
+To allow the PPC to read the level of the falcon re-routed
+interrupts, the CT60 furnishes a register called (B!) IVR (Interrupt
+Vector Register). @{b} The IVR column gives you the binary values encoded
+by the SDR60 chip...
+
+Note that the INT6, MFPINT and DSPREQ Interrupts are chained on the
+level 6 line... (its a stock Falcon feature !).
+
+It is planned that the PPC board will contain a mechanism register to
+generate a '68K like' INT ACK cycle and receive the software Vector
+from the Falcon data bus. On CT60, the IVR contains only the level of
+the pending INT...
+
+@{U} CPU#2 INTERRUPT @{u}
+
+
+@line 11 0 2
+@line 17 0 2
+@line 24 0 2
+@line 32 0 2
+@line 38 0 2
+@line 61 0 2
+@line 11 50 0
+           NAME  LEVEL  ACTIVE  TYPE  SOURCE                
+@line 11 50 0
+           INT   None   Low     Auto  F030 IPLx and CT60 I6 
+@line 11 50 0
+
+
+This interrupt is compatible with the PowerPC INT...
+
+@endnode
+
+
+@node "CHIPSETS pinouts"
+@toc "CT60 HARDWARE GUIDE"
+@{U}10.10  CHIPSETS pinouts                                           CT60@{u}
+
+10.10.1  SDR-60
+10.10.2  ABE-60
+
+@endnode
+
+
+@node "SDR-60"
+@toc "CHIPSETS pinouts"
+@{U}10.10.1  SDR-60                                                   CT60@{u}
+
+  1 VCC                            73 VCC
+  2 rstf                           74 cs1
+  3 PGND                           75 cs0
+  4 ta                             76 cas
+  5 PGND                           77 we
+  6 PGND                           78 a31
+  7 PGND                           79 a30
+  8 VCC                            80 a29
+  9 PGND                           81 a28
+ 10 a10                            82 a27
+ 11 a11                            83 a26
+ 12 a12                            84 VCC
+ 13 a13                            85 a25
+ 14 a14                            86 a24
+ 15 a15                            87 a23
+ 16 a2                             88 a22
+ 17 a3                             89 GND
+ 18 GND                            90 GND
+ 19 a4                             91 a21
+ 20 a5                             92 a20
+ 21 a6                             93 a19
+ 22 a7                             94 a18
+ 23 a8                             95 a17
+ 24 a9                             96 a16
+ 25 dm3                            97 tbi
+ 26 dm1                            98 PGND
+ 27 dm2                            99 GND
+ 28 dm0                            100 TEST SDR
+ 29 GND                            101 TEST SDR
+ 30 clk500                         102 tci
+ 31 cs3                            103 rst60
+ 32 clk                            104 PGND
+ 33 PGND                           105 PGND
+ 34 PGND                           106 int
+ 35 cs2                            107 PGND
+ 36 GND                            108 GND
+ 37 VCC                            109 VCC
+ 38 PGND                           110 PGND
+ 39 ideled                         111 ipl2f
+ 40 d2                             112 ipl1
+ 41 d1                             113 i6
+ 42 VCC                            114 GND
+ 43 d0                             115 ipl2
+ 44 PGND                           116 bs1
+ 45 PGND                           117 ts
+ 46 ma12                           118 tt1
+ 47 GND                            119 PGND
+ 48 ma11                           120 PGND
+ 49 ba1                            121 ipl0
+ 50 ba0                            122 TDO
+ 51 ma10                           123 GND
+ 52 ma9                            124 siz1
+ 53 ma8                            125 rsto
+ 54 ma7                            126 eeda
+ 55 VCC                            127 VCC
+ 56 ma6                            128 thcs
+ 57 ma5                            129 rw
+ 58 ma4                            130 siz0
+ 59 ma3                            131 Reserved
+ 60 ma2                            132 PGND
+ 61 ma1                            133 PGND
+ 62 GND                            134 eecl
+ 63 TDI                            135 bs0
+ 64 ma0                            136 bs2
+ 65 TMS                            137 bs3
+ 66 PGND                           138 thck
+ 67 TCK                            139 ipl0f
+ 68 PGND                           140 ipl1f
+ 69 PGND                           141 VCC
+ 70 PGND                           142 thdi
+ 71 ras                            143 rst
+ 72 GND                            144 GND
+
+@endnode
+
+
+@node "ABE-60"
+@toc "CHIPSETS pinouts"
+@{U}10.10.2  ABE-60                                                   CT60@{u}
+
+  1 VCC                            73 VCC
+  2 avec                           74 d28
+  3 a13                            75 d27
+  4 ct60                           76 d26
+  5 a14                            77 d25
+  6 a15                            78 d24
+  7 ta                             79 d23
+  8 VCC                            80 d22
+  9 bs0                            81 d21
+ 10 flhoe                          82 d20
+ 11 flhwe                          83 d19
+ 12 dtkcmb                         84 VCC
+ 13 halt                           85 d18
+ 14 a2                             86 d17
+ 15 a3                             87 d16
+ 16 tt0                            88 d15
+ 17 tm0                            89 GND
+ 18 GND                            90 GND
+ 19 bg1                            91 d14
+ 20 tm1                            92 d13
+ 21 bg2                            93 d12
+ 22 ts                             94 d11
+ 23 bg0                            95 d10
+ 24 tt1                            96 d9
+ 25 exp/  - TEST ABE               97 d8
+ 26 exp2/ - TEST ABE               98 d7
+ 27 tm2                            99 GND
+ 28 as                             100 d6
+ 29 GND                            101 d5
+ 30 clk500                         102 d4
+ 31 bs1                            103 d3
+ 32 clk                            104 d2
+ 33 bs2                            105 d1
+ 34 i6                             106 br2
+ 35 dtk                            107 d0
+ 36 GND                            108 GND
+ 37 VCC                            109 VCC
+ 38 clkf                           110 fd15
+ 39 a2f                            111 fd14
+ 40 fc2                            112 fd13
+ 41 slp                            113 fd12
+ 42 VCC                            114 GND
+ 43 bs3                            115 fd11
+ 44 a3f                            116 fd10
+ 45 bb                             117 fd9
+ 46 fc1                            118 fd8
+ 47 GND                            119 fd7
+ 48 a16                            120 fd6
+ 49 a17                            121 fd5
+ 50 a18                            122 TDO
+ 51 a19                            123 GND
+ 52 a20                            124 fd4
+ 53 a21                            125 fd3
+ 54 a22                            126 fd2
+ 55 VCC                            127 VCC
+ 56 a23                            128 fd1
+ 57 a24                            129 fd0
+ 58 a25                            130 bg30
+ 59 a26                            131 uds
+ 60 a27                            132 lds
+ 61 a28                            133 a1f
+ 62 GND                            134 berr
+ 63 TDI                            135 br0
+ 64 a29                            136 rw
+ 65 TMS                            137 fc0
+ 66 a30                            138 br1
+ 67 TCK                            139 abdir
+ 68 a31                            140 bgk
+ 69 d31                            141 VCC
+ 70 d30                            142 tea
+ 71 d29                            143 rst
+ 72 GND                            144 GND
+
+@endnode
+
+
+@node "Annexes"
+@toc "Main"
+@{U}11  Annexes                                                       CT60@{u}
+
+11.1  Board
+11.2  Connectors
+11.3  TOS Keyboard shortcuts
+
+@endnode
+
+
+@node "Board"
+@toc "Annexes"
+@{U}11.1  Board                                                       CT60@{u}
+
+
+@limage G:\TOS060\DOC\CT60\ENGLISH\..\img\board.img 1
+@endnode
+
+
+@node "Connectors"
+@toc "Annexes"
+@{U}11.2  Connectors                                                  CT60@{u}
+
+Connector F030 X4 (power supply motherboard)
+
+
+@line 10 0 5
+@line 20 0 5
+@line 28 0 5
+@line 43 0 5
+@line 61 0 5
+@line 10 51 0
+          Pin Card  Signal  Comment        Color wire       
+@line 10 51 0
+             1      +5V     +5V (output)   Red              
+             2      GND     Ground (0V)    Black            
+             3      GND     Ground (0V)    Black            
+             4      +12V    +12V (output)  Blue (or yellow) 
+@line 10 51 0
+
+
+Connector ATX POWER X5
+
+
+@line 8 0 21
+@line 18 0 21
+@line 26 0 21
+@line 52 0 21
+@line 64 0 21
+@line 8 56 0
+        Pin Card  Signal  Comment                   Color wire 
+@line 8 56 0
+           1      +3.3V   +3.3V (input)             Orange     
+           2      +3.3V   +3.3V (input)             Orange     
+           3      GND     Ground (0V)               Black      
+           4      +5V     +5V (input)               Red        
+           5      GND     Ground (0V)               Black      
+           6      +5V     +5V (input)               Red        
+           7      GND     Ground (0V)               Black      
+           8      PWOK    Power OK (not used)       Grey       
+           9      +5VSB   +5V Standby (input)       Violet     
+           10     +12V    +12V (input)              Yellow     
+           11     +3.3V   +3.3V (input)             Orange     
+           12     -12V    -12V                      Blue       
+           13     GND     Ground (0V)               Black      
+           14     PSON    Power Supply ON (output)  Green      
+           15     GND     Ground (0V)               Black      
+           16     GND     Ground (0V)               Black      
+           17     GND     Ground (0V)               Black      
+           18     -5V     -5V (input)               Red        
+           19     +5V     +5V (input)               Red        
+           20     +5V     +5V (input)               Red        
+@line 8 56 0
+
+
+Connector TOWER X6
+
+
+@line 19 0 12
+@line 29 0 12
+@line 39 0 12
+@line 53 0 12
+@line 19 34 0
+                   Pin Card  Signal    Comment      
+@line 19 34 0
+                      1      PWR_SW+   Power Switch 
+                      2      PWR_SW-                
+                      3      TRB_SW+   Turbo Switch 
+                      4      TRB_SW-                
+                      5      IDE_LED+  Led IDE      
+                      6      IDE_LED-               
+                      7      RST_SW+   Reset Switch 
+                      8      RST_SW-                
+                      9      PWR_LED+  Power led    
+                      10     NC                     
+                      11     PWR_LED-               
+@line 19 34 0
+
+
+Connector F030 BOOST X9
+
+
+@line 1 0 11
+@line 11 0 11
+@line 19 0 11
+@line 72 0 11
+@line 1 71 0
+ Pin Card  Signal  Comment                                             
+@line 1 71 0
+    1      GND1    Ground (0V)                                         
+    2      MCLK    Master Clock CT60 (output) to L102 motherboard      
+    3      GND2    Ground (0V)                                         
+    4      CLK32   Clock 32MHz (input) to L102 pin removed             
+    5      AC_K    Clock 500Khz Keyboard (output) to ACIA U52 pins 3/4 
+    6      AC_M    Clock 500Khz Midi (output) to ACIA U24 pins 3/4     
+    7      DCLK    DSP Clock (output) to DSP U38 pin 74                
+    8      GND3    Ground (0V)                                         
+    9      DTKCMB  Dtack Combel (input) to GAL U63 pin 8               
+    10     GND4    Ground (0V) not used                                
+@line 1 71 0
+
+
+
+@limage G:\TOS060\DOC\CT60\ENGLISH\..\img\dsp.img 26
+
+@limage G:\TOS060\DOC\CT60\ENGLISH\..\img\clock.img 21
+@endnode
+
+
+@node "TOS Keyboard shortcuts"
+@toc "Annexes"
+@{U}11.3  TOS Keyboard shortcuts                                      CT60@{u}
+
+CTRL:          If pressed before the Atari logo, jump the init
+               of the clock generator (CTCM) and the bios PCI (CTPCI).
+               Boot without AUTO folder and ACC.
+ALT:           If pressed before the Atari logo, jump the init
+               of the clock generator (CTCM) and the bios PCI (CTPCI).
+               Remove cache if pressed before the SDRAM init.
+               Boot without disk if pressed after.
+SHIFTL-SHIFTR: Boot without SDRAM if pressed before the Atari logo.
+SHIFTL:        Displays infos about the SDRAM module.
+CTRL-ALT-UNDO: NVM and Flash Parameters init if pressed during the
+               memory test until the Reset. You need to set the delay
+               at boot to 60 seconds with the configuration CPX.
+CTRL-ALT-
+SHIFTL-SHIFTR: Start the Atari Diagnostics if pressed before the Atari
+               logo (if not overwrited by drivers.hex).
+
+@endnode
+
+
+@node "Contacts"
+@toc "Main"
+@{U}12  Contacts                                                      CT60@{u}
+
+Hardware :
+Rodolphe CZUBA
+rodolphe.czuba@@free.fr
+http://www.czuba-tech.com
+
+Flash Tool, Configuration, and system :
+Didier MEQUIGNON
+aniplay@@wanadoo.fr
+
+@endnode
+
+
+

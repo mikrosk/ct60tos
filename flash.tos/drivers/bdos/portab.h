@@ -32,9 +32,15 @@
  *  Constants 
  */
 
+#ifndef NULL
 #define NULL    0                       /*      Null character value        */
+#endif
+#ifndef TRUE
 #define TRUE    (1)                     /*      Function TRUE  value        */
+#endif
+#ifndef FALSE
 #define FALSE   (0)                     /*      Function FALSE value        */
+#endif
 #define NULLPTR ((void*)0)              /*      Null pointer value          */
 
 /*

@@ -597,7 +597,7 @@ static unsigned portBASE_TYPE uxTaskNumber = 0; /*lint !e956 Static is deliberat
 		but had been interrupted by the scheduler.  The return address is set
 		to the start of the task function. Once the stack has been initialised
 		the	top of stack variable is updated. */
-		pxNewTCB->uxStartIntLevel = strcmp( pcName, "TOS" ) == 0 ? 0 : 3; 
+		pxNewTCB->uxStartIntLevel = strcmp( (void *)pcName, "TOS" ) == 0 ? 0 : 3; 
 #if( HAVE_USP == 1 )
 		pxNewTCB->pxTopOfStack = pxPortInitialiseStack( pxTopOfStack, pvTaskCode, pvParameters, pxNewTCB->Context, pxNewTCB->uxSuper, pxTopOfUserStack, pxNewTCB->uxStartIntLevel );
 #else
@@ -1393,7 +1393,7 @@ unsigned portBASE_TYPE uxNumberOfTasks;
 						{
 							usStackRemaining = usTaskCheckFreeStackSpace( ( unsigned portCHAR * ) pxList->pxStack );
 							usStackDepth = pxList->usStackDepth;
-						  sprintD( &pcWriteBuffer[ strlen( pcWriteBuffer ) ], ( portCHAR * ) "%s\t\t%04X\t%02X\t%s\t%d/NU/%d\t%d\r\n",
+						  sprintD( (void *)&pcWriteBuffer[ strlen( (void *)pcWriteBuffer ) ], ( portCHAR * ) "%s\t\t%04X\t%02X\t%s\t%d/NU/%d\t%d\r\n",
 			         pxList->pcTaskName, (int)pxList->pxTCB, (int)pxList->uxPriority,
 			         pxList->cStatus == tskREADY_CHAR ? "Ready" : 
 			          pxList->cStatus == tskBLOCKED_CHAR ? "Blocked" :
@@ -1406,7 +1406,7 @@ unsigned portBASE_TYPE uxNumberOfTasks;
 							usStackRemaining = usTaskCheckFreeStackSpace( ( unsigned portCHAR * ) pxList->pxStack );
 							usUserStackRemaining = usTaskCheckFreeStackSpace( ( unsigned portCHAR * ) ( pxList->pxStack + pxList->usStackDepth/2 ) );
 							usStackDepth = pxList->usStackDepth/2;
-						  sprintD( &pcWriteBuffer[ strlen( pcWriteBuffer ) ], ( portCHAR * ) "%s\t\t%04X\t%02X\t%s\t%d/%d/%d\t%d\r\n",
+						  sprintD( (void *)&pcWriteBuffer[ strlen( (void *)pcWriteBuffer ) ], ( portCHAR * ) "%s\t\t%04X\t%02X\t%s\t%d/%d/%d\t%d\r\n",
 			         pxList->pcTaskName, (int)pxList->pxTCB, (int)pxList->uxPriority,
 			         pxList->cStatus == tskREADY_CHAR ? "Ready" : 
 			          pxList->cStatus == tskBLOCKED_CHAR ? "Blocked" :
@@ -1431,7 +1431,7 @@ unsigned portBASE_TYPE uxNumberOfTasks;
 					if(uxNumber ==  pxList->uxTCBNumber)
 					{
 						usStackRemaining = usTaskCheckFreeStackSpace( ( unsigned portCHAR * ) pxList->pxStack );
-						sprintD( &pcWriteBuffer[ strlen( pcWriteBuffer ) ], ( portCHAR * ) "%s\t\t%04X\t%02X\t%s\t%d/%d\t%d\r\n",
+						sprintD( (void *)&pcWriteBuffer[ strlen( (void *)pcWriteBuffer ) ], ( portCHAR * ) "%s\t\t%04X\t%02X\t%s\t%d/%d\t%d\r\n",
 			       pxList->pcTaskName, (int)pxList->pxTCB, (int)pxList->uxPriority,
 			       pxList->cStatus == tskREADY_CHAR ? "Ready" : 
 			        pxList->cStatus == tskBLOCKED_CHAR ? "Blocked" :

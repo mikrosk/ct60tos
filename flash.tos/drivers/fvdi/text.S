@@ -129,10 +129,10 @@ _default_text:
 	cmp.l	d4,d1			//  than code_high
 	lbhi	.no_char2
 	add.l	d1,d1
-	move.w	2(a3,d1.w),d5
+	move.w	2(a3,d1.l),d5
 	ext.l	d5
 	add.l	d5,d3
-	move.w	0(a3,d1.w),d5
+	move.w	0(a3,d1.l),d5
 	ext.l	d5
 	sub.l	d5,d3
 .no_char2:
@@ -299,7 +299,9 @@ _default_text:
 	ldbra	d2,.loop22
 #endif
 #ifdef COLDFIRE
-	lea	(a3,d5.w),a3
+	move.w	d5,d0
+	ext.l	d0
+	lea	(a3,d0.l),a3
 	subq.l	#1,d1
 	bpl.s	.loop11
 #else
@@ -535,7 +537,7 @@ _default_text:
 #ifdef COLDFIRE
 	ext.l	d4
 	add.l	d4,d4
-	move.w	font_extra_distance(a5,d4.w),d4
+	move.w	font_extra_distance(a5,d4.l),d4
 	ext.l	d4
 	move.w	d1,d0
 	ext.l	d0
@@ -639,7 +641,7 @@ _default_text:
 #ifdef COLDFIRE
 	ext.l	d4
 	add.l	d4,d4
-	move.w	font_extra_distance(a5,d4.w),d4
+	move.w	font_extra_distance(a5,d4.l),d4
 	ext.l	d4
 	move.l	d0,-(sp)
 	move.w	d3,d0
@@ -698,13 +700,16 @@ _default_text:
 	ext.l	d1
 	sub.l	d1,d4
 	add.l	d4,d4
+	move.w	0(a5,d4.l),d0
+	move.w	d0,0+18(sp)	// Character source left coordinate
+	move.w	2(a5,d4.l),d5
 #else
 	sub.w	d1,d4
 	add.w	d4,d4
-#endif
 	move.w	0(a5,d4.w),d0
 	move.w	d0,0+18(sp)	// Character source left coordinate
 	move.w	2(a5,d4.w),d5
+#endif
 	move.w	d5,4+18(sp)	// Character source right coordinate
 #ifdef COLDFIRE
 	ext.l	d0
@@ -756,13 +761,16 @@ _default_text:
 	ext.l	d1
 	sub.l	d1,d4
 	add.l	d4,d4
+	move.w	0(a5,d4.l),d0
+	move.w	d0,0+18(sp)	// Character source left coordinate
+	move.w	2(a5,d4.l),d5
 #else
 	sub.w	d1,d4
 	add.w	d4,d4
-#endif
 	move.w	0(a5,d4.w),d0
 	move.w	d0,0+18(sp)	// Character source left coordinate
 	move.w	2(a5,d4.w),d5
+#endif
 	move.w	d5,4+18(sp)	// Character source right coordinate
 #ifdef COLDFIRE
 	ext.l	d0

@@ -98,7 +98,7 @@ static int create_socket(int type, int *ptr_port)
 	return desc;
 };
 
-int tftp_receive(struct sockaddr_in *to1, char *name, char *mode, short handle)
+int tftp_receive(struct sockaddr_in *to1, char *name, char *mode, short handle, long *length)
 {
 	char *dat, *cp;
 	struct tftphdr *dp, *ap;
@@ -108,6 +108,7 @@ int tftp_receive(struct sockaddr_in *to1, char *name, char *mode, short handle)
 	struct sockaddr_in from, to=*to1;
 	socklen_t fromlen=sizeof(from), tolen=fromlen;
 	*tftp_string_error = '\0';
+	*length = 0;
 	dp = (struct tftphdr *)buf;
 	ap = (struct tftphdr *)ackbuf;
 	dat = (char*)&dp->th_data[0];
@@ -217,6 +218,7 @@ int tftp_receive(struct sockaddr_in *to1, char *name, char *mode, short handle)
 		size = 4;
 		if(n-4 > 0)
 		{
+			*length += (long)(n-4);
 			i = Fwrite(handle, n-4, dat);
 			if(i < 0)
 			{

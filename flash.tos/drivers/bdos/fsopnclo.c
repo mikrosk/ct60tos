@@ -144,7 +144,7 @@ long ixcreat(char *name, char attr)
                 return(EPTHNF);
 
         /*  M01.01.0721.01  */
-        if( match1(" '*+,:;<=>?[]^`|~",s) )
+        if( match1(" '*+,:;<=>?[]^`|",s) )
                 return( EACCDN ) ;
 
         if (!(fd = dn->d_ofd))
@@ -250,7 +250,7 @@ ixopen(char *name, short mod)
         DND *dn;
         char *s;
         long pos;
-        
+
         /* first find path */
         if ((long)(dn = findit(name,&s,0)) < 0)                 /* M01.01.1212.01 */
                 return( (long)dn );

@@ -1,5 +1,5 @@
 /* TOS 4.04 VDI for the CT60/CTPCI and Coldfire boards
- * Didier Mequignon 2005-2010, e-mail: aniplay@wanadoo.fr
+ * Didier Mequignon 2005-2011, e-mail: aniplay@wanadoo.fr
  *
  * This file is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -221,7 +221,7 @@
 #define FORMHEIGHT 82
 #define NEXT_FONT 84
 
-	.global _init_det_vdi,_copy_det_vdi,_det_vdi,_old_vector_vdi,_init_resolution
+	.global _init_det_vdi,_end_vdi,_copy_det_vdi,_det_vdi,_old_vector_vdi
 	.global _opnwk,_clswk,_resolution,_colours
 	.global _wide_line,_allocate_block,_free_block,_copy_line
 	.global _fill_poly,_filled_poly,_fill_spans,_solid,_pattern_ptrs
@@ -235,6 +235,9 @@
 	.global _c_get_videoramaddress,_c_get_width_virtual,_c_get_height_virtual,_c_get_bpp_virtual
 	.global _eddi_cookie,_oldmouse,show_c,hide_c
 	.global _init_screen,_clear_screen,_move_screen,_print_screen,_memmove
+#ifdef COLDFIRE
+	.global _dma_transfer
+#endif
 	.global _c_blit_area,_c_line_draw,_default_line,_c_fill_area,_default_fill
 	.global _c_expand_area,_c_fill_polygon
 #ifdef DEBUG
@@ -244,7 +247,7 @@
 	.global _flag_mouse,_os_magic
 	.global adr_var_vdi,adr_linea_fonts,adr_linea_atab // for det_linea / MagiC
 	.global _virt_work,_V_OPNWK,_V_CLSWK,_V_OPNVWK,_V_CLSVWK,_LINE_STYLE,_init_choice_fill,_tick_int
-	.global _cursconf,_update_mono
+	.global _cursconf,_update_mono,_mousexy
 		
 	.data
 
@@ -296,6 +299,10 @@ _init_det_vdi:
 #else
 	movem.l (SP)+,D0-D2/A0-A2
 #endif
+	rts
+
+_end_vdi:
+	clr.l adr_var_vdi
 	rts
 	
 init_type_video:
@@ -394,16 +401,6 @@ display_string:
 #else
 	movem.l D0/A0,-(SP)
 
-#endif
-#if 0
-	moveq #27,D0
-	bsr display_char
-	moveq #0x48,D0
-	bsr display_char
-	moveq #13,D0
-	bsr display_char
-	moveq #10,D0
-	bsr display_char
 #endif
 .os2:
 		move.b (A0)+,D0
@@ -2105,11 +2102,32 @@ videl_p_sc_up:
 	add.l D2,D0              // form (max-1) - top row # for total rows to move
 	lea.l (A1,D3.l),A2       // form source address from cell wrap + base address
 	mulu.l D0,D3             // form # of bytes to move in d3
-	move.l D3,-(sp)          // move memory
-	move.l A2,-(sp)          // source
-	move.l A1,-(sp)          // dest
+#ifdef COLDFIRE
+	moveq #0,D0
+	move.w V_PLANES(A0),D0
+	lsr.l #3,D0              // / 8
+	beq.s videl_p_sc_up2     // use memmove if < 256 colors
+	moveq #4,D0
+	move.l D0,-(SP)          // step
+	clr.l -(SP)              // dest_incr
+	clr.l -(SP)              // src_incr
+	clr.l -(SP)              // width
+	move.l D3,-(SP)          // size
+	move.l A1,-(SP)          // dest
+	move.l A2,-(SP)          // source
+	jsr _dma_transfer
+	move.l (SP)+,A2
+	move.l (SP)+,A1
+	lea 20(SP),SP
+	tst.l D0
+	beq.s end_p_sc_up        // OK
+videl_p_sc_up2:
+#endif     
+	move.l D3,-(SP)          // move memory
+	move.l A2,-(SP)          // source
+	move.l A1,-(SP)          // dest
 	jsr _memmove
-	lea 12(sp),sp
+	lea 12(SP),SP
 end_p_sc_up:
 #ifdef COLDFIRE
 	movem.l (SP),D0-D3/A0-A2
@@ -2731,7 +2749,7 @@ no_planesx_256:
 			move.l D0,(A1)+ // fill background
 			move.l D0,(A1)+ 
 		subq.l #1,D5
-		bgt.s no_planesx_256 // go for rest of row
+		bpl.s no_planesx_256 // go for rest of row
 		move.l D4,A1
 		add.l A2,A1 // skip non-region area with stride advance
 	subq.l #1,D2
@@ -2757,7 +2775,7 @@ no_planesx_ntc:
 			move.l D0,(A1)+
 			move.l D0,(A1)+ 
 		subq.l #1,D5
-		bgt.s no_planesx_ntc // go for rest of row
+		bpl.s no_planesx_ntc // go for rest of row
 		move.l D4,A1
 		add.l A2,A1 // skip non-region area with stride advance
 	subq.l #1,D2
@@ -2783,7 +2801,7 @@ no_planesx_tc:
 			move.l D0,(A1)+
 			move.l D0,(A1)+  
 		subq.l #1,D5
-		bgt.s no_planesx_tc // go for rest of row
+		bpl.s no_planesx_tc // go for rest of row
 		move.l D4,A1
 		add.l A2,A1 // skip non-region area with stride advance
 	subq.l #1,D2
@@ -2994,8 +3012,8 @@ _cursconf:                            // from XBIOS handler
 	cmp.l #7,D0
 	bhi.s bl_exit
 	add.l D0,D0
-	move.w conf_tbl(PC,D0.w),D0
-	jmp conf_tbl(PC,D0.w)
+	move.w conf_tbl(PC,D0.l),D0
+	jmp conf_tbl(PC,D0.l)
 
 conf_tbl:
 	dc.w escf-conf_tbl       // hide
@@ -4447,8 +4465,8 @@ det_v_justified:
 		bne.s .vj3
 		addq.l #1,D5
 .vj3:
-		move.w 2(A3,D1.w*2),D6
-		move.w (A3,D1.w*2),D7
+		move.w 2(A3,D1.l*2),D6
+		move.w (A3,D1.l*2),D7
 		sub.l D7,D6
 		add.l D6,D2
 #else
@@ -4805,8 +4823,8 @@ det_vst_rotation:
 	move.w #1,8(A3)          // length tab INTOUT
 #endif
 	move.l ADR_FONT(A2),CUR_FONT(A0)
-	move.l 4(A1),A0          // INTIN
-	move.w (A0),D0           // rotation 1/10 degree
+	move.l 4(A1),A3          // INTIN
+	move.w (A3),D0           // rotation 1/10 degree
 #ifdef COLDFIRE
 	ext.l D0
 	add.l #450,D0
@@ -6972,7 +6990,7 @@ det_vsc_form:
 	beq.s .vf5               // no accel
 	lea wk_mouse(A1),A2
 	move.l wk_r_mouse(A1),A3
-	move.l A2,D2
+	move.l A2,D2             // change shape (pointer to mouse struct)
 #ifdef COLDFIRE
 	move.w G_CURX(A0),D0
 	move.w G_CURY(A0),D1
@@ -7635,18 +7653,25 @@ show_c:
 	move.w (SP)+,D0          // reset
 	beq.s .shc1              // reset cursor to on
 	move.w M_HID_CT(A0),D0
+	beq.s .shc3
 	subq.l #1,D0
-	move.w D0,M_HID_CT(A0)
 #else
 	movem.l D1-D2/A0-A3,-(SP)
 	move.l adr_var_vdi,A0
 	addq.b #1,MOUSE_FLAG(A0) // mask mouse interrupt routine
 	tst.w D0                 // reset
 	beq.s .shc1              // reset cursor to on
-	subq.w #1,M_HID_CT(A0)
+	move.w M_HID_CT(A0),D0
+	beq.s .shc3
+	subq.w #1,D0
 #endif
+	move.w D0,M_HID_CT(A0)
 	bgt.s .shc2
+	bra.s .shc4
 .shc1:
+	tst.w M_HID_CT(A0)
+	beq.s .shc3              // already in show state, do no draw the mouse a 2nd time without restore screen
+.shc4:
 	clr.w M_HID_CT(A0)
 	move.l G_CURX(A0),CUR_X(A0) // actual position for the next drawing
 	// display the cursor
@@ -7670,7 +7695,7 @@ show_c:
 	move.l wk_r_mouse(A1),D2
 	beq.s .shc3              // no accel
 	move.l D2,A3
-	moveq #3,D2
+	moveq #3,D2              // show
 #ifdef COLDFIRE
 	move.w G_CURX(A0),D0
 	move.w G_CURY(A0),D1
@@ -7777,7 +7802,7 @@ hide_c:
 	move.l wk_r_mouse(A1),D2
 	beq.s .hic2              // no accel	
 	move.l D2,A3
-	moveq #2,D2
+	moveq #2,D2              // hide
 #ifdef COLDFIRE
 	move.w G_CURX(A0),D0
 	move.w G_CURY(A0),D1
@@ -7829,6 +7854,31 @@ det_vq_mouse:
 	move.l G_CURX(A0),(A2)
 	move.w (SP)+,SR
 #endif /* COLDFIRE */
+	rts
+
+_mousexy:
+
+	move.l adr_var_vdi,D0
+	beq.s .mxy1
+	move.l D0,A0
+	move.l G_CURX(A0),D0
+	rts
+.mxy1:
+	move.l fvdi_virtual,D0
+	beq.s .mxy2
+#ifdef COLDFIRE
+	lea -16(SP),SP
+	movem.l D1-D2/A1-A2,(SP)
+	dc.w 0xA920              // 0xA000 used on Coldfire for MAC instruction
+	movem.l (SP),D1-D2/A1-A2
+	lea 16(SP),SP
+#else
+	movem.l D1-D2/A1-A2,-(SP)
+	dc.w 0xA000
+	movem.l (SP)+,D1-D2/A1-A2
+#endif
+	move.l G_CURX(A0),D0
+.mxy2:
 	rts
 
 det_vex_butv:
@@ -9053,7 +9103,7 @@ vb_draw:	                         // VBL routine
 #endif
 #endif
 	tst.b MOUSE_FLAG(A0)
-	bne.s .vd1
+	bne.s .vd1               // mouse interrupt disabled
 /*--------
 * Draw the mouse
 * c_mouse_draw(Workstation *wk, long x, long y, Mouse *mouse)
@@ -9070,10 +9120,10 @@ vb_draw:	                         // VBL routine
 	move.l wk_r_mouse(A1),D2
 	beq.s .vd3               // no accel
 	move.l D2,A2
-	moveq #1,D2              // assume move hidden
+	moveq #1,D2              // move hidden
 	move.w M_HID_CT(A0),wk_mouse_hide(A1)
-	bne.s .vd2
-	moveq #0,D2              // shown if zero
+	bne.s .vd2               // don't display cursor form yet
+	moveq #0,D2              // move showm
 .vd2:
 	jsr (A2)
 .vd3:
@@ -10873,13 +10923,13 @@ _pattern_ptrs:
 
 	.bss
 
-	ds.l 1024
+	ds.l 2048
 vdi_stack:	ds.l 1
-	ds.l 512
+	ds.l 1024
 vbl_stack:	ds.l 1
-	ds.l 512
+	ds.l 1024
 mouse_stack:	ds.l 1
-	ds.l 512
+	ds.l 1024
 conout_stack:	ds.l 1
 	ds.b -(CUR_FONT)
 var_vdi:     // for MagiC

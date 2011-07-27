@@ -1,5 +1,5 @@
 /* TOS 4.04 web server using FreeRTOS / LWIP
- * Didier Mequignon 2008, e-mail: aniplay@wanadoo.fr
+ * Didier Mequignon 2008-2011, e-mail: aniplay@wanadoo.fr
  *
  * This file is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -535,9 +535,13 @@ static unsigned char green_led_gif[] = {
 
 static char menu_html[] =
 #ifdef MCF5445X
-    "<html><head><title>M54455EVB - Menu</title>\n"
+    "<html><head>\n<title>M54455EVB - Menu</title>\n"
 #else
-    "<html><head><title>M5484LITE - Menu</title>\n"
+#ifdef MCF547X
+    "<html><head>\n<title>FIREBEE - Menu</title>\n"
+#else /* MCF548X */
+    "<html><head>\n<title>M5484LITE - Menu</title>\n"
+#endif
 #endif
     "<script language='javascript'>\n"
     "<!-- \n"
@@ -787,7 +791,17 @@ static char menu[] =
     "background:#ffa; width:150px; height:auto; padding:4px; text-align:left; "
     "border:2px solid black;'>\n"
     "Il a quelques navigateurs o&ugrave; les bulles ne fonctionnent pas...</div>\n"  
-    "<p><center><font color=blue size=5><i><b>M5484LITE</b></i></font><br>\n<i>Boot version ";
+    "<p><center><font color=blue size=5><i><b>"
+#ifdef MCF5445X
+    "M54455EVB"
+#else
+#ifdef MCF547X
+    "FIREBEE"
+#else /* MCF548X */
+    "M5484LITE"
+#endif
+#endif    
+    "</b></i></font><br>\n<i>Boot version ";
 static char menu0[] =
     "</i><br><hr size=1 color=blue><br></center>\n"
     "<p><h3>Menu :</h3>\n"
@@ -913,7 +927,15 @@ static char menu8[] =
     "</form>\n";
 static char menu_end[] = "</body></html>";
 static char mem_html[] =
+#ifdef MCF5445X
+    "<html><head>\n<title>M54455EVB</title>\n"
+#else
+#ifdef MCF547X
+    "<html><head>\n<title>FIREBEE</title>\n"
+#else /* MCF548X */
     "<html><head>\n<title>M5484LITE</title>\n"
+#endif
+#endif
     "</head>\n";
 #if 0
 static char mem_java[] = 
@@ -927,7 +949,16 @@ static char mem_java[] =
     "</script>\n";
 #endif
 static char mem_refresh[] =
+#ifdef MCF5445X
+    "<html><head>\n<title>M54455EVB - Mem</title>\n"
+#else
+#ifdef MCF547X
+    "<html><head>\n<title>FIREBEE - Mem</title>\n"
+#else /* MCF548X */
     "<html><head>\n<title>M5484LITE - Mem</title>\n"
+#endif
+#endif
+#if 0
     "<script language='javascript'>\n"
     "<!-- \n"
     "function exportToXL(eSrc) { \n"
@@ -955,23 +986,40 @@ static char mem_refresh[] =
     "  oExcelSheet.Application.Visible = true; } \n"
     "// --> \n"
     "</script>\n"
+#endif
     "<meta http-equiv='refresh' content='";
 #ifndef WEB_LIGHT
-static char mem_redirection_courbe[] =
+static char mem_redirection_curve[] =
+#ifdef MCF5445X
+    "<html><head>\n<title>M54455EVB</title>\n"
+#else
+#ifdef MCF547X
+    "<html><head>\n<title>FIREBEE</title>\n"
+#else /* MCF548X */
     "<html><head>\n<title>M5484LITE</title>\n"
+#endif
+#endif
     "<meta http-equiv='refresh' content='0; url=/curve.html'>\n"
     "</head>\n"
     "<body>\n<a href='/curve.html'></a>\n";
 #endif
-static char mem_redirection_fichier[] =
+static char mem_redirection_file[] =
+#ifdef MCF5445X
+    "<html><head>\n<title>M54455EVB</title>\n"
+#else
+#ifdef MCF547X
+    "<html><head>\n<title>FIREBEE</title>\n"
+#else /* MCF548X */
     "<html><head>\n<title>M5484LITE</title>\n"
+#endif
+#endif
     "<meta http-equiv='refresh' content='0; url=/sel_file.html'>\n"
     "</head>\n"
     "<body>\n<a href='/sel_file.html'></a>\n";
 static char mem_print[] = 
     "<form><p align=right>\n"
     "<input type='button' value='MENU' name='MENU' onClick='document.location.href=\"/menu.html\"'>\n"
-    "<input type='button' value='EXCEL' name='EXCEL' onCLick='exportToXL(oForm.all(\"idTable\"))'>\n"
+//    "<input type='button' value='EXCEL' name='EXCEL' onCLick='exportToXL(oForm.all(\"idTable\"))'>\n"
     "<input type='button' value='PRINT' name='IMPRIMER' onClick='window.print()'>\n"
     "</p></form>\n";   
 static char mem_print2[] = 
@@ -985,20 +1033,108 @@ static char mem_back[] =
     "</form>\n";  
 static char mem_end[] = "</body></html>";
 static char screen_html[] =
-    "<html><head><title>M5484LITE - Screen</title>\n"
-    "<meta http-equiv='refresh' content='1'>\n"
-    "</head>\n"
-    "<body bgcolor=black>\n"
-    "<p><center>\n"
-    "<p><script language='javascript'>\n"
+#ifdef MCF5445X
+    "<html><head>\n<title>M54455EVB - Screen</title>\n"
+#else
+#ifdef MCF547X
+    "<html><head>\n<title>FIREBEE - Screen</title>\n"
+#else /* MCF548X */
+    "<html><head>\n<title>M5484LITE - Screen</title>\n"
+#endif
+#endif
+    "<script language='javascript'>\n"
     "<!-- \n"
-    "document.write(\"<img src='/gif/screen.gif?\" + new Date().getTime() + \"' name='screen' width=640 height=480>\");\n"
+    "var IE = false; \n"
+    "if(navigator.appName == \"Microsoft Internet Explorer\") \n"
+    "  IE = true; \n"
+    "if(!IE) document.captureEvents(Event.MOUSEMOVE) \n"
+    "document.onmousemove = getMouseXY; \n"
+    "var tempX = 0; \n"
+    "var tempY = 0; \n"
+    "function getMouseXY(e) { \n"
+    "  if(IE) { \n"
+    "    tempX = event.clientX + document.body.scrollLeft; \n"
+    "    tempY = event.clientY + document.body.scrollTop; \n"
+    "  } else { \n"
+    "    tempX = e.pageX; \n"
+    "    tempY = e.pageY; } \n"
+    "  if(document.images && document.images.screen) { \n"
+    "    tempX = tempX - GetOffset(document.getElementById('screen'),'offsetLeft'); \n"
+    "    tempY = tempY - GetOffset(document.getElementById('screen'),'offsetTop'); \n"
+    "    if(tempX >= document.images.screen.width) tempX = -1; \n"
+    "    if(tempY >= document.images.screen.height) tempY = -1; \n"
+    "  } \n"
+    "  if(tempX < 0) tempX = -1; \n"
+    "  if(tempY < 0) tempY = -1; \n" 
+    "  document.forms[0].MouseX.value = tempX; \n"
+    "  document.forms[0].MouseY.value = tempY; \n"
+    "  return true; } \n"
+    "function GetOffset(inOBJ, inOFF) { \n"
+    "  var iVal = 0, oObj = inOBJ; \n"
+    "  while(oObj && oObj.tagName != 'BODY') { \n"
+    "    iVal += eval('oObj.' + inOFF); \n"
+    "    oObj = oObj.offsetParent; } \n"
+    "  return iVal; } \n"
+    "function detectKey(e) { \n"
+    "  var characterCode; \n"
+    "  if(e && e.which) characterCode = e.which; \n"
+    "  else { \n"
+    "    e = event \n"
+    "    characterCode = e.keyCode; } \n" /* IE */
+    "  if((document.forms[0].MouseX.value >= 0) && (document.forms[0].MouseY.value >= 0)) httpRequest('%' + characterCode); \n"
+    "  else if(characterCode == 13) { httpRequest(''); return true; } \n"
+    "  return false; } \n"
+    "function getMouseState(e) { \n"
+    "  if(e && e.which) document.forms[0].MouseK.value = e.which; \n"
+    "  else document.forms[0].MouseK.value = 1; \n"
+    "  httpRequest(''); } \n"
+    "function reload() { \n"
+    "  document.images.screen.src = '/gif/screen.gif?' + new Date().getTime();  \n"
+    "  if((document.forms[0].MouseX.value >= 0) && (document.forms[0].MouseY.value >= 0)) httpRequest(''); \n"
+    "  setTimeout('reload()',500); } \n"
+    "function httpRequest(key) { \n"
+    "  var xhr_object = null; \n"
+    "  var f = document.forms[0]; \n"
+    "  if(!document.all && window.XMLHttpRequest) xhr_object = new XMLHttpRequest(); \n"
+    "  else if(window.ActiveXObject) { \n"
+    "    try { xhr_object = new ActiveXObject('Microsoft.XMLHTTP'); } \n"
+    "    catch(e) { alert('Your browser not support XMLHTTPRequest!'); return; } \n"
+    "  } \n"
+    "  else if(document.all && window.XMLHttpRequest) xhr_object = new XMLHttpRequest(); \n"
+    "  else { alert('Your browser not support XMLHTTPRequest!'); return; } \n"
+    "  try { xhr_object.open('POST', '/change_screen.html', true); } \n"
+    "  catch(e) { return; } \n"
+    "  xhr_object.onreadystatechange = function() { \n"
+    "    if(xhr_object.readyState == 4) { delete xhr_object.onreadystatechange; xhr_object = null; } \n"        
+    "  } \n"
+    "  xhr_object.setRequestHeader('Content-type', 'application/x-www-form-urlencoded'); \n"
+    "  xhr_object.send('?Key=' + key + '&MouseX=' + f.MouseX.value + '&MouseY=' + f.MouseY.value + '&MouseK=' + f.MouseK.value + '&OffsetX=' + f.OffsetX.value + '&OffsetY=' + f.OffsetY.value + ' '); } \n"
     "// --> \n"
     "</script>\n"
+    "</head>\n"
+    "<body style='background-color:black; color:white;' onLoad='reload()' onKeyPress='detectKey(event)'>\n"
+    "<p><center>\n"
+    "<form>\n"
+    "<input type='hidden' value='-1' name='MouseX' id='MouseX'>\n"
+    "<input type='hidden' value='-1' name='MouseY' id='MouseY'>\n"
+    "<input type='hidden' value='0' name='MouseK' id='MouseK'>\n";
+static char end_screen_html[] =    
+    "</form>\n"
+    "<p><div onMousedown='getMouseState(event)' onMouseup='document.forms[0].MouseK.value=0; httpRequest(\"\")'>\n"
+    "<img id='screen' name='screen' src='/gif/screen.gif' width=640 height=480>\n"
+    "</div>\n"
     "</body></html>";
 #ifndef WEB_LIGHT
 static char curve_html[] =
-    "<html><head><title>M5484LITE - Curve</title>\n";
+#ifdef MCF5445X
+    "<html><head>\n<title>M54455EVB - Curve</title>\n";
+#else
+#ifdef MCF547X
+    "<html><head>\n<title>FIREBEE - Curve</title>\n";
+#else /* MCF548X */
+    "<html><head>\n<title>M5484LITE - Curve</title>\n";
+#endif
+#endif
 static char curve_refresh[] = 
     "<meta http-equiv='refresh' content='3'>\n";
 static char curve_script[] =
@@ -1039,10 +1175,17 @@ static char curve_print[] =
     "<input type='button' value='PRINT' name='IMPRIMER' onClick='window.print()'>\n"
     "</p></form>\n";
 static char curve_end[] = "</body></html>";
-#endif
-
+#endif /* WEB_LIGHT */
 static char select_html[] =
-    "<html><head><title>M5484LITE -  File</title>\n"
+#ifdef MCF5445X
+    "<html><head>\n<title>M54455EVB - File</title>\n"
+#else
+#ifdef MCF547X
+    "<html><head>\n<title>FIREBEE - File</title>\n"
+#else /* MCF548X */
+    "<html><head>\n<title>M5484LITE - File</title>\n"
+#endif
+#endif
     "</head>\n";
 static char select_form[] =
     "<body bgcolor=#FFFF7F'>\n"
@@ -1059,7 +1202,15 @@ static char select_form[] =
 static char select_end[] = "</body></html>";    
     
 static char file_html[] =
-    "<html><head><title>M5484LITE - End File Transfer</title>\n";
+#ifdef MCF5445X
+    "<html><head>\n<title>M54455EVB - End File Transfer</title>\n";
+#else
+#ifdef MCF547X
+    "<html><head>\n<title>FIREBEE - End File Transfer</title>\n";
+#else /* MCF548X */
+    "<html><head>\n<title>M5484LITE - End File Transfer</title>\n";
+#endif
+#endif
 static char file_back[] = 
     "<p><form>\n"
     "<input type='button' value='BACK' name='RETOUR' onClick='history.back()'>\n"
@@ -1089,6 +1240,15 @@ static unsigned long lowest_address, hight_address, Mem_Data;
 static int UseCurve;
 static char *BufPic, *BufGif, *SecondBufGif;
 int SizeGif;
+static int MouseX, MouseY, MouseK, OffsetX, OffsetY;
+
+extern struct fb_info *info_fvdi;
+extern long get_videl_base(void);
+extern long get_videl_bpp(void);
+extern long get_videl_width(void);
+extern long get_videl_height(void);
+extern long get_videl_size(void);
+extern void *get_videl_palette(void);
 
 #ifndef WEB_LIGHT
 
@@ -1387,6 +1547,8 @@ static void send_date(sock_conn *conn, const char *name, unsigned long datetime)
   ltoa(buf2, mday + 100, 10);
   strcat(buf, &buf2[1]);
   strcat(buf, " ");
+  if(mon < 1)
+  	mon = 1;
   strcat(buf, months[mon-1]);
   strcat(buf, " ");
   ltoa(buf2, year, 10);
@@ -1416,10 +1578,13 @@ static void send_content_length(sock_conn *conn, int length)
 
 static int copy_file(char *path, char *buf, long size)
 {
-  static char subdir[]="C:\\incoming";
+  extern long ram_disk_drive;
+  char subdir[]="C:\\incoming";
   long handle, err;
   char fname[256];
   char *p = path;
+  if(ram_disk_drive >= 1)
+    subdir[0] =(char)ram_disk_drive + 'A';
   while(*path)
   {
     if((*path == '\\') || (*path == '/'))
@@ -1811,8 +1976,8 @@ static void handle_menu(sock_conn *conn, char *request)
   ltoa(buf, VERSION, 16);
   a2p(conn, buf);
   a2p(conn, menu0);
-  if(!video_found
-   || ((info_fvdi->var.bits_per_pixel == 16) && (info_fvdi->var.xres_virtual <= PICTURE_WIDTH) && (info_fvdi->var.yres_virtual <= PICTURE_HEIGHT)))
+  if(((info_fvdi != NULL) && (info_fvdi->var.bits_per_pixel >= 16))
+   || ((info_fvdi == NULL) && get_videl_base() && ((get_videl_bpp() == 4) || (get_videl_bpp() >= 16))))
     a2p(conn, "<p><input type='button' value='View Screen' onClick='document.location.href=\"/screen.html\"'>\n");
   a2p(conn, menu1);
   add_types(conn);
@@ -1879,7 +2044,7 @@ static void handle_mem(sock_conn *conn, char *req)
   int suppr,k;
 #endif
   int len;
-  long *mem=NULL;
+  long *mem = NULL;
   ptr = strchr(req, '?');
   if(ptr == NULL)
     ptr = req;
@@ -1901,7 +2066,7 @@ static void handle_mem(sock_conn *conn, char *req)
     strcpy(body, "<body bgcolor=#FFFF7F>\n<p>\n");
 /*************************** ENVOI FICHIER ************************************/
   if(strstr(buf, "EnvoiFichier=") != NULL)
-    a2p(conn, mem_redirection_fichier);
+    a2p(conn, mem_redirection_file);
 #if 0
 /******************************* TELNET ***************************************/
   else if(strstr(buf, "Telnet=") != NULL)
@@ -2014,7 +2179,7 @@ static void handle_mem(sock_conn *conn, char *req)
 /*************************** EVOLUTION VARIABLE (COURBE) **********************/
 #ifndef WEB_LIGHT
   else if(strstr(buf, "VoirC=") != NULL)
-    a2p(conn, mem_redirection_courbe);
+    a2p(conn, mem_redirection_curve);
   else if(strstr(buf, "ChoixC=") != NULL)
   {
     choix = 0;
@@ -2177,7 +2342,7 @@ static void handle_mem(sock_conn *conn, char *req)
       }
       choix++;
     }
-    a2p(conn, mem_redirection_courbe);
+    a2p(conn, mem_redirection_curve);
   }
 #endif
 /*************************** MODIFICATION VARIABLE ****************************/
@@ -2197,7 +2362,7 @@ static void handle_mem(sock_conn *conn, char *req)
          && ptr[11]!='&')
         {
           ptr[10] = '$';
-          mem = (unsigned long *)atol(&ptr[10]);
+          mem = (long *)atol(&ptr[10]);
           ptr[10] = '=';
           if((ptr = strstr(buf, "ValeurModif=")) != NULL
            && ptr[12]!='&')
@@ -2470,24 +2635,229 @@ EndMem:
 
 static void show_red_led(sock_conn *conn, char *request)
 {
-  if(request);
-  add_block(conn, red_led_gif, sizeof(red_led_gif));
+  (void)request;
+  add_block(conn, (const char *)red_led_gif, sizeof(red_led_gif));
 }
 
 static void show_green_led(sock_conn *conn, char *request)
 {
-  if(request);
-  add_block(conn, green_led_gif, sizeof(green_led_gif));
+  (void)request;
+  add_block(conn, (const char *)green_led_gif, sizeof(green_led_gif));
 }
 
 static void handle_screen(sock_conn *conn, char *req)
 {
+  (void)req;
   a2p(conn, screen_html);
+  if(((info_fvdi != NULL) && (info_fvdi->var.xres_virtual > PICTURE_WIDTH) && (info_fvdi->var.yres_virtual > PICTURE_HEIGHT))
+   || ((info_fvdi == NULL) && get_videl_base() && (get_videl_width() > PICTURE_WIDTH) && (get_videl_height() > PICTURE_WIDTH)))
+  {
+    char buf[10];
+    a2p(conn, "X offset: <input type='text' value='");
+    ltoa(buf, OffsetX, 10);
+    a2p(conn, buf);
+    a2p(conn, "' size=4 maxlength=4 name='OffsetX' id='OffsetX'>\n");
+    a2p(conn, "&nbsp;&nbsp;Y offset: <input type='text' value='");
+    ltoa(buf, OffsetY, 10);
+    a2p(conn, buf);
+    a2p(conn, "' size=4 maxlength=4 name='OffsetY' id='OffsetY'>\n");
+    a2p(conn, "&nbsp;&nbsp;(screen ");
+    if(info_fvdi != NULL)
+    {
+      ltoa(buf, info_fvdi->var.xres_virtual, 10);
+      a2p(conn, buf);
+      a2p(conn, "x");
+      ltoa(buf, info_fvdi->var.yres_virtual, 10);
+    }
+    else
+    {
+      ltoa(buf, get_videl_width(), 10);
+      a2p(conn, buf);
+      a2p(conn, "x");
+      ltoa(buf, get_videl_height(), 10);
+    }
+    a2p(conn, buf);
+    a2p(conn, ")<br>\n");
+  }
+  else
+  {
+    a2p(conn, "<input type='hidden' value='0' name='OffsetX' id='OffsetX'>\n");
+    a2p(conn, "<input type='hidden' value='0' name='OffsetY' id='OffsetY'>\n"); 
+  }
+  OffsetX = OffsetY = 0;
+  a2p(conn, end_screen_html);
+}  
+
+static void handle_change_screen(sock_conn *conn, char *req)
+{
+  extern void call_mousevec(unsigned char *data, void (**mousevec)(void *));
+  extern void call_ikbdvec(unsigned char code, void *iorec, void (**ikbdvec)());
+  extern void (**mousevec)(void *);
+  extern void *iorec;
+  extern void (**ikbdvec)();
+  extern unsigned long mousexy(void);
+  extern unsigned char **keytbl;
+#define STATE_RIGHT_SHIFT 0x01
+#define STATE_LEFT_SHIFT  0x02
+#define STATE_CTRL        0x04
+#define STATE_ALT         0x08
+#define STATE_CAPSLOCK    0x10
+#define _sysbase          0x4F2 // header ROM
+	unsigned char **header = (unsigned char **)*(long *)_sysbase;
+  unsigned char sshift = *header[9];
+  unsigned char *table_unshift = keytbl[0];
+  unsigned char *table_shift = keytbl[1];
+//  unsigned char *table_capslock = keytbl[2];
+  char *ptr = strchr(req, '?');
+  char *ptr2;
+  if(ptr == NULL)
+  	return;
+  MouseX = MouseY = -1;
+  MouseK = 0;
+  if((ptr2 = (char *)strstr(ptr, "MouseX=")) != NULL)
+    MouseX = (int)atol(&ptr2[7]);
+  if((ptr2 = (char *)strstr(ptr, "MouseY=")) != NULL)
+    MouseY = (int)atol(&ptr2[7]);
+  if((ptr2 = (char *)strstr(ptr, "MouseK=")) != NULL)
+    MouseK = (int)atol(&ptr2[7]);
+  if((ptr2 = (char *)strstr(ptr, "OffsetX=")) != NULL)
+    OffsetX = (int)atol(&ptr2[8]);
+  if((ptr2 = (char *)strstr(ptr, "OffsetY=")) != NULL)
+    OffsetY = (int)atol(&ptr2[8]);
+  if(OffsetX < 0)
+    OffsetX = 0;
+  if(OffsetY < 0)
+    OffsetY = 0;
+  if(info_fvdi != NULL)
+  {
+    if(OffsetX > (info_fvdi->var.xres_virtual - PICTURE_WIDTH))
+      OffsetX = info_fvdi->var.xres_virtual - PICTURE_WIDTH;
+    if(OffsetY > (info_fvdi->var.yres_virtual - PICTURE_HEIGHT))
+      OffsetY = info_fvdi->var.yres_virtual - PICTURE_HEIGHT;
+  }
+  else
+  {
+    if(OffsetX > (get_videl_width() - PICTURE_WIDTH))
+      OffsetX = get_videl_width() - PICTURE_WIDTH;
+    if(OffsetY > (get_videl_height() - PICTURE_WIDTH))
+      OffsetY = get_videl_height() - PICTURE_HEIGHT;    
+  }
+  ptr2 = (char *)strstr(ptr, "Key=");
+  if(((info_fvdi != NULL) && (info_fvdi->var.bits_per_pixel >= 16))
+   || ((info_fvdi == NULL) && get_videl_base() && ((get_videl_bpp() == 4) || (get_videl_bpp() >= 16))))
+  {
+    if((ptr2 != NULL) && (iorec != NULL) && (ikbdvec != NULL))
+    {
+      ptr2 += 4;
+      while((*ptr2 > ' ') && (*ptr2 != '&'))
+  	  {
+  	    char key = *ptr2++;
+        unsigned char scancode = 0;
+        int i, shift = 0;
+        if(key == '+')
+          key = ' ';
+        if(key == '%')
+        {
+          i = (int)atol(ptr2);
+          if(i < 127)
+            key = (char)i;
+          else
+            key = 0;
+          while((*ptr2 >= '0') && (*ptr2 <= '9'))
+            ptr2++;
+        }
+        if(!key)
+          continue; 
+        for(i = 0; i < 128; i++)
+        {
+          if(table_unshift[i] == (unsigned char)key)
+          {
+            scancode = (unsigned char)i; 
+            break;
+          }
+        }
+        if(!scancode)
+        {
+          for(i = 0; i < 128; i++)
+          {
+            if(table_shift[i] == (unsigned char)key)
+            {
+              scancode = (unsigned char)i;
+              shift = 1; 
+              break;
+            }
+          }
+        }
+        if(scancode)
+        {
+          int level = asm_set_ipl(7);          /* mask interrupts for other tasks */
+          if(sshift & STATE_CAPSLOCK)
+            call_ikbdvec(0xBA, iorec, ikbdvec);
+          if(shift && !(sshift & (STATE_LEFT_SHIFT|STATE_RIGHT_SHIFT)))
+            call_ikbdvec(0x36, iorec, ikbdvec);
+          else if(!shift)
+          {
+            if(sshift & STATE_RIGHT_SHIFT)
+              call_ikbdvec(0xB6, iorec, ikbdvec);
+            if(sshift & STATE_LEFT_SHIFT)
+              call_ikbdvec(0xAA, iorec, ikbdvec);
+          }
+          call_ikbdvec(scancode, iorec, ikbdvec);
+          call_ikbdvec(scancode + 0x80, iorec, ikbdvec);
+          if(shift && !(sshift & (STATE_LEFT_SHIFT|STATE_RIGHT_SHIFT)))
+            call_ikbdvec(0xB6, iorec, ikbdvec);
+          else if(!shift)
+          {
+            if(sshift & STATE_RIGHT_SHIFT)
+              call_ikbdvec(0x36, iorec, ikbdvec);
+            if(sshift & STATE_LEFT_SHIFT)
+              call_ikbdvec(0x2A, iorec, ikbdvec);
+          }
+          if(sshift & STATE_CAPSLOCK)
+            call_ikbdvec(0x3A, iorec, ikbdvec);
+          asm_set_ipl(level);        
+        }
+      }
+    }
+    if((MouseX >= 0) && (MouseY >= 0) && (MouseX < PICTURE_WIDTH) && (MouseY < PICTURE_HEIGHT) && (mousevec != NULL))
+    {
+      int level, i = 0, deltaX, deltaY;
+      unsigned char new[4];      
+      do
+      {
+        int curMouseX = (int)(mousexy() >> 16);
+        int curMouseY = (int)(mousexy() & 0xffff);
+        deltaX = MouseX + OffsetX - curMouseX;
+        deltaY = MouseY + OffsetY - curMouseY;
+        if(deltaX < -128)
+          deltaX = -128;
+        else if(deltaX > 127)
+         deltaX = 127;
+        if(deltaY < -128)
+          deltaY = -128;
+        else if(deltaY > 127)
+          deltaY = 127;
+        switch(MouseK)
+        {
+          case 1: new[0] = 0xFA; break;  /* left button */
+          case 2: new[0] = 0xFB; break;  /* middle button */
+          case 3: new[0] = 0xF9; break;  /* right button */
+          default: new[0] = 0xF8; break; /* no button */
+        }
+        new[1] = (unsigned char)deltaX;
+        new[2] = (unsigned char)deltaY;
+        level = asm_set_ipl(7);          /* mask interrupts for other tasks */
+        call_mousevec(new, mousevec);
+        asm_set_ipl(level);
+        i++;
+      }
+      while((i < 10) && (deltaX || deltaY));
+    }
+  }
 }
 
 static void show_screen(sock_conn *conn, char *request)
 {
-  extern struct fb_info *info_fvdi;
   unsigned char *input[PICTURE_HEIGHT];
   char *output = BufGif;
   Gif *gif;
@@ -2495,12 +2865,25 @@ static void show_screen(sock_conn *conn, char *request)
   GifPicture *pic;
   GifBlock *block;
   static Colour col[256];
-  int level, size, i, j;
+  int level, size, i, j, k, width, height, incr, bpp;
 //	long mes = get_slice_timer();
-  if(request);
-  if((info_fvdi->var.bits_per_pixel != 16) || (info_fvdi->var.xres_virtual > PICTURE_WIDTH) || (info_fvdi->var.yres_virtual > PICTURE_HEIGHT))
+  (void)request;
+  if(info_fvdi != NULL)
   {
-    add_block(conn, red_led_gif, sizeof(red_led_gif));
+    width = incr = info_fvdi->var.xres_virtual;
+    height = info_fvdi->var.yres_virtual;
+    bpp = info_fvdi->var.bits_per_pixel;
+  }
+  else
+  {
+	  width = incr = (int)get_videl_width();
+	  height = (int)get_videl_height();
+	  bpp = (int)get_videl_bpp();
+  }
+  if(!(((info_fvdi != NULL) && (bpp >= 16))
+   || ((info_fvdi == NULL) && get_videl_base() && ((bpp == 4) || (bpp >= 16)))))
+  {
+    add_block(conn, (const char *)red_led_gif, sizeof(red_led_gif));
     return;    
   }  
   if((BufGif != NULL) && (BufPic != NULL))
@@ -2514,32 +2897,114 @@ static void show_screen(sock_conn *conn, char *request)
         asm_set_ipl(level);  
       }
       else
-        add_block(conn, red_led_gif, sizeof(red_led_gif));
+        add_block(conn, (const char *)red_led_gif, sizeof(red_led_gif));
       return;  
     }  
     UseCurve = 1;
-    for(i = 0; i < info_fvdi->var.yres_virtual; i++)
+    if(width > PICTURE_WIDTH)
+    	width = PICTURE_WIDTH;
+    if(height > PICTURE_HEIGHT)
+    	height = PICTURE_HEIGHT;
+    switch(bpp)
     {
-      unsigned short *src = (unsigned short *)&info_fvdi->screen_base[info_fvdi->var.xres_virtual * sizeof(short) * i];
-      unsigned char *dst = (unsigned char *)&BufPic[info_fvdi->var.xres_virtual * i];
-      input[i] = dst;
-      /* fast rgb565 to rgb332 conv */
-      for(j = info_fvdi->var.xres_virtual - 1; j >= 0; j--)
-      {
-        unsigned long rgb = (unsigned long)*src++;
-        unsigned long r = (rgb >> 8) & 0xE0;
-        unsigned long g = (rgb >> 6) & 0x1C;
-        unsigned long b = (rgb >> 3) & 0x03;
-        *dst++ = (unsigned char)(r + g + b);
-      }
-    }
+      case 4:
+        {
+          unsigned short *palette = (unsigned short *)get_videl_palette();
+          long base = get_videl_base();
+          if(palette != NULL)
+          {
+            for(i = 0; i < height; i++)
+            {
+              unsigned char *dst = (unsigned char *)&BufPic[width * i];
+              unsigned short *src = (unsigned short *)(base + ((incr * (i + OffsetY)) >> 1));
+              unsigned short *src2 = &src[OffsetX  & ~3];
+              input[i] = dst;
+              /* 4 interlaced planes to rgb332 conv */
+              for(j = 0; j <  width; j += 16)
+              {
+                unsigned long plane0 = (unsigned long)*src2++;
+                unsigned long plane1 = (unsigned long)*src2++;
+                unsigned long plane2 = (unsigned long)*src2++;
+                unsigned long plane3 = (unsigned long)*src2++;
+                unsigned long mask = 0x8000;
+                for(k = 15; k >= 0; k--)
+                {
+                  unsigned long index = 0, rgb, r, g, b;
+                  if(plane0 & mask)
+                    index |= 1;
+                  if(plane1 & mask)
+                    index |= 2;
+                  if(plane2 & mask)
+                    index |= 4;
+                  if(plane3 & mask)
+                    index |= 8;
+                  mask >>= 1;
+                  rgb = (unsigned long)palette[index] & 0x777;
+                  r = (rgb >> 3) & 0xE0;
+                  g = (rgb >> 2) & 0x1C;
+                  b = (rgb >> 1) & 0x03;
+                  *dst++ = (unsigned char)(r + g + b);
+                }
+              }
+              src += (incr >> 2);
+            }
+          }
+        }
+        break;
+      case 16:
+        for(i = 0; i < height; i++)
+        {
+          unsigned short *src, *src2;
+          unsigned char *dst = (unsigned char *)&BufPic[width * i];
+          if(info_fvdi != NULL)
+            src = (unsigned short *)&info_fvdi->screen_base[incr * sizeof(short) * (i + OffsetY)];
+          else
+            src = (unsigned short *)(get_videl_base() + (incr * sizeof(short) * (i + OffsetY)));
+          src2 = &src[OffsetX];
+          input[i] = dst;
+          /* rgb565 to rgb332 conv */
+          for(j = width - 1; j >= 0; j--)
+          {
+            unsigned long rgb = (unsigned long)*src2++;
+            unsigned long r = (rgb >> 8) & 0xE0;
+            unsigned long g = (rgb >> 6) & 0x1C;
+            unsigned long b = (rgb >> 3) & 0x03;
+            *dst++ = (unsigned char)(r + g + b);
+          }
+          src += incr;
+        }
+        break;
+      case 32:
+        for(i = 0; i < height; i++)
+        {
+          unsigned long *src, *src2;
+          unsigned char *dst = (unsigned char *)&BufPic[width * i];
+          if(info_fvdi != NULL)
+            src = (unsigned long *)&info_fvdi->screen_base[incr * sizeof(long) * (i + OffsetY)];
+          else
+            src = (unsigned long *)(get_videl_base() + (incr * sizeof(long) * (i + OffsetY)));
+          src2 = &src[OffsetX];
+          input[i] = dst;
+          /* rgb888 to rgb332 conv */
+          for(j = width - 1; j >= 0; j--)
+          {
+            unsigned long rgb = *src2++;
+            unsigned long r = (rgb >> 16) & 0xE0;
+            unsigned long g = (rgb >> 11) & 0x1C;
+            unsigned long b = (rgb >> 6) & 0x03;
+            *dst++ = (unsigned char)(r + g + b);
+          }
+          src += incr;
+        }
+        break;
+    }  
     /* Create a blank Gif: */
     gif = new_gif();
     if(gif != NULL)
     {
       /* Set the screen information: */
-      gif->screen->width = info_fvdi->var.xres_virtual;
-      gif->screen->height = info_fvdi->var.yres_virtual;
+      gif->screen->width = width;
+      gif->screen->height = height;
       gif->screen->has_cmap = 1;
       gif->screen->color_res = 8;
       gif->screen->cmap_depth = 8;
@@ -2558,8 +3023,8 @@ static void show_screen(sock_conn *conn, char *request)
       }
       /* Create a new GifPicture: */
       pic = new_gif_picture();
-      pic->width = info_fvdi->var.xres_virtual;
-      pic->height = info_fvdi->var.yres_virtual;
+      pic->width = width;
+      pic->height = height;
       pic->interlace = 0; /* 0=no interlace, 1=interlace */
       pic->has_cmap = 0;
       pic->cmap_depth = 8; /* must be depth, despite not writing it */
@@ -2588,17 +3053,7 @@ static void show_screen(sock_conn *conn, char *request)
       del_gif(gif);
       size = (int)(output - BufGif);
       add_block(conn, BufGif, size);
-#if 0
-      board_printf("gif size %d bytes %ld us\r\n", size, (mes - get_slice_timer()) / 100UL);
-      {
-        long file_w;
-			  if((file_w = Fcreate("screen.gif", 0)) >= 0)
-        {
-          Fwrite(file_w, size, BufGif);
-          Fclose(file_w);
-        }
-      }
-#endif      
+//      board_printf("gif size %d bytes %ld us\r\n", size, (mes - get_slice_timer()) / 100UL);
       if(SecondBufGif != NULL)
       {
         level = asm_set_ipl(7);         /* mask interrupts for other tasks */
@@ -2995,7 +3450,7 @@ static void show_curve(sock_conn *conn, char *request)
   float val[NB_COURBES];
   float fy;
   int level;
-  if(request);
+  (void)request;
   if((BufGif != NULL) && (BufPic != NULL))
   {
     if(UseCurve)
@@ -3232,7 +3687,7 @@ static void show_curve(sock_conn *conn, char *request)
 
 static void select_file(sock_conn *conn, char *request)
 {
-  if(request);
+  (void)request;
   a2p(conn, select_html);
   a2p(conn, select_form);
   a2p(conn, select_end);
@@ -3336,7 +3791,9 @@ static void handle_file(sock_conn *conn, char *req)
       hight_address = 0;
       i = strlen(buf);
       if((buf[i-3]=='h' && buf[i-2]=='e' && buf[i-1]=='x')
-       || (buf[i-3]=='H' && buf[i-2]=='E' && buf[i-1]=='X'))
+       || (buf[i-3]=='H' && buf[i-2]=='E' && buf[i-1]=='X')
+       || (buf[i-3]=='s' && buf[i-2]=='1' && buf[i-1]=='9')
+       || (buf[i-3]=='S' && buf[i-2]=='1' && buf[i-1]=='9'))
       {
         Mem_Data = (unsigned long)pvPortMalloc2(SIZE_TOS_FLASH);
         if(Mem_Data)
@@ -3403,7 +3860,7 @@ static void handle_file(sock_conn *conn, char *req)
 #ifndef WEB_LIGHT
 static void show_work(sock_conn *conn, char *request)
 {
-  if(request);
+  (void)request;
   add_block(conn, work_gif, sizeof(work_gif));
 }
 #endif
@@ -3415,6 +3872,7 @@ static http_list m_http_list[] = {
   { "GET", "/gif/red_led.gif", show_red_led, "image/gif" },
   { "GET", "/gif/green_led.gif", show_green_led, "image/gif" },
   { "GET", "/screen.html", handle_screen, "text/html" },
+  { "POST", "/change_screen.html", handle_change_screen, "application/x-www-form-urlencoded" },
   { "GET", "/gif/screen.gif", show_screen, "image/gif" },
 #ifndef WEB_LIGHT
   { "GET", "/curve.html", handle_curve, "text/html" },
@@ -3847,8 +4305,11 @@ void vBasicWEBServer(void *pvParameters)
   if(i);
   SizeGif = 0;
   BufPic = gif_alloc(PICTURE_WIDTH*PICTURE_HEIGHT);
-  BufGif = gif_alloc((PICTURE_WIDTH*PICTURE_HEIGHT)/2);
-  SecondBufGif = gif_alloc((PICTURE_WIDTH*PICTURE_HEIGHT)/2);
+  BufGif = gif_alloc(PICTURE_WIDTH*PICTURE_HEIGHT);
+  SecondBufGif = gif_alloc(PICTURE_WIDTH*PICTURE_HEIGHT);
+  MouseX = MouseY = -1;
+  MouseK = 0;
+  OffsetX = OffsetY = 0;
 #ifndef WEB_LIGHT
   UseCurve = 0;
   ValeurMini = -1000.0;
@@ -3868,7 +4329,7 @@ void vBasicWEBServer(void *pvParameters)
   {
     memset(Pts,0,NB_COURBES*PICTURE_WIDTH*NB_IMAGES*sizeof(float));
     memcpy(table_min_max, def_table_min_max, sizeof(def_table_min_max));
-    xTaskCreate(HTTP_mesure, "HMES", configMINIMAL_STACK_SIZE, NULL, 10, NULL);
+    xTaskCreate(HTTP_mesure, (void *)"HMES", configMINIMAL_STACK_SIZE, NULL, 10, NULL);
   }
   else
   {
@@ -3884,7 +4345,7 @@ void vBasicWEBServer(void *pvParameters)
     name[2] = '0' + (char)((task + 1) / 10);
     name[3] = '0' + (char)((task + 1) % 10);
     name[4] = '\0';
-    xTaskCreate(vProcessConnection, name, configMINIMAL_STACK_SIZE, (void *)task, 9, NULL);
+    xTaskCreate(vProcessConnection, (void *)name, configMINIMAL_STACK_SIZE, (void *)task, 9, NULL);
   }
   /* Create a new tcp connection handle */
   if((sock = socket(AF_INET, SOCK_STREAM, 0)) == -1)

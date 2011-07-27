@@ -28,7 +28,15 @@
 #include "usb.h"
 #include "ehci.h"
 
+#if defined(COLDFIRE) && defined(NETWORK) && defined(LWIP)
+#include "../freertos/FreeRTOS.h"
+#include "../freertos/queue.h"
+extern xQueueHandle queue_poll_hub;
+#define USB_POLL_HUB
+#endif
+
 #undef DEBUG
+#undef SHOW_INFO
 
 char ehci_inited;
 static int rootdev;
@@ -118,6 +126,7 @@ static struct ehci {
 	/* ------- common part -------- */
 	long handle;              /* PCI BIOS */
 	const struct pci_device_id *ent;
+	int usbnum;
   /* ---- end of common part ---- */
 	int big_endian;           /* PCI BIOS */
 	struct ehci_hccr *hccr;	/* R/O registers, not need for volatile */
@@ -139,6 +148,20 @@ static struct ehci {
 #else
 #define debug(format, arg...) do {} while (0)
 #endif /* DEBUG */
+#if defined(DEBUG) || defined(USB_POLL_HUB)
+#define err(format, arg...) sprintD(usb_error_str, "ERROR: " format "\r\n", ## arg); board_printf(usb_error_str) 
+#else
+#define err(format, arg...) sprintD(usb_error_str, "ERROR: " format "\r\n", ## arg); kprint(usb_error_str) 
+#endif /* DEBUG */
+#ifdef SHOW_INFO
+#ifdef COLDFIRE
+#define info(format, arg...) board_printf("INFO: " format "\r\n", ## arg)
+#else
+#define info(format, arg...) board_printf("INFO: " format "\r\n", ## arg)
+#endif /* COLDFIRE */
+#else
+#define info(format, arg...) do {} while (0)
+#endif
 
 #ifdef COLDFIRE
 
@@ -156,7 +179,11 @@ static inline void flush_dcache_range(void *begin, void *end)
 	else
 #endif /* LWIP */
 #endif /* NETWORK */
-		asm(" .chip 68060\n cpusha DC\n .chip 5200\n"); /* from CF68KLIB */
+#if (__GNUC__ > 3)
+		asm volatile (" .chip 68060\n\t cpusha DC\n\t .chip 5485\n\t"); /* from CF68KLIB */
+#else
+		asm volatile (" .chip 68060\n\t cpusha DC\n\t .chip 5200\n\t"); /* from CF68KLIB */
+#endif
 #endif /* CONFIG_USB_MEM_NO_CACHE */
 }
 #define invalidate_dcache_range flush_dcache_range
@@ -283,7 +310,11 @@ static inline void ehci_invalidate_dcache(struct QH *qh)
 	else
 #endif /* LWIP */
 #endif /* NETWORK */
-		asm(" .chip 68060\n cpusha DC\n .chip 5200\n");
+#if (__GNUC__ > 3)
+		asm volatile (" .chip 68060\n\t cpusha DC\n\t .chip 5485\n\t"); /* from CF68KLIB */
+#else
+		asm volatile (" .chip 68060\n\t cpusha DC\n\t .chip 5200\n\t"); /* from CF68KLIB */
+#endif
 #endif /* COLDFIRE */
 }
 
@@ -335,7 +366,7 @@ static int ehci_reset(void)
 	ret = handshake((uint32_t *)&gehci.hcor->or_usbcmd, CMD_RESET, 0, 250 * 1000);
 	if(ret < 0)
 	{
-		board_printf("EHCI fail to reset\r\n");
+		err("EHCI fail to reset");
 		goto out;
 	}
 	if(ehci_is_TDI())
@@ -506,7 +537,7 @@ static int ehci_submit_async(struct usb_device *dev, unsigned long pipe, void *b
 	ret = handshake((uint32_t *)&gehci.hcor->or_usbsts, STD_ASS, STD_ASS, 100 * 1000);
 	if(ret < 0)
 	{
-		board_printf("EHCI fail timeout STD_ASS set\r\n");
+		err("EHCI fail timeout STD_ASS set (usbsts=%#x)", ehci_readl(&gehci.hcor->or_usbsts));
 		goto fail;
 	}
 	/* Wait for TDs to be processed. */
@@ -530,7 +561,7 @@ static int ehci_submit_async(struct usb_device *dev, unsigned long pipe, void *b
 	ret = handshake((uint32_t *)&gehci.hcor->or_usbsts, STD_ASS, 0, 100 * 1000);
 	if(ret < 0)
 	{
-		board_printf("EHCI fail timeout STD_ASS reset\r\n");
+		err("EHCI fail timeout STD_ASS reset (usbsts=%#x)", ehci_readl(&gehci.hcor->or_usbsts));
 		goto fail;
 	}
 	gehci.qh_list->qh_link = cpu_to_hc32(((uint32_t)gehci.qh_list - gehci.dma_offset) | QH_LINK_TYPE_QH);
@@ -582,6 +613,17 @@ fail:
 			td = (struct qTD *)(gehci.dma_offset + (u32)td);
 	}
 	ehci_free(qh, sizeof(*qh));
+	if(ehci_readl(&gehci.hcor->or_usbsts) & STS_HSE) /* Host System Error */
+	{
+#ifdef PCI_XBIOS
+		unsigned short status = fast_read_config_word(gehci.handle, PCISR);
+#else
+		unsigned short status = Fast_read_config_word(gehci.handle, PCISR);
+#endif
+		err("EHCI Host System Error, controller usb-%s disabled\r\n(SR:0x%04X%s%s%s%s%s%s)", gehci.slot_name, status & 0xFFFF,
+		 status & 0x8000 ? ", Parity error" : "", status & 0x4000 ? ", Signaled system error" : "", status & 0x2000 ? ", Received master abort" : "",
+		 status & 0x1000 ? ", Received target abort" : "", status & 0x800 ? ", Signaled target abort" : "", status & 0x100 ? ", Data parity error" : "");
+	}
 	return -1;
 }
 
@@ -604,7 +646,7 @@ static int ehci_submit_root(struct usb_device *dev, unsigned long pipe, void *bu
 	uint32_t *status_reg;
 	if(le16_to_cpu(req->index) > CONFIG_SYS_USB_EHCI_MAX_ROOT_PORTS)
 	{
-		board_printf("The request port(%d) is not configured\r\n", le16_to_cpu(req->index) - 1);
+		err("The request port(%d) is not configured", le16_to_cpu(req->index) - 1);
 		return -1;
 	}
 	status_reg = (uint32_t *)&gehci.hcor->or_portsc[le16_to_cpu(req->index) - 1];
@@ -697,7 +739,7 @@ static int ehci_submit_root(struct usb_device *dev, unsigned long pipe, void *bu
           reg = ehci_readl(status_reg);
 				}
 				else
-					board_printf("port(%d) reset error\r\n", le16_to_cpu(req->index) - 1);
+					err("port(%d) reset error", le16_to_cpu(req->index) - 1);
 			}
 			if(reg & EHCI_PS_CS)
 				tmpbuf[0] |= USB_PORT_STAT_CONNECTION;
@@ -846,11 +888,19 @@ static int handle_usb_interrupt(struct ehci *ehci)
 	uint32_t status;
 #ifndef CONFIG_USB_MEM_NO_CACHE
 #ifdef COLDFIRE /* no bus snooping on Coldfire */
-#if 1
-	asm(" .chip 68060\n cpusha DC\n .chip 5200\n");
-#else
+#ifdef NETWORK
+#ifdef LWIP
+	extern unsigned long pxCurrentTCB, tid_TOS;
 	extern void flush_dc(void);
-	flush_dc(); /* native interrupt */
+	if(pxCurrentTCB != tid_TOS)
+		flush_dc();
+	else
+#endif /* LWIP */
+#endif /* NETWORK */
+#if (__GNUC__ > 3)
+	asm volatile (" .chip 68060\n\t cpusha DC\n\t .chip 5485\n\t"); /* from CF68KLIB */
+#else
+	asm volatile (" .chip 68060\n\t cpusha DC\n\t .chip 5200\n\t"); /* from CF68KLIB */
 #endif
 #endif /* COLDFIRE */
 #endif /* CONFIG_USB_MEM_NO_CACHE */
@@ -870,6 +920,13 @@ static int handle_usb_interrupt(struct ehci *ehci)
 				pstatus |= EHCI_PS_PO;
 				ehci_writel(&ehci->hcor->or_portsc[i-1], pstatus);
 			}
+#ifdef USB_POLL_HUB
+			else if((queue_poll_hub != NULL)  && (pstatus & EHCI_PS_CSC))
+			{
+				portBASE_TYPE xNeedSwitch = pdFALSE;
+				xNeedSwitch = xQueueSendFromISR(queue_poll_hub, &ehci->usbnum, xNeedSwitch);
+			} /* to fix xNeedSwitch usage */
+#endif		
 		}
 	} 
   ehci_writel(&ehci->hcor->or_usbsts, status);
@@ -988,7 +1045,7 @@ int ehci_usb_lowlevel_init(long handle, const struct pci_device_id *ent, void **
 				}
 			}
 			flags = pci_rsc_desc->flags;
-			(unsigned long)pci_rsc_desc += (unsigned long)pci_rsc_desc->next;
+			pci_rsc_desc = (PCI_RSC_DESC *)((unsigned long)pci_rsc_desc->next + (unsigned long)pci_rsc_desc);
 		}
 		while(!(flags & FLG_LAST));
 	}
@@ -1030,7 +1087,7 @@ int ehci_usb_lowlevel_init(long handle, const struct pci_device_id *ent, void **
 	ehci_writel(&gehci.hcor->or_asynclistaddr, (uint32_t)gehci.qh_list - gehci.dma_offset);
 	reg = ehci_readl(&gehci.hccr->cr_hcsparams);
 	gehci.descriptor->hub.bNbrPorts = HCS_N_PORTS(reg);
-	board_printf("Register %x NbrPorts %d\r\n", reg, gehci.descriptor->hub.bNbrPorts);
+	info("Register %x NbrPorts %d", reg, gehci.descriptor->hub.bNbrPorts);
 	/* Port Indicators */
 	if(HCS_INDICATOR(reg))
 		gehci.descriptor->hub.wHubCharacteristics |= 0x80;
@@ -1052,7 +1109,7 @@ int ehci_usb_lowlevel_init(long handle, const struct pci_device_id *ent, void **
 	cmd = ehci_readl(&gehci.hcor->or_usbcmd);
 	wait_ms(5);
 	reg = HC_VERSION(ehci_readl(&gehci.hccr->cr_capbase));
-	board_printf("USB EHCI %x.%02x\r\n", reg >> 8, reg & 0xff);
+	info("USB EHCI %x.%02x", reg >> 8, reg & 0xff);
   /* turn on interrupts */
 #ifdef PCI_XBIOS
 	hook_interrupt(handle, handle_usb_interrupt, &gehci);

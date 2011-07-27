@@ -10,7 +10,7 @@
  * option any later version.  See doc/license.txt for details.
  */
 
-
+#ifndef _MINT_ERRNO_H
 
 /* BIOS level errors */
 
@@ -56,4 +56,4 @@
 #define EPLFMT  -66L    /* invalid program load format  0xffffffbe      */
 #define EGSBF   -67L    /* setblock fail: growth restr. 0xffffffbd      */
 
-
+#endif

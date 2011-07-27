@@ -304,56 +304,57 @@ portSaveRestoreInt( int iSave )
 static void
 prvPortYield( void )
 {
+#if (__GNUC__ <= 3)
     asm volatile (".chip 68060\n\t");
-    asm volatile (" move.w #0x2700, %sr\n\t");
-#if _GCC_USES_FP == 1
-    asm volatile (" unlk %fp\n\t");
 #endif
-    asm volatile (" move.l %d0, -(%sp)\n\t"); 
-    asm volatile (" move.l %a0, -(%sp)\n\t"); 
-    asm volatile (" move.l %usp, %a0\n\t");
-    asm volatile (" btst #5, 10(%sp)\n\t");    // call in supervisor state
+    asm volatile (" move.w #0x2700, sr\n\t");
+#if _GCC_USES_FP == 1
+    asm volatile (" unlk fp\n\t");
+#endif
+    asm volatile (" move.l d0, -(sp)\n\t"); 
+    asm volatile (" move.l a0, -(sp)\n\t"); 
+    asm volatile (" move.l usp, a0\n\t");
+    asm volatile (" btst #5, 10(sp)\n\t");   // call in supervisor state
     asm volatile (" beq.s .user\n\t" );
-    asm volatile (" move.b 8(%sp), %d0\r\n");  // get SP alignment bits from A7 stack frame
-    asm volatile (" lsr.l #4, %d0\n\t");
-    asm volatile (" and.l #3, %d0\n\t");
-    asm volatile (" addq.l #8, %d0\n\t");
-    asm volatile (" addq.l #8, %d0\n\t");
-    asm volatile (" add.l %sp, %d0\n\t");
-    asm volatile (" move.l %d0, %a0\n\t");
+    asm volatile (" move.b 8(sp), d0\r\n");  // get SP alignment bits from A7 stack frame
+    asm volatile (" lsr.l #4, d0\n\t");
+    asm volatile (" and.l #3, d0\n\t");
+    asm volatile (" addq.l #8, d0\n\t");
+    asm volatile (" addq.l #8, d0\n\t");
+    asm volatile (" add.l sp, d0\n\t");
+    asm volatile (" move.l d0, a0\n\t");
     asm volatile (".user:\n\t" );
-    asm volatile (" moveq #0, %d0\n\t");
-    asm volatile (" move.w (%a0), %d0\n\t");
-    asm volatile (" cmp.l #0xFE, %d0\n\t");    // function
+    asm volatile (" moveq #0, d0\n\t");
+    asm volatile (" move.w (a0), d0\n\t");
+    asm volatile (" cmp.l #0xFE, d0\n\t");   // function
     asm volatile (" beq .set_ipl\n\t" );
-    asm volatile (" cmp.l #0xFF, %d0\n\t");    // function
+    asm volatile (" cmp.l #0xFF, d0\n\t");   // function
     asm volatile (" beq .yield\n\t" );
-    asm volatile (" move.l (%sp)+, %a0\n\t"); 
-    asm volatile (" addq.l #4, %sp\n\t"); 
-    asm volatile (" moveq #-1, %d0\n\t"); 
+    asm volatile (" move.l (sp)+, a0\n\t"); 
+    asm volatile (" addq.l #4, sp\n\t"); 
+    asm volatile (" moveq #-1, d0\n\t"); 
     asm volatile (" rte\n\t");
     asm volatile (".set_ipl:\n\t");
-    asm volatile (" move.l %d6, -(%sp)\n\t"); 
-    asm volatile (" move.l %d7, -(%sp)\n\t"); 
-    asm volatile (" move.w 18(%sp), %d7\n\t"); // current SR
-    asm volatile (" move.l %d7, %d0\n\t");     // prepare return value
-    asm volatile (" and.l #0x700, %d0\n\t");   // mask out IPL
-    asm volatile (" lsr.l #8, %d0\n\t");       // IPL
-    asm volatile (" move.l 2(%a0), %d6\n\t");  // get argument
-    asm volatile (" and.l #7, %d6\n\t");       // least significant three bits
-    asm volatile (" lsl.l #8, %d6\n\t");       // move over to make mask
-    asm volatile (" and.l #0xF8FF, %d7\n\t");  // zero out current IPL
-    asm volatile (" or.l %d6, %d7\n\t");       // place new IPL in SR
-    asm volatile (" move.w %d7, 18(%sp)\n\t");
-    asm volatile (" move.l (%sp)+, %d7\n\t");
-    asm volatile (" move.l (%sp)+, %d6\n\t"); 
-    asm volatile (" move.l (%sp)+, %a0\n\t");
-    asm volatile (" addq.l #4, %sp\n\t"); 
+    asm volatile (" move.l d6, -(sp)\n\t"); 
+    asm volatile (" move.l d7, -(sp)\n\t"); 
+    asm volatile (" move.w 18(sp), d7\n\t"); // current SR
+    asm volatile (" move.l d7, d0\n\t");     // prepare return value
+    asm volatile (" and.l #0x700, d0\n\t");  // mask out IPL
+    asm volatile (" lsr.l #8, d0\n\t");      // IPL
+    asm volatile (" move.l 2(a0), d6\n\t");  // get argument
+    asm volatile (" and.l #7, d6\n\t");      // least significant three bits
+    asm volatile (" lsl.l #8, d6\n\t");      // move over to make mask
+    asm volatile (" and.l #0xF8FF, d7\n\t"); // zero out current IPL
+    asm volatile (" or.l d6, d7\n\t");       // place new IPL in SR
+    asm volatile (" move.w d7, 18(sp)\n\t");
+    asm volatile (" move.l (sp)+, d7\n\t");
+    asm volatile (" move.l (sp)+, d6\n\t"); 
+    asm volatile (" move.l (sp)+, a0\n\t");
+    asm volatile (" addq.l #4, sp\n\t"); 
     asm volatile (" rte\n\t");;    
     asm volatile (".yield:\n\t");
-//    asm volatile (" move.w #0x2700, %sr\n\t");
-    asm volatile (" move.l (%sp)+, %a0\n\t"); 
-    asm volatile (" move.l (%sp)+, %d0\n\t"); 
+    asm volatile (" move.l (sp)+, a0\n\t"); 
+    asm volatile (" move.l (sp)+, d0\n\t"); 
      /* Perform the context switch.  First save the context of the current task. */
     portSAVE_CONTEXT(  );
     /* Find the highest priority task that is ready to run. */
@@ -364,14 +365,14 @@ prvPortYield( void )
 
 void portYIELD(void)
 {
-    asm volatile (" move.w #0xFF, -(%sp)\n\t");
-    asm volatile (" trap %0\n\t" : : "i" (portTRAP_YIELD));
-    asm volatile (" addq.l #2, %sp\n\t");
+    asm volatile (
+                  " move.w #0xFF, -(sp)\n\t"
+                  " trap %0\n\t"
+                  " addq.l #2, sp" : : "i" (portTRAP_YIELD) : "d0", "d1", "a0", "a1", "memory", "cc" );
 }
 
 int vPortSetIPL( unsigned long int uiNewIPL )
 {
-    int iOldIPL;
 #if 0 // ugly hack fixed by using portOldIPLTOS
     portSTACK_TYPE *p = (portSTACK_TYPE *) pxCurrentTCB;
     unsigned portBASE_TYPE uxStartIntLevel = (unsigned portBASE_TYPE) p[65];
@@ -384,30 +385,30 @@ int vPortSetIPL( unsigned long int uiNewIPL )
     if(*(unsigned long *)(((portVECTOR_SYSCALL) * 4) + coldfire_vector_base)  == (unsigned long)prvPortYield)
 #endif
     {
-        asm volatile (" move.l %0, -(%%sp)\n\t" : : "d" (uiNewIPL));
-        asm volatile (" move.w #0xFE, -(%sp)\n\t");
-        asm volatile (" trap %0\n\t" : : "i" (portTRAP_YIELD));
-        asm volatile (" addq.l #6, %sp\n\t");
+        register int iOldIPL __asm__("d0");
+        asm volatile (
+                      " move.l %1, -(sp)\n\t"
+                      " move.w #0xFE, -(sp)\n\t"
+                      " trap %2\n\t"
+                      " addq.l #6, sp" : "=d" (iOldIPL) : "d" (uiNewIPL), "i" (portTRAP_YIELD) : "d1", "a0", "a1", "memory", "cc" ); 
+        return( iOldIPL );
     }
     else
     {
-        asm volatile (" move.l %d6, -(%sp)\n\t"); 
-        asm volatile (" move.l %d7, -(%sp)\n\t"); 
-        asm volatile (" move.l %0, %%d6\n\t" : : "d" (uiNewIPL)); // get argument
-        asm volatile (" move.w %sr, %d7\n\t");    // current SR
-        asm volatile (" move.l %d7, %d0\n\t");    // prepare return value
-        asm volatile (" and.l #0x700, %d0\n\t");  // mask out IPL
-        asm volatile (" lsr.l #8, %d0\n\t");      // IPL
-        asm volatile (" and.l #7, %d6\n\t");      // least significant three bits
-        asm volatile (" lsl.l #8, %d6\n\t");      // move over to make mask
-        asm volatile (" and.l #0xF8FF, %d7\n\t"); // zero out current IPL
-        asm volatile (" or.l %d6, %d7\n\t");      // place new IPL in SR
-        asm volatile (" move.w %d7, %sr\n\t");
-        asm volatile (" move.l (%sp)+, %d7\n\t");
-        asm volatile (" move.l (%sp)+, %d6\n\t"); 
+        register int iOldIPL __asm__("d0");
+        asm volatile (
+                      " move.l %1, d6\n\t"     /* get argument */
+                      " move.w sr, d7\n\t"     /* current SR */
+                      " move.l d7, d0\n\t"     /* prepare return value */
+                      " and.l #0x700, d0\n\t"  /* mask out IPL */
+                      " lsr.l #8, d0\n\t"      /* IPL */
+                      " and.l #7, d6\n\t"      /* least significant three bits */
+                      " lsl.l #8, d6\n\t"      /* move over to make mask */
+                      " and.l #0xF8FF, d7\n\t" /* zero out current IPL */
+                      " or.l d6, d7\n\t"       /* place new IPL in SR */
+                      " move.w d7, sr" : "=d" (iOldIPL) : "d" (uiNewIPL) : "d6", "d7", "memory", "cc" );
+        return( iOldIPL );
     } 
-    asm volatile (" move.l %%d0, %0\n\t" : "=d" (iOldIPL) : );
-    return( iOldIPL );
 }
 
 #if configUSE_PREEMPTION == 0
@@ -434,9 +435,9 @@ prvPortPreemptiveTick ( void )
 static void
 prvPortPreemptiveTick( void )
 {
-    asm volatile ( "move.w  #0x2700, %sr\n\t" );
+    asm volatile ( "move.w  #0x2700, sr\n\t" );
 #if _GCC_USES_FP == 1
-    asm volatile ( "unlk %fp\n\t" );
+    asm volatile ( "unlk fp\n\t" );
 #endif
     portSAVE_CONTEXT(  );
 #ifdef MCF5445X
@@ -486,7 +487,7 @@ vPortExitCritical()
 static void rte_int(void)
 {
 #if _GCC_USES_FP == 1
-	asm volatile (" unlk %fp\n\t");
+	asm volatile (" unlk fp\n\t");
 #endif
 	asm volatile (" rte\n\t");	
 }
@@ -494,14 +495,15 @@ static void rte_int(void)
 portBASE_TYPE
 xPortStartScheduler( void )
 {
-    asm volatile ( "move.w  #0x2700, %sr\n\t" );
+    asm volatile ( "move.w  #0x2700, sr\n\t" );
 
+    *(unsigned long *)_hz_200 = 0;
     /* Add entry in vector table for yield system call. */
     *(unsigned long *)(((portVECTOR_SYSCALL) * 4) + coldfire_vector_base) = (unsigned long)prvPortYield;
     /* Add entry in vector table for periodic timer. */
     *(unsigned long *)(((portVECTOR_TIMER) * 4) + coldfire_vector_base) = (unsigned long)prvPortPreemptiveTick;
     /* sometimes spurious interrupt not fixed ! */
-	  *(unsigned long *)((24 * 4) + coldfire_vector_base) = (long)rte_int;
+    *(unsigned long *)((24 * 4) + coldfire_vector_base) = (long)rte_int;
 
     ulCriticalNesting = portINITIAL_CRITICAL_NESTING;
 

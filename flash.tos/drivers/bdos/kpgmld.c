@@ -111,7 +111,7 @@ LONG   kpgmld(PD *p, FH h, PGMHDR01 *hd )
  *  lastcp - used to keep track of the code ptr between pgmld01 and pgfix01
  */
 
-static char *lastcp ;
+static UBYTE *lastcp ;
 
 
 /*
@@ -220,7 +220,7 @@ static LONG     pgmld01( FH h , PD *pdptr, PGMHDR01 *hd)
 
         *((long *)(cp)) += (long)pi->pi_tbase ; /*  1st fixup     */
 
-        lastcp = cp ;                           /*  for pgfix01() */
+        lastcp = (UBYTE *)cp ;                           /*  for pgfix01() */
 
         flen = (long)p->p_hitpa - (long)pi->pi_bbase;   /* M01.01.0925.01 */
 
@@ -284,10 +284,10 @@ static LONG     pgfix01( LONG nrelbytes , PGMINFO *pi )
     register LONG       tbase ;         /*  base addr of text segment   */
 
     cp = lastcp ;
-    rp = pi->pi_bbase ;
+    rp = (UBYTE *)pi->pi_bbase ;
     n = nrelbytes ;
     tbase = (LONG) pi->pi_tbase ;
-    bbase = pi->pi_bbase ;
+    bbase = (UBYTE *)pi->pi_bbase ;
 
     while( n--  &&      *rp != 0 )
     {

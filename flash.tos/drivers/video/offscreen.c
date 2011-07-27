@@ -52,6 +52,7 @@ MPB
 static int count_md;
 static MD tab_md[MAXMD];
 static MPB pmd;
+static long wrap;
 
 static MD *ffit(long amount, MPB *mp)
 {
@@ -60,8 +61,14 @@ static MD *ffit(long amount, MPB *mp)
 	long maxval;
 	if(amount != -1)
 	{
+#if 1
+		amount += (wrap - 1);
+		amount /= wrap;
+		amount  *= wrap;               /* screen line alignment */
+#else
 		amount += 15;                  /* 16 bytes alignment */
 		amount &= 0xFFFFFFF0;
+#endif
 	}
 	if((q = mp->mp_rover) == 0)      /* get rotating pointer */
 		return(0) ;
@@ -224,14 +231,6 @@ long offscreen_alloc(struct fb_info *info, long amount)
 		*vblsem = 1;
 		return(0);
 	}
-	/* test offscreen limits for current screen */
-	if((unsigned long)m->m_start - (unsigned long)info->screen_base + (unsigned long)amount
-	 > (unsigned long)info->var.xres_virtual * 8192UL * (unsigned long)(info->var.bits_per_pixel / 8))
-	{
-		offscreen_free(info,(long)m->m_start);
-		*vblsem = 1;
-		return(0);
-	}	
 #ifdef DEBUG
 	Funcs_ltoa(buf, m->m_start, 16);
 	Funcs_puts(buf);
@@ -252,7 +251,9 @@ void offscreen_init(struct fb_info *info)
 #ifdef DEBUG
 	char buf[10];
 #endif
-	long size_screen = (long)info->var.xres_virtual*(long)info->var.yres_virtual*(long)(info->var.bits_per_pixel/8);
+	long size_screen, max_offscreen_size;
+	wrap = (long)info->var.xres_virtual * (long)(info->var.bits_per_pixel / 8);
+	size_screen = (long)info->var.yres_virtual * wrap;
 	if(!size_screen)
 		size_screen = (long)info->screen_size;
 	pmd.mp_mfl = pmd.mp_rover = &tab_md[0];
@@ -261,6 +262,11 @@ void offscreen_init(struct fb_info *info)
 	tab_md[0].m_length = (long)info->ram_size - size_screen;
 	if(tab_md[0].m_length > USB_BUFFER_SIZE)
 		tab_md[0].m_length -= USB_BUFFER_SIZE;
+	max_offscreen_size = ((long)info->var.xres_virtual * 8192L * (long)(info->var.bits_per_pixel / 8)) - size_screen;
+	if(max_offscreen_size < 0)
+		max_offscreen_size = 0;
+	if(tab_md[0].m_length > max_offscreen_size)
+		tab_md[0].m_length = max_offscreen_size;
 #ifdef DEBUG
 	Funcs_puts("offscreen_init start 0x");
 	Funcs_ltoa(buf, tab_md[0].m_start, 16);

@@ -1038,6 +1038,7 @@ static struct fb_ops lynxfb_ops =
 	.HideCursor = SMI_HideCursor,
 	.ShowCursor = SMI_ShowCursor,
 	.CursorInit = SMI_CursorInit,
+	.WaitVbl = NULL,
 
 /*extern void SMI_SetupForColor8x8PatternFill(struct smifb_info *smiinfo, int, int, int, unsigned int, int);
 extern void SMI_SubsequentColor8x8PatternFillRect(struct smifb_info *smiinfo, int, int, int, int, int, int);
@@ -1132,7 +1133,7 @@ int lynxfb_pci_register(long handle, const struct pci_device_id *ent)
 				}
 			}
 			flags = pci_rsc_desc->flags;
-			(unsigned long)pci_rsc_desc += (unsigned long)pci_rsc_desc->next;
+			pci_rsc_desc = (PCI_RSC_DESC *)((unsigned long)pci_rsc_desc->next + (unsigned long)pci_rsc_desc);
 		}
 		while(!(flags & FLG_LAST));
 	}

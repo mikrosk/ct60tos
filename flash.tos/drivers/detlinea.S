@@ -63,20 +63,5 @@ _det_linea:
 	move.l A1,2(SP)          // jump opcode
 	rte	
 .l1:
-#if 0
-	tst.w _os_magic
-	beq.s .i4
-	move.l _sysbase,A0
-	move.l 0x18(A0),D2       // date
-	swap D2
-	cmp.l #0x20010000,D2     // MagiC 6.20
-	bcs.s .i4
-	move.l A1,2(SP)          // jump opcode
-	move.l adr_var_vdi,A0
-	move.l adr_linea_fonts,A1
-	move.l adr_linea_atab,A2
- 	rte
-.i4:
-#endif
 	move.l _old_vector_linea,-(SP)
 	rts	

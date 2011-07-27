@@ -483,7 +483,7 @@ long CDECL initialize(Virtual *vwk)
 	Funcs_ltoa(buf, VERSION & 0xFF, 10);
 	Funcs_puts(buf);
 	Funcs_puts(" started \r\n");
-	if((Funcs_get_cookie("_PCI",is_super)) != -1)
+	if((Funcs_get_cookie((void *)"_PCI",is_super)) != -1)
 	{
 		if(debug)
 			Funcs_puts("Search PCI devices...\r\n");

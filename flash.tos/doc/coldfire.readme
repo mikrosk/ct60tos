@@ -8,10 +8,11 @@ M5484LITE tested (Coldfire v4e 200 MHz) and use:
  - CAN for IKBD with a special version of Eiffel
  - Ethernet 10/100
  - USB device
- - PCI: USB / Radeon (USB support mouse & keyboard, mass storage not works)
+ - PCI: USB / Radeon (USB support mouse & keyboard, and mass storage) with plug & play feature.
  - CompactFlash
  - DMA
  - MMU
+ - AC97 Sound (need hardware).
 (Makefile: -DCOLDFIRE)
 M54455EVB untested (Coldfire v4m 266 MHz) and use:
  - Timers
@@ -24,23 +25,90 @@ M54455EVB untested (Coldfire v4m 266 MHz) and use:
  - MMU
 (Makefile: -DCOLDFIRE -DMCF5445X)
 FIREBEE (Coldfire V4e 266 MHz) and use:
- - Timers
- - Serial port
+ - Timers and MFP (FPGA emulation)
+ - Serial ports (MFP FPGA emulation and PSC0)
  - Serial port for IKBD with Eiffel
  - ACIA for original IKBD (FPGA emulation)
+ - ACIA for MIDI (FPGA emulation)
  - Ethernet 10/100
- - PCI: USB / Radeon (USB support mouse & keyboard, mass storage not works)
- - CompactFlash
- - Atari Falcon IDE / SCSI (FPGA emulation, SCSI not tested)
+ - PCI: USB / Radeon (USB support mouse & keyboard, and mass storage) with plug & play feature.
+ - CompactFlash (FPGA emulation)
+ - SD-Card (using DSPI)
+ - Atari Falcon IDE / SCSI (FPGA emulation, SCSI not implemented)
  - DMA
  - MMU
  - PSG (YAMAHA - FPGA emulation)
  - Atari Floppy (FPGA emulation, only reading works)
  - RTC (PIC & FPGA emulation)
  - Videl ACP extended modes with EDID probing (monitor detection)
-- AC97 Sound, only for M5484LITE/M5485EVB and FIREBEE targets, is actually in debug state and not works.
+ - AC97 Sound.
 (Makefile: -DCOLDFIRE -DMCF547X)
 
+
+Firebee Status:
+===============
+- Ports:
+  * ATARI SERIAL / SERIAL 1 (MFP) bugged (lost characters, FPGA bug normally, TOS use original routines).
+  * HIGHSPEED SERIAL / SERIAL 2 (SCC) replaced by PSC0 (Coldfire) works fine.
+  * MIDI not tested.
+  * MIC (mono) not tested.
+  * SOUND IN has some noise with original on board 5V voltage.
+  * SOUND OUT works.
+  * ATARI KEYBOORD works fine.
+  * PS/2 for keyboard and mouse not tested, need a PIC update.
+  * POWER CONNECTOR 1.5 A seems a minimum (lot of peoples has destroyed adapters).
+  * GAME PORT not tested.
+  * PRINTER PORT not tested.
+  * ROM PORT not tested.
+  * FLOPPY works only for reading (FPGA emulation problem).
+  * SCSI not implemented inside the FPGA.
+  * ACSI not tested, can't work on TOS404.
+  * IDE works with a short cable.
+  * COMPACTFLASH works in IDE mode.
+  * SD-CARD works fine in SPI mode.
+  * PCI works fine with a Radeon board, warning if you use on-board voltages !
+  * ETHERNET 10/100 works fine.
+  * DVI-I works but not with all monitors, impossible to set HSYNC (signal inverted) 
+    like EDID protocol infos (else signal is lost). Video modes are like the Radeon 
+    (in 256 / 65K /16M colors) excepted than there are no hardware accelerationn (original
+    VDI need a blitter under the TOS 404). 
+  * USB works only with low speed device (mouse and keyboard)…if the 3V3 voltage on board is fixed.
+    High speed devices seems works with a PCI bus load with a Radeon board (for example).
+- Devices:
+  * AC97 audio codec not works on a 2nd init, but works from an hardware reset to the codec (maybe a 
+    problem with thhe Coldfire himself), so you need to replace the BAS by dBUG if you want sound
+    because the BAS already use the audio codec.
+    Sound is GSXB XBIOS compatible and has also and hardware STE emulation.
+  * There are an internal driver with a fix for IDE/CompactFlash (Rwabs and XHDI routines), with 
+    verification on read and retry loop because sometimes the 1st long access is lost under MiNT.
+    The internal driver runs only after all IDE/SCSI disk scan and if no bootable disk load an external
+    driver. BDOS replace the GEMDOS, in theory 1GB partitions TOS (16KB sectors) or DOS works.
+    It's possible to swap IDE and CompactFlash by software (flash parameter with the CPX), but the
+    TOS internal driver can use 4 IDE devices.
+  * Ethernet under TOS is compatible with Gluestick.
+ - Compatibility:
+   The FPGA hardware emulation is not complete, there are no DSP, no Blitter, no SCC, and no DMA
+   sound, else in theory it's a Falcon:
+   * VIDEL works with extended modes.
+   * RTC/NVRAM works.
+   The TOS use the CF68KLIB for emulate a 68060, but some instructions (lot of in Pure C programs)
+   can create problems because for fix it you need a full emulation (like Aranym or another emulator),
+   the TOS test Pure C programs and try to replace theses instructions (for exemple push or pop a byte 
+   on stack use a word on a 68K):
+   * Line A 0xA000-0xA00F already used for mac instructions replaced by opcode 0xA920-0xA92F.
+   * move.b DX,-(SP) replaced by opcode 0xA910-0xA917.
+   * move.b (SP)+,DX replaced by opcode 0xA918-0xA91F.
+   * move.b (AX),-(SP) replaced by opcode 0xA930-0xA937.
+   * move.b (SP)+,(AX) replaced by opcode 0xA938-0xA93F.
+   * move.b d(AX),-(SP) replaced by opcode 0xA9B0-0xA9B7.
+   * move.b (SP)+,d(AX) replaced by opcode 0xA9B8-0xA9BF.
+   * move.b abs.l,-(SP) replaced by opcode 0xA9F1.
+   * move.b d(PC),-(SP) replaced by opcode 0xA9F2.
+   * move.b (SP)+,abs.l replaced by opcode 0xA9F9.
+   * mulu/s.l ea,dh:dl replaced by opcode 0xABC0-0xABFF.
+   * divu/s.l ea:dr:dq replaced by opcode 0xAFC0-0xAFFF.
+   There are no emulation for the FPU.
+    
 
 Load TOS
 ========
@@ -79,6 +147,15 @@ Load TOS
  
  NOTE: In the current state because the network part use dBUG settings, ethernet not works if the BAS start the TOS.
  WARNING: The ethernet part of dBUG need a clock on the PHY, so if the FLASH above 0xE7000000 is destroyed ethernet can't work! 
+ NOTE2: If the BAS is installed, it's possible to use ethernet without dBUG with some limitations (3 flash parameters used) :
+  * You can change only the 3 lastest bytes of the MAC address with the CPX (stop/misc menu), begin is 00:CF:54
+  * You can change board IP and host IP with the CPX (stop/misc menu).
+  * The netmask is automatic if the choice is CPX setting.
+  * The default gateway is 0.0.0.0.
+  * The default path/filename for TFTP is /home/firebee.hex.
+  * If the board IP address is at 0.0.0.0 or 255.255.255.255 dBUG setting are used for board IP / gateway / netmask / path/filename.
+  * If the host IP address is at 0.0.0.0 or 255.255.255.255 dBUG setting are used for host IP.
+  * If the 3 last bytes of MAC address are 00:00:00 or FF:FF:FF dBUG setting are used.  
 
  
 Build config
@@ -306,24 +383,30 @@ FIREBEE Notes (M5484LITE/M5485EVB comparison)
 - 2 x SRAM base location unchanged (0x20000000, cf68klib.S).
 - MMU mapping (pmmu.C).
 - Atari hardware F030 IDE/SCSI are available inside the TOS (boot2.S).
-- CT60 flash parameters (xbios.S).
-- PSC1 for Eiffel (CAN1 on M5484LITE/M5485EVB, xbios.S)
+- CT60 flash parameters (xbios2.S).
+- PSC1 or 68050 (from FPGA emulation) for Eiffel (CAN1 on M5484LITE/M5485EVB, xbios2.S)
 - PCI Devices numbers, AD17 is the NEC USB Controller, AD18, AD19, AD20... actually for slots
   (7 maxi actually, pci_bios.S).
-- Original XBIOS TOS functions available (xbios.S):
+- Original XBIOS TOS functions available (xbios2.S):
   * Floprd
   * Flopwr
   * Flopfmt
-  * Midiws (interrupt cannot works actually).
+  * Midiws
   * Flopver
+  * Rsconf (MFP and PSC0):
+    Index    0    1   2     3    4    5    6    7   8   9     10     11    12    13     14    15
+    MFP  19200 9600 4800 3600 2400 2000 1800 1200 600 300    200    150   134   110     75    50
+    PSC0 19200 9600 4800 3600 2400 2000 1800 1200 600 300 230400 115200 57600 38400 153600 76800
   * Giaccess
   * Offgibit 	
   * Ongibit
   * Dosound
+  * Bconmap (6:MFP, 7:PSC0 who replace the SCC - default like a FALCON)
 - Flash programming with web server (lwip/amd_flash.c, lwip/web.c).
 - Driver for the AM79C874 10/100 Ethernet PHY (lwip/am79c874.c, lwip/fec.c).
 - Second network interface (FEC1) removed (lwip/init.c).
 - USB Slave Mass Storage Driver removed (lwip/init.c).
+- SD-Card driver added (detxbios.S).
 - Videl fVDI driver (without Blitter) with a 65K colors 640x480 or extendend modes in 
   256/65K/16M start if no Radeon is detected on PCI. 
 
@@ -331,10 +414,27 @@ FIREBEE Notes (M5484LITE/M5485EVB comparison)
    and need to be called by the boot at 0xE0400000.
    The TOS unpacked by himself is finally between 0xE00000-0xEFFFFF and 0xFC0000-0xFEFFFF.
    of DBUG for start the TOS at 0xFF700000 (flash begins at 0xFF000000).
-   Idea: We can put DBUG at 0xE0000000 and it can test a switch and start himself the TOS. 
+   Idea: We can put DBUG at 0xE0000000 and it can test the SW5 switch and start himself the TOS. 
 
 - CT60CONF.CPX / flash parameters allows to swap IDE port (CompactFlash at 0xFFF00000 and IDE 
   at 0xFFF00040) and change the boot order on drives.
+  
+- Boot menu and rescue features:
+  SW6 and SW5 are inside the cookie '_SWI':
+  * B7: (1) SW6 DOWN, (0) SW6 UP
+  * B6: (1) SW5 DOWN, (0) SW5 UP
+  * B0: (1) rescue TOS started from 0xE0000000 (replace BAS or dBUG)
+ SW6 up is the normal usage
+ SW6 down allows to TOS to start FTP (build option), HTTP, TFTP servers and create a Ram-Disk 
+     actually in B (this feature is also possible with dBUG at 0xE0000000).
+ SW5 up is the normal usage for start the TOS at 0xE0400000 (same usage inside BAS or dBUG at 
+     0xE0000000) and a boot menu has 2 choices TOS or EMUTOS (TOS by default).
+ SW5 down is the rescue mode, TOS at 0xE0000000 continue to run and a boot menu displays 3 choices:
+  * TOS404 (at 0xE0000000 - boot)   => TOS rescue (default choice)
+  * EMUTOS (at 0xE0600000)
+  * TOS404 (at 0xE0400000 - normal) => TOS to test
+ IT'S IMPORTANT TO FLASH ONLY AT 0xE0000000 AN OFFICIAL STABLE RELEASE OF THE TOS (rescuetos.hex)
+ OR CONTINUE TO USE DBUG OR BAS AT 0xE0000000.
  
 
 Ram-disk & TFTP notes
@@ -428,12 +528,6 @@ fVDI TOS notes
 
 - The fVDI part inside the TOS is normally 100% compatible with the TOS and use his variables.
   So for example bezier lines, true type fonts are not supported.
-
-
-radeon(_cf).sys notes
-=====================
-
-- Not tested with fVDI.prg, only the internal TOS radeon driver is tested.
 
 
 Coldfire notes
@@ -542,8 +636,8 @@ Coldfire notes
  FFF00000 - FFFFFFFF : FPGA FBCS1 - ATARI IDE - ATARI I/O (1MB - no cache) 
  
 
-Compile MiNT 1.16.1
-===================
+Compile MiNT 1.16.1 (obsolete)
+==============================
 MiNT need some changes for the Coldfire:
 
 - Inside KERNELDEF (example for make deb):

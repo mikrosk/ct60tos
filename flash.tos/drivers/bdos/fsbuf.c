@@ -37,7 +37,7 @@ extern void ltoa(char *buf, long n, unsigned long base);
  * LVL - This should really go in BDOS...
  */
 
-static BYTE secbuf[4][8192]; /* sector buffers: 16kB is TOS 4.0x limit though
+static BYTE secbuf[4][16384]; /* sector buffers: 16kB is TOS 4.0x limit though
                                 when set here as [4][16384] the BDOS goes
                                 crazy. 4kB is enough for my 500 MB partition */
 
@@ -127,13 +127,15 @@ char *getrec(long recn, DMD *dm, short wrtflg)
 {
     register BCB *b;
     BCB *p,*mtbuf,**q,**phdr;
-    short n,cl,err;
+    short n,cl,err,delta;
 
     /* put bcb management here */
     cl = (short)(recn >> dm->m_clrlog);  /*  calculate cluster nbr       */
-    if (cl < (short)dm->m_dtl->d_strtcl)
+    delta =  (short)dm->m_dtl->d_strtcl - cl;
+    if((delta > 0) && (delta <= (short)(dm->m_recoff[2] >> dm->m_clrlog)))  /* DM 26/12/10 */
+//    if (cl < (short)dm->m_dtl->d_strtcl)
         n = 0;                  /* FAT operat'n */
-    else if(recn >= ((long)dm->m_numcl *  (long)dm->m_clsiz))
+    else if(recn >= (long)((unsigned long)dm->m_numcl * (unsigned long)dm->m_clsiz))
         n = 1;                  /*  DIR (?)     */
     else
         n = 2;                  /*  DATA (?)    */
@@ -145,7 +147,7 @@ char *getrec(long recn, DMD *dm, short wrtflg)
         ltoa(buf, recn, 10);
         display_string(buf);
         display_string(", cl ");
-        ltoa(buf, (long)cl, 10);
+        ltoa(buf, (long)cl & 0xffff, 10);
         display_string(buf);
         display_string(", d_strtcl ");
         ltoa(buf, (long)dm->m_dtl->d_strtcl, 10);

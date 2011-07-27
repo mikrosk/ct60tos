@@ -26,27 +26,57 @@
  */
 
 #include "config.h"
+#include <stdarg.h>
 #include "usb.h"
 
 #undef RESET_START_STOP_CMDS
 #undef CONFIG_USB_STORAGE
 
-#ifdef COLDFIRE
-#ifdef NETWORK
-#ifdef LWIP
-#define USB_CMDS
-#endif
-#endif
-#else
-#define USB_CMDS
-#endif
-
-#ifdef USB_CMDS
 #if defined(CONFIG_USB_UHCI) || defined(CONFIG_USB_OHCI) || defined(CONFIG_USB_EHCI)
 
 #ifdef CONFIG_USB_STORAGE
 extern int usb_stor_curr_dev; /* current device */
 #endif
+
+#if defined(COLDFIRE) && defined(NETWORK) && defined(LWIP)
+extern long pxCurrentTCB, tid_TOS;
+// #define info(format, arg...) do { if(pxCurrentTCB == tid_TOS) kprint(format, ## arg); else board_printf(format, ## arg); } while(0)
+#else
+#define info(format, arg...) kprint(format, ## arg)
+#endif
+
+#if defined(COLDFIRE) && defined(NETWORK) && defined(LWIP)
+
+typedef struct
+{
+    int dest;
+    void (*func)(char);
+    char *loc;
+} PRINTK_INFO;
+
+#define DEST_CONSOLE    (1)
+#define DEST_STRING     (2)
+
+extern int printk(PRINTK_INFO *info, const char *fmt, va_list ap);
+
+static void info(const char *const fmt, ...)
+{
+	va_list ap;
+	PRINTK_INFO info;
+	static char buf[1024];
+	info.dest = DEST_STRING;
+	info.loc = buf;
+	va_start(ap, fmt);
+	printk(&info, fmt, ap);
+	*info.loc = '\0';
+	if(pxCurrentTCB == tid_TOS)
+		kprint(buf);
+	else
+		board_printf(buf);
+	va_end(ap);
+}
+
+#endif /* defined(COLDFIRE) && defined(NETWORK) && defined(LWIP) */
 
 /* some display routines (info command) */
 char *usb_get_class_desc(unsigned char dclass)
@@ -71,48 +101,48 @@ void usb_display_class_sub(unsigned char dclass, unsigned char subclass, unsigne
 	switch(dclass)
 	{
 		case USB_CLASS_PER_INTERFACE:
-			board_printf("See Interface");
+			info("See Interface");
 			break;
 		case USB_CLASS_HID:
-			board_printf("Human Interface, Subclass: ");
+			info("Human Interface, Subclass: ");
 			switch(subclass)
 			{
-				case USB_SUB_HID_NONE: board_printf("None"); break;
+				case USB_SUB_HID_NONE: info("None"); break;
 				case USB_SUB_HID_BOOT:
-					board_printf("Boot ");
+					info("Boot ");
 					switch(proto)
 					{
-						case USB_PROT_HID_NONE: board_printf("None"); break;
-						case USB_PROT_HID_KEYBOARD: board_printf("Keyboard"); break;
-						case USB_PROT_HID_MOUSE: board_printf("Mouse"); break;
-						default: board_printf("reserved"); break;
+						case USB_PROT_HID_NONE: info("None"); break;
+						case USB_PROT_HID_KEYBOARD: info("Keyboard"); break;
+						case USB_PROT_HID_MOUSE: info("Mouse"); break;
+						default: info("reserved"); break;
 					}
 					break;
-				default: board_printf("reserved"); break;
+				default: info("reserved"); break;
 			}
 			break;
 		case USB_CLASS_MASS_STORAGE:
-			board_printf("Mass Storage, ");
+			info("Mass Storage, ");
 			switch(subclass)
 			{
-				case US_SC_RBC: board_printf("RBC "); break;
-				case US_SC_8020: board_printf("SFF-8020i (ATAPI)"); break;
-				case US_SC_QIC: board_printf("QIC-157 (Tape)"); break;
-				case US_SC_UFI: board_printf("UFI"); break;
-				case US_SC_8070: board_printf("SFF-8070"); break;
-				case US_SC_SCSI: board_printf("Transp. SCSI"); break;
-				default: board_printf("reserved"); break;
+				case US_SC_RBC: info("RBC "); break;
+				case US_SC_8020: info("SFF-8020i (ATAPI)"); break;
+				case US_SC_QIC: info("QIC-157 (Tape)"); break;
+				case US_SC_UFI: info("UFI"); break;
+				case US_SC_8070: info("SFF-8070"); break;
+				case US_SC_SCSI: info("Transp. SCSI"); break;
+				default: info("reserved"); break;
 			}
-			board_printf(", ");
+			info(", ");
 			switch (proto)
 			{
-				case US_PR_CB: board_printf("Command/Bulk"); break;
-				case US_PR_CBI: board_printf("Command/Bulk/Int"); break;
-				case US_PR_BULK: board_printf("Bulk only"); break;
-				default: board_printf("reserved"); break;
+				case US_PR_CB: info("Command/Bulk"); break;
+				case US_PR_CBI: info("Command/Bulk/Int"); break;
+				case US_PR_BULK: info("Bulk only"); break;
+				default: info("reserved"); break;
 			}
 			break;
-		default: board_printf("%s", usb_get_class_desc(dclass)); break;
+		default: info("%s", usb_get_class_desc(dclass)); break;
 	}
 }
 
@@ -122,7 +152,7 @@ void usb_display_string(struct usb_device *dev, int index)
 	if(index != 0)
 	{
 		if(usb_string(dev, index, &buffer[0], 256) > 0)
-			board_printf("String: \"%s\"", buffer);
+			info("String: \"%s\"", buffer);
 	}
 }
 
@@ -130,65 +160,65 @@ void usb_display_desc(struct usb_device *dev)
 {
 	if(dev->descriptor.bDescriptorType == USB_DT_DEVICE)
 	{
-		board_printf("%d: %s,  USB Revision %x.%x\r\n", dev->devnum, usb_get_class_desc(dev->config.if_desc[0].bInterfaceClass), (dev->descriptor.bcdUSB>>8) & 0xff, dev->descriptor.bcdUSB & 0xff);
+		info("%d: %s,  USB Revision %x.%x\r\n", dev->devnum, usb_get_class_desc(dev->config.if_desc[0].bInterfaceClass), (dev->descriptor.bcdUSB>>8) & 0xff, dev->descriptor.bcdUSB & 0xff);
 		if(strlen(dev->mf) || strlen(dev->prod) || strlen(dev->serial))
-			board_printf(" - %s %s %s\r\n", dev->mf, dev->prod, dev->serial);
+			info(" - %s %s %s\r\n", dev->mf, dev->prod, dev->serial);
 		if(dev->descriptor.bDeviceClass)
 		{
-			board_printf(" - Class: ");
+			info(" - Class: ");
 			usb_display_class_sub(dev->descriptor.bDeviceClass, dev->descriptor.bDeviceSubClass, dev->descriptor.bDeviceProtocol);
-			board_printf("\r\n");
+			info("\r\n");
 		}
 		else
-			board_printf(" - Class: (from Interface) %s\r\n", usb_get_class_desc(dev->config.if_desc[0].bInterfaceClass));
-		board_printf(" - PacketSize: %d  Configurations: %d\r\n",
+			info(" - Class: (from Interface) %s\r\n", usb_get_class_desc(dev->config.if_desc[0].bInterfaceClass));
+		info(" - PacketSize: %d  Configurations: %d\r\n",
 			dev->descriptor.bMaxPacketSize0,
 			dev->descriptor.bNumConfigurations);
-		board_printf(" - Vendor: 0x%04x  Product 0x%04x Version %d.%d\r\n", dev->descriptor.idVendor, dev->descriptor.idProduct, (dev->descriptor.bcdDevice>>8) & 0xff, dev->descriptor.bcdDevice & 0xff);
+		info(" - Vendor: 0x%04x  Product 0x%04x Version %d.%d\r\n", dev->descriptor.idVendor, dev->descriptor.idProduct, (dev->descriptor.bcdDevice>>8) & 0xff, dev->descriptor.bcdDevice & 0xff);
 	}
 }
 
 void usb_display_conf_desc(struct usb_config_descriptor *config, struct usb_device *dev)
 {
-	board_printf("   Configuration: %d\r\n", config->bConfigurationValue);
-	board_printf("   - Interfaces: %d %s%s%dmA\r\n", config->bNumInterfaces, (config->bmAttributes & 0x40) ? "Self Powered " : "Bus Powered ", (config->bmAttributes & 0x20) ? "Remote Wakeup " : "", config->MaxPower*2);
+	info("   Configuration: %d\r\n", config->bConfigurationValue);
+	info("   - Interfaces: %d %s%s%dmA\r\n", config->bNumInterfaces, (config->bmAttributes & 0x40) ? "Self Powered " : "Bus Powered ", (config->bmAttributes & 0x20) ? "Remote Wakeup " : "", config->MaxPower*2);
 	if(config->iConfiguration)
 	{
-		board_printf("   - ");
+		info("   - ");
 		usb_display_string(dev, config->iConfiguration);
-		board_printf("\r\n");
+		info("\r\n");
 	}
 }
 
 void usb_display_if_desc(struct usb_interface_descriptor *ifdesc, struct usb_device *dev)
 {
-	board_printf("     Interface: %d\r\n", ifdesc->bInterfaceNumber);
-	board_printf("     - Alternate Setting %d, Endpoints: %d\r\n", ifdesc->bAlternateSetting, ifdesc->bNumEndpoints);
-	board_printf("     - Class ");
+	info("     Interface: %d\r\n", ifdesc->bInterfaceNumber);
+	info("     - Alternate Setting %d, Endpoints: %d\r\n", ifdesc->bAlternateSetting, ifdesc->bNumEndpoints);
+	info("     - Class ");
 	usb_display_class_sub(ifdesc->bInterfaceClass, ifdesc->bInterfaceSubClass, ifdesc->bInterfaceProtocol);
-	board_printf("\r\n");
+	info("\r\n");
 	if(ifdesc->iInterface)
 	{
-		board_printf("     - ");
+		info("     - ");
 		usb_display_string(dev, ifdesc->iInterface);
-		board_printf("\r\n");
+		info("\r\n");
 	}
 }
 
 void usb_display_ep_desc(struct usb_endpoint_descriptor *epdesc)
 {
-	board_printf("     - Endpoint %d %s ", epdesc->bEndpointAddress & 0xf, (epdesc->bEndpointAddress & 0x80) ? "In" : "Out");
+	info("     - Endpoint %d %s ", epdesc->bEndpointAddress & 0xf, (epdesc->bEndpointAddress & 0x80) ? "In" : "Out");
 	switch((epdesc->bmAttributes & 0x03))
 	{
-		case 0: board_printf("Control"); break;
-		case 1: board_printf("Isochronous"); break;
-		case 2: board_printf("Bulk"); break;
-		case 3: board_printf("Interrupt"); break;
+		case 0: info("Control"); break;
+		case 1: info("Isochronous"); break;
+		case 2: info("Bulk"); break;
+		case 3: info("Interrupt"); break;
 	}
-	board_printf(" MaxPacket %d", epdesc->wMaxPacketSize);
+	info(" MaxPacket %d", epdesc->wMaxPacketSize);
 	if((epdesc->bmAttributes & 0x03) == 0x3)
-		board_printf(" Interval %dms", epdesc->bInterval);
-	board_printf("\r\n");
+		info(" Interval %dms", epdesc->bInterval);
+	info("\r\n");
 }
 
 /* main routine to diasplay the configs, interfaces and endpoints */
@@ -210,7 +240,7 @@ void usb_display_config(struct usb_device *dev)
 			usb_display_ep_desc(epdesc);
 		}
 	}
-	board_printf("\r\n");
+	info("\r\n");
 }
 
 static inline char *portspeed(int speed)
@@ -229,7 +259,7 @@ void usb_show_tree_graph(struct usb_device *dev, char *pre)
 	int i, index;
 	int has_child, last_child, port;
 	index = strlen(pre);
-	board_printf(" %s", pre);
+	info(" %s", pre);
 	/* check if the device has connected children */
 	has_child = 0;
 	for(i = 0; i < dev->maxchild; i++)
@@ -259,21 +289,21 @@ void usb_show_tree_graph(struct usb_device *dev, char *pre)
 				} /* while */
 			} /* device found */
 		} /* for all children of the parent */
-		board_printf("\b+-");
+		info("\b+-");
 		/* correct last child */
 		if(last_child)
 			pre[index-1] = ' ';
 	} /* if not root hub */
 	else
-		board_printf(" ");
-	board_printf("%d ", dev->devnum);
+		info(" ");
+	info("%d ", dev->devnum);
 	pre[index++] = ' ';
 	pre[index++] = has_child ? '|' : ' ';
 	pre[index] = 0;
-	board_printf(" %s (%s, %dmA)\r\n", usb_get_class_desc(dev->config.if_desc[0].bInterfaceClass), portspeed(dev->speed), dev->config.MaxPower * 2);
+	info(" %s (%s, %dmA)\r\n", usb_get_class_desc(dev->config.if_desc[0].bInterfaceClass), portspeed(dev->speed), dev->config.MaxPower * 2);
 	if(strlen(dev->mf) || strlen(dev->prod) || strlen(dev->serial))
-		board_printf(" %s  %s %s %s\r\n", pre, dev->mf, dev->prod, dev->serial);
-	board_printf(" %s\r\n", pre);
+		info(" %s  %s %s %s\r\n", pre, dev->mf, dev->prod, dev->serial);
+	info(" %s\r\n", pre);
 	if(dev->maxchild > 0)
 	{
 		for(i = 0; i < dev->maxchild; i++)
@@ -310,7 +340,7 @@ int uif_cmd_usb(int argc, char **argv)
 	if((strncmp(argv[1], "reset", 5) == 0) || (strncmp(argv[1], "start", 5) == 0))
 	{
 		usb_stop();
-		board_printf("(Re)start USB...\r\n");
+		info("(Re)start USB...\r\n");
 		i = usb_init(0, NULL);
 #ifdef CONFIG_USB_STORAGE
 		/* try to recognize storage devices immediately */
@@ -326,31 +356,32 @@ int uif_cmd_usb(int argc, char **argv)
 		{
 			if(usb_kbd_deregister() != 0)
 			{
-				board_printf("USB not stopped: usbkbd still using USB\r\n");
+				info("USB not stopped: usbkbd still using USB\r\n");
 				return 1;
 			}
 		}
 		else /* forced stop, switch console in to serial */
 			usb_kbd_deregister();
 #endif /* CONFIG_USB_KEYBOARD */
-		board_printf("stopping USB..\r\n");
+		info("stopping USB..\r\n");
 		usb_stop();
 		return 0;
 	}
 	if(!usb_started)
 	{
-		board_printf("USB is stopped. Please issue 'usb start' first.\r\n");
+		info("USB is stopped. Please issue 'usb start' first.\r\n");
 		return 1;
 	}
 #endif /* RESET_START_STOP_CMDS */
 	if(strncmp(argv[1], "tree", 4) == 0)
 	{
-		board_printf("\r\nUSB Device Tree:\r\n");
+		info("\r\nUSB Device Tree:\r\n");
 		for(i = 0; i < USB_MAX_BUS; i++)
 		{
 			struct usb_device *dev = usb_get_dev_index(0, i);
 			if(dev == NULL)
 				break;
+			info(" USB controller %d:\r\n", i);
 			usb_show_tree(dev);
 		}
 		return 0;
@@ -367,6 +398,8 @@ int uif_cmd_usb(int argc, char **argv)
 					dev = usb_get_dev_index(d, b);
 					if(dev == NULL)
 						break;
+					if(!d)
+						info("USB controller %d:\r\n\n", b);
 					usb_display_desc(dev);
 					usb_display_config(dev);
 				}
@@ -377,7 +410,7 @@ int uif_cmd_usb(int argc, char **argv)
 		{
 			int d;
 			i = strtoul(argv[2], NULL, 16);
-			board_printf("config for device %d\r\n", i);
+			info("config for device %d\r\n", i);
 			for(d = 0; d < USB_MAX_DEVICE; d++)
 			{
 				dev = usb_get_dev_index(d, 0);
@@ -388,7 +421,7 @@ int uif_cmd_usb(int argc, char **argv)
 			}
 			if(dev == NULL)
 			{
-				board_printf("*** NO Device avaiable ***\r\n");
+				info("*** NO Device avaiable ***\r\n");
 				return 0;
 			}
 			else
@@ -406,7 +439,7 @@ int uif_cmd_usb(int argc, char **argv)
 	{
 		if(usb_stor_curr_dev < 0)
 		{
-			board_printf("no current device selected\r\n");
+			info("no current device selected\r\n");
 			return 1;
 		}
 		if(argc == 5)
@@ -415,10 +448,10 @@ int uif_cmd_usb(int argc, char **argv)
 			unsigned long blk  = strtoul(argv[3], NULL, 16);
 			unsigned long cnt  = strtoul(argv[4], NULL, 16);
 			unsigned long n;
-			board_printf("\r\nUSB read: device %d block # %ld, count %ld ... ", usb_stor_curr_dev, blk, cnt);
+			info("\r\nUSB read: device %d block # %ld, count %ld ... ", usb_stor_curr_dev, blk, cnt);
 			stor_dev = usb_stor_get_dev(usb_stor_curr_dev);
 			n = stor_dev->block_read(usb_stor_curr_dev, blk, cnt, (unsigned long *)addr);
-			board_printf("%ld blocks read: %s\r\n", n, (n == cnt) ? "OK" : "ERROR");
+			info("%ld blocks read: %s\r\n", n, (n == cnt) ? "OK" : "ERROR");
 			if(n == cnt)
 				return 0;
 			return 1;
@@ -429,24 +462,24 @@ int uif_cmd_usb(int argc, char **argv)
 		if(argc == 3)
 		{
 			int dev = (int)strtoul(argv[2], NULL, 10);
-			board_printf("\r\nUSB device %d: ", dev);
+			info("\r\nUSB device %d: ", dev);
 			if(dev >= USB_MAX_STOR_DEV)
 			{
-				board_printf("unknown device\r\n");
+				info("unknown device\r\n");
 				return 1;
 			}
-			board_printf("\r\n    Device %d: ", dev);
+			info("\r\n    Device %d: ", dev);
 			stor_dev = usb_stor_get_dev(dev);
 			dev_print(stor_dev);
 			if(stor_dev->type == DEV_TYPE_UNKNOWN)
 				return 1;
 			usb_stor_curr_dev = dev;
-			board_printf("... is now current device\r\n");
+			info("... is now current device\r\n");
 			return 0;
 		}
 		else
 		{
-			board_printf("\r\nUSB device %d: ", usb_stor_curr_dev);
+			info("\r\nUSB device %d: ", usb_stor_curr_dev);
 			stor_dev = usb_stor_get_dev(usb_stor_curr_dev);
 			dev_print(stor_dev);
 			if(stor_dev->type == DEV_TYPE_UNKNOWN)
@@ -455,7 +488,7 @@ int uif_cmd_usb(int argc, char **argv)
 		}
 		return 0;
 	}
-	board_printf(
+	info(
 #ifdef RESET_START_STOP_CMDS
 	 "usb reset - reset (rescan) USB controller\r\n"
 	 "usb stop [f]  - stop USB [f]=force stop\r\n"
@@ -467,7 +500,7 @@ int uif_cmd_usb(int argc, char **argv)
 	 "usb read addr blk# cnt - read `cnt' blocks starting at block `blk#'\r\n"
 	 "    to memory address `addr'\r\n");
 #else /* !CONFIG_USB_STORAGE */	
-	board_printf(
+	info(
 #ifdef RESET_START_STOP_CMDS
 	 "usb reset - reset (rescan) USB controller\r\n"
 	 "usb stop [f]  - stop USB [f]=force stop\r\n"
@@ -479,4 +512,3 @@ int uif_cmd_usb(int argc, char **argv)
 }
 
 #endif /* CONFIG_USB_UHCI || CONFIG_USB_OHCI || CONFIG_USB_EHCI */
-#endif /* USB_CMDS */

@@ -68,8 +68,9 @@ text_area:
 
 	move.w		d5,wraps+2(sp)
 #ifdef COLDFIRE
+	ext.l		d6
 	add.l		d6,d6
-	move.w		font_extra_distance(a5,d6.w),d4
+	move.w		font_extra_distance(a5,d6.l),d4
 	ext.l		d4
 #else
 	add.w		d6,d6
@@ -154,8 +155,8 @@ text_area:
 	ext.l		d2
 	sub.l		d2,d6
 	add.l		d6,d6
-	move.w		2(a6,d6.w),d7		// Start of next character
-	move.w		0(a6,d6.w),d2		// Start of this character
+	move.w		2(a6,d6.l),d7		// Start of next character
+	move.w		0(a6,d6.l),d2		// Start of this character
 	ext.l		d7
 	ext.l		d2
 	sub.l		d2,d7
@@ -261,12 +262,12 @@ clip_done:
 	ext.l		d6
 	sub.l		d2,d6
 	add.l		d6,d6
-	move.w		0(a6,d6.w),d4		// Start of this character
+	move.w		0(a6,d6.l),d4		// Start of this character
 	ext.l		d4
 	ext.l		d1
 	move.l		d1,d2
 	add.l		d4,d1
-	move.w		2(a6,d6.w),d6
+	move.w		2(a6,d6.l),d6
 	ext.l		d6
 	sub.l		d6,d4
 	neg.l		d4
@@ -352,12 +353,13 @@ clip_done:
 #ifdef COLDFIRE
 	move.w		code_low(sp),d1
 	ext.l		d1
+	ext.l		d6
 	sub.l		d1,d6
 	add.l		d6,d6
-	move.w		0(a0,d6.w),d4		// Start of this character
+	move.w		0(a0,d6.l),d4		// Start of this character
 	ext.l		d4
 	move.l		d4,-(sp)
-	move.w 		2(a0,d6.w),d1
+	move.w 		2(a0,d6.l),d1
 	ext.l		d1
 	sub.l		d1,d4
 	neg.l		d4
@@ -941,11 +943,11 @@ display4:
 	ext.l		d2
 	sub.l		d2,d6
 	add.l		d6,d6
-	move.w		0(a6,d6.w),d4		// Start of this character
+	move.w		0(a6,d6.l),d4		// Start of this character
 	ext.l		d4
 	move.l		d1,d2
 	add.l		d4,d1
-	move.w		2(a6,d6.w),d6
+	move.w		2(a6,d6.l),d6
 	ext.l		d6	
 	sub.l		d6,d4
 	neg.l		d4

@@ -1,5 +1,5 @@
-Note about MAGXBOOT.PRG
------------------------
+Note about MAGXBOOT.PRG for CT60
+--------------------------------
 This MAGXBOOT.PRG has been rewritten to support normal mode (68030) and
 turbo mode (68060), and in turbo mode MAGIC.RAM has been patched to not
 overwrite some parts of TOS such as FPU emulation, etc... You must install

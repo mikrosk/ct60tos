@@ -181,7 +181,7 @@ static void parse_vendor_block(unsigned char *block, struct fb_monspecs *specs)
 	specs->year = block[9] + 1990;
 	specs->week = block[8];
 	DPRINT("   Manufacturer: ");
-	DPRINT(specs->manufacturer);
+	DPRINT((void *)specs->manufacturer);
 	DPRINTVAL("\r\n   Model: ",specs->model);
 	DPRINTVAL("\r\n   Serial#: ",specs->serial);
 	DPRINTVAL("\r\n   Year: ",specs->year);
@@ -887,21 +887,21 @@ void fb_edid_to_monspecs(unsigned char *edid, struct fb_monspecs *specs)
 		{
 			copy_string(block, specs->serial_no);
 			DPRINT("   Serial Number: ");
-			DPRINT(specs->serial_no);
+			DPRINT((void *)specs->serial_no);
 			DPRINT("\r\n");
 		}
 		else if(edid_is_ascii_block(block))
 		{
 			copy_string(block, specs->ascii);
 			DPRINT("   ASCII Block: ");
-			DPRINT(specs->ascii);
+			DPRINT((void *)specs->ascii);
 			DPRINT("\r\n");
 		}
 		else if(edid_is_monitor_block(block))
 		{
 			copy_string(block, specs->monitor);
 			DPRINT("   Monitor Name: ");
-			DPRINT(specs->monitor);
+			DPRINT((void *)specs->monitor);
 			DPRINT("\r\n");
 		}
 	}

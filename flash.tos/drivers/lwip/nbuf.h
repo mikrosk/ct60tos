@@ -26,7 +26,7 @@
 #define NUM_TXBDS               (2)
 #else /* MCF548X */
 #define NUM_RXBDS               (2)
-#define NUM_TXBDS               (3)
+#define NUM_TXBDS               (2)
 #endif
 #else
 #define NUM_RXBDS               (20)

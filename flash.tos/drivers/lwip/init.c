@@ -64,9 +64,12 @@
 #ifdef LWIP
 
 /* ------------------------ Defines --------------------------------------- */
+#undef KILL_TOS_ON_FAULT /* for debug */
+
 /* Priorities for the demo application tasks. */
 #define TOS_TASK_PRIORITY           ( 5 )
 #define RTC_TASK_PRIORITY           ( 6 )
+#define VBL_TASK_PRIORITY           ( 25 )
 #define ROOT_TASK_PRIORITY          ( 10 )
 #define WEB_TASK_PRIORITY           ( 10 )
 #define FTP_TASK_PRIORITY           ( 10 )
@@ -96,6 +99,35 @@
 #define CTRL_D  0x04      /* command line next */
 #define CTRL_U  0x15      /* command line previous */
 #define CTRL_R  0x12      /* last command repeat */
+
+/* ------------------------ PCI ------------------------------------------- */
+typedef struct
+{
+  long ident;
+  union
+  {
+    long l;
+    short i[2];
+    char c[4];
+  } v;
+} COOKIE;
+
+#ifdef MCF547X /* for start Emutos and recreate PCI cookie */ 
+#ifndef PCI_COOKIE_TOTALSIZE /* #include ../../include/pci_bios.h create problems */
+#define PCI_MAX_HANDLE           (7+1) /* Firebee specific ! */
+#define PCI_MAX_FUNCTION         4  /* 4 functions per PCI slot */
+#define PCI_DEV_DES_SIZE        20 
+#define PCI_RSC_DESC_SIZE       24
+#define PCI_RSC_DESC_TOTALSIZE  (PCI_RSC_DESC_SIZE*6)
+#define PCI_COOKIE_ROUTINE       8   /* offset PCI BIOS routines            */
+#define PCI_COOKIE_MAX_ROUTINES 45   /* maximum of routines                 */
+#define PCI_COOKIE_SIZE          ((4*PCI_COOKIE_MAX_ROUTINES)+PCI_COOKIE_ROUTINE)
+#define PCI_RSC_HANDLESTOTALSIZE (PCI_RSC_DESC_TOTALSIZE*PCI_MAX_HANDLE*PCI_MAX_FUNCTION)
+#define PCI_DEV_HANDLESTOTALSIZE (PCI_DEV_DES_SIZE*PCI_MAX_HANDLE*PCI_MAX_FUNCTION)
+#define PCI_INT_HANDLESTOTALSIZE (PCI_MAX_HANDLE*PCI_MAX_FUNCTION)
+#define PCI_COOKIE_TOTALSIZE     (PCI_COOKIE_SIZE+PCI_RSC_HANDLESTOTALSIZE+PCI_DEV_HANDLESTOTALSIZE+PCI_INT_HANDLESTOTALSIZE)
+#endif
+#endif
 
 /* ------------------------ TFTP ------------------------------------------ */
 #define TimeOut       2   /* seconds */
@@ -217,7 +249,23 @@ struct termstate
 extern unsigned char __SDRAM_SIZE[];
 extern unsigned long size_ram_disk, ext_write_protect_ram_disk;
 extern xTaskHandle pxCurrentTCB, tid_TOS;
-xTaskHandle tid_TELNET, tid_DEBUG;
+xTaskHandle tid_TELNET, tid_DEBUG, tid_HTTPd;
+
+#ifdef MCF547X
+xTaskHandle tid_ETOS;
+unsigned long pseudo_dma_vec;
+extern short boot_os;
+#if defined(CONFIG_USB_UHCI) || defined(CONFIG_USB_OHCI) || defined(CONFIG_USB_EHCI)
+void *pci_data;
+#endif
+#endif /* MCF547X */
+
+#ifdef CONFIG_USB_OHCI
+extern char ohci_inited;
+#endif
+#ifdef CONFIG_USB_EHCI
+// extern char ehci_inited;
+#endif
 
 #ifdef MCF5445X
 extern unsigned long save_imrl0, save_imrl0_tos, save_imrh0, save_imrh0_tos, save_imrh1, save_imrh1_tos;
@@ -252,17 +300,6 @@ void *start_run;
 
 int errno;
 xSemaphoreHandle xSemaphoreBDOS;
-
-typedef struct
-{
-  long ident;
-  union
-  {
-    long l;
-    short i[2];
-    char c[4];
-  } v;
-} COOKIE;
 
 typedef struct socket_cookie
 {
@@ -337,60 +374,110 @@ extern void usb_enable_interrupt(void);
 
 /* ------------------------ Implementation -------------------------------- */
 
-static int auxistat(void)
+// static 
+int auxistat(void)
 {
-  int ret;
-  asm(" move.l D2,-(SP)");
-  asm(" lea 0xF72,A0");             // iorec RS232
-  asm(" moveq #-1,D0");             // OK
-  asm(" moveq #0,D1");
-  asm(" moveq #0,D2");
-  asm(" move.w 8(A0),D1");          // tail index
-  asm(" move.w 6(A0),D2");          // head index
-  asm(" cmp.l D2,D1");              // buffer empty
-  asm(" bne.s .ais1");              // no
-  asm(".ais2:");
-  asm(" moveq #0,D0");
-  asm(".ais1:");
-  asm(" move.l (SP)+,D2");
-  asm(" move.l D0,%0" : "=d" (ret) : );
+  register int ret __asm__("d0");
+#ifdef MCF547X
+  asm volatile (
+        " move.l D2,-(SP)\n\t"
+        " lea 0x165A,A0\n\t"        /* iorec RS232 */
+        " moveq #-1,D0\n\t"         /* OK */
+        " moveq #0,D1\n\t"
+        " moveq #0,D2\n\t"
+        " move.w 8(A0),D1\n\t"      /* tail index */
+        " move.w 6(A0),D2\n\t"      /* head index */
+        " cmp.l D2,D1\n\t"          /* buffer empty */
+        " bne.s .ais1\n\t"          /* no */
+        " moveq #0,D0\n\t"
+        ".ais1:\n\t"
+        " move.l (SP)+,D2" : "=d" (ret) :  : "d1", "d2", "a0", "memory", "cc" );
+#else /* MCF548X */
+  asm volatile (
+        " move.l D2,-(SP)\n\t"
+        " lea 0xF72,A0\n\t"         /* iorec RS232 */
+        " moveq #-1,D0\n\t"         /* OK */
+        " moveq #0,D1\n\t"
+        " moveq #0,D2\n\t"
+        " move.w 8(A0),D1\n\t"      /* tail index */
+        " move.w 6(A0),D2\n\t"      /* head index */
+        " cmp.l D2,D1\n\t"          /* buffer empty */
+        " bne.s .ais1\n\t"          /* no */
+        " moveq #0,D0\n\t"
+        ".ais1:\n\t"
+        " move.l (SP)+,D2" : "=d" (ret) :  : "d1", "d2", "a0", "memory", "cc" );
+#endif /* MCF548X */
   return(ret);
 }
 
 static int rs232get(void)
 {
-  int ret;
-  asm(" move.l D2,-(SP)");
-  asm(" lea 0xF72,A0");             // iorec RS232
-  asm(" move.w SR,D2");
-  asm(" move.l D2,-(SP)");
-  asm(" or.l #0x700,D2");           // mask interrupts
-  asm(" move.w D2,SR");
-  asm(" moveq #0,D1");
-  asm(" move.w 6(A0),D1");          // head index
-  asm(" moveq #0,D2");
-  asm(" move.w 8(A0),D2");          // tail index
-  asm(" cmp.l D2,D1");
-  asm(" beq.s .rg1");               // bufer empty
-  asm(" addq.l #1,D1");
-  asm(" moveq #0,D2");
-  asm(" move.w 4(A0),D2");          // size
-  asm(" cmp.l D2,D1");
-  asm(" bcs.s .rg2");
-  asm(" moveq #0,D1");
-  asm(".rg2:");
-  asm(" move.l (A0),A1");           // buffer
-  asm(" moveq #0,D0");
-  asm(" move.b (A1,D1.l),D0");      // get data
-  asm(" move.w D1,6(A0)");          // head index
-  asm(" bra.s .rg3");
-  asm(".rg1:");
-  asm(" moveq #-1,D0");             // no receive
-  asm(".rg3:");
-  asm(" move.l (SP)+,D2");
-  asm(" move.w D2,SR");
-  asm(" move.l (SP)+,D2");
-  asm(" move.l D0,%0" : "=d" (ret) : );
+  register int ret __asm__("d0");
+#ifdef MCF547X
+  asm volatile (
+        " move.l D2,-(SP)\n\t"
+        " lea 0x165A,A0\n\t"         /* iorec RS232 */
+        " move.w SR,D2\n\t"
+        " move.l D2,-(SP)\n\t"
+        " or.l #0x700,D2\n\t"        /* mask interrupts */
+        " move.w D2,SR\n\t"
+        " moveq #0,D1\n\t"
+        " move.w 6(A0),D1\n\t"       /* head index */
+        " moveq #0,D2\n\t"
+        " move.w 8(A0),D2\n\t"       /* tail index */
+        " cmp.l D2,D1\n\t"
+        " beq.s .rg1\n\t"            /* bufer empty */
+        " addq.l #1,D1\n\t"
+        " moveq #0,D2\n\t"
+        " move.w 4(A0),D2\n\t"       /* size */
+        " cmp.l D2,D1\n\t"
+        " bcs.s .rg2\n\t"
+        " moveq #0,D1\n\t"
+        ".rg2:\n\t"
+        " move.l (A0),A1\n\t"        /* buffer */
+        " moveq #0,D0\n\t"
+        " move.b (A1,D1.l),D0\n\t"   /* get data */
+        " move.w D1,6(A0)\n\t"       /* head index */
+        " bra.s .rg3\n\t"
+        ".rg1:\n\t"
+        " moveq #-1,D0\n\t"          /* no receive */
+        ".rg3:\n\t"
+        " move.l (SP)+,D2\n\t"
+        " move.w D2,SR\n\t"
+        " move.l (SP)+,D2" : "=d" (ret) :  : "d1", "d2", "a0", "a1", "memory", "cc" );
+#else /* MCF548X */
+  asm volatile (
+        " move.l D2,-(SP)\n\t"
+        " lea 0xF72,A0\n\t"          /* iorec RS232 */
+        " move.w SR,D2\n\t"
+        " move.l D2,-(SP)\n\t"
+        " or.l #0x700,D2\n\t"        /* mask interrupts */
+        " move.w D2,SR\n\t"
+        " moveq #0,D1\n\t"
+        " move.w 6(A0),D1\n\t"       /* head index */
+        " moveq #0,D2\n\t"
+        " move.w 8(A0),D2\n\t"       /* tail index */
+        " cmp.l D2,D1\n\t"
+        " beq.s .rg1\n\t"            /* bufer empty */
+        " addq.l #1,D1\n\t"
+        " moveq #0,D2\n\t"
+        " move.w 4(A0),D2\n\t"       /* size */
+        " cmp.l D2,D1\n\t"
+        " bcs.s .rg2\n\t"
+        " moveq #0,D1\n\t"
+        ".rg2:\n\t"
+        " move.l (A0),A1\n\t"        /* buffer */
+        " moveq #0,D0\n\t"
+        " move.b (A1,D1.l),D0\n\t"   /* get data */
+        " move.w D1,6(A0)\n\t"       /* head index */
+        " bra.s .rg3\n\t"
+        ".rg1:\n\t"
+        " moveq #-1,D0\n\t"          /* no receive */
+        ".rg3:\n\t"
+        " move.l (SP)+,D2\n\t"
+        " move.w D2,SR\n\t"
+        " move.l (SP)+,D2" : "=d" (ret) :  : "d1", "d2", "a0", "a1", "memory", "cc" );
+#endif /* MCF547X */
   return(ret);
 }
 
@@ -513,17 +600,27 @@ static int conin_debug(void)
   int tos_run;
   while(*(unsigned char *)(serial_mouse))
     vTaskDelay(1);
-  tos_run = (int)(*(unsigned short *)_timer_ms);
+#ifdef MCF547X
+  if((tos_suspend && !get_serial_vector) || (tid_ETOS != NULL))
+#else
   if(tos_suspend && !get_serial_vector)
+#endif
     tos_run = 0;
+  else
+    tos_run = (int)(*(unsigned short *)_timer_ms);
   /* if TOS runs we can use TOS interrupts routines also out of the CF68KLIB */
   while((!tos_run && !(MCF_UART_USR(0) & MCF_UART_USR_RXRDY))
    || (tos_run && !auxistat()))
   {
     vTaskDelay(1);
-    tos_run = (int)(*(unsigned short *)_timer_ms);
+#ifdef MCF547X
+    if((tos_suspend && !get_serial_vector) || (tid_ETOS != NULL))
+#else
     if(tos_suspend && !get_serial_vector)
+#endif
       tos_run = 0;
+    else
+      tos_run = (int)(*(unsigned short *)_timer_ms);
 //    install_inters_cf68klib();
   }
   return(tos_run ? rs232get() & 0xFF : (int)MCF_UART_URB(0) & 0xFF);
@@ -533,7 +630,11 @@ void conout_debug(int c)
 {
   if(!*(unsigned char *)(serial_mouse))
   {
+#ifdef MCF547X
+    if((pxCurrentTCB != tid_TOS) && (pxCurrentTCB != tid_ETOS))
+#else
     if(pxCurrentTCB != tid_TOS)
+#endif
     {
       int level = vPortSetIPL(portIPL_MAX);
       vPortSetIPL(level);
@@ -583,7 +684,7 @@ static int telnet_write_socket(char *response, int size, int flush)
      || flush)
     {
       len = n = 0;
-      ptr = ts->bo.data;
+      ptr = (char *)ts->bo.data;
       do
       {
         FD_ZERO(&data_write);
@@ -1188,7 +1289,11 @@ static int breakpoint_install_from_cf68klib(unsigned long address)
       }
     }
   }
-  asm(" .chip 68060\n cpusha BC\n .chip 5200\n");
+#if (__GNUC__ > 3)
+  asm volatile (" .chip 68060\n\t cpusha BC\n\t .chip 5485\n\t");
+#else
+  asm volatile (" .chip 68060\n\t cpusha BC\n\t .chip 5200\n\t");
+#endif
   return(found);
 }
 
@@ -1249,7 +1354,11 @@ static int breakpoint_deinstall_from_cf68klib(unsigned long address, xTaskHandle
       }
     }
   }
-  asm(" .chip 68060\n cpusha BC\n .chip 5200\n");
+#if (__GNUC__ > 3)
+  asm volatile (" .chip 68060\n\t cpusha BC\n\t .chip 5485\n\t");
+#else
+  asm volatile (" .chip 68060\n\t cpusha BC\n\t .chip 5200\n\t");
+#endif
   return found;
 }
 
@@ -1440,13 +1549,432 @@ static void uif_cmd_lb(int argc, char **argv)
   breakpoint_display(argc, argv);
 }
 
-#ifdef MCF547X
+#ifdef MCF547X /* FIREBEE */
+
+void zero_devide(void)
+{
+  asm volatile (
+        "_new_zero_divide:\n\t"
+        " move.w #0x2700,SR\n\t"         /* disable interrupt */
+        " move.l D0,-(SP)\n\t"
+        " move.l A0,-(SP)\n\t"
+        " move.l 12(SP),A0\n\t"          /* PC */
+        " move.w (A0)+,D0\n\t"           /* opcode */
+        " btst #7,D0\n\t"
+        " bne.s .word\n\t"
+        " addq.l #2,A0\n\t"              /* longword */
+        ".word:\n\t"
+        " and.l	#0x3F,D0\n\t"            /* source effective address */
+        " cmp.l	#8,D0\n\t"
+        " bls.s .end\n\t"                /* Dy */
+        " addq.l #2,A0\n\t"
+        " cmp.l	#0x39,D0\n\t"            /* absolute */
+        " beq.s .absolute\n\t"
+        "	cmp.l	#0x3C,D0\n\t"            /* immediate */
+        " bne.s .end\n\t"
+        ".absolute:\n\t"
+        " addq.l #2,A0\n\t"
+        ".end:\n\t"
+        " move.l A0,12(SP)\n\t"          /* fix PC */
+        "	move.l (SP)+,A0\n\t"
+        "	move.l (SP)+,D0\n\t"
+        "	rte\n\t" );
+}
+
+void trap_exception(void)
+{
+  asm volatile (
+        "_new_trap:\n\t"
+        " clr.l -(SP)\n\t"
+        " move.l D0,-(SP)\n\t"
+        " move.l A0,-(SP)\n\t"
+        " move.w 12(SP),D0\n\t"
+        " and.l #0x3FC,D0\n\t"
+        " move.l D0,A0\n\t"
+        " move.l (A0),8(SP)\n\t"
+        " move.l (SP)+,A0\n\t"
+        " move.l (SP)+,D0\n\t"
+        " rts\n\t" );
+}
+
+void clear_int6(void)
+{
+  MCF_EPORT_EPFR |= MCF_EPORT_EPFR_EPF6; /* clear interrupt */ 
+}
+
+void inter_mfp(void)
+{
+  asm volatile (
+        "_new_mfp:\n\t"
+        " move.l 0x114,-(SP)\n\t"
+        " lea -24(SP),SP\n\t"
+        " movem.l D0-D2/A0-A2,(SP)\n\t" );
+  clear_int6();
+  asm volatile (
+        " moveq #0,D1\n\t"
+        " move.b 0xFFFFFA13,D1\n\t"      /* MFP IMRA (FPGA emulation) */
+        " asl.l #8,D1\n\t"
+        " move.b 0xFFFFFA15,D1\n\t"      /* MFP IMRB (FPGA emulation) */
+        " move.b 0xFFFFFA0B,D0\n\t"      /* MFP IPRA (FPGA emulation) */
+        " asl.l #8,D0\n\t"
+        " move.b 0xFFFFFA0D,D0\n\t"      /* MFP IPRB (FPGA emulation) */
+        " and.l D1,D0\n\t"
+        " tst.l D0\n\t"
+        " beq.s .is_not_mfp\n\t"
+        " move.l 0xF0020000,D0\n\t"      /* ACP_MFP_INTACK_VECTOR (MFP vector base register + MFP int channel) * 4 */
+        " and.l #0x3FC,D0\n\t"
+        " cmp.l #0x13C,D0\n\t"
+        " bne.s .not_pseudo_dma\n\t"     /* TOS pseudo dma routine */
+        " move.l _pseudo_dma_vec,D0\n\t"
+        " move.l D0,24(SP)\n\t"          /* move vector content to return address */
+        " bra.s .is_not_mfp\n\t"
+        ".not_pseudo_dma:\n\t"
+        " move.l D0,A0\n\t"
+        " move.l (A0),24(SP)\n\t"        /* move vector content to return address */
+        ".is_not_mfp:\n\t"
+        " movem.l (SP),D0-D2/A0-A2\n\t"
+        " lea 24(SP),SP\n\t"
+        " rts\n\t" );                    /* jump to MFP vector */
+}
+
+void function_vbl(void)
+{
+#if (defined(CONFIG_USB_UHCI) || defined(CONFIG_USB_OHCI) || defined(CONFIG_USB_EHCI)) && defined(CONFIG_USB_INTERRUPT_POLLING)
+void usb_event_poll(int interrupt);
+#endif
+  MCF_INTC_INTFRCL &= ~MCF_INTC_INTFRCL_INTFRC4; /* clear interrupt */
+#if (defined(CONFIG_USB_UHCI) || defined(CONFIG_USB_OHCI) || defined(CONFIG_USB_EHCI)) && defined(CONFIG_USB_INTERRUPT_POLLING)
+  MCF_GPT_GMS(0) = 0;
+  MCF_GPT_GCIR(0) = 20000 | (SYSTEM_CLOCK << 16); /* 20 mS */
+  MCF_GPT_GMS(0) = MCF_GPT_GMS_TMS_GPIO | MCF_GPT_GMS_CE | MCF_GPT_GMS_WDEN; /* watchdog timer */
+#ifdef CONFIG_USB_OHCI
+  if(ohci_inited)
+#endif
+    usb_event_poll(1);                   /* if CTRL-ALT-(SHIFT-)DEL no return ! */
+  MCF_GPT_GMS(0) = 0;                    /* clear watchdog timer */
+#endif
+}
+
+void inter_vbl(void)
+{
+  asm volatile (
+        "_new_vbl:\n\t"
+        " lea -24(SP),SP\n\t"
+        " movem.l D0-D2/A0-A2,(SP)\n\t" );
+  function_vbl();
+  asm volatile (
+        " movem.l (SP),D0-D2/A0-A2\n\t"
+        " lea 24(SP),SP\n\t"
+        "	move.l 0x70,-(SP)\n\t"
+        " rts\n\t" );                    /* jump to VBL vector */
+}
+
+#define MMUCR (*(volatile unsigned long *)(MMU_BASE+0x0000))
+#define MMUOR (*(volatile unsigned long *)(MMU_BASE+0x0004))
+#define MMUSR (*(volatile unsigned long *)(MMU_BASE+0x0008))
+#define MMUAR (*(volatile unsigned long *)(MMU_BASE+0x0010))
+#define MMUTR (*(volatile unsigned long *)(MMU_BASE+0x0014))
+#define MMUDR (*(volatile unsigned long *)(MMU_BASE+0x0018))
+
+#define MMUCR_EN           0x01
+
+#define MMUOR_STLB        0x100
+#define MMUOR_CA           0x80
+#define MMUOR_CNL          0x40
+#define MMUOR_CAS          0x20
+#define MMUOR_ITLB         0x10
+#define MMUOR_ADR          0x08
+#define MMUOR_RW           0x04
+#define MMUOR_ACC          0x02
+#define MMUOR_UAA          0x01
+
+#define MMUTR_SG           0x02
+#define MMUTR_V            0x01
+
+#define MMUDR_SZ1M        0x000
+#define MMUDR_SZ4K        0x100
+#define MMUDR_SZ8K        0x200
+#define MMUDR_SZ1K        0x300
+#define MMUDR_WRITETHROUGH 0x00
+#define MMUDR_WRITEBACK    0x40
+#define MMUDR_NOCACHE      0x80
+#define MMUDR_SP           0x20
+#define MMUDR_R            0x10
+#define MMUDR_W            0x08
+#define MMUDR_X            0x04
+#define MMUDR_LK           0x02
+
+#define MMUSR_HITN         0x02
+
+static void mmu_map(long virt_addr, long phys_addr, long flag_itlb, long flags_mmutr, long flags_mmudr)
+{
+  extern unsigned char __MBAR[];
+  unsigned long MMU_BASE = (unsigned long)__MBAR + 0x40000;
+	MMUAR = virt_addr + 1;
+	MMUOR = MMUOR_STLB + MMUOR_ADR + flag_itlb;
+	MMUTR = virt_addr + flags_mmutr + MMUTR_V;
+	MMUDR = phys_addr + flags_mmudr;
+	MMUOR = MMUOR_ACC + MMUOR_UAA + flag_itlb;
+}
+
+static portTASK_FUNCTION(vVBL, pvParmeters)
+{           
+  extern void new_vbl(void);
+  extern long get_videl_base(void);
+  extern long get_videl_size(void);
+  extern void get_mouseikbdvec(void);
+#if defined(CONFIG_USB_UHCI) || defined(CONFIG_USB_OHCI) || defined(CONFIG_USB_EHCI) /* for usb_malloc */
+#ifdef SOUND_AC97
+  extern void det_xbios(void);
+  extern long sndstatus(long reset);
+  extern long old_vector_xbios;
+  extern long flag_snd_init, flag_gsxb;
+  int sound_err;
+#endif /* SOUND_AC97 */
+#endif /* defined(CONFIG_USB_UHCI) || defined(CONFIG_USB_OHCI) || defined(CONFIG_USB_EHCI) */
+  volatile unsigned char *rtc_reg = (volatile unsigned char *)0xFFFF8961; /* PFGA emulation */
+  volatile unsigned char *rtc_data = (volatile unsigned char *)0xFFFF8963;
+  long count = 0, physbase = get_videl_base();
+  long date = 0, time = 0;
+  *(unsigned long *)(((64+4) * 4) + coldfire_vector_base) = (unsigned long)new_vbl;
+  MCF_GPIO_PODR_FEC1L &= ~MCF_GPIO_PODR_FEC1L_PODR_FEC1L4; /* led */
+  vTaskDelay(configTICK_RATE_HZ);
+  get_mouseikbdvec();  /* XBIOS calls !!! (for USB and screen WEB server) */
+  old_vector_xbios = *(long *)0xB4; /* XBIOS */
+#if defined(CONFIG_USB_UHCI) || defined(CONFIG_USB_OHCI) || defined(CONFIG_USB_EHCI)
+#ifdef SOUND_AC97
+  sound_err = mcf548x_ac97_install(2);
+#endif
+#endif
+  while(1)
+  {
+		unsigned long start_timer = *(unsigned long *)_hz_200;
+#if defined(CONFIG_USB_UHCI) || defined(CONFIG_USB_OHCI) || defined(CONFIG_USB_EHCI)
+#ifdef SOUND_AC97
+    if(!sound_err)
+    {
+      *(long *)0xB4 = (long)det_xbios;
+      flag_snd_init = 1;
+      flag_gsxb = 1;
+      sndstatus(1);
+    }
+    else
+      flag_snd_init = 0;
+#endif /* SOUND_AC97 */
+    board_printf("Add cookies\r\n");
+    if(pci_data != NULL)
+    {
+      COOKIE pcookie;
+      COOKIE *p = *(COOKIE **)cookie;
+      int i = 0;
+      pcookie.ident = '_PCI';
+      pcookie.v.l = (long)pci_data;
+      while(p != NULL)
+      {
+        if(p->ident == '_PCI')
+        	continue;
+        if((!p->ident) && (i+1 < p->v.l)) /* free space ? */
+        {
+          *(p+1) = *p; /* add cookie */
+          *p++ = pcookie;
+          break;
+        }
+#ifdef SOUND_AC97
+        if((p->ident == '_SND') && !sound_err)
+          p->v.l |= 0x27; /* bit 5: extended mode, bit 2: 16 bits DMA, bit 1: 8 bits DMA, bit 0: YM2149 */
+#endif /* SOUND_AC97 */
+        i++;
+        p++;
+      }
+    }
+#endif /* defined(CONFIG_USB_UHCI) || defined(CONFIG_USB_OHCI) || defined(CONFIG_USB_EHCI) */
+    while((*(unsigned long *)_hz_200 - start_timer) < 200UL)
+    {
+		  start_timer = *(unsigned long *)_hz_200;
+      /* Videl screen change - FPGA memory */
+      long new_physbase = get_videl_base();
+      if(new_physbase != physbase)
+      {
+        long end_physbase = new_physbase + get_videl_size();
+        physbase = new_physbase;
+        new_physbase &= 0xf00000;
+        end_physbase &= 0xf00000;
+        if(new_physbase < 0xd00000)
+        {
+          int level = asm_set_ipl(7); /* disable interrupts */
+          flush_caches();
+          memcpy((void *)(new_physbase + 0x60000000), (void *)new_physbase, 0x100000);
+          mmu_map(new_physbase,(new_physbase + 0x60000000),MMUOR_ITLB,MMUTR_SG,MMUDR_SZ1M+MMUDR_WRITETHROUGH+MMUDR_X+MMUDR_LK);
+          mmu_map(new_physbase,(new_physbase + 0x60000000),0,MMUTR_SG,MMUDR_SZ1M+MMUDR_WRITETHROUGH+MMUDR_R+MMUDR_W);
+				  if((end_physbase != new_physbase) && (end_physbase < 0xd00000)) /* 2nd page */
+          {
+            memcpy((void *)(end_physbase + 0x60000000), (void *)new_physbase, 0x100000);
+            mmu_map(end_physbase,(end_physbase + 0x60000000),MMUOR_ITLB,MMUTR_SG,MMUDR_SZ1M+MMUDR_WRITETHROUGH+MMUDR_X+MMUDR_LK);
+            mmu_map(end_physbase,(end_physbase + 0x60000000),0,MMUTR_SG,MMUDR_SZ1M+MMUDR_WRITETHROUGH+MMUDR_R+MMUDR_W);
+          }
+          asm_set_ipl(level);
+//          board_printf("new videl screen at 0x%lX\r\n", physbase); 
+        }
+      }
+      if(!(count % 50))
+      {
+#define NVRAM_RTC_SECONDS 0
+#define NVRAM_RTC_MINUTES 2
+#define NVRAM_RTC_HOURS 4
+#define NVRAM_RTC_DAYS 7
+#define NVRAM_RTC_MONTHS 8
+#define NVRAM_RTC_YEARS 9
+        int i;
+        long new_date = 0, new_time = 0, delta_time;
+        int level = asm_set_ipl(7); /* disable interrupts */
+        unsigned char reg = *rtc_reg;
+        *rtc_reg = NVRAM_RTC_HOURS;
+        new_time |= (unsigned long)*rtc_reg;
+        new_time <<= 8;
+        *rtc_reg = NVRAM_RTC_MINUTES;
+        new_time |= (unsigned long)*rtc_reg;
+        new_time <<= 8;
+        *rtc_reg = NVRAM_RTC_SECONDS;
+        new_time |= (unsigned long)*rtc_reg;
+        *rtc_reg = NVRAM_RTC_YEARS;
+        new_date |= (unsigned long)*rtc_reg;
+        new_date <<= 8;
+        *rtc_reg = NVRAM_RTC_MONTHS;
+        new_date |= (unsigned long)*rtc_reg;
+        new_date <<= 8;
+        *rtc_reg = NVRAM_RTC_DAYS;
+        new_date |= (unsigned long)*rtc_reg;
+        if(!time)
+          time = new_time;
+        if(!date)
+          date = new_date;    
+        delta_time = new_time - time;
+        if(delta_time < 0)
+          delta_time = - delta_time;
+        if((delta_time > 2) || (date != new_date))     
+        {
+          MCF_UART3_UTB = 0x82; /* header */
+          for(i = 0; i < 64; i++)
+          {
+            while(!(MCF_UART3_USR & MCF_UART_USR_TXEMP));
+            *rtc_reg = (unsigned char)i;
+            MCF_UART3_UTB = *rtc_data; /* send data */
+          }
+        }
+        *rtc_reg = reg;
+        asm_set_ipl(level);
+//        if((delta_time > 2) || (date != new_date))     
+//          board_printf("RTC update to the PIC\r\n"); 
+        time = new_time;
+        date = new_date;    
+      }
+       /* Toggle led */
+      if(!(count & 7))
+        MCF_GPIO_PODR_FEC1L &= ~MCF_GPIO_PODR_FEC1L_PODR_FEC1L4;
+      else if((count & 7) == 4)
+        MCF_GPIO_PODR_FEC1L |= MCF_GPIO_PODR_FEC1L_PODR_FEC1L4;
+      /* RTC update to the PIC */
+      /* Send VBL interrupt */
+      MCF_INTC_INTFRCL |= MCF_INTC_INTFRCL_INTFRC4; /* force INT 4 */
+      /* VBL delay */    
+      vTaskDelay((20*configTICK_RATE_HZ)/1000);
+      count++;
+    }
+  }
+}
+
 static portTASK_FUNCTION(vETOS,pvParmeters)
 {           
   void (*fp)(void) = (void(*)(void))0xE00000;
   (*fp)();
 }
+
+static void go_emutos(unsigned long source)
+{
+  extern void end_vdi();
+  extern long init_videl(long width, long height, long bpp, long refresh, long extended);
+  extern void new_zero_divide(void);
+  extern void new_trap(void);
+  extern void new_mfp(void);
+  extern unsigned char __LWIP_BASE[];
+  extern void *info_fvdi;
+#if defined(CONFIG_USB_UHCI) || defined(CONFIG_USB_OHCI) || defined(CONFIG_USB_EHCI)
+  extern void *usb_malloc(long amount);
+  COOKIE *pci_cookie = *(COOKIE **)cookie;
 #endif
+  unsigned long top = (unsigned long)__LWIP_BASE - 0x100000; /* - 1MB */
+  int i;
+	mcf548x_ac97_uninstall(2, 0);
+	vTaskDelay(1);
+	deinstall_inters_cf68klib();
+  vTaskDelete(tid_TOS);
+	end_vdi(); /* for screen WEB server and mousexy() */
+  if(source != 0xE0600000)
+  {
+    void (*fp)(void) = (void(*)(void))source;
+    asm_set_ipl(7); /* disable interrupts */
+    (*fp)();
+  }
+#if (defined(CONFIG_USB_UHCI) || defined(CONFIG_USB_OHCI) || defined(CONFIG_USB_EHCI)) && defined(CONFIG_USB_MEM_NO_CACHE)
+  pci_data = NULL;
+  while(pci_cookie != NULL)
+  {
+    if(pci_cookie->ident == '_PCI')
+    {
+  	  pci_data = usb_malloc(PCI_COOKIE_TOTALSIZE);
+  	  if(pci_data != NULL)
+			  memcpy(pci_data, (void *)pci_cookie->v.l, PCI_COOKIE_TOTALSIZE);
+		  break;
+    }
+    if(!pci_cookie->ident)
+    {
+			pci_cookie = NULL;
+			break;
+    }
+    pci_cookie++;
+  }
+#endif /* (defined(CONFIG_USB_UHCI) || defined(CONFIG_USB_OHCI) || defined(CONFIG_USB_EHCI)) && defined(CONFIG_USB_MEM_NO_CACHE) */
+#if 1
+  init_videl(640, 480, 4, 60, 0xD00000);
+	memset((void *)0xD00000, 0, (640 * 480 * 4) /sizeof(short));
+#else
+  init_videl(640, 480, 16, 60, 0xD00000);
+	memset((void *)0xD00000, -1, 640 * 480 * sizeof(short));
+#endif
+	info_fvdi = NULL;
+  asm_set_ipl(7); /* disable interrupts */
+	for(i = 1; i < 16; *(unsigned long *)(((32+i) * 4) + coldfire_vector_base) = (unsigned long)new_trap, i++);
+  *(unsigned long *)((5 * 4) + coldfire_vector_base) = (unsigned long)new_zero_divide; /* Zero Divide */
+  *(unsigned long *)((10 * 4) + coldfire_vector_base) = (unsigned long)new_trap; /* LineA */
+  *(unsigned long *)((15 * 4) + coldfire_vector_base) = (unsigned long)new_trap; /* LineF */
+  *(unsigned long *)(((64+6) * 4) + coldfire_vector_base) = (unsigned long)new_mfp;  /* IRQ6 EPORT */
+  pseudo_dma_vec = *(unsigned long *)0x13C;
+	MCF_EPORT_EPIER |= MCF_EPORT_EPIER_EPIE6;
+  if(save_imrl_tos & MCF_INTC_IMRL_INT_MASK5)
+	  MCF_INTC_IMRL &= ~(MCF_INTC_IMRL_INT_MASK6 + MCF_INTC_IMRL_MASKALL);
+	else /* PCI used */
+	{
+	  /* move PCI CF68KLIB interrupt vector to native coldfire vector */
+    *(unsigned long *)(((64+5) * 4) + coldfire_vector_base) = *(unsigned long *)((64+5+OFFSET_INT_CF68KLIB) * 4); /* IRQ5 EPORT */
+	  MCF_INTC_IMRL &= ~(MCF_INTC_IMRL_INT_MASK6 + MCF_INTC_IMRL_INT_MASK5 + MCF_INTC_IMRL_MASKALL);  
+  }
+  top &= 0xFFF00000;
+  disable_caches();
+  asm volatile (
+        " move.l #0x0000E040,D0\n\t" /* zone at $00000000 to $00FFFFFF in cache inhibit */
+        " movec.l D0,ACR0\n\t" );
+  memcpy((void *)0xE00000,(void *)source,0x80000); /* copy Emutos */
+  asm volatile (
+        " moveq #0,D0\n\t"
+        " movec.l D0,ACR0\n\t" );
+  mmu_map(top,top,0,MMUTR_SG,MMUDR_SZ1M+MMUDR_NOCACHE+MMUDR_LK);
+  *(unsigned long *)ramtop = top;
+  enable_caches();
+  xTaskCreate(vETOS, (void *)"ETOS", STACK_DEFAULT, NULL, TOS_TASK_PRIORITY, &tid_ETOS);
+  xTaskCreate(vVBL, (void *)"VBL", STACK_DEFAULT, NULL, VBL_TASK_PRIORITY, NULL);
+}
+
+#endif /* MCF547X */
 
 static void uif_cmd_go(int argc, char **argv)
 {
@@ -1460,26 +1988,13 @@ static void uif_cmd_go(int argc, char **argv)
       return;
     }
 #ifdef MCF547X
-    if((unsigned long)fp == 0xE0600000)
+    if(((unsigned long)fp == 0xE0600000) || ((unsigned long)fp == 0xE0400000))
     {
-      vTaskDelete(tid_TOS);
-      asm_set_ipl(7); /* disable interrupts */
-      disable_caches();
-      {
-        asm(" move.l #0x0000E040,D0"); /* zone at $00000000 to $00FFFFFF in cache inhibit */
-        asm(" movec.l D0,ACR0");
-      }
-      memcpy((void *)0xE00000,(void *)fp,0x80000); /* copy Emutos */
-      {
-        asm(" moveq #0,D0");
-        asm(" movec.l D0,ACR0");
-      }
-      enable_caches();
-      xTaskCreate(vETOS, "ETOS", STACK_DEFAULT, NULL, TOS_TASK_PRIORITY, NULL);
+    	go_emutos((unsigned long)fp);
       return;
     }
 #endif
-    (*fp)();    
+    (*fp)(); 
   }
   *(unsigned long *)(cpu_trace_count) = 0;
   if(breakpoint_install(*(unsigned short *)(save_format) ? *(unsigned long *)(save_pc) : (unsigned long)-1)) /* insert all breakpoints */
@@ -1836,52 +2351,61 @@ static void uif_cmd_dr(int argc, char **argv)
   if(argc);
   vTaskSuspendAll();
   memcpy(reg, (void *)(library_data_area), 40 * sizeof(unsigned long));
+#ifdef MCF547X
+  memcpy(p, (tid_ETOS != NULL) ? tid_ETOS  : tid_TOS, 64 * sizeof(portSTACK_TYPE));
+#else
   memcpy(p, tid_TOS, 64 * sizeof(portSTACK_TYPE));
+#endif
   p1 = (portSTACK_TYPE *)p[0];
   frame_format = p1[0];
   pc = p1[1];
   xTaskResumeAll();
-  vector = (int)((reg[38] >> 2) & 255);
-  board_printf("CF68KLIB data area, fault #%d: ", vector);
-  switch(vector)
+#ifdef MCF547X
+  if(tid_ETOS == NULL)
+#endif
   {
-    case 2: board_printf("Access Fault"); break;
-    case 3: board_printf("Address Error"); break;
-    case 4: board_printf("Illegal Instruction"); break;
-    case 5: board_printf("Integer Zero Divide"); break;
-    case 8: board_printf("Privilege Violation"); break;
-    case 9: board_printf("Trace"); break;
-    case 10: board_printf("Line A"); break;
-    case 11: board_printf("Line F"); break;
-    case 14: board_printf("Format Error"); break;
-    case 32:
-    case 33:
-    case 34:
-    case 35:
-    case 36:
-    case 37:
-    case 38:
-    case 39:
-    case 40:
-    case 41:
-    case 42:
-    case 43:
-    case 44:
-    case 45:
-    case 46:
-    case 47: board_printf("Trap #%d", vector - 32); break;
+    vector = (int)((reg[38] >> 2) & 255);
+    board_printf("CF68KLIB data area, fault #%d: ", vector);
+    switch(vector)
+    {
+      case 2: board_printf("Access Fault"); break;
+      case 3: board_printf("Address Error"); break;
+      case 4: board_printf("Illegal Instruction"); break;
+      case 5: board_printf("Integer Zero Divide"); break;
+      case 8: board_printf("Privilege Violation"); break;
+      case 9: board_printf("Trace"); break;
+      case 10: board_printf("Line A"); break;
+      case 11: board_printf("Line F"); break;
+      case 14: board_printf("Format Error"); break;
+      case 32:
+      case 33:
+      case 34:
+      case 35:
+      case 36:
+      case 37:
+      case 38:
+      case 39:
+      case 40:
+      case 41:
+      case 42:
+      case 43:
+      case 44:
+      case 45:
+      case 46:
+      case 47: board_printf("Trap #%d", vector - 32); break;
+    }
+    board_printf("\r\nStatus Register (SR): %04X\r\n", (int)reg[17]>>16);
+    board_printf("Program Counter (PC): %08X\r\n", (int)reg[16]);
+    board_printf("Supervisor Stack (SSP): %08X\r\n", (int)reg[19]);
+    board_printf("User Stack (USP): %08X\r\n", (int)reg[18]);
+    for(i = j = 0; i < 8; i++)
+      board_printf("D%d: %08X  A%d: %08X\r\n", i, (int)reg[i], i, (int)reg[i+8]);
+    if(((vector == 4) || (vector == 8))
+     && (*(unsigned long *)(save_pc_cf68klib) < (unsigned long)__SDRAM_SIZE))
+      board_printf("%s  (emul)\r\n", disassemble_pc(*(unsigned long *)(save_pc_cf68klib)));
+    if(reg[16] < (unsigned long)__SDRAM_SIZE)
+      board_printf("%s\r\n", disassemble_pc(reg[16]));
   }
-  board_printf("\r\nStatus Register (SR): %04X\r\n", (int)reg[17]>>16);
-  board_printf("Program Counter (PC): %08X\r\n", (int)reg[16]);
-  board_printf("Supervisor Stack (SSP): %08X\r\n", (int)reg[19]);
-  board_printf("User Stack (USP): %08X\r\n", (int)reg[18]);
-  for(i = j = 0; i < 8; i++)
-    board_printf("D%d: %08X  A%d: %08X\r\n", i, (int)reg[i], i, (int)reg[i+8]);
-  if(((vector == 4) || (vector == 8))
-   && (*(unsigned long *)(save_pc_cf68klib) < (unsigned long)__SDRAM_SIZE))
-    board_printf("%s  (emul)\r\n", disassemble_pc(*(unsigned long *)(save_pc_cf68klib)));
-  if(reg[16] < (unsigned long)__SDRAM_SIZE)
-    board_printf("%s\r\n", disassemble_pc(reg[16]));
   board_printf("TOS task context saving:\r\n");
   board_printf("Status Register (SR): %04X\r\n", (int)(frame_format & 0xFFFF));
   board_printf("Program Counter (PC): %08X\r\n", (int)pc);
@@ -1908,7 +2432,7 @@ static void uif_cmd_qt(int argc, char **argv)
   board_printf("Name\t\tTID\tPrio\tStatus\tStack\t\t#\r\n");
 #endif
   board_printf("------------------------------------------------------------");
-  vTaskList(buf);
+  vTaskList((void *)buf);
   board_printf(buf);
 }
 
@@ -2280,7 +2804,7 @@ static void uif_cmd_rmdir(int argc, char **argv)
 /* Fonction arp                                                        */
 /*---------------------------------------------------------------------*/
 
-void uif_cmd_arp(int argc, char **argv)
+static void uif_cmd_arp(int argc, char **argv)
 {
   extern struct netif *netif_list;
   struct netif *netif;
@@ -2341,7 +2865,7 @@ void uif_cmd_arp(int argc, char **argv)
 /* Fonction ifconfig                                                   */
 /*---------------------------------------------------------------------*/
 
-void ife_print(struct netif *ptr)
+static void ife_print(struct netif *ptr)
 {
   struct in_addr addr;
   board_printf("%c%c%d  ", ptr->name[0], ptr->name[1], ptr->num);
@@ -2430,9 +2954,9 @@ static void usage_ifconfig(void)
   board_printf("  [dstaddr <address>]  [netmask <address>]  [gateway <address>]  [up|down]\r\n\n");
 }
 
-void uif_cmd_ifconfig(int argc, char **argv)
+static void uif_cmd_ifconfig(int argc, char **argv)
 {
-#define IFNAMSIZ 3
+#define IFNAMSIZ 4
   char ifr_name[IFNAMSIZ];
   int opt_a = 0;      /* show all interfaces */
   struct netif *netif;
@@ -3035,16 +3559,21 @@ static void uif_cmd_reset(int argc, char **argv)
   board_putchar('\r');
   board_putchar('\n');
   board_putchar_flush();
-  vPortEnterCritical();
+  (void)vPortSetIPL(portIPL_MAX);
   /* Watchdog Reset */
 #ifdef MCF5445X
+  MCF_INTC_IMRH0 = MCF_INTC_IMRL0 = MCF_INTC_IMRH1 = MCF_INTC_IMRL1 = 0xFFFFFFFF;
   MCF_SCM_CWCR = SCM_CWCR_CWE | SCM_CWCR_CWRI(2) | SCM_CWCR_CWT(8);
 #else /* MCF548X */
+  MCF_INTC_IMRH = MCF_INTC_IMRL = 0xFFFFFFFF;
   MCF_GPT_GMS(0) = 0;
-  MCF_GPT_GCIR(0) = 1 | (100 << 16);
-  MCF_GPT_GMS(0) = MCF_GPT_GMS_TMS_GPIO | MCF_GPT_GMS_CE | MCF_GPT_GMS_WDEN;
+  MCF_GPT_GCIR(0) = 10 | (SYSTEM_CLOCK << 16); /* 10 uS */
+  MCF_GPT_GMS(0) = MCF_GPT_GMS_TMS_GPIO | MCF_GPT_GMS_CE | MCF_GPT_GMS_WDEN; /* watchdog timer */
 #endif /* MCF5445X */
-  while(1);
+  while(1)
+  {
+		asm volatile(" nop\n\t");  
+  }
 }
 
 static void uif_cmd_trap(int argc, char **argv)
@@ -3319,6 +3848,7 @@ static portTASK_FUNCTION(vFTPd, pvParameters)
 
 static portTASK_FUNCTION(vTFTPd, pvParameters)
 {
+  extern long ram_disk_drive;
   long file;
   unsigned long bytes_read;
   static struct sockaddr_in address, adresse, from, to;
@@ -3331,7 +3861,7 @@ static portTASK_FUNCTION(vTFTPd, pvParameters)
   struct tftphdr *dp, *ap;
   int i=0, size, Oldsize=PKTSIZE, n, ntimeout, peer, sock, nextBlockNumber;
   struct timeval tv;
-  fd_set lecture;
+  fd_set data_read;
   if(pvParameters);
   if((sock = socket(AF_INET, SOCK_DGRAM, 0)) < 0)
   {
@@ -3360,7 +3890,13 @@ static portTASK_FUNCTION(vTFTPd, pvParameters)
     if(*cp && (*cp != ' ')) 
       continue;
     *cp = '\0';
-    strcpy(filename, &tp->th_stuff[0]);
+    filename[0] = 'C';
+    filename[1] = ':';
+    filename[2] = '\\';
+    filename[3] = '\0';
+    if(ram_disk_drive >= 1)
+  	  filename[0] =(char)ram_disk_drive + 'A';
+    strcat(filename, &tp->th_stuff[0]);
     dp = (struct tftphdr *)buf;
     ap = (struct tftphdr *)ackbuf;
     dat = (char*)&dp->th_data[0]; 
@@ -3409,16 +3945,16 @@ static portTASK_FUNCTION(vTFTPd, pvParameters)
             do
             {
               n = -1;
-              FD_ZERO(&lecture);
-              FD_SET(peer, &lecture); 
+              FD_ZERO(&data_read);
+              FD_SET(peer, &data_read); 
               tv.tv_sec = TimeOut;
               tv.tv_usec = 0;
-              if((i = select(FD_SETSIZE, &lecture, NULL, NULL, &tv)) == -1)
+              if((i = select(FD_SETSIZE, &data_read, NULL, NULL, &tv)) == -1)
               {
                 board_printf("TFTPd: select error (err %d)\r\n",errno);
                 goto tftp_close;
               }
-              if((i > 0) && FD_ISSET(peer, &lecture))
+              if((i > 0) && FD_ISSET(peer, &data_read))
                 n = recvfrom(peer, dp, PKTSIZE, 0, (struct sockaddr *)&from, &fromlen);
             }
             while((n < 0) && (i > 0));
@@ -3499,16 +4035,16 @@ tftp_close:
             do
             {
               n = -1;
-              FD_ZERO(&lecture);
-              FD_SET(peer,&lecture); 
+              FD_ZERO(&data_read);
+              FD_SET(peer,&data_read); 
               tv.tv_sec = TimeOut;
               tv.tv_usec = 0;
-              if((i = select(FD_SETSIZE, &lecture, NULL, NULL, &tv)) == -1)
+              if((i = select(FD_SETSIZE, &data_read, NULL, NULL, &tv)) == -1)
               {
                 board_printf("TFTPd: select error (err %d)\r\n",errno);
                 goto tftp_close;
               }
-              if((i > 0) && FD_ISSET(peer, &lecture))
+              if((i > 0) && FD_ISSET(peer, &data_read))
                 n = recvfrom(peer, ap, PKTSIZE, 0,(struct sockaddr *)&from, &fromlen);
             }
             while((n < 0) && (i > 0));
@@ -3885,10 +4421,14 @@ next_cmd:
   }
 }
 
-static void *test_debug_fault(unsigned long address, unsigned long vector)
+static void *test_debug_fault(unsigned long address, unsigned long vector, unsigned char *RegList)
 {
+#ifndef MCF547X
+  (void)RegList;
+#endif
   if(pxCurrentTCB == tid_TOS)
   {
+#ifndef KILL_TOS_ON_FAULT
     if(address >= (unsigned long)__SDRAM_SIZE)
       vector = 0; /* => kill TOS */
     switch(vector)
@@ -3897,12 +4437,14 @@ static void *test_debug_fault(unsigned long address, unsigned long vector)
       case 4: /* Illegal Instruction */
       case 5: /* Integer Zero Divide */
       case 8: /* Privilege Violation */
+      case 11: /* Line F */
         return(NULL); /* hope than TOS fix fault himself */
       case 2: /* Access Fault */
         if((address < CF68KLIB) || (address >= CF68KLIB+0x10000)) /* 65KB */
           return(NULL); /* hope than TOS fix fault himself */
         /* else access fault inside CF68KLIB => kill TOS */
       default: /* other faults => kill TOS */
+#endif /* KILL_TOS_ON_FAULT */
 #ifdef MCF5445X
         save_imrl0 |= (INTC_IMRL_INT_MASK26 | INTC_IMRL_INT_MASK28); /* mask UART 0 (serial) & UART 2 (IKBD) */
         MCF_INTC_IMRL0 = save_imrl0;
@@ -3914,10 +4456,40 @@ static void *test_debug_fault(unsigned long address, unsigned long vector)
         MCF_INTC_IMRH = save_imrh;
 #endif
         *(unsigned short *)_timer_ms = 0; /* TOS is dead, flag used for polling serial ... */
+#ifndef KILL_TOS_ON_FAULT
         break;
     }
+#endif /* KILL_TOS_ON_FAULT */
+		*(unsigned long *)memvalid = 0; /* force cold reset to next reset */
   }
-  if(pxCurrentTCB == tid_DEBUG)
+#ifdef MCF547X
+  else if((pxCurrentTCB == tid_ETOS) && (vector != 3) && (vector != 4)) /* rebuild return exception frame, EMUTOS not use the CF68KLIB */
+  {
+    unsigned long ssp = (*(unsigned long *)&RegList[76]) + 8;
+    unsigned long pc = *(unsigned long *)&RegList[64];
+    unsigned long sr = (unsigned long)(*(unsigned short *)&RegList[68]);
+    unsigned long format = (vector << 18) | sr;
+    unsigned long jump = *(unsigned long *)(vector * 4);
+    switch(ssp & 3)
+    {
+      case 0: format |= 0x40000000UL; break;
+      case 1: format |= 0x50000000UL; ssp--; break;
+      case 2: format |= 0x60000000UL; ssp -= 2; break;
+      case 3: format |= 0x70000000UL; ssp -= 3; break;
+    }     
+    if(*(unsigned long *)phystop <= 0x80000)
+      *(unsigned long *)phystop = 0xE00000; /* FPGA 0xFFFF8006 has bad infos */  
+    asm volatile (
+          " move.l %0,SP\n\t"
+          " move.l %1,-(SP)\n\t"
+          " move.l %2,-(SP)\n\t"
+          " move.l %3,-(SP)\n\t"
+          " move.l %4,A0\n\t"
+          " movem.l (A0),D0-D7/A0-A6\n\t"
+          " rts"  :  : "d" (ssp), "d" (pc), "d" (format), "d" (jump), "d" (RegList) : "a0", "sp" );
+  }
+#endif
+  else if(pxCurrentTCB == tid_DEBUG)
     restart_debug = 1;
   vTaskDelete(0);
   while(1);
@@ -3945,7 +4517,7 @@ static portTASK_FUNCTION(vDEBUG, pvParameters)
 
 static void start_debug(vid)
 {
-  xTaskCreate(vDEBUG, "DBUG", STACK_DEFAULT, NULL, DEBUG_TASK_PRIORITY, &tid_DEBUG);
+  xTaskCreate(vDEBUG, (void *)"DBUG", STACK_DEFAULT, NULL, DEBUG_TASK_PRIORITY, &tid_DEBUG);
 } 
 
 #endif
@@ -3981,6 +4553,19 @@ static SOCKET_COOKIE sc =
   gethostbyname,
   geterrno
 };
+
+void start_servers(void)
+{
+#ifdef DBUG
+  xTaskCreate(vTELNETd, (void *)"TELNETd", STACK_DEFAULT, NULL, TELNET_TASK_PRIORITY, &tid_TELNET);
+#endif
+#ifdef FTP_SERVER
+	xTaskCreate(vFTPd, (void *)"FTPd", STACK_DEFAULT, NULL, FTP_TASK_PRIORITY, NULL);
+#endif
+  xTaskCreate(vTFTPd, (void *)"TFTPd", STACK_DEFAULT, NULL, TFTP_TASK_PRIORITY, NULL);
+  /* Start the webserver */
+  xTaskCreate(vBasicWEBServer, (void *)"HTTPd", STACK_DEFAULT, NULL, WEB_TASK_PRIORITY, &tid_HTTPd);
+}
 
 void init_lwip(void)
 {
@@ -4067,15 +4652,14 @@ void init_lwip(void)
 #endif
   enable_caches();
 #ifdef DBUG
-  xTaskCreate(vTELNETd, "TELNETd", STACK_DEFAULT, NULL, TELNET_TASK_PRIORITY, &tid_TELNET);
   breakpoint_init();
 #endif
-#ifdef FTP_SERVER
-  xTaskCreate(vFTPd, "FTPd", STACK_DEFAULT, NULL, FTP_TASK_PRIORITY, NULL);
+#ifdef MCF547X
+  if(MCF_GPIO_PPDSDR_PSC3PSC2 & MCF_GPIO_PPDSDR_PSC3PSC2_PPDSDR_PSC3PSC27)
 #endif
-  xTaskCreate(vTFTPd, "TFTPd", STACK_DEFAULT, NULL, TFTP_TASK_PRIORITY, NULL);
-  /* Start the webserver */
-  xTaskCreate(vBasicWEBServer, "HTTPd", STACK_DEFAULT, NULL, WEB_TASK_PRIORITY, NULL);
+  {
+    start_servers();
+  }
   lwip_ok = 1;
 }
 
@@ -4089,12 +4673,6 @@ static portTASK_FUNCTION(vTOS, pvParameters)
 
 static portTASK_FUNCTION(vROOT, pvParameters)
 {
-#ifdef CONFIG_USB_OHCI
-  extern char ohci_inited;
-#endif
-#ifdef CONFIG_USB_EHCI
-  extern char ehci_inited;
-#endif
 #ifdef USB_DEVICE
 #ifndef MCF5445X
 #ifndef MCF547X
@@ -4103,17 +4681,30 @@ static portTASK_FUNCTION(vROOT, pvParameters)
 #endif
 #endif
 //  int error = 0;
+#if 0 // #ifdef MCF547X
+  extern void hbl_int(void);
+  extern unsigned long get_timer(void);
+  int tick_count = 0;
+	unsigned long start_timer = get_timer();
+  int level = vPortSetIPL(portIPL_MAX);
+  old_hbl = *(unsigned long *)((64+2)*4 + coldfire_vector_base);
+  *(unsigned long *)((64+2)*4 + coldfire_vector_base) = (unsigned long)hbl_int;
+  MCF_EPORT_EPIER |= MCF_EPORT_EPIER_EPIE2;
+	MCF_EPORT_EPFR |= MCF_EPORT_EPFR_EPF2; /* clear interrupt	*/
+  MCF_INTC_IMRL &= ~MCF_INTC_IMRL_INT_MASK2; /* enable interrupt */
+  asm_set_ipl(level);
+#endif /* MCF547X */
 #ifdef USE_RTC
 #ifndef MCF5445X
 #ifndef MCF547X
   extern void RTC_task(void);
-  xTaskCreate((pdTASK_CODE)RTC_task, "RTCd", STACK_DEFAULT, NULL, RTC_TASK_PRIORITY, NULL);
+  xTaskCreate((pdTASK_CODE)RTC_task, (void *)"RTCd", STACK_DEFAULT, NULL, RTC_TASK_PRIORITY, NULL);
 #endif
 #endif
 #endif
   restart_debug = 0;
   init_lwip();
-  xTaskCreate(vTOS, "TOS", STACK_DEFAULT, pvParameters, TOS_TASK_PRIORITY, &tid_TOS);
+  xTaskCreate(vTOS, (void *)"TOS", STACK_DEFAULT, pvParameters, TOS_TASK_PRIORITY, &tid_TOS);
 #ifdef DBUG
   start_debug();
 #endif
@@ -4153,7 +4744,7 @@ static portTASK_FUNCTION(vROOT, pvParameters)
      && ohci_inited
 #endif
 #ifdef CONFIG_USB_EHCI
-//     && ehci_inited // actually no interrupts for only Mass Storage
+//     && ehci_inited
 #endif
     )
     {
@@ -4174,44 +4765,70 @@ static portTASK_FUNCTION(vROOT, pvParameters)
 #endif /* CONFIG_USB_INTERRUPT_POLLING */
     }
 #endif /* CONFIG_USB_UHCI || CONFIG_USB_OHCI || CONFIG_USB_EHCI */
+#ifdef MCF547X
+   if(boot_os)
+   {
+      unsigned long start_addr = 0;
+      extern short swi;
+      switch(boot_os)
+      {      
+        case 1:
+          start_addr = 0xE0600000;
+          break;
+        default:
+          if(swi & 1) /* boot from rescue TOS at 0xE0000000 */
+            start_addr = 0xE0400000;
+#ifdef DBUG
+          else if((tid_TELNET == NULL) && (tid_HTTPd == NULL))
+#else
+          else if(tid_HTTPd == NULL)
+#endif
+            start_servers();
+        	break;
+      }
+      if(start_addr)
+		  {
+		    if(*(short *)start_addr == 0x602E)
+          go_emutos(start_addr);
+        boot_os = 0;
+      }
+    }
+#endif
+#if 0 // #ifdef MCF547X
+    tick_count++;
+    if(tick_count > configTICK_RATE_HZ*10)
+    {
+    	unsigned long time = get_timer();
+			board_printf("VBL interval %d uS (%d %d)\r\n", (int)((time - start_timer)/(hbl_count * SYSTEM_CLOCK)), hbl_count, (time - start_timer)/SYSTEM_CLOCK);
+      level = vPortSetIPL(portIPL_MAX);
+			start_timer =  get_timer();
+      tick_count = 0;
+			hbl_count = 0;		
+      asm_set_ipl(level);
+    }
+#endif
     vTaskDelay(1);
   }
 } 
 
-#if 0
-static long test_semaphore(long *addr)
-{
-  char ret;
-  asm(" move.l %0,A0" : : "d" (addr));
-  asm(" bset #7,(A0)");
-  asm(" sne.b D0");
-  asm(" extb.l D0");
-  asm(" move.l D0,%0" : "=d" (ret) : );
-  return((long)ret);
-}
-#endif
-
 void xSemaphoreTakeBDOS(void)
 {
-//  while(test_semaphore(&xSemaphoreBDOS))
-//    vTaskDelay(1);
   while(xSemaphoreAltTake(xSemaphoreBDOS, portMAX_DELAY) != pdTRUE);
 }
 
 void xSemaphoreGiveBDOS(void)
 {
-//  xSemaphoreBDOS = 0;  
   xSemaphoreAltGive(xSemaphoreBDOS);
 }
 
-int tftpreceive(unsigned char *server, char *sname, short handle)
+int tftpreceive(unsigned char *server, char *sname, short handle, long *size)
 {
   struct sockaddr_in address_server;
   address_server.sin_family = AF_INET;
   address_server.sin_port = htons(PortTFTP);
   memcpy(&address_server.sin_addr.s_addr, server, 4);
   address_server.sin_addr.s_addr = htonl(address_server.sin_addr.s_addr);
-  return(tftp_receive(&address_server, sname, "octet", handle) == 0 ? TRUE : FALSE);
+  return(tftp_receive(&address_server, sname, "octet", handle, size) == 0 ? TRUE : FALSE);
 }
 
 int tftpsend(unsigned char *server, char *sname, short handle)
@@ -4271,7 +4888,7 @@ int init_network(void)
   return(TRUE);
 }
 
-int init_rtos(void *return_address)
+int init_rtos(void *params)
 {
   extern unsigned char _bss_start_freertos[];
   extern unsigned char _end_freertos[];
@@ -4280,14 +4897,17 @@ int init_rtos(void *return_address)
   size_ram_disk = 0;
   pxCurrentTCB = NULL;
   tid_TOS = (void *)-1; /* for vPortSetIPL() */
-  tid_TELNET = tid_DEBUG = NULL;
+  tid_TELNET = tid_DEBUG = tid_HTTPd = NULL;
+#ifdef MCF547X
+  tid_ETOS = NULL;
+  boot_os = 0;
+#endif
   start_run = NULL;
   lwip_ok = get_serial_vector = get_ikbd_vector = tos_suspend = 0;
   *(unsigned short *)_timer_ms = 0;
-//  xSemaphoreBDOS = 0;
   vSemaphoreCreateBinary(xSemaphoreBDOS);
   init_dma();
-  xTaskCreate(vROOT, "ROOT", STACK_DEFAULT, return_address, ROOT_TASK_PRIORITY, NULL);
+  xTaskCreate(vROOT, (void *)"ROOT", STACK_DEFAULT, params, ROOT_TASK_PRIORITY, NULL);
   vTaskStartScheduler();
   return 0;
 }

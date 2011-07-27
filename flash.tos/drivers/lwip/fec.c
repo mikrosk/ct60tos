@@ -135,53 +135,106 @@ static void hex_byte(char c)
 
 void fec0_rx_interrupt(void)
 {
-  asm("_fec0_rx_int:\n lea -24(%SP),%SP\n movem.l %D0-%D2/%A0-%A2,(%SP)\n");
-  asm(" clr.l -(%SP)\n jsr _fec_rx_frame\n addq.l #4,%SP\n"); 
-  asm(" movem.l (%SP),%D0-%D2/%A0-%A2\n lea 24(%SP),%SP\n rte\n");
+  asm volatile (
+                "_fec0_rx_int:\n\t"
+                " move.w #0x2700,SR\n\t"
+                " lea -24(SP),SP\n\t"
+                " movem.l D0-D2/A0-A2,(SP)\n\t"
+                " clr.l -(SP)\n\t"
+                " jsr _fec_rx_frame\n\t"
+                " addq.l #4,SP\n\t"
+                " movem.l (SP),D0-D2/A0-A2\n\t"
+                " lea 24(SP),SP\n\t"
+                " rte\n\t" );
 }
 
 void fec1_rx_interrupt(void)
 {
-  asm("_fec1_rx_int:\n lea -24(%SP),%SP\n movem.l %D0-%D2/%A0-%A2,(%SP)\n");
-  asm(" pea 1\n jsr _fec_rx_frame\n addq.l #4,%SP\n"); 
-  asm(" movem.l (%SP),%D0-%D2/%A0-%A2\n lea 24(%SP),%SP\n rte\n");
+  asm volatile (
+                "_fec1_rx_int:\n\t"
+                " move.w #0x2700,SR\n\t"
+                " lea -24(SP),SP\n\t"
+                " movem.l D0-D2/A0-A2,(SP)\n\t"
+                " pea 1\n\t"
+                " jsr _fec_rx_frame\n\t"
+                " addq.l #4,SP\n\t"
+                " movem.l (SP),D0-D2/A0-A2\n\t"
+                " lea 24(SP),SP\n\t"
+                " rte\n\t" );
 }
 
 void fec0_tx_interrupt(void)
 {
-  asm("_fec0_tx_int:\n lea -24(%SP),%SP\n movem.l %D0-%D2/%A0-%A2,(%SP)\n");
-  asm(" clr.l -(%SP)\n jsr _fec_tx_frame\n addq.l #4,%SP\n"); 
-  asm(" movem.l (%SP),%D0-%D2/%A0-%A2\n lea 24(%SP),%SP\n rte\n");
+  asm volatile (
+                "_fec0_tx_int:\n\t"
+                " move.w #0x2700,SR\n\t"
+                " lea -24(SP),SP\n\t"
+                " movem.l D0-D2/A0-A2,(SP)\n\t"
+                " clr.l -(SP)\n\t"
+                " jsr _fec_tx_frame\n\t"
+                " addq.l #4,SP\n\t"
+                " movem.l (SP),D0-D2/A0-A2\n\t"
+                " lea 24(SP),SP\n\t"
+                " rte\n\t" );
 }
 
 void fec1_tx_interrupt(void)
 {
-  asm("_fec1_tx_int:\n lea -24(%SP),%SP\n movem.l %D0-%D2/%A0-%A2,(%SP)\n");
-  asm(" pea 1\n jsr _fec_tx_frame\n addq.l #4,%SP\n"); 
-  asm(" movem.l (%SP),%D0-%D2/%A0-%A2\n lea 24(%SP),%SP\n rte\n");
+  asm volatile (
+                "_fec1_tx_int:\n\t"
+                " move.w #0x2700,SR\n\t"
+                " lea -24(SP),SP\n\t"
+                " movem.l D0-D2/A0-A2,(SP)\n\t"
+                " pea 1\n\t"
+                " jsr _fec_tx_frame\n\t"
+                " addq.l #4,SP\n\t"
+                " movem.l (SP),D0-D2/A0-A2\n\t"
+                " lea 24(SP),SP\n\t"
+                " rte\n\t" );
 }
 
 #endif
 
 void fec0_interrupt(void)
 {
-  asm("_fec0_int:\n lea -24(%SP),%SP\n movem.l %D0-%D2/%A0-%A2,(%SP)\n");
-  asm(" clr.l -(%SP)\n jsr _fec_interrupt_handler\n addq.l #4,%SP\n"); 
-  asm(" movem.l (%SP),%D0-%D2/%A0-%A2\n lea 24(%SP),%SP\n rte\n");
+  asm volatile (
+                "_fec0_int:\n\t"
+                " move.w #0x2700,SR\n\t"
+                " lea -24(SP),SP\n\t"
+                " movem.l D0-D2/A0-A2,(SP)\n\t"
+                " clr.l -(SP)\n\t"
+                " jsr _fec_interrupt_handler\n\t"
+                " addq.l #4,SP\n\t"
+                " movem.l (SP),D0-D2/A0-A2\n\t"
+                " lea 24(SP),SP\n\t"
+                " rte\n\t" );
 }
 
 void fec1_interrupt(void)
 {
-  asm("_fec1_int:\n lea -24(%SP),%SP\n movem.l %D0-%D2/%A0-%A2,(%SP)\n");
-  asm(" pea 1\n jsr _fec_interrupt_handler\n addq.l #4,%SP\n"); 
-  asm(" movem.l (%SP),%D0-%D2/%A0-%A2\n lea 24(%SP),%SP\n rte\n");
+  asm volatile (
+                "_fec1_int:\n\t"
+                " move.w #0x2700,SR\n\t"
+                " lea -24(SP),SP\n\t"
+                " movem.l D0-D2/A0-A2,(SP)\n\t"
+                " pea 1\n\t"
+                " jsr _fec_interrupt_handler\n\t"
+                " addq.l #4,SP\n\t"
+                " movem.l (SP),D0-D2/A0-A2\n\t"
+                " lea 24(SP),SP\n\t"
+                " rte\n\t" );
+}
+
+void dma_interrrupt2(void)
+{
+  xNeedSwitch = pdFALSE;
+  dma_interrupt_handler();
 }
 
 void dma_interrupt(void)
 {
   portENTER_SWITCHING_ISR()
-  xNeedSwitch = pdFALSE;
-  dma_interrupt_handler();
+  dma_interrrupt2();
   portEXIT_SWITCHING_ISR(xNeedSwitch);
 }
 
@@ -459,8 +512,10 @@ static void fec_reset(uint8 ch)
   }  
   /* Set the Reset bit and clear the Enable bit */
   MCF_FEC_ECR(ch) = MCF_FEC_ECR_RESET;
-  for(i=0; (MCF_FEC_ECR(ch) & MCF_FEC_ECR_RESET) && (i < FEC_RESET_DELAY); i++)
-    asm(" nop");   
+  for(i = 0; (MCF_FEC_ECR(ch) & MCF_FEC_ECR_RESET) && (i < FEC_RESET_DELAY); i++)
+  {
+    asm volatile (" nop\n\t");
+  }
 #else /* MCF548X */
   /* Configure Interrupt vectors */
   if(ch)
@@ -476,8 +531,10 @@ static void fec_reset(uint8 ch)
   /* Set the Reset bit and clear the Enable bit */
   MCF_FEC_ECR(ch) = MCF_FEC_ECR_RESET;
   /* Wait at least 8 clock cycles */
-  for(i=0; i<10; i++)
-    asm(" nop");   
+  for(i = 0; i < 10; i++)
+  {
+    asm volatile (" nop\n\t"); 
+  }
 #endif /* MCF5445X */
 }
 
@@ -698,8 +755,6 @@ static void fec_rx_task(void *arg)
     while(xSemaphoreAltTake(fecif->rx_sem, portMAX_DELAY) != pdTRUE); 
 //    if(!ch) PERF_START;
 #ifndef NBUF_USE_SYSTEM_RAM
-//    /* flush data cache from the cf68klib */
-//    asm(" .chip 68060\n cpusha DC\n .chip 5200\n");
     flush_dc();
 #endif
     while((pNBuf = nbuf_rx_allocate(ch)) != NULL)
@@ -1007,8 +1062,6 @@ static err_t fec_output_raw(struct netif *netif, struct pbuf *p)
     }
 #endif
 #ifndef NBUF_USE_SYSTEM_RAM
-//    /* flush data cache from the cf68klib */
-//    asm(" .chip 68060\n cpusha DC\n .chip 5200\n");
     flush_dc();
 #endif
     pNBuf->length = p->tot_len;

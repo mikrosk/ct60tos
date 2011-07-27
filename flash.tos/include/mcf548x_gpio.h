@@ -52,7 +52,7 @@
 #define MCF_GPIO_PPDSDR_FECI2C      (*(vuint8 *)(void*)(&__MBAR[0x000A28]))
 #define MCF_GPIO_PPDSDR_PCIBG       (*(vuint8 *)(void*)(&__MBAR[0x000A29]))
 #define MCF_GPIO_PPDSDR_PCIBR       (__MBAR+0x000A2A)
-#define MCF_GPIO_PPDSDR_PSC3PSC2    (*(vuint8 *)(void*)(&__MBAR[0x000A2C]))
+#define MCF_GPIO_PPDSDR_PSC3PSC2    (__MBAR+0x000A2C)
 #define MCF_GPIO_PPDSDR_PSC1PSC0    (*(vuint8 *)(void*)(&__MBAR[0x000A2D]))
 #define MCF_GPIO_PPDSDR_DSPI        (*(vuint8 *)(void*)(&__MBAR[0x000A2E]))
 #define MCF_GPIO_PCLRR_FBCTL        (*(vuint8 *)(void*)(&__MBAR[0x000A30]))

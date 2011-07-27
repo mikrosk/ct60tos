@@ -100,11 +100,12 @@ void clfix(CLNO cl, CLNO link, DMD *dm)
 **      M01.0.1.03
 */
 
-CLNO getcl(short cl, DMD *dm)
+CLNO getcl(CLNO cl, DMD *dm)      /* cl was short, DM 02.01.11 */
 {
         unsigned short f[1];
 
-        if (cl < 0)
+        if(cl >= dm->m_numcl)     /* DM 02.01.11 */
+//        if (cl < 0)
         {
 #if DBGFSFAT
                 char buf[10];
@@ -163,10 +164,11 @@ short nextcl(OFD *p, short wrtflg)
         cl = p->o_curcl;
         dm = p->o_dmd;
 
-        if((short)(cl) < 0) {
+        if(cl >= dm->m_numcl) {     /* DM 02.01.11 */
+/*        if((short)(cl) < 0) { */
             cl2 = cl + 1;
             goto retcl;
-        } else if((short)(cl) > 0) {
+        } else if(cl != 0) {
             cl2 = getcl(cl,dm);
         } else { /* was  if (cl == 0) */
             cl2 = (p->o_strtcl ? p->o_strtcl : 0xffff );
@@ -226,7 +228,7 @@ retcl:  p->o_curcl = cl2;
 
 long xgetfree(long *buf, short drv) 
 {
-        short i,free;
+        long i,free;
         DMD *dm;
 
         drv = (drv ? drv-1 : run->p_curdrv);
@@ -237,12 +239,13 @@ long xgetfree(long *buf, short drv)
         dm = drvtbl[i];
         free = 0;
         for (i = 2; i < dm->m_numcl; i++)
-                if (!getcl(i,dm))
+                if (!getcl((CLNO)i,dm))
                         free++;
-        *buf++ = (long)(free);
-        *buf++ = (long)(dm->m_numcl);
-        *buf++ = (long)(dm->m_recsiz);
-        *buf++ = (long)(dm->m_clsiz);
+        buf[0] = (long)(free);
+        buf[1] = (long)(dm->m_numcl);
+        buf[2] = (long)(dm->m_recsiz);
+        buf[3] = (long)(dm->m_clsiz);
+
         return(E_OK);
 }
 

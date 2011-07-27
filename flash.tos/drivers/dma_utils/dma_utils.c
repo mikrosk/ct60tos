@@ -60,7 +60,7 @@ extern void critical_error(int error);
 #include "../mcdapi/MCD_dma.h"
 #include "mcf548x.h"
 #define V_DMA (64+48)
-#define DMA_PRIORITY 6
+#define DMA_PRIORITY 2
 #endif /* MCF5445X */
 
 #ifndef MCF5445X
@@ -141,7 +141,7 @@ static void dma_int(int channel)
 	long width, step;
 #endif
 	struct dma_block *p;
-	asm("move.w #0x2700,SR");   /* disable interrupts */
+	asm volatile (" move.w #0x2700,SR\r\t");   /* disable interrupts */
 	p = &dma_block_int[channel];
 #ifndef CHAINED_DMA
 	p->src += p->src_incr;
@@ -221,6 +221,9 @@ int dma_transfer(char *src, char *dest, int size, int width, int src_incr, int d
 {
 	struct dma_block *p; 
 	int	channel;
+#ifdef MCF547X
+	int flexbus = 0;
+#endif
 #ifndef CHAINED_DMA
 #ifdef USE_COMM_BUS
 	unsigned long offset = (unsigned long)info_fvdi->ram_base;
@@ -230,17 +233,25 @@ int dma_transfer(char *src, char *dest, int size, int width, int src_incr, int d
 	step = 4; /* 32 bits only */	
 #endif
 #endif /* CHAINED_DMA */
+#ifdef MCF547X
+	if(((unsigned long)src >= 0x40000000) && ((unsigned long)src < 0x80000000)) /* from FPGA Video RAM memory */
+		flexbus |= 1;
+	if(((unsigned long)dest >= 0x40000000) && ((unsigned long)dest < 0x80000000)) /* to FPGA Video RAM memory */
+		flexbus |= 2;
+	if(flexbus /* && width */) /* Flexbus seems need all DMA MCD_TT_XXX flags removed but it's very slow (8MB/S), slower than CPU */
+		return(-1); /* else problems ?!?!? */
+#endif
 	if(!use_dma || !size)
 		return(-1);
 	else
 	{
-		asm("clr.l -(SP)");		
-		asm("move.l D0,-(SP)");
-		asm("move.w SR,D0");
-		asm("move.l D0,4(SP)");
-		asm("or.l #0x700,D0");   /* disable interrupts */
-		asm("move.w D0,SR");
-		asm("move.l (SP)+,D0");
+		asm volatile (
+			" move.l D0,-(SP)\n\t"
+			" move.w SR,D0\n\t"
+			" move.w D0,save_d0\n\t"
+			" or.l #0x700,D0\n\t"   /* disable interrupts */
+			" move.w D0,SR\n\t"
+			" move.l (SP)+,D0\n\t" );
 #ifdef CHAINED_DMA
 		channel = dma_set_channel(DMA_ALWAYS, NULL);
 #else /* !CHAINED_DMA */
@@ -260,11 +271,11 @@ int dma_transfer(char *src, char *dest, int size, int width, int src_incr, int d
 			dma_channel[channel].req = DMA_ALWAYS;
 			dma_channel[channel].handler = dma_handler[channel];
 		}
-		asm("move.l D0,-(SP)");
-		asm("move.l 4(SP),D0");
-		asm("move.w D0,SR");
-		asm("move.l (SP)+,D0");
-		asm("addq.l #4,SP");		
+		asm volatile (
+			" move.w D0,-(SP)\n\t"
+			" move.w save_d0,D0\n\t" /* restore interrupts */
+			" move.w D0,SR\n\t"
+			" move.w (SP)+,D0\n\t" );
 	}
 	if(channel < 0)
 		return(-1);
@@ -272,17 +283,18 @@ int dma_transfer(char *src, char *dest, int size, int width, int src_incr, int d
 	if(p->used)
 		return(-1);
 #ifdef CHAINED_DMA
+	wait_dma(); /* for malloc Descriptors */
 	p->used = 0;
 	Channel = channel;
-	Descriptors = (unsigned long)Funcs_allocate_block(((size / width) + 2) * 32);
+	Descriptors = (unsigned long)Funcs_allocate_block(((width ? size / width : 1) + 2) * 32);
 	if(!Descriptors)
 		return(-1);
 	else
-	{
+  {
 		MCD_bufDesc *pd = (MCD_bufDesc *)((Descriptors + 31) & ~31); /* 32 bytes alignment */
 		p->aligned_descriptors = pd;
 		if(!width && !src_incr && !dest_incr)
-//			width = src_incr = dest_incr = STEP_DMA;
+//		width = src_incr = dest_incr = STEP_DMA;
 			width = size;
 		while(size > 0)
 		{
@@ -344,7 +356,11 @@ int dma_transfer(char *src, char *dest, int size, int width, int src_incr, int d
 	}
 #endif /* CHAINED_DMA */
  	/* flush data cache from the cf68klib */
-	asm(" .chip 68060\n cpusha DC\n .chip 5200\n");
+#if (__GNUC__ > 3)
+	asm volatile (" .chip 68060\n\t cpusha DC\n\t .chip 5485\n\t");
+#else
+	asm volatile (" .chip 68060\n\t cpusha DC\n\t .chip 5200\n\t");
+#endif
 	p->used = 1;
 #ifdef MCF5445X
 	{
@@ -373,9 +389,18 @@ int dma_transfer(char *src, char *dest, int size, int width, int src_incr, int d
 #else /* MCF548X */
 #ifdef CHAINED_DMA
 	if(MCD_startDma(channel, (char *)p->aligned_descriptors, (short)step, dest, (short)step, (unsigned long)size, (unsigned long)step, 0, DMA_PRIORITY,
+#ifdef MCF547X
+	 flexbus ? MCD_INTERRUPT | MCD_TT_FLAGS_RL : 
+#endif
 	 MCD_INTERRUPT | MCD_TT_FLAGS_CW | MCD_TT_FLAGS_RL | MCD_TT_FLAGS_SP, MCD_NO_BYTE_SWAP | MCD_NO_CSUM) == MCD_OK)
+	{
+#ifdef MCF547X
+		if(flexbus)
+			wait_dma(); /* because all GFX routines use CPU */
+#endif
 	 	return(0);
-#else
+	}
+#else /* !CHAINED_DMA */
 #ifdef USE_COMM_BUS
 	if(p->dir == 1) /* PCI to Local Bus */
 	{
@@ -395,7 +420,7 @@ int dma_transfer(char *src, char *dest, int size, int width, int src_incr, int d
 		if(MCD_startDma(channel, (char *)&MCF_PCI_PCIRFDR, 0, dest, (short)step, (unsigned long)size, (unsigned long)step, DMA_PCI_RX, DMA_PRIORITY,
 	   MCD_INTERRUPT | MCD_SINGLE_DMA | MCD_TT_FLAGS_CW | MCD_TT_FLAGS_RL | MCD_TT_FLAGS_SP, MCD_NO_BYTE_SWAP | MCD_NO_CSUM) == MCD_OK)
 		{
-			wait_dma(); /* need wait if there are an Mfree before DMA finished  */
+			wait_dma(); /* need wait if there are an Mfree before DMA finished */
 	 		return(0);
 		}
 	}
@@ -420,8 +445,17 @@ int dma_transfer(char *src, char *dest, int size, int width, int src_incr, int d
 	}
 #else /* !USE_COMM_BUS */
 	if(MCD_startDma(channel, src, (short)step, dest, (short)step, (unsigned long)size, (unsigned long)step, 0, DMA_PRIORITY,
+#ifdef MCF547X
+	 flexbus ? MCD_INTERRUPT | MCD_SINGLE_DMA | MCD_TT_FLAGS_RL : 
+#endif
 	 MCD_INTERRUPT | MCD_SINGLE_DMA | MCD_TT_FLAGS_CW | MCD_TT_FLAGS_RL | MCD_TT_FLAGS_SP, MCD_NO_BYTE_SWAP | MCD_NO_CSUM) == MCD_OK)
+	{
+#ifdef MCF547X
+		if(flexbus)
+			wait_dma(); /* because all GFX routines use CPU */
+#endif
 	 	return(0);
+	}
 #endif /* USE_COMM_BUS */
 #endif /* CHAINED_DMA */
 #endif /* MCF5445X */
@@ -516,9 +550,14 @@ void dma_init_tables(void)
 #ifndef LWIP
 static void dmainterrupt(void)
 {
-  asm("_dma_interrupt:\n lea -24(SP),SP\n movem.l D0-D2/A0-A2,(SP)\n");
-  asm(" jsr _dma_interrupt_handler\n");
-  asm(" movem.l (SP),D0-D2/A0-A2\n lea 24(SP),SP\n rte\n");
+  asm volatile(
+  	"_dma_interrupt:\n\t"
+  	" lea -24(SP),SP\n\t"
+  	" movem.l D0-D2/A0-A2,(SP)\n\t"
+		" jsr _dma_interrupt_handler\n\t"
+		" movem.l (SP),D0-D2/A0-A2\n\t"
+		" lea 24(SP),SP\n\t"
+		" rte\n\t" );
 }
 #endif
 
@@ -555,7 +594,7 @@ void init_dma(void)
   int i;
 #endif
 #ifndef LWIP
-  if(dmainterrupt);
+  (void)dmainterrupt;
 #endif
 #ifdef CHAINED_DMA
 	Descriptors = 0;
@@ -569,6 +608,7 @@ void init_dma(void)
     Setexc(64+INT0_LO_EDMA_00, dma_interrupt);
 #else /* MCF548X */
   /* Initialize the Multi-channel DMA */
+	memset((void *)__MCDAPI_START, 0, 0x8000);
   MCD_initDma((dmaRegs*)(__MBAR+0x8000), (void *)__MCDAPI_START, MCD_COMM_PREFETCH_EN | MCD_RELOC_TASKS);
   /* Configure Interrupt vector */
   Setexc(V_DMA, dma_interrupt);
@@ -1109,7 +1149,7 @@ int dma_transfer(char *src, char *dest, int size, int width, int src_incr, int d
 				dest += dest_incr;
 			}
 			if(dir == 2) /* Local Bus To PCI */
-				asm(" cpusha DC"); /* descriptors and blocks to flush => flush all data cache */
+				asm volatile (" cpusha DC\n\t"); /* descriptors and blocks to flush => flush all data cache */
 			else /* just descriptors to flush */
 #ifdef DMA_MALLOC
 				cpush_dc(aligned_descriptors, (long)p - (long)aligned_descriptors); /* flush data cache */
@@ -1128,12 +1168,11 @@ int dma_transfer(char *src, char *dest, int size, int width, int src_incr, int d
 #endif
 			Write_config_byte(0, DMASCR0, 3); /* start & enable */
 			dma_run = 1;
-
 //			while(*(volatile unsigned long *)&p[-2]); /* wait last transfert size cleared by DMA clear count mode */
 //			if(dir == 2) /* else black screen and crash, why ??? */
 //				wait_dma();	
 //			if(dir == 1) /* PCI to Local Bus */
-				wait_dma(); /* need wait if there are an Mfree before DMA finished  */
+				wait_dma(); /* need wait if there are an Mfree before DMA finished */
 		}
 #ifdef DMA_MALLOC
 		else /* no memory block for descriptors */
@@ -1159,7 +1198,7 @@ int dma_transfer(char *src, char *dest, int size, int width, int src_incr, int d
 #endif
 		dma_run = 1;
 		if(dir == 1) /* PCI to Local Bus */
-			wait_dma(); /* need wait if there are an Mfree before DMA finished  */
+			wait_dma(); /* need wait if there are an Mfree before DMA finished */
 	}
 	return(0);
 }

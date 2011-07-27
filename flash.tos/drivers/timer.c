@@ -1,5 +1,5 @@
-/* VDI driver for the CT60/CTPCI & Coldfire boards
- * Didier Mequignon 2005-2009, e-mail: aniplay@wanadoo.fr
+/* time / delay functions for the CT60/CTPCI & Coldfire boards
+ * Didier Mequignon 2005-2011, e-mail: aniplay@wanadoo.fr
  *
  * This file is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -21,7 +21,7 @@
 #include <mint/sysvars.h>
 #include <string.h>
 #include "fb.h"
-#include "../../include/fire.h"
+#include "../include/fire.h"
 
 typedef struct
 {
@@ -105,23 +105,19 @@ void mdelay(long msec)
 long get_timer(void) /* try to get a precise timer on F030 */
 {
 	register long retvalue __asm__("d0");
-	__asm__ volatile ( \
-		"move.l D1,-(SP)\n" \
-		"move.w SR,-(SP)\n" \
-		"or.w #0x700,SR\n"       /* no interrupts	*/ \
-		"move.l 0x4BA,D0\n"      /* _hz_200 */ \
-		"asl.l #8,D0\n" \
-		"moveq #0,D1\n" \
-		"move.b 0xFFFFFA23,D1\n" /* TCDR timer C MFP */	\
-		"subq.b #1,D1\n"         /* 0-191 */ \
-		"asl.l #8,D1\n"	         /* *256  */ \
-		"divu #192,D1\n"         /* 0-255 */ \
-		"not.b D1\n" \
-		"move.b D1,D0\n" \
-		"move.w (SP)+,SR\n" \
-		"move.l (SP)+,D1\n" \
-		: "=r"(retvalue) \
-	);
+	asm volatile (
+		"move.w SR,-(SP)\n\t"
+		"or.w #0x700,SR\n\t"       /* no interrupts	*/
+		"move.l 0x4BA,D0\n\t"      /* _hz_200 */
+		"asl.l #8,D0\n\t"
+		"moveq #0,D1\n\t"
+		"move.b 0xFFFFFA23,D1\n\t" /* TCDR timer C MFP */
+		"subq.b #1,D1\n\t"         /* 0-191 */
+		"asl.l #8,D1\n\t"	         /* *256  */
+		"divu #192,D1\n\t"         /* 0-255 */
+		"not.b D1\n\t"
+		"move.b D1,D0\n\t"
+		"move.w (SP)+,SR\n\t"	: "=r"(retvalue) : : "d1", "cc" );
 	return(retvalue);	
 }
 
@@ -163,6 +159,16 @@ static long save_stack;
 
 void install_vbl_timer(void *func, int remove)
 {
+#ifdef COLDFIRE
+#if defined(NETWORK) && defined (LWIP) && defined(DRIVER_IN_ROM)
+#if (defined(CONFIG_USB_UHCI) || defined(CONFIG_USB_OHCI) || defined(CONFIG_USB_EHCI)) && defined(CONFIG_USB_MEM_NO_CACHE) && defined(CONFIG_USB_MEM_NO_CACHE)
+	extern void *usb_malloc(long amount);
+	extern int usb_free(void *addr);
+#endif
+	extern void flush_dc(void);
+	extern unsigned long pxCurrentTCB, tid_TOS;
+#endif
+#endif /* COLDFIRE */
 	XBRA *xbra;
 	int i = (int)*nvbls;
 	void (**func_vbl)(void);
@@ -174,12 +180,26 @@ void install_vbl_timer(void *func, int remove)
 		if(remove && (*func_vbl != NULL))
 		{
 			xbra = (XBRA *)((long)*func_vbl - 12);
-			if((xbra->xbra == 'XBRA') && (xbra->ident == '_PCI'))
+			if((xbra->xbra == 'XBRA') && (xbra->ident == '_PCI')
+			 && (xbra->caller[0] == 0x23CF) && (*(long *)&xbra->caller[7] == (long)func))
+			{
+#if defined(COLDFIRE) && defined(NETWORK) && defined(LWIP) && defined(DRIVER_IN_ROM) && defined(CONFIG_USB_MEM_NO_CACHE) && (defined(CONFIG_USB_UHCI) || defined(CONFIG_USB_OHCI) || defined(CONFIG_USB_EHCI))
+			if(pxCurrentTCB != tid_TOS)
+				usb_free(xbra);
+			else
+#endif
+				Funcs_free(xbra);
 				*func_vbl = NULL;		/* remove old vector */	
+			}
 		}
 		if(*func_vbl == NULL)
 		{
-			xbra = (XBRA *)Funcs_malloc(sizeof(XBRA),3);
+#if defined(COLDFIRE) && defined(NETWORK) && defined(LWIP) && defined(DRIVER_IN_ROM) && defined(CONFIG_USB_MEM_NO_CACHE) && (defined(CONFIG_USB_UHCI) || defined(CONFIG_USB_OHCI) || defined(CONFIG_USB_EHCI))
+			if(pxCurrentTCB != tid_TOS)
+				xbra = (XBRA *)usb_malloc(sizeof(XBRA));
+			else
+#endif
+				xbra = (XBRA *)Funcs_malloc(sizeof(XBRA),3);
 			if(xbra != NULL)
 			{
 				xbra->xbra = 'XBRA';
@@ -194,12 +214,19 @@ void install_vbl_timer(void *func, int remove)
 				*(long *)&xbra->caller[10] = (long)&save_stack;
 				xbra->caller[12] = 0x4E75; /* rts */
 #ifdef COLDFIRE
-				asm("	.chip 68060");
+#if defined(NETWORK) && defined (LWIP) && defined(DRIVER_IN_ROM)
+				if(pxCurrentTCB != tid_TOS)
+					flush_dc();
+				else
 #endif
-				asm(" cpusha BC");
-#ifdef COLDFIRE
-				asm("	.chip 5200");
+#if (__GNUC__ > 3)
+					asm volatile (" .chip 68060\n\t cpusha BC\n\t .chip 5485\n\t"); /* from CF68KLIB */
+#else
+					asm volatile (" .chip 68060\n\t cpusha BC\n\t .chip 5200\n\t"); /* from CF68KLIB */
 #endif
+#else /* 68060 */
+				asm volatile (" cpusha BC\n\t");
+#endif /* COLDFIRE */
 				*func_vbl = (void(*)())&xbra->caller[0];
 				xbra->old_address = 0;
 			}
@@ -211,6 +238,7 @@ void install_vbl_timer(void *func, int remove)
 
 void uninstall_vbl_timer(void *func)
 {
+	XBRA *xbra;
 	int i = (int)*nvbls;
 	void (**func_vbl)(void);
 	func_vbl = *_vblqueue;
@@ -218,11 +246,17 @@ void uninstall_vbl_timer(void *func)
 	{
 		if(*func_vbl != NULL)
 		{
-			if(*func_vbl == func)
-				*func_vbl = NULL;
-			break;
+			xbra = (XBRA *)((long)*func_vbl - 12);
+			if((xbra->xbra == 'XBRA') && (xbra->ident == '_PCI')
+			 && (xbra->caller[0] == 0x23CF) && (*(long *)&xbra->caller[7] == (long)func))
+			{
+				Funcs_free(xbra);
+				*func_vbl = NULL;		/* remove old vector */	
+				break;
+			}
 		}
 		func_vbl++;
 	}
 }
+
 

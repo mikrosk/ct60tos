@@ -159,7 +159,7 @@ Buffptr()      XBIOS Function 141.
           to be set in DATA. If bit #14 is cleared, the below channels 
           are unmodified.
           Bit 2 - Microphone In.
-          Bit 3 - FM Generator, PC Beep on AC97.
+          Bit 3 - FM Generator, PC Beep / 3D enable on AC97.
           Bit 4 - Line In.
           Bit 5 - CD In.
           Bit 6 - Video/TV in.
@@ -198,7 +198,7 @@ Buffptr()      XBIOS Function 141.
 
           Bit 0  - Microphone    -> Right record channel.
           Bit 1  - Microphone    -> Left record channel.
-          Bit 2  - FM Generator  -> Right record channel, 3D enable on AC97.
+          Bit 2  - FM Generator  -> Right record channel, not used on AC97.
           Bit 3  - FM Generator  -> Left record channel, not used on AC97.
           Bit 4  - Line In       -> Right record channel.
           Bit 5  - Line In       -> Left record channel.
@@ -255,7 +255,7 @@ Buffptr()      XBIOS Function 141.
           without any changes. Otherwise DATA contains the desired sample 
           rate, between 0 - 65533 Hz.
 
-  NOTE:   This call acutally sets the rate for both the DAC and the ADC.
+  NOTE:   This call actually sets the rate for both the DAC and the ADC.
 
   Return: Returns the sample rate actually set for the DAC.
 
@@ -912,7 +912,7 @@ Buffptr()      XBIOS Function 141.
                  Bit 0 - Record Gain (ADC)
                  Bit 1 - PCM attenuation (DAC)
                  Bit 2 - Mic attenuation
-                 Bit 3 - FM Generator attenuation, PC Beep on AC97
+                 Bit 3 - FM Generator attenuation, PC Beep / 3D Control on AC97
                  Bit 4 - Line In attenuation
                  Bit 5 - CD In attenuation
                  Bit 6 - Video/TV In attenuation
@@ -924,8 +924,8 @@ Buffptr()      XBIOS Function 141.
 
                  Bit 0  - Mic Right
                  Bit 1  - Mic Left
-                 Bit 2  - FM Generator Right, PC Beep on AC97
-                 Bit 3  - FM Generator Left, PC Beep on AC97
+                 Bit 2  - FM Generator Right, not used on AC97
+                 Bit 3  - FM Generator Left, not used on AC97
                  Bit 4  - Line In Right
                  Bit 5  - Line In Left
                  Bit 6  - CD In Right

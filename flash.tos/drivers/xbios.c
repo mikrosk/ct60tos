@@ -1,6 +1,6 @@
 /* TOS 4.04 Xbios calls for the CT60/CTPCI & Coldfire boards
  * Coldfire Xbios AC97 Sound 
- * Didier Mequignon 2005-2010, e-mail: aniplay@wanadoo.fr
+ * Didier Mequignon 2005-2011, e-mail: aniplay@wanadoo.fr
  *
  * This file is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -49,11 +49,16 @@ extern void kprint(const char *fmt, ...);
 
 unsigned long physbase(void);
 long vgetsize(long modecode);
-short validmode(long modecode);
+long validmode(long modecode);
 
 extern void ltoa(char *buf, long n, unsigned long base);                                    
 extern void cursor_home(void);
+#ifdef COLDFIRE
+extern void videl_blank(long blank);
+#endif
    
+#define XBIOS_SCREEN_VERSION 0x0101
+
 #define Modecode (*((short*)0x184C))
 
 typedef struct
@@ -77,7 +82,7 @@ extern const struct fb_videomode modedb[];
 extern const struct fb_videomode vesa_modes[];
 extern long total_modedb;
 extern short video_found, video_log, os_magic, memory_ok, drive_ok;
-long fix_modecode, second_screen, second_screen_aligned;
+long fix_modecode, second_screen, second_screen_aligned, log_addr;
 
 static short modecode_magic;
 static long bios_colors[256]; 
@@ -85,17 +90,17 @@ static long bios_colors[256];
 /* some XBIOS functions for the video driver */
 
 #ifdef RADEON_RENDER
-void display_composite_texture(long op, char *src_tex, long src_x, long src_y, long w_tex, long h_tex, long dst_x, long dst_y, long width, long height)
+int display_composite_texture(long op, char *src_tex, long src_x, long src_y, long w_tex, long h_tex, long dst_x, long dst_y, long width, long height)
 {
 	struct fb_info *info = info_fvdi;
 	unsigned long dstFormat;
 	if(info->screen_mono != NULL)
-		return;
+		return(0);
 	switch(info->var.bits_per_pixel)
 	{
 		case 16: dstFormat = PICT_r5g6b5; break;
 		case 32: dstFormat = PICT_x8r8g8b8; break;
-		default: return;	
+		default: return(0);	
 	}
 	if(info->fbops->SetupForCPUToScreenTexture(info, (int)op, PICT_a8r8g8b8, dstFormat, src_tex, (int)w_tex << 2 , (int)w_tex, (int)h_tex, 0))
 	{
@@ -117,6 +122,7 @@ void display_composite_texture(long op, char *src_tex, long src_x, long src_y, l
 			dst_y += h_tex;
 		}
 	}
+	return(1);
 }
 #endif /* RADEON_RENDER */
 
@@ -127,7 +133,7 @@ void display_mono_block(char *src_buf, long dst_x, long dst_y, long w, long h, l
 		return;
 	info_fvdi->fbops->SetClippingRectangle(info_fvdi, (int)dst_x, (int)dst_y, (int)w - 1, (int)h -1);
 	skipleft = ((int)src_buf & 3) << 3;
-	src_buf = (unsigned char*)((int)src_buf & ~3);
+	src_buf = (char *)((int)src_buf & ~3);
 	dst_x -= skipleft;
 	w += skipleft;
 	info_fvdi->fbops->SetupForScanlineCPUToScreenColorExpandFill(info_fvdi, (int)foreground, (int)background, 3, 0xffffffff);
@@ -173,6 +179,39 @@ long clear_screen(long bg_color, long x, long y, long w, long h)
 	return(1);
 }
 
+long fill_screen(long op, long bg_color, long x, long y, long w, long h)
+{
+	struct fb_info *info = info_fvdi;
+	if(info->screen_mono != NULL)
+		return(0);
+	info->fbops->SetupForSolidFill(info, (int)bg_color, (int)op, 0xffffffff);
+	info->fbops->SubsequentSolidFillRect(info, (int)x, (int)y, (int)w, (int)h);
+	info->fbops->fb_sync(info);
+	return(1);
+}
+
+long line_screen(long op, long fg_color, long bg_color, long x1, long y1, long x2, long y2, long pattern)
+{
+	struct fb_info *info = info_fvdi;
+	if(info->screen_mono != NULL)
+		return(0);
+	if(pattern == -1) /* solid line */
+	{
+		info->fbops->SetupForSolidLine(info, (int)fg_color, (int)op, 0xffffff);
+		if(info->fbops->SubsequentSolidTwoPointLine == NULL)
+			return(0);
+		info->fbops->SubsequentSolidTwoPointLine(info, (int)x1, (int)y1, (int)x2, (int)y2, OMIT_LAST);	
+	}
+	else
+	{
+		if(info->fbops->SetupForDashedLine == NULL)
+			return(0);
+		info->fbops->SetupForDashedLine(info, (int)fg_color, (int)bg_color, (int)op, 0xffffffff, 32, (unsigned char *)&pattern);
+		info->fbops->SubsequentDashedTwoPointLine(info, (int)x1, (int)y1, (int)x2, (int)y2, OMIT_LAST,0);
+	}
+	return(1);
+}							
+
 long move_screen(long src_x, long src_y, long dst_x, long dst_y, long w, long h)
 {
 	int xdir = (int)(src_x - dst_x);
@@ -182,6 +221,30 @@ long move_screen(long src_x, long src_y, long dst_x, long dst_y, long w, long h)
 	info_fvdi->fbops->SetupForScreenToScreenCopy(info_fvdi, xdir, ydir, 3, 0xffffffff, -1);
 	info_fvdi->fbops->SubsequentScreenToScreenCopy(info_fvdi, (int)src_x, (int)src_y, (int)dst_x, (int)dst_y, (int)w, (int)h);
 	info_fvdi->fbops->fb_sync(info_fvdi);
+	return(1);
+}
+
+long copy_screen(long op, long src_x, long src_y, long dst_x, long dst_y, long w, long h)
+{
+	int xdir = (int)(src_x - dst_x);
+	int ydir = (int)(src_y - dst_y);
+	if(info_fvdi->screen_mono != NULL)
+		return(0);
+	info_fvdi->fbops->SetupForScreenToScreenCopy(info_fvdi, xdir, ydir, op, 0xffffffff, -1);
+	info_fvdi->fbops->SubsequentScreenToScreenCopy(info_fvdi, (int)src_x, (int)src_y, (int)dst_x, (int)dst_y, (int)w, (int)h);
+	info_fvdi->fbops->fb_sync(info_fvdi);
+	return(1);
+}
+
+long clip_screen(long clip_on, long dst_x, long dst_y, long w, long h)
+{
+	struct fb_info *info = info_fvdi;
+	if(info->screen_mono != NULL)
+		return(0);
+	if(clip_on)
+		info->fbops->SetClippingRectangle(info, (int)dst_x, (int)dst_y, (int)(dst_x + w - 1), (int)(dst_y + h - 1));
+	else
+		info->fbops->DisableClipping(info);
 	return(1);
 }
 
@@ -817,8 +880,7 @@ void init_screen_info(SCREENINFO *si, long modecode)
 			return;
 		}
 #if defined(COLDFIRE) && defined(MCF547X) /* FIREBEE */
-		if(!video_found && ((db->vmode & (FB_VMODE_DOUBLE | FB_VMODE_INTERLACED))
-/*		 || ((db->sync & (FB_SYNC_VERT_HIGH_ACT | FB_SYNC_HOR_HIGH_ACT)) != (FB_SYNC_VERT_HIGH_ACT | FB_SYNC_HOR_HIGH_ACT)) */ ))
+		if(!video_found && (db->vmode & (FB_VMODE_DOUBLE | FB_VMODE_INTERLACED)))
 		{
 			si->scrFlags = 0;
 			return;
@@ -890,7 +952,8 @@ void init_screen_info(SCREENINFO *si, long modecode)
 	else
 		si->scrClut = SOFT_CLUT;
 	si->bitFlags = STANDARD_BITS;					
-	si->max_x = si->max_y = 8192; /* max. possible heigth/width ??? */
+	si->max_x = si->virtWidth;
+	si->max_y = 8192; /* max. possible heigth/width ??? */
 	si->maxmem = si->max_x * si->max_y * (si->scrPlanes / 8);
 	si->pagemem = vgetsize(modecode);
 	if(!si->devID)
@@ -991,7 +1054,7 @@ void init_resolution(long modecode)
 				resolution.height = 1200;
 				break;
 			default:
-				init_resolution((long)validmode(Mode));
+				init_resolution(validmode(Mode));
 			 	break;
 		}
 	}
@@ -1062,14 +1125,17 @@ void init_resolution(long modecode)
 
 void vsetrgb(long index, long count, long *array)
 {
-	short i;
+	static int init_ok;
 	unsigned red,green,blue;
 	struct fb_info *info = info_fvdi;
-	for(i = index; i < (count + index); i++)
+	int i;
+	for(i = index; i < (count + index); i++, array++)
 	{
-		bios_colors[i] = *array;
 		if(video_found && (info->var.bits_per_pixel <= 8))
 		{
+			if(init_ok && (bios_colors[i] == *array))
+				continue;
+			bios_colors[i] = *array;
 			red = (*array>>16) & 0xFF;
 			green = (*array>>8) & 0xFF;
 			blue = *array & 0xFF;
@@ -1079,6 +1145,7 @@ void vsetrgb(long index, long count, long *array)
 		else if(!video_found)
 		{
 			long type = 1; /* FALCON */
+			bios_colors[i] = *array;
 			if((Modecode & STMODES) && (((Modecode & NUMCOLS) == BPS2) || ((Modecode & NUMCOLS) == BPS4)))
 				type = 0; /* ST */
 			else if((unsigned long)info->screen_base >= 0x1000000)
@@ -1086,9 +1153,12 @@ void vsetrgb(long index, long count, long *array)
 			if((Modecode & NUMCOLS) <= BPS8)
 				setrgb_videl(i, *array, type);
 		}
-#endif		
-		array++;
+#endif
+		else
+			bios_colors[i] = *array;
 	}
+	if(!index && (count == 256) && video_found && (info->var.bits_per_pixel <= 8))
+		init_ok = 1;
 }
 
 void vgetrgb(long index, long count, long *array)
@@ -1132,6 +1202,14 @@ unsigned long physbase(void)
 		physaddr = (unsigned long)info->screen_base;
 //	board_printf("physbase => %08X\r\n", physaddr);
 	return(physaddr);
+}
+
+unsigned long logbase(void)
+{
+	struct fb_info *info = info_fvdi;
+	if(video_found && (info->screen_mono == NULL))
+		return(log_addr);
+	return((long)*((char **)_v_bas_ad));
 }
 
 long getrez(void)
@@ -1234,9 +1312,9 @@ long vsetscreen(long logaddr, long physaddr, long rez, long modecode, long init_
 					}
 					return(0);
 				case CMD_ALLOCPAGE:
-					if(video_found)
+					if(video_found && (info->screen_mono == NULL))
 					{
-						long addr, addr_aligned;
+						long addr, addr_aligned, size;
 						long wrap = info->var.xres_virtual * (info->var.bits_per_pixel >> 3);
 						modecode = physaddr;
 						if(second_screen)
@@ -1245,7 +1323,15 @@ long vsetscreen(long logaddr, long physaddr, long rez, long modecode, long init_
 								*((long *)logaddr) = second_screen_aligned;
 							return(0);
 						}
-						addr_aligned = addr = offscreen_alloc(info, vgetsize(modecode)+wrap);
+						if(modecode == -1)
+							size = info->var.yres_virtual * wrap;
+						else
+						{
+							size = vgetsize(modecode & 0xFFFF);
+							if(size <  (info->var.yres_virtual * wrap))
+								size = info->var.yres_virtual * wrap;
+						}
+						addr_aligned = addr = offscreen_alloc(info, size + wrap);
 						if(addr)
 						{
 							addr_aligned = addr - (long)info->screen_base;
@@ -1269,7 +1355,7 @@ long vsetscreen(long logaddr, long physaddr, long rez, long modecode, long init_
 					}
 					return(0);
 				case CMD_FREEPAGE:
-					if(video_found)
+					if(video_found && (info->screen_mono == NULL))
 					{
 						if((logaddr == -1) || (logaddr == second_screen_aligned))
 							logaddr = second_screen;
@@ -1278,11 +1364,11 @@ long vsetscreen(long logaddr, long physaddr, long rez, long modecode, long init_
 						if(logaddr)
 						{
 							offscreen_free(info, logaddr);
-							if(logaddr == second_screen_aligned)
+							if(logaddr == second_screen)
 							{
 								if(second_screen_aligned == (long)physbase())
 								{
-									logaddr = physaddr = (long)info->screen_base;
+									log_addr = logaddr = physaddr = (long)info->screen_base;
 									rez = -1; /* switch back to the first if second page active */
 									init_vdi = 0;
 									second_screen = second_screen_aligned = 0;
@@ -1295,16 +1381,20 @@ long vsetscreen(long logaddr, long physaddr, long rez, long modecode, long init_
 					}
 					return(0);
 				case CMD_FLIPPAGE:
-					if(!video_found || !second_screen)
+					if(!video_found || !second_screen || (info->screen_mono != NULL))
 						return(0);
 					if(second_screen_aligned == (long)physbase())
-						logaddr = physaddr = (long)info->screen_base;
+						physaddr = (long)info->screen_base;
 					else
-						logaddr = physaddr = second_screen_aligned;
+						physaddr = second_screen_aligned;
+					if(second_screen_aligned == log_addr)
+						log_addr = logaddr = (long)info->screen_base;
+					else
+						log_addr = logaddr = second_screen_aligned;
 					rez = -1;
-					init_vdi = 0;
 					break;
 				case CMD_ALLOCMEM:
+					if(video_found && (info->screen_mono == NULL))
 					{
 						SCRMEMBLK *blk = (SCRMEMBLK *)physaddr;
 						if(blk->blk_y)
@@ -1320,12 +1410,18 @@ long vsetscreen(long logaddr, long physaddr, long rez, long modecode, long init_
 								blk->blk_status = BLK_ERR;
 							blk->blk_w = (long)info->var.xres_virtual;
 							blk->blk_wrap = blk->blk_w * (long)bpp;
-							blk->blk_x = (blk->blk_start % (info->var.xres_virtual * bpp)) / bpp;
-							blk->blk_y = blk->blk_start / (info->var.xres_virtual * bpp);
+							blk->blk_x = ((blk->blk_start - (long)info->screen_base) % (info->var.xres_virtual * bpp)) / bpp;
+							blk->blk_y = (blk->blk_start - (long)info->screen_base) / (info->var.xres_virtual * bpp);
 						}
+					}
+					else
+					{
+						SCRMEMBLK *blk = (SCRMEMBLK *)physaddr;
+						blk->blk_status = BLK_ERR;
 					}
 					return(0);
 				case CMD_FREEMEM:
+					if(video_found && (info->screen_mono == NULL))
 					{
 						SCRMEMBLK *blk	= (SCRMEMBLK *)physaddr;
 						offscreen_free(info, blk->blk_start);
@@ -1333,8 +1429,15 @@ long vsetscreen(long logaddr, long physaddr, long rez, long modecode, long init_
 					}
 					return(0);
 				case CMD_SETADR:
-					rez = -1;
-					break;
+					if(video_found && (info->screen_mono == NULL))
+					{
+						if((logaddr >= (long)info->screen_base)
+						 || ((logaddr - (long)info->screen_base) >= (info->var.xres_virtual * 8192 * (info->var.bits_per_pixel >> 3))))
+							log_addr = logaddr;
+						rez = -1;
+						break;
+					}
+					return(0);
 				case CMD_ENUMMODES:
 					{
 						long (*enumfunc)(SCREENINFO *inf, long flag) = (void *)physaddr;
@@ -1409,7 +1512,7 @@ long vsetscreen(long logaddr, long physaddr, long rez, long modecode, long init_
 				case CMD_COPYPAGE:
 					if(milan_mode)
 						return(0);					
-					if(video_found && second_screen)
+					if(video_found && second_screen	&& (info->screen_mono == NULL))
 					{
 						long src_x, src_y, dst_x, dst_y;
 						int bpp = info->var.bits_per_pixel >> 3;
@@ -1427,6 +1530,114 @@ long vsetscreen(long logaddr, long physaddr, long rez, long modecode, long init_
 							dst_y = offset / (info->var.xres_virtual * bpp);
 						}
 						move_screen(src_x, src_y, dst_x, dst_y, info->var.xres_virtual, info->var.yres_virtual);
+					}
+					return(0);
+				case CMD_FILLMEM:
+					if(milan_mode)
+						return(0);
+					if(video_found)
+					{
+						SCRFILLMEMBLK *blk = (SCRFILLMEMBLK *)physaddr;
+						if(fill_screen(blk->blk_op, blk->blk_color, blk->blk_x, blk->blk_y, blk->blk_w, blk->blk_h))
+							blk->blk_status = BLK_OK;
+						else
+							blk->blk_status = BLK_ERR;			
+					}
+					else
+					{
+						SCRFILLMEMBLK *blk = (SCRFILLMEMBLK *)physaddr;
+						blk->blk_status = BLK_ERR;			
+					}
+					return(0);
+				case CMD_COPYMEM:
+					if(milan_mode)
+						return(0);
+					if(video_found)
+					{
+						SCRCOPYMEMBLK *blk = (SCRCOPYMEMBLK *)physaddr;
+						if(copy_screen(blk->blk_op, blk->blk_src_x, blk->blk_src_y, blk->blk_dst_x, blk->blk_dst_y, blk->blk_w, blk->blk_h))
+							blk->blk_status = BLK_OK;
+						else
+							blk->blk_status = BLK_ERR;				
+					}
+					else
+					{
+						SCRCOPYMEMBLK *blk = (SCRCOPYMEMBLK *)physaddr;
+						blk->blk_status = BLK_ERR;			
+					}
+					return(0);
+				case CMD_TEXTUREMEM:
+					if(milan_mode)
+						return(0);
+					if(video_found && (info->screen_mono == NULL))
+					{
+						SCRTEXTUREMEMBLK *blk = (SCRTEXTUREMEMBLK *)physaddr;
+#ifdef RADEON_RENDER
+						if(display_composite_texture(blk->blk_op, (char *)blk->blk_src_tex, blk->blk_src_x, blk->blk_src_y, blk->blk_w_tex, blk->blk_h_tex, blk->blk_dst_x, blk->blk_dst_y, blk->blk_w, blk->blk_h))
+							blk->blk_status = BLK_OK;
+						else
+#endif
+							blk->blk_status = BLK_ERR;				
+					}
+					else
+					{
+						SCRTEXTUREMEMBLK *blk = (SCRTEXTUREMEMBLK *)physaddr;
+						blk->blk_status = BLK_ERR;			
+					}
+					return(0);
+				case CMD_GETVERSION:
+					if(milan_mode)
+						return(0);
+					if(physaddr != -1)
+						*((long *)physaddr) = XBIOS_SCREEN_VERSION;
+					return(0);			
+				case CMD_LINEMEM:
+					if(milan_mode)
+						return(0);
+					if(video_found && (info->screen_mono == NULL))
+					{
+						SCRLINEMEMBLK *blk = (SCRLINEMEMBLK *)physaddr;
+						if(line_screen(blk->blk_op, blk->blk_fgcolor, blk->blk_bgcolor, blk->blk_x1, blk->blk_y1, blk->blk_x2, blk->blk_y2, blk->blk_pattern))
+							blk->blk_status = BLK_OK;
+						else
+							blk->blk_status = BLK_ERR;			
+					}
+					else
+					{
+						SCRLINEMEMBLK *blk = (SCRLINEMEMBLK *)physaddr;
+						blk->blk_status = BLK_ERR;			
+					}
+					return(0);
+				case CMD_CLIPMEM:
+					if(milan_mode)
+						return(0);
+					if(video_found)
+					{
+						SCRCLIPMEMBLK *blk = (SCRCLIPMEMBLK *)physaddr;
+						if(clip_screen(blk->blk_clip_on, blk->blk_x, blk->blk_y, blk->blk_w, blk->blk_h))
+							blk->blk_status = BLK_OK;
+						else
+							blk->blk_status = BLK_ERR;			
+					}
+					else
+					{
+						SCRCLIPMEMBLK *blk = (SCRCLIPMEMBLK *)physaddr;
+						blk->blk_status = BLK_ERR;			
+					}
+					return(0);
+				case CMD_SYNCMEM:
+					if(!milan_mode && video_found)
+						info_fvdi->fbops->fb_sync(info_fvdi);
+					return(0);
+				case CMD_BLANK:
+					if(!milan_mode)
+					{
+						if(video_found)
+							info_fvdi->fbops->fb_blank(physaddr, info_fvdi);
+#ifdef COLDFIRE
+						else
+							videl_blank(physaddr);
+#endif
 					}
 					return(0);
 				case -1:
@@ -1696,10 +1907,14 @@ long vsetscreen(long logaddr, long physaddr, long rez, long modecode, long init_
 			if(info->screen_mono != NULL)
 				*((char **)_v_bas_ad) = info->screen_mono;
 			else
+			{
 				*((char **)_v_bas_ad) = info->screen_base;
+				log_addr = (long)info->screen_base;
+			}
 			if(init_vdi) /* Vsetscreen, Vsetmode not change linea variables */
 			{
 				offscreen_init(info);
+				second_screen = second_screen_aligned = 0;
 				init_var_linea((long)video_found);
 				switch(info->var.bits_per_pixel)
 				{
@@ -1755,7 +1970,7 @@ long vsetscreen(long logaddr, long physaddr, long rez, long modecode, long init_
 			{
 				int bpp = info->var.bits_per_pixel >> 3;
 				physaddr -= (long)info->screen_base;
-				if(physaddr < 0
+				if((physaddr < 0)
 				 || (physaddr >= (info->var.xres_virtual * 8192 * bpp)))
 					return(Mode);
 				memcpy(&var, &info->var, sizeof(struct fb_var_screeninfo));			
@@ -1771,7 +1986,7 @@ long vsetscreen(long logaddr, long physaddr, long rez, long modecode, long init_
 	return(Mode);
 }
 
-short vsetmode(long modecode)
+long vsetmode(long modecode)
 {
 	long Mode;
 	if(os_magic == 1)
@@ -1785,7 +2000,7 @@ short vsetmode(long modecode)
 	return(Mode);
 }
 
-short montype(void)
+long montype(void)
 {
 	if(video_found == 1) /* Radeon */
 	{
@@ -1883,6 +2098,7 @@ long vgetsize(long modecode)
 
 long find_best_mode(long modecode)
 {
+	long i = 0, index = -1;
 	switch(video_found)
 	{
 #if defined(COLDFIRE) && defined(MCF547X) /* FIREBEE */
@@ -1891,15 +2107,22 @@ long find_best_mode(long modecode)
 				extern struct fb_videomode *videl_modedb;
 				extern unsigned long videl_modedb_len;
 				const struct fb_videomode *db;
-				long i = 0;
 				while(i < videl_modedb_len)
 				{
 					db = &videl_modedb[i];
 					if(db->flag & FB_MODE_IS_FIRST)
 					{
 						modecode = SET_DEVID(i + VESA_MODEDB_SIZE + total_modedb);
-						break;
+						return(modecode);
 					}
+					i++;
+				}
+				i = 0;
+				while(i < videl_modedb_len)
+				{
+					db = &videl_modedb[i];
+					if(db->flag & FB_MODE_IS_STANDARD)
+						index = i;
 					i++;
 				}
 			}
@@ -1909,15 +2132,22 @@ long find_best_mode(long modecode)
 			{
 				struct radeonfb_info *rinfo = info_fvdi->par;
 				const struct fb_videomode *db;
-				long i = 0;
-				while(i <  rinfo->mon1_dbsize)
+				while(i < rinfo->mon1_dbsize)
 				{
 					db = &rinfo->mon1_modedb[i];
 					if(db->flag & FB_MODE_IS_FIRST)
 					{
 						modecode = SET_DEVID(i + VESA_MODEDB_SIZE + total_modedb);
-						break;
+						return(modecode);
 					}
+					i++;
+				}
+				i = 0;
+				while(i < rinfo->mon1_dbsize)
+				{
+					db = &rinfo->mon1_modedb[i];
+					if(db->flag & FB_MODE_IS_STANDARD)
+						index = i;
 					i++;
 				}
 			}
@@ -1926,24 +2156,33 @@ long find_best_mode(long modecode)
 			{
 				struct radeonfb_info *smiinfo = info_fvdi->par;
 				const struct fb_videomode *db;
-				long i = 0;
-				while(i <  smiinfo->mon1_dbsize)
+				while(i < smiinfo->mon1_dbsize)
 				{
 					db = &smiinfo->mon1_modedb[i];
 					if(db->flag & FB_MODE_IS_FIRST)
 					{
 						modecode = SET_DEVID(i + VESA_MODEDB_SIZE + total_modedb);
-						break;
+						return(modecode);
 					}
+					i++;
+				}
+				i = 0;
+				while(i < smiinfo->mon1_dbsize)
+				{
+					db = &smiinfo->mon1_modedb[i];
+					if(db->flag & FB_MODE_IS_STANDARD)
+						index = i;
 					i++;
 				}
 			}
 			break;
 	}
+	if(index >= 0)
+		modecode = SET_DEVID(index + VESA_MODEDB_SIZE + total_modedb); /* last standard mode */
 	return(modecode);
 }
 
-short validmode(long modecode)
+long validmode(long modecode)
 {
 	long Mode;
 	if(os_magic == 1)
@@ -2029,7 +2268,17 @@ short validmode(long modecode)
 	if(fix_modecode != 1)
 		fix_modecode = -1;
 //	board_printf(" => modecode %04X\r\n", modecode);
-	return((short)modecode);
+	return(modecode);
+}
+
+long wait_vbl(void)
+{
+	if(video_found && (info_fvdi->fbops->WaitVbl != NULL))
+	{
+		info_fvdi->fbops->WaitVbl(info_fvdi);
+		return(1);
+	}
+	return(0);
 }
 
 long vmalloc(long mode, long value)
@@ -2080,7 +2329,7 @@ long InitVideo(void) /* test for Video input */
 
 #ifdef SOUND_AC97
 
-#define DEBUG
+#undef DEBUG
 
 #ifdef MCF547X
 #define AC97_DEVICE 2 /* FIREBEE */
@@ -2124,7 +2373,7 @@ struct McSnCookie
 	long res4;
 };
 
-long flag_snd_init, count_timer_a, preload_timer_a, timer_a_enabled, io7_enabled; 
+long flag_snd_init, flag_gsxb, count_timer_a, preload_timer_a, timer_a_enabled, io7_enabled; 
 static long flag_snd_lock, status_dma, mode_res;
 static long volume_play, volume_record, volume_master, volume_mic, volume_fm, volume_line, volume_cd, volume_video, volume_aux;
 static long adder_inputs, record_source;
@@ -2137,11 +2386,12 @@ extern void ltoa(char *buf, long n, unsigned long base);
 
 static unsigned short tab_freq_falcon[] = {
 	// internal
-	49170,33800,24585,20770,16940,16940,12292,12292,9834,9834,8195, // 25.175 MHz
+	49170, 33800, 24585, 20770, 16940, 16940, 12292, 12292, 9834, 9834, 8195, // 25.175 MHz
 	// external
-	44100,29400,22050,17640,14700,14700,11025,11025,8820,8820,7350, // 22.5792 MHz
-	48000,32000,24000,19200,16000,16000,12000,12000,9600,9600,8000 }; // 24.576 MHz
-static unsigned short tab_freq_ste[] = { 6250,12500,25000,50000 };
+	44100, 29400, 22050, 17640, 14700, 14700, 11025, 11025, 8820, 8820, 7350, // 22.5792 MHz
+	48000, 32000, 24000, 19200, 16000, 16000, 12000, 12000, 9600, 9600, 8000 }; // 24.576 MHz
+// static unsigned short tab_freq_ste[] = { 6258, 12517, 25033, 50066 };
+static unsigned short tab_freq_ste[] = { 6146, 12292, 24585, 49170 };
 struct McSnCookie cookie_mac_sound = { 0x0100, 30, 2, 2, 0, 1, 1, 0, 0, 0, 0 }; 
 
 void call_timer_a(void)
@@ -2153,16 +2403,17 @@ void call_timer_a(void)
 	if(count_timer_a > 0)
 		return;
 	count_timer_a = preload_timer_a;
-	asm(" clr.w -(SP)");         // 68K format
-	asm("	pea.l .next_timer_a(PC)"); // return address
-	asm(" clr.w -(SP)");				 // space for SR
-	asm(" move.l D0,-(SP)");
-	asm(" move.w SR,D0");
-	asm(" move.w D0,4(SP)");
-	asm(" move.l (SP)+,D0");
-	asm(" move.l 0x134,-(SP)");  // timer A vector
-	asm("	rts");
-	asm(".next_timer_a:");
+	asm volatile (
+		" clr.w -(SP)\n\t"         /* 68K format */
+		" pea.l .next_timer_a(PC)\n\t" /* return address */
+		" clr.w -(SP)\n\t"         /* space for SR */
+		" move.l D0,-(SP)\n\t"
+		" move.w SR,D0\n\t"
+		" move.w D0,4(SP)\n\t"
+		" move.l (SP)+,D0\n\t"
+		" move.l 0x134,-(SP)\n\t"  /* timer A vector */
+		"	rts\n\t"
+		".next_timer_a:" );
 }
 
 void call_io7_mfp(void)
@@ -2170,35 +2421,36 @@ void call_io7_mfp(void)
 	void *vect_io7 = *(void **)0x13C;
 	if((vect_io7 == NULL) || (!io7_enabled))
 		return;
-	asm(" clr.w -(SP)");         // 68K format
-	asm("	pea.l .next_io7(PC)"); // return address
-	asm(" clr.w -(SP)");				 // space for SR
-	asm(" move.l D0,-(SP)");
-	asm(" move.w SR,D0");
-	asm(" move.w D0,4(SP)");
-	asm(" move.l (SP)+,D0");
-	asm(" move.l 0x13C,-(SP)");
-	asm("	rts");
-	asm(".next_io7:");           // IO7 MFP vector
+	asm volatile (
+		" clr.w -(SP)\n\t"         /* 68K format */
+		"	pea.l .next_io7(PC)\n\t" /* return address */
+		" clr.w -(SP)\n\t"		     /* space for SR */
+		" move.l D0,-(SP)\n\t"
+		" move.w SR,D0\n\t"
+		" move.w D0,4(SP)\n\t"
+		" move.l (SP)+,D0\n\t"
+		" move.l 0x13C,-(SP)\n\t"
+		"	rts\n\t"
+		".next_io7:" );            /* IO7 MFP vector */
 }
 
 void stop_dma_play(void)
 {
-	if(status_dma & SI_PLAY)
+	if(status_dma & SB_PLA_ENA)
 	{
 		mcf548x_ac97_playback_trigger(AC97_DEVICE, 0);
 		mcf548x_ac97_playback_close(AC97_DEVICE);
-		status_dma &= ~SI_PLAY;
+		status_dma &= ~SB_PLA_ENA;
 	}
 }
 
 void stop_dma_record(void)
 {
-	if(status_dma & SI_RECORD)
+	if(status_dma & SB_REC_ENA)
 	{
 		mcf548x_ac97_capture_trigger(AC97_DEVICE, 0);
 		mcf548x_ac97_capture_close(AC97_DEVICE);
-		status_dma &= ~SI_RECORD;
+		status_dma &= ~SB_REC_ENA;
 	}
 }
 
@@ -2210,6 +2462,7 @@ long locksnd(void)
 	if(flag_snd_lock)
 		return(-128);
 	flag_snd_lock = 1;
+	flag_clock_44_48 = 0; /* seems better for SDL who use devconnect(DMAPLAY,DAC,CLKEXT,prediv,1) */
 #ifdef DEBUG
 	display_string("locksnd ok\r\n");
 #endif
@@ -2230,10 +2483,47 @@ long unlocksnd(void)
 	return(0);
 }
 
+static long get_left_volume(long volume)
+{
+	if(flag_gsxb)
+		return(255 - (volume & 0xff));
+	else			
+		return(volume & 0xff);
+}
+
+static void set_left_volume(unsigned long data, long *volume)
+{
+	*volume &= 0xff00;
+	if(flag_gsxb)
+		*volume |= ((255 - data) & 0xff);
+	else
+		*volume |= (data & 0xff);
+}
+
+static long get_right_volume(long volume)
+{
+	if(flag_gsxb)
+		return(255 - ((volume >> 8) & 0xff));				
+	else
+		return((volume >> 8) & 0xff);
+}
+
+static void set_right_volume(unsigned long data, long *volume)
+{                
+	*volume &= 0xff;
+	data &= 0xff;
+	if(flag_gsxb)
+		*volume |= ((255 - data) << 8);
+	else
+		*volume |= (data << 8);
+}
+
 long soundcmd(long mode, unsigned long data)
 {
-	int val1, val2, val3;
+	int val1, val2;
+	long temp;
 #ifdef DEBUG
+	if(data < 0x8000)
 	{
 		char buf[10];
 		display_string("soundcmd, mode: ");
@@ -2248,37 +2538,45 @@ long soundcmd(long mode, unsigned long data)
 	switch(mode)
 	{
 		case LTATTEN:
-			if(data >= 0x8000)
-				return(255 - (volume_play & 0xff));
-			volume_play &= 0xff00;
-			volume_play |= ((255 - data) & 0xff);
-			mcf548x_ac97_ioctl(AC97_DEVICE, SOUND_MIXER_WRITE_PCM, (void *)&volume_play);
-			return(data);
 		case RTATTEN:
-			if(data >= 0x8000)
-				return(255 - ((volume_play >> 8) & 0xff));
-			volume_play &= 0xff;
-			volume_play |= ((255 - data) << 8);
+			if(mode == LTATTEN)
+			{
+				if(data >= 0x8000)
+					return(255 - (volume_play & 0xff));
+				volume_play &= 0xff00;
+				volume_play |= ((255 - data) & 0xff);
+			}
+			else /* RTATTEN */
+			{
+				if(data >= 0x8000)
+					return(255 - ((volume_play >> 8) & 0xff));
+				volume_play &= 0xff;
+				data &= 0xff;
+				volume_play |= ((255 - data) << 8);			
+			}			
 			mcf548x_ac97_ioctl(AC97_DEVICE, SOUND_MIXER_WRITE_PCM, (void *)&volume_play);
 			return(data);
 		case LTGAIN:
-			if(data >= 0x8000)
-				return(volume_record & 0xff);
-			volume_record &= 0xff00;
-			volume_record |= (data & 0xff);
-			mcf548x_ac97_ioctl(AC97_DEVICE, SOUND_MIXER_WRITE_RECLEV, (void *)&volume_record);
-			return(data);
 		case RTGAIN:
-			if(data >= 0x8000)
-				return((volume_record >> 8) & 0xff);
-			volume_record &= 0xff;
-			volume_record |= ((data & 0xff) << 8);
+			if(mode == LTGAIN)
+			{
+				if(data >= 0x8000)
+					return(volume_record & 0xff);
+				volume_record &= 0xff00;
+				volume_record |= (data & 0xff);
+			}
+			else /* RTGAIN */
+			{
+				if(data >= 0x8000)
+					return((volume_record >> 8) & 0xff);
+				volume_record &= 0xff;
+				volume_record |= ((data & 0xff) << 8);			
+			}
 			mcf548x_ac97_ioctl(AC97_DEVICE, SOUND_MIXER_WRITE_RECLEV, (void *)&volume_record);
 			return(data);
 		case ADDERIN: /* Select inputs to adder 0=off, 1=on */
 			if(data >= 0x8000)
 				return(adder_inputs);
-			adder_inputs = data & 0x1ff;
 			if(data & ADCIN) /* Input from ADC */
 				val1 = 0x1ff0000;
 			else
@@ -2288,6 +2586,7 @@ long soundcmd(long mode, unsigned long data)
 				val1 = 0x1ff0000;
 			else
 				val1 = 0x1000000;
+			mcf548x_ac97_ioctl(AC97_DEVICE, SOUND_MIXER_WRITE_VOLUME, (void *)&val1); // Master
 			if(data & 0x4000) /* Bit 14 */
 			{
 				/* extended values valid by bit 5 of cookie '_SND'
@@ -2299,6 +2598,7 @@ long soundcmd(long mode, unsigned long data)
 				   Bit 7: Aux1
 				   bit 8: PCM
 				*/
+				adder_inputs = data & 0x1ff;
 				if(data & 4) /* Mic */
 					val1 = 0x1ff0000;
 				else
@@ -2308,7 +2608,8 @@ long soundcmd(long mode, unsigned long data)
 					val1 = 0x1ff0000;
 				else
 					val1 = 0x1000000;
-				mcf548x_ac97_ioctl(AC97_DEVICE, SOUND_MIXER_WRITE_SYNTH, (void *)&val1);
+				mcf548x_ac97_ioctl(AC97_DEVICE, SOUND_MIXER_WRITE_SYNTH, (void *)&val1);  // FM enable
+				mcf548x_ac97_ioctl(AC97_DEVICE, SOUND_MIXER_WRITE_ENHANCE, (void *)&val1); // 3D enable
 				if(data & 0x10) /* Line */
 					val1 = 0x1ff0000;
 				else
@@ -2323,36 +2624,43 @@ long soundcmd(long mode, unsigned long data)
 					val1 = 0x1ff0000;
 				else
 					val1 = 0x1000000;
-				mcf548x_ac97_ioctl(AC97_DEVICE, SOUND_MIXER_WRITE_LINE2, (void *)&val1);
+				mcf548x_ac97_ioctl(AC97_DEVICE, SOUND_MIXER_WRITE_LINE2, (void *)&val1); // Video
 				if(data & 0x80) /* Aux */
 					val1 = 0x1ff0000;
 				else
 					val1 = 0x1000000;
-				mcf548x_ac97_ioctl(AC97_DEVICE, SOUND_MIXER_WRITE_LINE1, (void *)&val1); // Aux
+				mcf548x_ac97_ioctl(AC97_DEVICE, SOUND_MIXER_WRITE_LINE1, (void *)&val1); // Aux1
 				if(data & 0x100) /* PCM */
 					val1 = 0x1ff0000;
 				else
 					val1 = 0x1000000;
 				mcf548x_ac97_ioctl(AC97_DEVICE, SOUND_MIXER_WRITE_PCM, (void *)&val1);
 			}
+			else
+				adder_inputs = (data & 3) + (adder_inputs & ~3);
 			return(adder_inputs);
 			break;
 		case ADCINPUT: /* Select input to ADC, 0=mic, 1=PSG */
 			if(data >= 0x8000)
 				return(record_source);			
 			record_source = data & (ADCRT | ADCLT | 0x3ffc);
-			if(data & ADCRT) /* Right channel input */
-				val2 = RECORD_SOURCE_AUX; /* (Firebee PSG) */
-			else
-				val2 = RECORD_SOURCE_MIC;
-			if(data & ADCLT) /* Left channel input */
-				val1 = RECORD_SOURCE_AUX;
-			else
-				val1 = RECORD_SOURCE_MIC;
-			if(data & 0x4000) /* Bit 14 */
+			if(!(data & 0x4000))
+			{
+				if(data & ADCRT) /* Right channel input */
+					val2 = RECORD_SOURCE_AUX; /* (Firebee PSG) */
+				else
+					val2 = RECORD_SOURCE_LINE;
+				if(data & ADCLT) /* Left channel input */
+					val1 = RECORD_SOURCE_AUX; /* (Firebee PSG) */
+				else
+					val1 = RECORD_SOURCE_LINE;			
+			}
+			else  /* Bit 14 */
 			{
 				/* extended values valid by bit 5 of cookie '_SND'
-				   Bit 2: right FM-Generator, 3D enable on AC97
+					 Bit 0: right microphone
+					 Bit 1: left microphone 
+				   Bit 2: right FM-Generator, not used on AC97
 				   Bit 3: left FM-Generator, not used on AC97
 				   Bit 4: right Line input
 				   Bit 5: left Line input
@@ -2365,14 +2673,10 @@ long soundcmd(long mode, unsigned long data)
 				   Bit 12: right Mix out
 				   Bit 13: left Mix out
 				*/
-				if(!(data & 4)) /* right FM-Generator, 3D enable on AC97 */
-				{
-					val3 = 0x1ff0000;
-					record_source &=  ~4;
-				}
-				else
-					val3 = 0x1000000;
-				mcf548x_ac97_ioctl(AC97_DEVICE, SOUND_MIXER_WRITE_ENHANCE, (void *)&val3);
+				if(!(data & 1)) /* Microphone right input */
+					val2 = RECORD_SOURCE_MIC; 
+				if(!(data & 2)) /* Microphone left input */
+					val1 = RECORD_SOURCE_MIC; 
 				if(!(data & 0x10)) /* Line right input */
 					val2 = RECORD_SOURCE_LINE; 
 				if(!(data & 0x20)) /* Line left input */
@@ -2387,7 +2691,7 @@ long soundcmd(long mode, unsigned long data)
 					val1 = RECORD_SOURCE_VIDEO;
 				if(!(data & 0x400)) /* Aux right (Firebee PSG)  */
 					val2 = RECORD_SOURCE_AUX;
-				if(!(data & 0x800)) /* Aux left */
+				if(!(data & 0x800)) /* Aux left (Firebee PSG) */
 					val1 = RECORD_SOURCE_AUX;
 				if(!(data & 0x1000)) /* Mix right out */
 					val2 = RECORD_SOURCE_STEREO_MIX;
@@ -2451,117 +2755,102 @@ long soundcmd(long mode, unsigned long data)
 			return(frequency);
 		case SETFMT8BITS: /* valid by bit 5 of cookie '_SND' */
 			return(1); /* signed */
-			break;
 		case SETFMT16BITS: /* valid by bit 5 of cookie '_SND' */
 			return(5); /* signed motorola big endian */
+		/* WARNING: GSXB use attenuations and MilanBlaster gains ! */
 		case LTGAINMASTER: /* valid by bit 5 of cookie '_SND' */
 			if(data >= 0x8000)
-				return(volume_master & 0xff);
-			volume_master &= 0xff00;
-			volume_master |= (data & 0xff);
-			val1 = 0x1ff0000;
-			mcf548x_ac97_ioctl(AC97_DEVICE, SOUND_MIXER_WRITE_VOLUME, (void *)&val1);
+				return(get_left_volume(volume_master));
+			set_left_volume(data, &volume_master);
 			mcf548x_ac97_ioctl(AC97_DEVICE, SOUND_MIXER_WRITE_VOLUME, (void *)&volume_master);
 			return(data);
 		case RTGAINMASTER: /* valid by bit 5 of cookie '_SND' */
 			if(data >= 0x8000)
-				return((volume_master >> 8) & 0xff);
-			volume_master &= 0xff;
-			volume_master |= (data << 8);
-			val1 = 0x1ff0000;
-			mcf548x_ac97_ioctl(AC97_DEVICE, SOUND_MIXER_WRITE_VOLUME, (void *)&val1);
+				return(get_right_volume(volume_master));
+			set_right_volume(data, &volume_master);
 			mcf548x_ac97_ioctl(AC97_DEVICE, SOUND_MIXER_WRITE_VOLUME, (void *)&volume_master);
 			return(data);
 		case LTGAINMIC: /* valid by bit 5 of cookie '_SND' */
 			if(data >= 0x8000)
-				return(volume_mic & 0xff);
-			volume_mic &= 0xff00;
-			volume_mic |= (data & 0xff);
+				return(get_left_volume(volume_mic));
+			set_left_volume(data, &volume_mic);
 			mcf548x_ac97_ioctl(AC97_DEVICE, SOUND_MIXER_WRITE_MIC, (void *)&volume_mic);
 			return(data);
 		case RTGAINMIC: /* valid by bit 5 of cookie '_SND' */
 			if(data >= 0x8000)
-				return((volume_mic >> 8) & 0xff);
-			volume_mic &= 0xff;
-			volume_mic |= ((data & 0xff) << 8);
+				return(get_right_volume(volume_mic));
+			set_right_volume(data, &volume_mic);
 			mcf548x_ac97_ioctl(AC97_DEVICE, SOUND_MIXER_WRITE_MIC, (void *)&volume_mic);
 			return(data);
 		case LTGAINFM: /* valid by bit 5 of cookie '_SND' */
 			if(data >= 0x8000)
-				return(volume_fm & 0xff);
-			volume_fm &= 0xff00;
-			volume_fm |= (data & 0xff);
-			mcf548x_ac97_ioctl(AC97_DEVICE, SOUND_MIXER_WRITE_SYNTH, (void *)&volume_fm); // PC Beep
+				return(get_left_volume(volume_fm));
+			set_left_volume(data, &volume_fm);
+			temp = volume_fm & 0xff;
+			mcf548x_ac97_ioctl(AC97_DEVICE, SOUND_MIXER_WRITE_SYNTH, (void *)&temp); // PC Beep
 			return(data);
 		case RTGAINFM: /* valid by bit 5 of cookie '_SND' */
 			if(data >= 0x8000)
-				return((volume_fm >> 8) & 0xff);
-			volume_fm &= 0xff;
-			volume_fm |= ((data & 0xff) << 8);
-			mcf548x_ac97_ioctl(AC97_DEVICE, SOUND_MIXER_WRITE_ENHANCE, (void *)&volume_fm); // 3D Control
+				return(get_right_volume(volume_fm));
+			set_right_volume(data, &volume_fm);
+			temp = volume_fm >> 8;
+			mcf548x_ac97_ioctl(AC97_DEVICE, SOUND_MIXER_WRITE_ENHANCE, (void *)&temp); // 3D Control
 			return(data);
 		case LTGAINLINE: /* valid by bit 5 of cookie '_SND' */
 			if(data >= 0x8000)
-				return(volume_line & 0xff);
-			volume_line &= 0xff00;
-			volume_line |= (data & 0xff);
+				return(get_left_volume(volume_line));
+			set_left_volume(data, &volume_line);
 			mcf548x_ac97_ioctl(AC97_DEVICE, SOUND_MIXER_WRITE_LINE, (void *)&volume_line);
 			return(data);
 		case RTGAINLINE: /* valid by bit 5 of cookie '_SND' */
 			if(data >= 0x8000)
-				return((volume_line >> 8) & 0xff);
-			volume_line &= 0xff;
-			volume_line |= ((data & 0xff) << 8);
+				return(get_right_volume(volume_line));
+			set_right_volume(data, &volume_line);
 			mcf548x_ac97_ioctl(AC97_DEVICE, SOUND_MIXER_WRITE_LINE, (void *)&volume_line);
 			return(data);
 		case LTGAINCD: /* valid by bit 5 of cookie '_SND' */
 			if(data >= 0x8000)
-				return(volume_cd & 0xff);
-			volume_cd &= 0xff00;
-			volume_cd |= (data & 0xff);
+				return(get_left_volume(volume_cd));
+			set_left_volume(data, &volume_cd);
 			mcf548x_ac97_ioctl(AC97_DEVICE, SOUND_MIXER_WRITE_CD, (void *)&volume_cd);
 			return(data);
 		case RTGAINCD: /* valid by bit 5 of cookie '_SND' */
 			if(data >= 0x8000)
-				return((volume_cd >> 8) & 0xff);
-			volume_cd &= 0xff;
-			volume_cd |= ((data & 0xff) << 8);
+				return(get_right_volume(volume_cd));
+			set_right_volume(data, &volume_cd);
 			mcf548x_ac97_ioctl(AC97_DEVICE, SOUND_MIXER_WRITE_CD, (void *)&volume_cd);
 			return(data);
 		case LTGAINVIDEO: /* valid by bit 5 of cookie '_SND' */
 			if(data >= 0x8000)
-				return((volume_video >> 8) & 0xff);
-			volume_video &= 0xff;
-			volume_video |= ((data & 0xff) << 8);
+				return(get_left_volume(volume_video));
+			set_left_volume(data, &volume_video);
 			mcf548x_ac97_ioctl(AC97_DEVICE, SOUND_MIXER_WRITE_LINE2, (void *)&volume_video);
 			return(data);
 		case RTGAINVIDEO: /* valid by bit 5 of cookie '_SND' */
 			if(data >= 0x8000)
-				return((volume_video >> 8) & 0xff);
-			volume_video &= 0xff;
-			volume_video |= ((data & 0xff) << 8);
+				return(get_right_volume(volume_video));
+			set_right_volume(data, &volume_video);
 			mcf548x_ac97_ioctl(AC97_DEVICE, SOUND_MIXER_WRITE_LINE2, (void *)&volume_video);
 			return(data);
 		case LTGAINAUX: /* valid by bit 5 of cookie '_SND' */
 			if(data >= 0x8000)
-				return((volume_aux >> 8) & 0xff);
-			volume_aux &= 0xff;
-			volume_aux |= ((data & 0xff) << 8);
+				return(get_left_volume(volume_aux));
+			set_left_volume(data, &volume_aux);
 			mcf548x_ac97_ioctl(AC97_DEVICE, SOUND_MIXER_WRITE_LINE1, (void *)&volume_aux);
 			return(data);
 		case RTGAINAUX: /* valid by bit 5 of cookie '_SND' */
 			if(data >= 0x8000)
-				return((volume_aux >> 8) & 0xff);
-			volume_aux &= 0xff;
-			volume_aux |= ((data & 0xff) << 8);
+				return(get_right_volume(volume_aux));
+			set_right_volume(data, &volume_aux);
 			mcf548x_ac97_ioctl(AC97_DEVICE, SOUND_MIXER_WRITE_LINE1, (void *)&volume_aux);
 			return(data);
 	}
-	return(0);
+	return(-15); /* ENODEV */
 }
 
 long setbuffer(long reg, long begaddr, long endaddr)
 {
+	void *ptr[2];
 	if(endaddr <= begaddr)
 		return(1); // error
 #ifdef DEBUG
@@ -2584,10 +2873,22 @@ long setbuffer(long reg, long begaddr, long endaddr)
 		case SR_PLAY:
 			play_addr = begaddr;
 			end_play_addr = endaddr;
+			if(status_dma & SB_PLA_ENA)
+			{
+				ptr[0] = (void *)play_addr;
+				ptr[1] = (void *)end_play_addr;
+				mcf548x_ac97_playback_pointer(AC97_DEVICE, (void **)&ptr, 1);
+			}
 			return(0); // OK
 		case SR_RECORD:
 			record_addr = begaddr;
 			end_record_addr = endaddr;
+			if(status_dma & SB_REC_ENA)
+			{
+				ptr[0] = (void *)record_addr;
+				ptr[1] = (void *)end_record_addr;
+				mcf548x_ac97_capture_pointer(AC97_DEVICE, (void **)&ptr, 1);
+			}
 			return(0); // OK
 	}
 	return(1); // error
@@ -2684,11 +2985,11 @@ long setinterrupt(long src, long cause, void (*callback)())
 				case SI_PLAY: callback_play = callback; break;	// int_addr called on eof DAC interrupts
 				case SI_RECORD: callback_record = callback;	break; // int_addr called on eof ADC interrupts
 				case SI_BOTH: callback_play = callback_record = callback; break; // int_addr called on eof DAC/ADC interrupts
-					mcf548x_ac97_playback_callback(AC97_DEVICE, callback_play);
-					mcf548x_ac97_capture_callback(AC97_DEVICE, callback_record);
-          cause_inter = 0;
-					return(0); // OK
 			}
+			mcf548x_ac97_playback_callback(AC97_DEVICE, callback_play);
+			mcf548x_ac97_capture_callback(AC97_DEVICE, callback_record);
+			cause_inter = 0;
+			return(0); // OK
 			break;
 	}
 	return(1); // error
@@ -2705,6 +3006,9 @@ long buffoper(long mode)
 		display_string("buffoper, mode: ");
 		ltoa(buf, mode, 10);
 		display_string(buf);
+		display_string(", status_dma: ");
+		ltoa(buf, status_dma, 10);
+		display_string(buf);
 		display_string("\r\n");
 	}
 #endif
@@ -2717,7 +3021,7 @@ long buffoper(long mode)
 	if(mode < 0)
 	  return(status_dma);
 	if((mode & SB_PLA_ENA) /* Play enable */
-	 && !(status_dma & SI_PLAY))
+	 && !(status_dma & SB_PLA_ENA))
 	{
 		if(!mcf548x_ac97_playback_open(AC97_DEVICE))
 		{
@@ -2726,22 +3030,20 @@ long buffoper(long mode)
 				ptr[0] = (void *)play_addr;
 				ptr[1] = (void *)end_play_addr;
 				if(!mcf548x_ac97_playback_pointer(AC97_DEVICE, (void **)&ptr, 1)
-				 && !mcf548x_ac97_playback_callback(AC97_DEVICE, callback_play)
 				 && !mcf548x_ac97_playback_trigger(AC97_DEVICE, 1))
-			 		status_dma |= SI_PLAY;
+			 		status_dma |= SB_PLA_ENA;
 		 	}
 		 	else
 				mcf548x_ac97_playback_close(AC97_DEVICE);
 		}
 	}
-	if(!(mode & SB_PLA_ENA) && (status_dma & SI_PLAY))
+	if(!(mode & SB_PLA_ENA) && (status_dma & SB_PLA_ENA))
 	{
-		mcf548x_ac97_playback_trigger(AC97_DEVICE, 0);
-		mcf548x_ac97_playback_close(AC97_DEVICE);
+		stop_dma_play();
 		return(0);	
 	}
 	if((mode & SB_REC_ENA) /* Record enable */
-	 && !(status_dma & SI_RECORD))
+	 && !(status_dma & SB_REC_ENA))
 	{
 		if(!mcf548x_ac97_capture_open(AC97_DEVICE))
 		{
@@ -2750,18 +3052,16 @@ long buffoper(long mode)
 				ptr[0] = (void *)record_addr;
 				ptr[1] = (void *)end_record_addr;
 				if(!mcf548x_ac97_capture_pointer(AC97_DEVICE, (void **)&ptr, 1)
-				 && !mcf548x_ac97_capture_callback(AC97_DEVICE, callback_record)
 				 && !mcf548x_ac97_capture_trigger(AC97_DEVICE, 1))
-					status_dma |= SI_RECORD;
+					status_dma |= SB_REC_ENA;
 			}
 			else
 				mcf548x_ac97_capture_close(AC97_DEVICE);
 		}
 	}
-	if(!(mode & SB_REC_ENA) && (status_dma & SI_RECORD))
+	if(!(mode & SB_REC_ENA) && (status_dma & SB_REC_ENA))
 	{
-		mcf548x_ac97_capture_trigger(AC97_DEVICE, 0);
-		mcf548x_ac97_capture_close(AC97_DEVICE);
+		stop_dma_record();
 		return(0);	
 	}
 	return(0); // OK
@@ -2862,7 +3162,8 @@ long devconnect(long src, long dest, long srcclk, long prescale, long protocol)
 
 long sndstatus(long reset)
 {
-	long data = 0;
+	long max = 189;
+	long min = 66;
 	switch(reset)
 	{
 		case SND_CHECK:
@@ -2870,34 +3171,41 @@ long sndstatus(long reset)
 		case SND_RESET:
 			stop_dma_play();
 			stop_dma_record();
-			soundcmd(LTATTEN, 0);
-			soundcmd(RTATTEN, 0);
+			soundcmd(LTATTEN, 66);
+			soundcmd(RTATTEN, 66);
 			soundcmd(LTGAIN, 0);
 			soundcmd(RTGAIN, 0); 
-			soundcmd(ADDERIN, ADCIN + 0x41B4); /* + PCM / Aux / CD / Mic */
+			/* WARNING: GSXB use attenuations and MilanBlaster gains ! */
+			if(flag_gsxb)
+			{
+				long temp = max;
+				max = min;
+				min = temp;
+			}
+			/* new calls */
+			soundcmd(LTGAINMASTER, max);
+			soundcmd(RTGAINMASTER, max); 
+			soundcmd(LTGAINMIC, min);
+			soundcmd(RTGAINMIC, min);
+			soundcmd(LTGAINLINE, flag_gsxb ? 0 : 255);
+			soundcmd(RTGAINLINE, flag_gsxb ? 0 : 255);
+			soundcmd(LTGAINCD, min);
+			soundcmd(RTGAINCD, min);
+			soundcmd(LTGAINVIDEO, min);
+			soundcmd(RTGAINVIDEO, min);
+			soundcmd(LTGAINAUX, min); // (Firebee PSG)
+			soundcmd(RTGAINAUX, min); // (Firebee PSG)
+			soundcmd(LTGAINFM, min); // PC Beep
+			soundcmd(RTGAINFM, min); // 3D Control
+			soundcmd(ADDERIN, ADCIN + MATIN + 0x41B4); /* + PCM / Aux / CD / Mic */
 			soundcmd(ADCINPUT, 0);
-			soundcmd(LTGAINMASTER, 255);
-			soundcmd(RTGAINMASTER, 255); 
-			soundcmd(LTGAINMIC, 0);
-			soundcmd(RTGAINMIC, 0);
-			soundcmd(LTGAINLINE, 0);
-			soundcmd(RTGAINLINE, 0);
-			soundcmd(LTGAINCD, 0);
-			soundcmd(RTGAINCD, 0);
-			soundcmd(LTGAINVIDEO, 0);
-			soundcmd(RTGAINVIDEO, 0);
-			soundcmd(LTGAINAUX, 255);
-			soundcmd(RTGAINAUX, 255);
-			data = 0x1ff0000; /* enable */
-			mcf548x_ac97_ioctl(AC97_DEVICE, SOUND_MIXER_WRITE_SPEAKER, (void *)&data);
-			data = 0xffff;
-			mcf548x_ac97_ioctl(AC97_DEVICE, SOUND_MIXER_WRITE_SPEAKER, (void *)&data);
 			status_dma = 0;
 			nb_tracks_play = nb_tracks_record = mon_track = 0;
 			flag_clock_44_48 = prescale_ste = 0;
 			play_addr = record_addr = 0;
 			cause_inter = 0;
 			callback_play = callback_record = NULL;
+			mcf548x_ac97_ioctl(AC97_DEVICE, SOUND_MIXER_WRITE_POWERDOWN, NULL);
 			return(SS_OK);
 		/* extended values valid by bit 5 of cookie '_SND' */
 		case 2: // resolutions
@@ -2906,7 +3214,7 @@ long sndstatus(long reset)
 		  /* Bit 0: A/D (ADC-InMix bypass)   X
 		     Bit 1: D/A (DAC/Multiplexer)    X
 		     Bit 2: Mic                      X
-		     Bit 3: FM-Generator             X (PC Beep)
+		     Bit 3: FM-Generator             X (PC Beep / 3D Control)
 		     Bit 4: Line                     X
 		     Bit 5: CD                       X
 		     Bit 6: Video                    X
@@ -2916,8 +3224,8 @@ long sndstatus(long reset)
 		case 4: // record sources
 			/* Bit 0: Mic right                X
 			   Bit 1: Mic left                 X
-			   Bit 2: FM-Generator right       X (3D Control)
-			   Bit 3: FM-Generator left        X (PC Beep)
+			   Bit 2: FM-Generator right
+			   Bit 3: FM-Generator left
 			   Bit 4: Line right               X
 			   Bit 5: Line left                X
 			   Bit 6: CD right                 X
@@ -2929,7 +3237,7 @@ long sndstatus(long reset)
 			   Bit 12: Mixer right (MasterMix) X
 			   Bit 13: Mixer left (MasterMix)  X
 			*/
-			return(0x3fff);
+			return(0x3ff3);
 		case 5: // duplex
 			return(0);
 		case 8: // format8bits
@@ -2937,7 +3245,7 @@ long sndstatus(long reset)
 		case 9: // format16bits
 			return(5); // signed motorola big endian
 		default:
-			return(SS_OK);
+			return(-15); /* ENODEV */
 	}
 }
 
@@ -2971,7 +3279,7 @@ long buffptr(SndBufPtr *ptr)
 	return(0); // OK
 }
 
-long InitSound(void)
+long InitSound(long type_gsxb)
 {
 	if(!mcf548x_ac97_install(AC97_DEVICE))
 	{
@@ -2981,15 +3289,23 @@ long InitSound(void)
 		if(p != 0)
 		{
 			p->v.l &= 0x9;  /* preserve PSG & DSP bits */
+#ifdef MCF547X
+			p->v.l |= 0x27; /* bit 5: extended mode, bit 2: 16 bits DMA, bit 1: 8 bits DMA, bit 0: YM2149 */
+#else
 			p->v.l |= 0x26; /* bit 5: extended mode, bit 2: 16 bits DMA, bit 1: 8 bits DMA */
+#endif
 		}
 		mcsn.ident = 'McSn';
 		mcsn.v.l = (long)&cookie_mac_sound;
 		add_cookie(&mcsn);
-		gsxb.ident = 'GSXB';
-		gsxb.v.l = 0;
-		add_cookie(&gsxb);
+		if(type_gsxb)
+		{
+			gsxb.ident = 'GSXB';
+			gsxb.v.l = 0;
+			add_cookie(&gsxb);
+		}
 		flag_snd_init = 1;
+		flag_gsxb = type_gsxb;
 		sndstatus(SND_RESET);
 		return(0); // OK
 	}
@@ -2999,7 +3315,7 @@ long InitSound(void)
 
 #else
 
-long InitSound(void)
+long InitSound(long gsxb)
 {
 	return(-1); // error
 }

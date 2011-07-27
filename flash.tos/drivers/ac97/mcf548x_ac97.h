@@ -68,6 +68,7 @@
 #define SOUND_MIXER_WRITE_ENHANCE 0xC0044D1D
 #define SOUND_MIXER_WRITE_LOUD 0xC0044D1E
 #define SOUND_MIXER_WRITE_RECSRC 0xC0044DFF
+#define SOUND_MIXER_WRITE_POWERDOWN 0xC004DF0
 
 #define RECORD_SOURCE_MIC        0
 #define RECORD_SOURCE_CD         1
@@ -103,5 +104,6 @@ int mcf548x_ac97_ioctl(long psc_channel, unsigned int cmd, void *arg);
 int mcf548x_ac97_debug_read(long psc_channel, long reg);
 int mcf548x_ac97_debug_write(long psc_channel, long reg, long val);
 int mcf548x_ac97_install(long psc_channel);
+int mcf548x_ac97_uninstall(long psc_channel, int free);
 
 #endif /* __MCF548X_AC97_H */

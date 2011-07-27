@@ -1,12 +1,11 @@
-Note sur MAGXBOOT.PRG
----------------------
+Note sur MAGXBOOT.PRG pour la CT60
+----------------------------------
 Ce MAGXBOOT.PRG est r‚ecrit pour les modes normal (68030) et turbo 
-(68060), et en turbo MAGIC.RAM est patch‚ pour ne pas ‚craser 
-certaines parties du TOS comme l'‚muulation FPU, etc... Vous devez 
-installer ce programme dans le dossier AUTO. Test‚ avec MagiC 6.10 et 
-6.20.    
-Vous devez utiliser le MAGIC.RAM patch‚ de Centek (avec MAGIC_P.PRG) 
-avant d'utiliser MagiC. 
+(68060), et en turbo MAGIC.RAM est patch‚ pour ne pas ‚craser certaines 
+parties du TOS comme l'‚muulation FPU, etc... Vous devez installer ce 
+programme dans le dossier AUTO. Test‚ avec MagiC 6.10 et 6.20.
+Vous devez utiliser le MAGIC.RAM patch‚ de Centek (avec MAGIC_P.PRG) avant 
+d'utiliser MagiC.
 
 Vous devez installez CT60XBIO.PRG et DSPXBIOS.PRG dans le dossier 
 AUTO.

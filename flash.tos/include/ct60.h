@@ -1,5 +1,5 @@
 /* TOS 4.04 Xbios for the CT60 board
-*  Didier Mequignon 2002-2010, e-mail: aniplay@wanadoo.fr
+*  Didier Mequignon 2002-2011, e-mail: aniplay@wanadoo.fr
 *
 *  This library is free software; you can redistribute it and/or
 *  modify it under the terms of the GNU Lesser General Public
@@ -41,18 +41,26 @@
 /* Vsetscreen(void *par1, void *par2, short rez, short command) */
 /* with rez always 0x564E 'VN' (Vsetscreen New) */
 
-#define CMD_GETMODE   0
-#define CMD_SETMODE   1
-#define CMD_GETINFO   2
-#define CMD_ALLOCPAGE 3
-#define CMD_FREEPAGE  4
-#define CMD_FLIPPAGE  5
-#define CMD_ALLOCMEM  6
-#define CMD_FREEMEM   7
-#define CMD_SETADR    8
-#define CMD_ENUMMODES 9
-#define CMD_TESTMODE  10
-#define CMD_COPYPAGE  11
+#define CMD_GETMODE    0
+#define CMD_SETMODE    1
+#define CMD_GETINFO    2
+#define CMD_ALLOCPAGE  3
+#define CMD_FREEPAGE   4
+#define CMD_FLIPPAGE   5
+#define CMD_ALLOCMEM   6
+#define CMD_FREEMEM    7
+#define CMD_SETADR     8
+#define CMD_ENUMMODES  9
+#define CMD_TESTMODE   10
+#define CMD_COPYPAGE   11
+#define CMD_FILLMEM    12
+#define CMD_COPYMEM    13
+#define CMD_TEXTUREMEM 14
+#define CMD_GETVERSION 15
+#define CMD_LINEMEM    16
+#define CMD_CLIPMEM    17
+#define CMD_SYNCMEM    18
+#define CMD_BLANK      19
           
 #define MSG_CT60_TEMP 0xcc60
 
@@ -72,9 +80,12 @@
 #define CT60_SAVE_NVRAM_2 8
 #define CT60_SAVE_NVRAM_3 9
 #define CT60_PARAM_OFFSET_TLV 10
+#define CT60_MAC_ADDRESS 10
 #define CT60_SERIAL_SPEED 11
 #define CT60_USER_DIV_CLOCK 12
+#define CT60_IP_ADDRESS 12
 #define CT60_CLOCK 13
+#define CT60_SERVER_IP_ADDRESS 13
 #define CT60_PARAM_CTPCI 14
 /* 15 is reserved - do not use */
 

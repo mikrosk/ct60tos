@@ -308,3 +308,54 @@ before to start the PCI drivers (boot2.S).
 - Add a 2nd CTPCI test before apply patches and copy TOS in SDRAM 
 because later when the PCI BIOS start, the CTPCI seems always 
 detected ??? (boot2.S)
+
+2011-07-17 2.01
+---------------
+- Try to fix CT60 flash boot problems by reading until 4 x times the TOS in 
+flash if the CRC is bad before apply the patches in SDRAM (boot2.S).
+- If the Supervidel is found, the TOS use the default Bconout routine 
+who use the blitter (conout.S).
+- On fhe Coldfire targets, lot of fixes on XHDI, internal hard disk 
+driver started after IDE/SCSI scan if no external driver loaded 
+(boot2.S and ide_scsi.S).
+- On the Firebee target try to fix IDE read bug by using _FRB buffer 
+in STRAM and mutiple retry/verifications until 5 times (ide_scsi.S).
+- On the Fireebee target, rewrited some parts of the TOS in native 
+code like the PSG sound VBL interrupt routine and IKBD interrupt 
+routine.
+- On the Fireebee target, enabled Bconmap (xbios.S) with device 6 is MFP, 
+7 is PSC0  who replace the SCC (default like a FALCON), this is the 
+baud table for Rsconf (MFP and PSC0):  
+Index    0    1   2     3    4    5    6    7   8   9     10     11    12    13     14    15
+MFP  19200 9600 4800 3600 2400 2000 1800 1200 600 300    200    150   134   110     75    50
+PSC0 19200 9600 4800 3600 2400 2000 1800 1200 600 300 230400 115200 57600 38400 153600 76800
+- On the Fireebee target,  SW6 and SW5 are inside the cookie '_SWI':
+  * B7: (1) SW6 DOWN, (0) SW6 UP
+  * B6: (1) SW5 DOWN, (0) SW5 UP
+  * B0: (1) rescue TOS started from 0xE0000000 (replace BAS or dBUG)
+ - On the FIrebee target, IKBD interrupt disabled if no IKBD found else 
+you get infinite IKBD interrupts with null byte received (for example 
+if an USB keyboard used from drivers part).
+- Added some unimplemented emulation inside the CF68KLIB for 
+btst/bset/bclr/bchg #x,d16(PC) and special Line A cases for Pure C 
+programs (cf68klib.S):
+  * 0xA000 replaced by opcode 0xA920 (0xA000 used for MAC instruction).
+  * move.b DX,-(SP) replaced by opcode 0xA910-0xA917.
+  * move.b (SP)+,DX replaced by opcode 0xA918-0xA91F.
+  * move.b (AX),-(SP) replaced by opcode 0xA930-0xA937.
+  * move.b (SP)+,(AX) replaced by opcode 0xA938-0xA93F.
+  * move.b d(AX),-(SP) replaced by opcode 0xA9B0-0xA9B7.
+  * move.b (SP)+,d(AX) replaced by opcode 0xA9B8-0xA9BF.
+  * move.b abs.l,-(SP) replaced by opcode 0xA9F1.
+  * move.b d(PC),-(SP) replaced by opcode 0xA9F2.
+  * move.b (SP)+,abs.l replaced by opcode 0xA9F9.
+  * mulu/s.l ea,dh:dl replaced by opcode 0xABC0-0xABFF.
+  * divu/s.l ea:dr:dq replaced by opcode 0xAFC0-0xAFFF.
+ - Added zero divide handler inside the CF68KLIB and special Line F 
+ cases (cf68klib.S):
+  * fsave(Ax), fsave d(AX).
+  * frestore(Ax), frestore d(AX).
+  * fabs/fadd/fcmp/fdiv/fint/fintrz/fmove/fmul/fneg/fsqrt/fsub/ftst #.
+  * cinva/cpushl/cpusha.
+
+

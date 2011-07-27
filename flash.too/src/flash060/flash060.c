@@ -1,5 +1,5 @@
 /* Flashing CT60 / CTPCI soft & hard and FIREBEE
-*  Didier Mequignon 2003-2010, e-mail: aniplay@wanadoo.fr
+*  Didier Mequignon 2003-2011, e-mail: aniplay@wanadoo.fr
 *
 *  This program is free software; you can redistribute it and/or modify
 *  it under the terms of the GNU General Public License as published by
@@ -529,10 +529,12 @@ int Button(int objc_clic, int mouse_x)
 							Alert(ALERT_POWER);
 						else
 						{
-							if(device==CTPCI)
-								dreg_length=DATA_LENGTH*2; /* XC95288 */
-							else
-								dreg_length=DATA_LENGTH; /* XC95144 */
+							switch(device)
+							{
+								case ETHERNAT: dreg_length=DATA_LENGTH/2; break; /* XC9572 */
+								case CTPCI: dreg_length=DATA_LENGTH*2; break; /* XC95288 */
+								default: dreg_length=DATA_LENGTH; break; /* XC95144 */
+							}
 							JtagSelectTarget(device);
 							stack=Super(0L);
 							setPort(TMS,1); /* JTAG reset */
@@ -898,10 +900,12 @@ int jtag_test_device(unsigned char *tap_state,unsigned long *usercode)
 		return(error);
 	tdi.len=tdo.len=tdo_cmp.len=tdo_mask.len=4;
 	*(unsigned long *)&tdi.val[0]=0xFFFFFFFF;
-	if(device==CTPCI)
-		*(unsigned long *)&tdo_cmp.val[0]=IDCODE_XC95288XL;
-	else
-		*(unsigned long *)&tdo_cmp.val[0]=IDCODE_XC95144XL;
+	switch(device)
+	{
+		case ETHERNAT: *(unsigned long *)&tdo_cmp.val[0]=IDCODE_XC9572XL; break;
+		case CTPCI: *(unsigned long *)&tdo_cmp.val[0]=IDCODE_XC95288XL; break;
+		default:	*(unsigned long *)&tdo_cmp.val[0]=IDCODE_XC95144XL; break;
+	}
 	*(unsigned long *)&tdo_mask.val[0]=IDMASK;
 	error=JtagShift(tap_state,TAPSTATE_SHIFTDR,32,&tdi,&tdo,&tdo_cmp,&tdo_mask,TAPSTATE_RUNTEST,0,0);
 #ifdef DEBUG
@@ -1484,12 +1488,16 @@ void load_file(char *path_argv)
 				}
 				else if(strstr(device_name,"XC95288XL") != NULL) /* CTPCI */
 					device=CTPCI;
+				else if(strstr(device_name,"XC9572XL") != NULL) /* ETHERNAT */
+					device=ETHERNAT;
 				else
 					device=NO_DEVICE;
-				if(device==CTPCI)
-					dreg_length=DATA_LENGTH*2;
-				else
-					dreg_length=DATA_LENGTH;
+				switch(device)
+				{
+					case ETHERNAT: dreg_length=DATA_LENGTH/2; break;
+					case CTPCI: dreg_length=DATA_LENGTH*2; break;
+					default: dreg_length=DATA_LENGTH; break;
+				}
 				usercode_jed=get_user_code_jed();
 				if(device==NO_DEVICE)
 					Alert(ALERT_JED_DEVICE);
@@ -1527,10 +1535,12 @@ void load_file(char *path_argv)
 						tp->te_ptext[0]=tp->te_ptext[1]=tp->te_ptext[2]=tp->te_ptext[3]='X';
 					}
 					tp->te_ptext[4]=0;
-					if(device == CTPCI)
-						strcat(device_name," CTPCI");
-					else
-						strcat(device_name,code);
+					switch(device)
+					{
+						case ETHERNAT: strcat(device_name, " ETHERNAT"); break;
+						case CTPCI:	strcat(device_name," CTPCI"); break;
+						default: strcat(device_name,code); break;
+					}
 					rsrc_gaddr(R_OBJECT,FILE,&op);
 					tp=op->ob_spec.tedinfo;
 					tp->te_ptext=device_name;

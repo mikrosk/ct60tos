@@ -236,9 +236,14 @@ static void usb_read_fifo(uint32 epnum, uint8 *buffer, uint32 fifo_data)
 
 void usb_or_handler_interrupt(void)
 {
-  asm("_usb_or_handler_int:\n lea -24(%SP),%SP\n movem.l %D0-%D2/%A0-%A2,(%SP)\n");
-  asm(" jsr _usb_or_handler\n"); 
-  asm(" movem.l (%SP),%D0-%D2/%A0-%A2\n lea 24(%SP),%SP\n rte\n");
+	asm volatile(
+		"_usb_or_handler_int:\n\t"
+		" lea -24(SP),SP\n\t"
+		" movem.l D0-D2/A0-A2,(SP)\n\t"
+		" jsr _usb_or_handler\n\t"
+		" movem.l (SP),D0-D2/A0-A2\n\t"
+		" lea 24(SP),SP\n\t"
+		" rte\n\t" );
 }
 
 void usb_or_handler(void)

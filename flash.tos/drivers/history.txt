@@ -511,8 +511,184 @@ pattern), and v_locator (thanks to Claude Labelle).
 Fixed the VDI function v_contourfill used by lot of graphics 
 applications (Note: This function is not implemented inside fVDI).
 
-2010 October
-------------
+2010 October - 1.0
+------------------
 Fix zero divide inside clip line routine.
 Fix vrt_cpyfm in 65K colors.
 Test for get working MagiC 6.20 / NVDI 5.
+
+2010 October - I received the Firebee !
+=======================================
+
+2010 October
+------------
+Firebee target:
+- Replaced hardware Radeon routines by CPU routines in 256/65K/16M, 
+but default fill fVDI routine is very slow (fvdi directory).
+- Videl driver with ACP modes (PLL clock) and I2C monitor detection 
+(videl.c).
+
+2010 November
+-------------
+Firebee target:
+- Rewrited the default filling routine of fVDI with native Coldfire 
+code, now it's faster (blit.S).
+
+2010 December
+-------------
+Firebee target:
+- Added SD-card driver (detxbios.S).
+- Added 3 flash parameters for cnmfigure ethernet when TOS started by 
+BAS and not dBUG (get.c):
+ * 3 last bytes of MAC address, begin is 00:CF:54.
+ * Board IP address.
+ * Host IP address.
+ * Netmask is automatic.
+ * Gateway is 0.0.0.0.
+ * Default path/filename for TFTP is /home/firebee.hex.
+Coldfire targets (Firebee and M5484LITE):
+- Increased BDOS limits (bdos directory).
+
+
+2011 January-February
+---------------------
+Coldfire targets (Firebee and M5484LITE):
+- Removed Linux AC97 sources for reduce size. Rewrited AC97 Coldfire 
+driver (mcf548x_ac97.c). The AC97 codec works only from reset and need  
+dBUG !
+ * All GSXB controls are supported, but gains added to FALCON XBIOS 
+   with MilanBlaster are attenuations with GSXB (it's possible to add 
+   a choice in the CPX in the future if someone want MilanBlaster 
+   compatibility, the driver himself support the two modes).   
+ * FSOUND.CPX controls only PCM levels and record levels, but the GSXB 
+   Mixer runs also in ACC. 
+ * Because there are no FM input on AC97, left FM level controls the 
+   PC BEEP level, and the right FM level controls 3D AC97 features 
+   (for info on the Firebee the FPGA YAMAHA emulation is routed to PC 
+   BEEP and AUX1 inputs).   
+ * Like GSXB, the driver has some limits with FALCON compatibility 
+   because the are no DSP and no Matrix. By default LINE inputs are 
+   selected as record source and replace MIC FALCON input source 
+   because MIC input is mono on AC97, and excepted VIDEO and FM, all 
+   inputs are enabled.
+ * The driver works in 8/16 bits mono/stereo for play and record samples.
+ * It's impossible to use the VRA mode (Variable Rate) because this 
+   feature need hardware support, the CS4299 codec works always at 48KHz 
+   and the driver use a fast linear interpolation routine for lower 
+   frequency (play/record).   
+ * For reduce CPU load (Chronos see a 154 MHz CPU and the Firebee is 
+   clocked at 164 MHz), after a 30 seconds delay timeout of inactivity 
+   the AC-LINK (the name of the AC97 hardware interface) goes to 
+   powerdown. For resume the Coldfire send a warn reset.   
+ * For info, with Coldfire DMA transfers, 2 x 52 bytes (2 x 13 slots) 
+   are send/received to/from TX/RX PSC2 FIFO by sample (5 MBytes/S), 
+   when there are no samples some slots are use for read/write AC97 
+   registers (XBIOS controls).   
+ * STE DMA sound emulation added for the Firebee, this feature need an 
+   FPGA update (blank registers used like RAM, updated with 200 Hz 
+   system timer).
+
+2011 March
+----------
+Added rejection modes for clocks over 135 MHz who have heat isues with
+DVI on RV100 (Radeon 7000 boards).
+Added accel sub functions CMD_FILLMEM, CMD_COPYMEM, CMD_TEXTUREMEM  
+and CMD_GETVERSION to the XBIOS Vsetscreen (Radeon) and put some 
+changes to other sub functions (xbios.c).
+Firebee target:
+- Added switch 6 test when the board start with dBUG (already used  with BAS):
+  ON - Normal 
+  OFF: Ethernet deamons (Telnet,TFTP,FTP,HTTP) and TFTP client + Ram-disk available.
+- SD-Card replace A if a disk is found, and boot is faster because 
+timeout on floppy without floppy is very slow (13 seconds added).
+- Moved also Ram-disk to drive B.
+
+2011 April
+----------
+Added accel sub functions CMD_LINEMEM, CMD_CLIPMEM, and CMD_SYNCMEM  
+to the XBIOS Vsetscreen (Radeon xbios.c).
+Coldfire targets:
+- Added plug and play support for USB using a FreeRTOS task. But 
+there are a problem when I connect the mouse or the keyboard the 2nd 
+time I get "Device Not Responding" before start again the 
+mouse/keyboard driver. First connection when boot start or later 
+works. For me there are a bug somewhere in the low level OHCI driver. 
+Plug and play works with USB stick but there are no report frame. When 
+this error arrives and mouse removed and PIPE_INTERRUPT used => unlink ed.
+This fix seems not works with my keyboard. The USB stack use U-Boot 
+sources, it's easier to use than Linux but there are some limitations. 
+Fixed also lot of bugs inside XHDI driver (SD-CARD/USB).
+
+2011 May
+---------
+Firebee target:
+- Rebuild with GCC 4 for the Coldfire V4e (else LwIP is 
+bugged if build with GCC 3.3 -m5200 who has some troubles with short  
+integers). Fixed bugs added with inline assembly parts.
+- Added Emutos support with a boot OS menu:
+ * Uninstall interrupt vectors handled by the CF68KLIB.
+ * Delete TOS task.
+ * Set screen in 640x480x16.
+ * Disable caches.
+ * Unprotect TOS area (0xE00000) via an ACR.
+ * Copy Emutos from E0600000 (value used here).
+ * Invalidate one megabyte before the lwIP area (for Emutos memory test).
+ * Enable caches.
+ * Start VBL task and reinstall PCI BIOS (for USB mouse/keyboard).
+ * Start ETOS task.
+- Extended the screen view feature inside the HTTP server. The GIF 
+picture is always in 640x480x256 but with a screen in 16/65K/16M 
+colors. Mouse and keyboard works from the host computer (a VNC light).
+
+2011 June
+----------
+Fixed an ugly bug (crashes possible like word result on stack if the VDI 
+parameter block is on the stack) with VDI function vst_rotation on all 
+targets (detvdi.S).  
+Added accel sub function CMD_BLANK to the XBIOS Vsetscreen (Radeon), 
+works also on Firebee with FPGA Videl ACP modes (xbios.c, videl.c).
+Added another boot menu and rescue features on the Fireebee target:
+- SW6 and SW5 are inside the cookie '_SWI' (from boot part):
+ * B7: (1) SW6 DOWN, (0) SW6 UP.
+ * B6: (1) SW5 DOWN, (0) SW5 UP.
+ * B0: (1) TOS started from 0xE0000000 (replace BAS or dBUG).
+- SW6 up is the normal usage, the OS Boot menu has a 3rd line for 
+  select a TOS with all features (like SW6 down, but this feature is 
+  impossible when TOS started with BAS).
+- SW6 down allows to TOS to start FTP (build option), HTTP, TFTP servers 
+  and create a Ram-Disk actually in B (this feature is also possible 
+  with dBUG at 0xE0000000).  
+- SW5 up is the normal usage for start the TOS at 0xE0400000 (same usage 
+  inside BAS or dBUG at 0xE0000000) and a boot menu has 2 choices TOS or 
+  EMUTOS (TOS by default).  
+- SW5 down is the rescue mode, TOS at 0xE0000000 continue to run and a 
+  boot menu displays 3 choices: 
+ * TOS404 (at 0xE0000000 - boot) => TOS rescue (default choice).
+ * EMUTOS (at 0xE0600000).
+ * TOS404 (at 0xE0400000 - normal) => TOS to test.
+
+2011 July - 1.01
+----------------
+Coldfire targets:
+- Rewrited in native code vr_trn_fm (blit.S).
+- Added CF instructions to the 68K disassembler. Now pulse, tfp, wddata, 
+wdebug, intouch, halt, mvs, mvz, mov3q, movec, sat and all mac group 
+are supported.   
+- Found a big bug with the sys variable membot not updated before BDOS 
+started, so the previous malloc from TOS (PCI BIOS structure) was 
+dead, and bug and play crashed under MiNT.  
+- Fixed VDI function v_show_c without graphic card (detvdi.S).
+- Increased BDOS buffers limits (fsbuf.c).
+- Added Pexec patch for Pure C programs bdos\rwa.S):
+  * Some case for Line A 0xA000 replaced by opcode 0xA920.
+  * move.b DX,-(SP) replaced by opcode 0xA910-0xA917.
+  * move.b (SP)+,DX replaced by opcode 0xA918-0xA91F.
+  * move.b (AX),-(SP) replaced by opcode 0xA930-0xA937.
+  * move.b (SP)+,(AX) replaced by opcode 0xA938-0xA93F.
+  * move.b d(AX),-(SP) replaced by opcode 0xA9B0-0xA9B7.
+  * move.b (SP)+,d(AX) replaced by opcode 0xA9B8-0xA9BF.
+  * move.b abs.l,-(SP) replaced by opcode 0xA9F1.
+  * move.b d(PC),-(SP) replaced by opcode 0xA9F2.
+  * move.b (SP)+,abs.l replaced by opcode 0xA9F9.
+  * mulu/s.l ea,dh:dl replaced by opcode 0xABC0-0xABFF.
+  * divu/s.l ea:dr:dq replaced by opcode 0xAFC0-0xAFFF.

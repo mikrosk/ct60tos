@@ -34,16 +34,29 @@ ARP_INFO    arp_info;
 
 static void fec0_interrupt(void)
 {
-	asm("_fec0_int:\n lea -24(SP),SP\n movem.l D0-D2/A0-A2,(SP)\n");
-	asm(" clr.l -(SP)\n jsr _fec_irq_handler\n addq.l #4,SP\n"); 
-	asm(" movem.l (SP),D0-D2/A0-A2\n lea 24(SP),SP\n rte\n");
+	asm volatile (
+		"_fec0_int:\n\t"
+		" lea -24(SP),SP\n\t"
+		" movem.l D0-D2/A0-A2,(SP)\n\t"
+		" clr.l -(SP)\n\t"
+		" jsr _fec_irq_handler\n\t"
+		" addq.l #4,SP\n\t"
+		" movem.l (SP),D0-D2/A0-A2\n\t"
+		" lea 24(SP),SP\n\t"
+		" rte\n\t" );
 }
 
 static void fec1_interrupt(void)
 {
-	asm("_fec1_int:\n lea -24(SP),SP\n movem.l D0-D2/A0-A2,(SP)\n");
-	asm(" pea 1\n jsr _fec_irq_handler\n addq.l #4,SP\n"); 
-	asm(" movem.l (SP),D0-D2/A0-A2\n lea 24(SP),SP\n rte\n");
+		"_fec1_int:\n\t"
+		" lea -24(SP),SP\n\t"
+		" movem.l D0-D2/A0-A2,(SP)\n\t"
+		" pea 1\n\t"
+		" jsr _fec_irq_handler\n\t"
+		" addq.l #4,SP\n\t"
+		" movem.l (SP),D0-D2/A0-A2\n\t"
+		" lea 24(SP),SP\n\t"
+		" rte\n\t" );
 }
 
 #ifdef TEST_NETWORK
@@ -167,8 +180,7 @@ int tx_test(uint8 ch, uint8 mode, uint8 speed, uint8 duplex)
     }
 
     /* Wait a bit to let the FEC finish up */
-    for (i = 0; i < 1000000; i++)
-        asm(" nop");
+    for (i = 0; i < 1000000; asm volatile (" nop\n\t"); i++);
 
     /* Stop the Ethernet */
     fec_eth_stop(ch);

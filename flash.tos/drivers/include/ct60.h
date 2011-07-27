@@ -1,5 +1,5 @@
 /* TOS 4.04 Xbios for the CT60 board
-*  Didier Mequignon 2002-2010, e-mail: aniplay@wanadoo.fr
+*  Didier Mequignon 2002-2011, e-mail: aniplay@wanadoo.fr
 *
 *  This library is free software; you can redistribute it and/or
 *  modify it under the terms of the GNU Lesser General Public
@@ -39,18 +39,26 @@
 /* Vsetscreen(void *par1, void *par2, short rez, short command) */
 /* with rez always 0x564E 'VN' (Vsetscreen New) */
 
-#define CMD_GETMODE   0
-#define CMD_SETMODE   1
-#define CMD_GETINFO   2
-#define CMD_ALLOCPAGE 3
-#define CMD_FREEPAGE  4
-#define CMD_FLIPPAGE  5
-#define CMD_ALLOCMEM  6
-#define CMD_FREEMEM   7
-#define CMD_SETADR    8
-#define CMD_ENUMMODES 9
-#define CMD_TESTMODE  10
-#define CMD_COPYPAGE  11
+#define CMD_GETMODE    0
+#define CMD_SETMODE    1
+#define CMD_GETINFO    2
+#define CMD_ALLOCPAGE  3
+#define CMD_FREEPAGE   4
+#define CMD_FLIPPAGE   5
+#define CMD_ALLOCMEM   6
+#define CMD_FREEMEM    7
+#define CMD_SETADR     8
+#define CMD_ENUMMODES  9
+#define CMD_TESTMODE   10
+#define CMD_COPYPAGE   11
+#define CMD_FILLMEM    12
+#define CMD_COPYMEM    13
+#define CMD_TEXTUREMEM 14
+#define CMD_GETVERSION 15
+#define CMD_LINEMEM    16
+#define CMD_CLIPMEM    17
+#define CMD_SYNCMEM    18
+#define CMD_BLANK      19
 
 /* scrFlags */
 #define SCRINFO_OK 1
@@ -118,7 +126,92 @@ typedef struct _scrblk
 	long blk_h;       /* height                     */
 	long blk_wrap;    /* width in bytes             */
 } SCRMEMBLK;
-             
+
+/* operations */
+#define BLK_CLEAR        0
+#define BLK_AND          1
+#define BLK_ANDREVERSE   2
+#define BLK_COPY         3
+#define BLK_ANDINVERTED  4
+#define BLK_NOOP         5
+#define BLK_XOR          6
+#define BLK_OR           7
+#define BLK_XNOR         8
+#define BLK_EQUIV        9
+#define BLK_INVERT       10
+#define BLK_ORREVERSE    11
+#define BLK_COPYINVERTED 12
+#define BLK_ORINVERTED   13
+#define BLK_NAND         14
+#define BLK_SET          15
+
+typedef struct _scrfillblk
+{
+	long size;        /* size of structure          */
+	long blk_status;  /* status bits of blk         */
+  long blk_op;      /* mode operation             */
+	long blk_color;   /* background fill color      */
+	long blk_x;       /* x pos in total screen      */
+	long blk_y;       /* y pos in total screen      */
+	long blk_w;       /* width                      */
+	long blk_h;       /* height                     */
+	long blk_unused;
+} SCRFILLMEMBLK;
+           
+typedef struct _scrcopyblk
+{
+	long size;        /* size of structure            */
+	long blk_status;  /* status bits of blk           */
+	long blk_src_x;   /* x pos source in total screen */
+	long blk_src_y;   /* y pos source in total screen */
+	long blk_dst_x;   /* x pos dest in total screen   */
+	long blk_dst_y;   /* y pos dest in total screen   */
+	long blk_w;       /* width                        */
+	long blk_h;       /* height                       */
+	long blk_op;      /* mode operation               */
+} SCRCOPYMEMBLK;
+
+typedef struct _scrtextureblk
+{
+	long size;        /* size of structure            */
+	long blk_status;  /* status bits of blk           */
+	long blk_src_x;   /* x pos source                 */
+	long blk_src_y;   /* y pos source                 */
+	long blk_dst_x;   /* x pos dest in total screen   */
+	long blk_dst_y;   /* y pos dest in total screen   */
+	long blk_w;       /* width                        */
+	long blk_h;       /* height                       */
+	long blk_op;      /* mode operation               */
+	long blk_src_tex; /* source texture address       */
+	long blk_w_tex;   /* width texture                */
+	long blk_h_tex;   /* height texture               */
+}SCRTEXTUREMEMBLK;
+
+typedef struct _scrlineblk
+{
+	long size;        /* size of structure            */
+	long blk_status;  /* status bits of blk           */
+	long blk_fgcolor; /* foreground fill color        */
+	long blk_bgcolor; /* background fill color        */
+	long blk_x1;      /* x1 pos dest in total screen  */
+	long blk_y1;      /* y1 pos dest in total screen  */
+	long blk_x2;      /* x2 pos dest in total screen  */
+	long blk_y2;      /* y2 pos dest in total screen  */
+	long blk_op;      /* mode operation               */
+	long blk_pattern; /* pattern (-1: solid line)     */
+} SCRLINEMEMBLK;
+
+typedef struct _scrclipblk
+{
+	long size;        /* size of structure            */
+	long blk_status;  /* status bits of blk           */
+	long blk_clip_on; /* clipping flag 1:on, 0:off    */
+	long blk_x;       /* x pos in total screen        */
+	long blk_y;       /* y pos in in total screen     */
+	long blk_w;       /* width                        */
+	long blk_h;       /* height                       */
+} SCRCLIPMEMBLK;
+
 #define MSG_CT60_TEMP 0xcc60
 
 /* CT60 parameters  */
@@ -126,7 +219,7 @@ typedef struct _scrblk
 #define CT60_FARENHEIT 1
 #define CT60_MODE_READ 0
 #define CT60_MODE_WRITE 1
-#define CT60_PARAM_TOSRAM 0
+#define CT60_PARAM_TOSRAM 0 /* obsolete for boot >= 2.00 */
 #define CT60_BLITTER_SPEED 1
 #define CT60_CACHE_DELAY 2
 #define CT60_BOOT_ORDER 3
@@ -137,9 +230,12 @@ typedef struct _scrblk
 #define CT60_SAVE_NVRAM_2 8
 #define CT60_SAVE_NVRAM_3 9
 #define CT60_PARAM_OFFSET_TLV 10
-#define CT60_ABE_CODE 11
-#define CT60_SDR_CODE 12
+#define CT60_MAC_ADDRESS 10
+#define CT60_SERIAL_SPEED 11
+#define CT60_USER_DIV_CLOCK 12
+#define CT60_IP_ADDRESS 12
 #define CT60_CLOCK 13
+#define CT60_SERVER_IP_ADDRESS 13
 #define CT60_PARAM_CTPCI 14
 /* 15 is reserved - do not use */
 

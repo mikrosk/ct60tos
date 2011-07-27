@@ -30,7 +30,7 @@
 #endif /* MCF5445X */
 
 /* XBIOS */
-#undef TOS_ATARI_LOGO /* defined for use TOS4.04 logo */
+#define TOS_ATARI_LOGO /* defined for use TOS4.04 logo */
 
 /* BDOS */
 #define NEWCODE
@@ -57,7 +57,9 @@
 #define CONFIG_FB_RADEON_I2C
 #define CONFIG_FB_MODE_HELPERS
 #undef RADEON_TILING /* normally faster but tile 16 x 16 is not compatible with accel.c read_pixel, blit/expand_area and writes on screen frame buffer */
-#undef RADEON_RENDER
+#ifndef COLDFIRE
+#define RADEON_RENDER
+#endif
 #undef RADEON_THEATRE /* unfinished */
 #define RADEON_DIRECT_ACCESS /* MMIO access faster but don't check endian - little -> big conversion !!! */
 
@@ -72,7 +74,7 @@
 #ifdef COLDFIRE
 #ifndef MCF5445X
 #ifndef MCF547X
-#define CONFIG_VIDEO_SMI_LYNXEM
+#undef CONFIG_VIDEO_SMI_LYNXEM
 #endif
 #endif
 #endif /* COLDFIRE */
@@ -82,13 +84,13 @@
 #define MAX_HEIGHT_EMU_MONO 768
 
 /* AC97 */
-#undef SOUND_AC97
+#define SOUND_AC97
 
 /* USB */
-#define USB_DEVICE /* Coldfire USB device */
+#undef USB_DEVICE /* Coldfire USB device */
 #define USB_BUFFER_SIZE 0x10000
 #define CONFIG_USB_OHCI /* PCI USB 1.1 */
-#undef CONFIG_USB_EHCI /* PCI USB 2.0 */
+#define CONFIG_USB_EHCI /* PCI USB 2.0 */
 #undef CONFIG_EHCI_DCACHE
 #define CONFIG_SYS_OHCI_SWAP_REG_ACCESS
 #define CONFIG_SYS_USB_OHCI_MAX_ROOT_PORTS 15
@@ -98,6 +100,7 @@
 #else
 #define CONFIG_USB_INTERRUPT_POLLING
 #endif /* COLDFIRE */
+#undef CONFIG_LEGACY_USB_INIT_SEQ
 #define CONFIG_USB_KEYBOARD
 #define CONFIG_USB_MOUSE
 #define CONFIG_USB_STORAGE

@@ -149,7 +149,7 @@ struct td {
 } __attribute__((aligned(32)));
 typedef struct td td_t;
 
-#define OHCI_ED_SKIP	(1 << 14)
+#define OHCI_ED_SKIP	  (1 << 14)
 
 /*
  * The HCCA (Host Controller Communications Area) is a 256 byte
@@ -403,6 +403,7 @@ typedef struct ohci {
 	/* ------- common part -------- */
 	long handle;              /* PCI BIOS */
 	const struct pci_device_id *ent;
+	int usbnum;
   /* ---- end of common part ---- */
 	int big_endian;           /* PCI BIOS */
 	int controller;
@@ -418,6 +419,7 @@ typedef struct ohci {
 	int irq;
 	int disabled;			/* e.g. got a UE, we're hung */
 	int sleeping;
+#define OHCI_FLAGS_NEC 0x80000000
 	unsigned long flags;		/* for HC bugs */
 
 	unsigned long offset;
@@ -430,7 +432,6 @@ typedef struct ohci {
 	ed_t *ed_controltail;	 /* last endpoint of control list */
 	int intrstatus;
 	__u32 hc_control;		/* copy of the hc control reg */
-//	struct usb_device *dev[32];
 	struct virt_root_hub rh;
 
 	const char *slot_name;

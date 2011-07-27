@@ -44,7 +44,7 @@ extern void cat(const char *src, char *dest);
 extern void _bzero(void *ptr, long len);
 extern void *memcpy(void *dst, const void *src, unsigned long len);
 
-extern void flush_cache_pexec(PD *p);
+extern void flush_cache_pexec(PD *p, char *path);
 extern long slb_exec(void);
 
 static void ixterm(PD *r);
@@ -336,13 +336,17 @@ long xexec(WORD flag, char *path, char *tail, char *env)
         display_string("\r\n");
 #endif
 #if 1
-				flush_cache_pexec(p);
+				flush_cache_pexec(p, path);
 #else
 #ifdef COLDFIRE
-    		asm(" .chip 68060\n cpusha BC\n .chip 5200\n");
+#if (__GNUC__ > 3)
+    		asm volatile (" .chip 68060\n\t cpusha BC\n\t .chip 5485\n\t"); /* flush from CF68KLIB */
 #else
-    		asm(" cpusha BC");
+    		asm volatile (" .chip 68060\n\t cpusha BC\n\t .chip 5200\n\t"); /* flush from CF68KLIB */
 #endif
+#else /* 68060 */
+    		asm volatile (" cpusha BC\n\t");
+#endif /* COLDFIRE */
 #endif
         proc_go(p);
         /* should not return ? */
@@ -500,13 +504,17 @@ long xexec(WORD flag, char *path, char *tail, char *env)
 #endif
 //    invalidate_icache(((char *)cur_p) + sizeof(PD), hdr.h01_tlen);
 #if 1
-		flush_cache_pexec(cur_p);
+		flush_cache_pexec(cur_p, path);
 #else
 #ifdef COLDFIRE
-    asm(" .chip 68060\n cpusha BC\n .chip 5200\n");
+#if (__GNUC__ > 3)
+    asm volatile (" .chip 68060\n\t cpusha BC\n\t .chip 5485\n\t"); /* flush from CF68KLIB */
 #else
-    asm(" cpusha BC");
+    asm volatile (" .chip 68060\n\t cpusha BC\n\t .chip 5200\n\t"); /* flush from CF68KLIB */
 #endif
+#else /* 68060 */
+    asm volatile (" cpusha BC\n\t");
+#endif /* COLDFIRE */
 #endif
 
     if(flag != PE_LOAD)

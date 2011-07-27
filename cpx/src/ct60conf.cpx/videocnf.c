@@ -1,5 +1,5 @@
 /* Video Modes for Radeon / PURE C */
-/* Didier MEQUIGNON - v1.00 - November 2006 / September 2009 / July 2010 */
+/* Didier MEQUIGNON - v1.01 - 2006-2011 */
 
 #include <portab.h>
 #include <string.h>
@@ -57,7 +57,7 @@ char *rs_strings[] = {
 	"Test",
 	"XIOS",
 
-	"Radeon Vid‚o Modes V1.0 Mai 2010","","",
+	"Radeon Vid‚o Modes V1.01 Mars 2011","","",
 	"Ce CPX et systŠme:","","",
 	"Didier MEQUIGNON","","",
 	"aniplay@wanadoo.fr","","",
@@ -82,7 +82,7 @@ char *rs_strings_en[] = {
 	"Test",
 	"XBIOS",
 
-	"Radeon Video Modes V1.0 Mai 2010","","",
+	"Radeon Video Modes V1.01 March 2011","","",
 	"This CPX and system:","","",
 	"Didier MEQUIGNON","","",
 	"aniplay@wanadoo.fr","","",
@@ -394,7 +394,6 @@ int val_string(char *p);
 long tempo_5S(void);
 void reboot(void);
 void (*reset)(void);
-/* short detect_pixel_format(void); */
 
 /* variables globales */
 
@@ -472,7 +471,6 @@ int CDECL cpx_call(GRECT *work)
 	if(vdi_handle <= 0)
 		return(0);
 	vq_extnd(vdi_handle,1,work_extend);
-/*	detect_pixel_format(); */
 	modecode=Vsetmode(-1);
 	if(!(modecode & DEVID))
 		type_modes = MODES_XBIOS;
@@ -1242,9 +1240,10 @@ int modif_inf(int modecode)
 {
 	static char path_desk[]="C:\\newdesk.inf";
 	static char path_magic[]="C:\\magx.inf";
-	static char path_myaes[]="C:\\gemsys\\myaes\\maes.cnf";
+	static char path_myaes[]="C:\\gemsys\\myaes\\myaes.cnf";
+	static char path_xaaes[]="C:\\video.cnf";
 	static char path_inf[16];
-	static char string[16];
+	static char string[32];
 	void *sauve_ssp,*buffer;
 	char *p;
 	register int handle,i;
@@ -1253,6 +1252,26 @@ int modif_inf(int modecode)
 	int ok,old_modecode,magic,myaes,lg=0;
 	ok=0;
 	graf_mouse(HOURGLASS,(MFORM*)0);
+	if(get_cookie('nAES') != NULL)
+	{
+		copy_string(path_xaaes,path_inf);
+		sauve_ssp=(void *)Super(0L);
+		path_inf[0]=(char)*(int *)0x446+'A';		/* boot drive */
+		Super(sauve_ssp);
+		if((err=(long)(handle=Fcreate(path_inf,0)))>=0)
+		{
+			sprintf(string,"video = %d\r\n",modecode);
+			err=Fwrite(handle,strlen(string),string);
+			Fclose(handle);
+		}
+		if(err<0)
+		{
+			if(!start_lang)
+				form_alert(1,"[1][Erreur pour ‚crire|le fichier VIDEO.CNF][Annuler]");
+			else
+				form_alert(1,"[1][Error for write|the file VIDEO.CNF][Cancel]");
+		}
+	}
 	if(get_cookie('MAS2') != NULL)
 	{
 		myaes=1;
@@ -1616,185 +1635,3 @@ void reboot(void)
 	reset=(void (*)())*(void **)0x4;		/* reset vector */
 	(*reset)();								/* reset system */
 }
-
-#if 0
-#define HAVE_VS_COLOR
-
-short detect_pixel_format(void)
-{
-	short ret = 8;	/* generic */
-
-	if(work_extend[4] > 8)
-	{
-		MFDB scr, dst;
-#ifdef HAVE_VS_COLOR
-		short srgb[3], rgb[3];
-#endif
-		short pxy[8];
-		union { unsigned short w[64]; unsigned long l[32];} b;
-
-		vswr_mode(vdi_handle, MD_REPLACE);
-		vsl_type(vdi_handle, 1);
-		vsl_ends(vdi_handle, 0, 0);
-		vsl_width(vdi_handle, 1);
-#ifdef HAVE_VS_COLOR
-		printf("detect_pixel: using vs_color\r\n");
-		vq_color(vdi_handle, 0, 1, srgb);
-		rgb[0] = 1000;
-		rgb[1] = 1000;
-		rgb[2] = 0;
-		vs_color(vdi_handle, 0, rgb);
-		vsl_color(vdi_handle, 0);
-		pxy[0] = 0;
-		pxy[1] = 0;
-		pxy[2] = 0;
-		pxy[3] = 0;
-		v_pline(vdi_handle, 2, pxy);
-#else
-		{
-		pxy[0] = pxy[1] = 0;
-		pxy[2] = work_out[0];
-		pxy[3] = work_out[1];
-		printf("detect_pixel: using vsf_color");
-		vsf_color(vdi_handle, 6); /* yellow */
-		v_bar(vdi_handle, pxy);
-		}
-#endif
-		scr.fd_addr = NULL;
-
-		dst.fd_addr = &b;
-		dst.fd_w = 1;
-		dst.fd_h = 1;
-		dst.fd_wdwidth = 1;
-		dst.fd_stand = 1;
-		dst.fd_nplanes = work_extend[4];
-		dst.fd_r1 = dst.fd_r2 = dst.fd_r3 = 0;
-
-		pxy[0] = 0;
-		pxy[1] = 0;
-		pxy[2] = 0;
-		pxy[3] = 0;
-		pxy[4] = 0;
-		pxy[5] = 0;
-		pxy[6] = 0;
-		pxy[7] = 0;
-		vro_cpyfm(vdi_handle, S_ONLY, pxy, &scr, &dst);
-
-#ifdef HAVE_VS_COLOR
-		vs_color(vdi_handle, 0, srgb);
-#endif
-		switch(work_extend[4])
-		{
-			/* pixelformat E07F */
-			/* 12345678.12345678 */
-			case 15:
-			{
-				unsigned short pix = b.w[0];
-				printf("%d bit pixel %x", work_extend[4], pix);
-				if(pix == (unsigned short)((31 << 2) | (7 << 13) | 3))		/* gggbbbbb.0rrrrrgg */
-				{
-					ret = 1;
-					printf(" is intel format\r\n");
-				}
-				else if(pix == (unsigned short)((31 << 11) | (31 << 6))) 	/* rrrrrggg.ggobbbbb */
-				{
-					ret = 0;
-					printf(" is moto format\r\n");
-				}
-				else
-				{
-					ret = -1;
-					printf(" unknown format\r\n");
-				}
-				break;
-			}
-			case 16:
-			{
-				unsigned short pix = b.w[0];
-				printf("%d bit pixel %x", work_extend[4], pix);
-				if(pix == (unsigned short)((31 << 3) | (7 << 13) | 7))		/* gggbbbbb.rrrrrggg */
-				{
-					ret = 1;
-					printf(" is intel format");
-				}
-				else if(pix == (unsigned short)((31 << 11) | (63 << 5)))	/* rrrrrggg.gggbbbbb */
-				{
-					ret = 0;
-					printf(" is moto format");
-				}
-				else if(pix == (unsigned short)((31 << 11) | (31 << 6)))	/* rrrrrggg.ggobbbbb */
-				{
-					ret = 2;
-					printf(" is falcon (motorola) 15 bit");
-				}
-				else if(pix == (unsigned short)((31 << 2) | (7 << 13) | 3))	/* gggbbbbb.0rrrrrgg */
-				{
-					ret = 3;
-					printf(" is a intel 15 bit");
-				}
-				else
-				{
-					ret = -1;
-					printf(" unknown format!");
-				}
-				break;
-			}
-			case 24:
-			{
-				unsigned long pix = b.l[0];
-				printf("%d bit pixel %lx", work_extend[4], pix);
-				pix >>= 8;
-				if(pix == 0xffff00L)			/* rrrrrrrr.gggggggg.bbbbbbbb  Moto */
-				{
-					ret = 0;
-					printf(" is moto format\r\n");
-				}
-				else if(pix == 0xffffL)		/* gggggggg.rrrrrrrrbbbbbbbb */
-				{
-					ret = 1;
-					printf(" is intel format\r\n");
-				}
-				else
-				{
-					ret = -1;
-					printf(" unknown format!\r\n");
-				}
-				break;
-			}
-			case 32:
-			{
-				unsigned long pix = b.l[0];
-				printf("%d bit pixel %lx\r\n", work_extend[4], pix);
-				if(pix == 0xffff00L)			/* 00000000.rrrrrrrr.gggggggg.bbbbbbbb */
-				{
-					ret = 0;
-					printf(" is moto format\r\n");
-				}
-				else if(pix == 0xffff0000L)		/* rrrrrrrr.gggggggg.bbbbbbbb.00000000 */
-				{
-					ret = 1;
-					printf(" is intel format\r\n");
-				}
-				else if(pix == 0x0000ffffL)		/* 00000000.bbbbbbbb.gggggggg.rrrrrrrr */
-				{
-					ret = 2;
-					printf(" is intel byteswapped format\r\n");
-				}
-				else
-				{
-					ret = -1;
-					printf(" unknown format!\r\n");
-				}
-				break;
-			}
-			default:
-			{
-				printf("unsupported color depth!\r\n");
-				ret = -2;
-				break;
-			}
-		}
-	}
-	return ret;
-}
-#endif

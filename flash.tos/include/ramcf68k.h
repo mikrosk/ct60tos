@@ -1,5 +1,5 @@
-/* TOS 4.04 Xbios for the Fire Engine Coldfire board
-*  Didier Mequignon 2007, e-mail: aniplay@wanadoo.fr
+/* TOS 4.04 Xbios for the Coldfire boards
+*  Didier Mequignon 2011, e-mail: aniplay@wanadoo.fr
 *
 *  This library is free software; you can redistribute it and/or
 *  modify it under the terms of the GNU Lesser General Public
@@ -54,6 +54,8 @@
 #define counter_1ms           RAM_BASE_CF68KLIB+0x460 // 4 bytes
 #define fire_engine_hw_rev    RAM_BASE_CF68KLIB+0x464 // 1 byte, for IDE test
 #define psg_save_port_a       RAM_BASE_CF68KLIB+0x465 // 1 byte
+#define stop_mfp_ikbd         RAM_BASE_CF68KLIB+0x466 // 1 byte
+#define boot_tos              RAM_BASE_CF68KLIB+0x467 // 1 byte
 // #define save_ide_registers    RAM_BASE_CF68KLIB+0x464 // 8 bytes
 #define old_access_error      RAM_BASE_CF68KLIB+0x46C // 4 bytes
 #define save_registers        RAM_BASE_CF68KLIB+0x470 // 60 bytes
@@ -80,12 +82,16 @@
 #define debug_int7            RAM_BASE_CF68KLIB+0x4EF // 1 bytes
 #define save_mmuar            RAM_BASE_CF68KLIB+0x4F0 // 4 bytes
 #define save_regs             RAM_BASE_CF68KLIB+0x4F4 // 158 bytes
+#define mac_address           RAM_BASE_CF68KLIB+0x594 // 4 bytes
+#define ip_address            RAM_BASE_CF68KLIB+0x598 // 4 bytes
+#define server_ip_address     RAM_BASE_CF68KLIB+0x59C // 4 bytes
+#define fpu_area              RAM_BASE_CF68KLIB+0x5A0 // 16 bytes
 
 #define access_fault_stack    RAM_BASE_CF68KLIB+0x800
 #define ustack_aes            RAM_BASE_CF68KLIB+0xC00 // top
 #define library_data_area     RAM_BASE_CF68KLIB+0xC00 // 1024 bytes
 
-#define current_tcb           RAM_BASE_CF68KLIB+0x1000 // 4 bytes (FreeRTOS, defined also inside pci_cf.lk !)
-#define tid_tos               RAM_BASE_CF68KLIB+0x1004 // 4 bytes (FreeRTOS, defined also inside pci_cf.lk !)
+#define current_tcb           RAM_BASE_CF68KLIB+0x1000 // 4 bytes (FreeRTOS, defined also inside dirvers_cf.lk !)
+#define tid_tos               RAM_BASE_CF68KLIB+0x1004 // 4 bytes (FreeRTOS, defined also inside drivers_cf.lk !)
 
 #endif

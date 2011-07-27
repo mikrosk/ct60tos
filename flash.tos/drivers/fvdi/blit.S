@@ -27,8 +27,7 @@
 
 	.data
 	
-	.chip 68060
-
+//	.chip 68060
 
 /* _default_fill - Line by line (or pixel by pixel) fill routine
 * In:	a0	VDI struct (odd address marks table operation)
@@ -434,10 +433,21 @@ lib_vrt_cpyfm:
 _lib_vr_trn_fm:
 lib_vr_trn_fm:
 	uses_d1
+#ifdef COLDFIRE
+	lea	-40(a7),a7
+	movem.l	d2-d7/a3-a6,(a7)
+#else
 	movem.l	d2-d7/a3-a6,-(a7)
+#endif
 	move.l	(a1)+,a2
 	move.l	(a1),a1
+#ifdef COLDFIRE
+	move.l	a1,d1
+	move.l	a2,a1
+	move.l	d1,a2
+#else
 	exg	a1,a2		// a1 - source, a2 - dest
+#endif
 
 	move.l	mfdb_address(a1),a3
 	move.l	mfdb_address(a2),a4
@@ -519,7 +529,11 @@ to_standard:
 	move.l	wk_driver(a5),a5
 	move.l	driver_device(a5),a5
 	move.w	dev_format(a5),d6
+#ifdef COLDFIRE
+	and.l	#2,d6
+#else
 	and.w	#2,d6
+#endif
 	beq	not_chunky_ts
 
 	move.w	d0,d7
@@ -527,19 +541,32 @@ to_standard:
 	add.l	d7,d7			// d7 = pix/16 * height * 2 = words/plane
 	moveq	#2,d6
 
+#ifdef COLDFIRE
+	ext.l	d2
+	cmp.l	#16,d2
+#else
 	cmp.w	#16,d2
+#endif
 	bne	.not_16bit_ts
 	bsr	to_standard_16
 	bra	end_vr_trn_fm
 
 .not_16bit_ts:
+#ifdef COLDFIRE
+	cmp.l	#8,d2
+#else
 	cmp.w	#8,d2
+#endif
 	bne	.not_8bit_ts
 	bsr	to_standard_8
 	bra	end_vr_trn_fm
 
 .not_8bit_ts:
+#ifdef COLDFIRE
+	cmp.l	#32,d2
+#else
 	cmp.w	#32,d2
+#endif
 	bne	not_32bit_ts
 	bsr	to_standard_32
 	bra	end_vr_trn_fm
@@ -822,29 +849,60 @@ to_standard_32:
 not_32bit_ts:
 not_chunky_ts:
 	move.w	d2,d3			// Reorganize device specific
+#ifdef COLDFIRE
+	ext.l	d3
+	add.l	d3,d3
+#else
 	add.w	d3,d3			//  bitplanes into standard ones
-
+#endif
 	move.l	a3,a5
 
 	move.w	d2,d7
+#ifdef COLDFIRE
+	ext.l	d7
+	subq.l	#1,d7
+#else
 	subq.w	#1,d7
+#endif
 
 .loop1d_1:
 	move.w	d0,d6
+#ifdef COLDFIRE
+	ext.l	d6
+	subq.l	#1,d6
+#else
 	subq.w	#1,d6
+#endif
 
 .loop2d_2:
 	move.w	d1,d5
+#ifdef COLDFIRE
+	ext.l	d5
+	subq.l	#1,d5
+#else
 	subq.w	#1,d5
+#endif
 
 .loop3d_3:
 	move.w	(a3),(a4)+
+#ifdef COLDFIRE
+	add.l	d3,a3
+	subq.l	#1,d5
+	bpl.s	.loop3d_3
+	subq.l	#1,d6
+	bpl.s	.loop2d_2
+	addq.l	#2,a5
+	move.l	a5,a3
+	subq.l	#1,d7
+	bpl.s 	.loop1d_1
+#else
 	add.w	d3,a3
 	ldbra	d5,.loop3d_3
 	ldbra	d6,.loop2d_2
 	addq.w	#2,a5
 	move.l	a5,a3
 	ldbra	d7,.loop1d_1
+#endif
 	bra	end_vr_trn_fm
 
 
@@ -870,7 +928,11 @@ in_place:
 	add.l	d3,d3			// d0 = pix/16 * planes * height * 2 = total bytes
 
 	mulu	d0,d1
+#ifdef COLDFIRE
+	add.l	d1,d1
+#else
 	add.w	d1,d1			// d1 = bytes per standard line * height
+#endif
 
 	move.l	d3,d0
 	subq.l	#2,d0
@@ -878,27 +940,50 @@ in_place:
 	addq.l	#2,a4
 
 	move.l	a0,-(a7)
-
+#ifdef COLDFIRE
+	ext.l	d7
+	subq.l	#1,d7
+#else
 	subq.w	#1,d7
+#endif
 
 .loop11:
 	move.w	d6,d5
+#ifdef COLDFIRE
+	ext.l	d5
+	subq.l	#1,d5
+#else
 	subq.w	#1,d5
+#endif
 
 .loop22:
 	move.w	d2,d4
+#ifdef COLDFIRE
+	ext.l	d4
+	subq.l	#1,d4
+#else
 	subq.w	#1,d4
+#endif
 
 .loop33:
 	move.l	a4,a0
 	bsr	rotate_mem
 	addq.l	#2,a4
 	subq.l	#2,d0
+#ifdef COLDFIRE
+	subq.l	#1,d4
+	bpl.s	.loop33
+	subq.l	#2,d1
+	subq.l	#1,d5
+	bpl.s	.loop22
+	subq.l	#1,d7
+	bpl.s	.loop11
+#else
 	ldbra	d4,.loop33
 	subq.w	#2,d1
 	ldbra	d5,.loop22
 	ldbra	d7,.loop11
-
+#endif
 	move.l	(a7)+,a0
 	bra	finish_up
 
@@ -908,7 +993,11 @@ to_standard_ip:			// Should have code for chunky modes (working on it)
 	move.l	wk_driver(a5),a5
 	move.l	driver_device(a5),a5
 	move.w	dev_format(a5),d6
+#ifdef COLDFIRE
+	and.l	#2,d6
+#else
 	and.w	#2,d6
+#endif
 	beq	.not_chunky_ts_ip
 
 	move.w	d0,d7
@@ -916,19 +1005,32 @@ to_standard_ip:			// Should have code for chunky modes (working on it)
 	add.l	d7,d7			// d7 = pix/16 * height * 2 = words/plane
 	moveq	#2,d6
 
+#ifdef COLDFIRE
+	ext.l	d2
+	cmp.l	#16,d2
+#else
 	cmp.w	#16,d2
+#endif
 	bne	.not_16bit_ts_ip
 	bsr	to_standard_16
 	bra	end_vr_trn_fm
 
 .not_16bit_ts_ip:
+#ifdef COLDFIRE
+	cmp.l	#8,d2
+#else
 	cmp.w	#8,d2
+#endif
 	bne	.not_8bit_ts_ip
 	bsr	to_standard_8
 	bra	end_vr_trn_fm
 
 .not_8bit_ts_ip:
+#ifdef COLDFIRE
+	cmp.l	#32,d2
+#else
 	cmp.w	#32,d2
+#endif
 	bne	.not_32bit_ts_ip
 	bsr	to_standard_32
 	bra	end_vr_trn_fm
@@ -936,8 +1038,13 @@ to_standard_ip:			// Should have code for chunky modes (working on it)
 
 .not_32bit_ts_ip:
 .not_chunky_ts_ip:
+#ifdef COLDFIRE
+	move.l	d1,d7
+	move.l	d2,d1
+	move.l	d7,d2
+#else	
 	exg	d1,d2
-
+#endif
 	move.w	d0,d7
 	move.w	d1,d6
 
@@ -946,36 +1053,70 @@ to_standard_ip:			// Should have code for chunky modes (working on it)
 	mulu	d0,d3
 	add.l	d3,d3			// d3 = pix/16 * planes * height * 2 = total bytes
 
+#ifdef COLDFIRE
+	ext.l	d1
+	add.l	d1,d1			// d1 = bytes per 16 pixel block
+#else
 	add.w	d1,d1			// d1 = bytes per 16 pixel block
+#endif
 
 	move.l	d3,d0
 	subq.l	#2,d0
+
+#ifdef COLDFIRE
+	subq.l	#2,d1
+#else
 	subq.w	#2,d1
 	ext.l	d1
+#endif
 	addq.l	#2,a4
 
 	move.l	a0,-(a7)
 
+#ifdef COLDFIRE
+	ext.l	d6
+	subq.l	#1,d6
+#else
 	subq.w	#1,d6
+#endif
 
 .loop_11:
 	move.w	d7,d5
+#ifdef COLDFIRE
+	ext.l	d5
+	subq.l	#1,d5
+#else
 	subq.w	#1,d5
+#endif
 
 .loop_22:
 	move.w	d2,d4
+#ifdef COLDFIRE
+	ext.l	d4
+	subq.l	#1,d4
+#else
 	subq.w	#1,d4
+#endif
 
 .loop_33:
 	move.l	a4,a0
 	bsr	rotate_mem
 	addq.l	#2,a4
 	subq.l	#2,d0
+#ifdef COLDFIRE
+	subq.l	#1,d4
+	bpl.s	.loop_33
+	subq.l	#1,d5
+	bpl.s	.loop_22
+	subq.l	#2,d1
+	subq.l	#1,d6
+	bpl.s	.loop_11
+#else
 	ldbra	d4,.loop_33
 	ldbra	d5,.loop_22
 	subq.w	#2,d1
 	ldbra	d6,.loop_11
-
+#endif
 	move.l	(a7)+,a0
 	bra	end_vr_trn_fm
 
@@ -985,11 +1126,19 @@ finish_up:
 	move.l	wk_driver(a4),a4
 	move.l	driver_device(a4),a4
 	move.w	dev_format(a4),d0
+#ifdef COLDFIRE
+	and.l	#2,d0
+#else
 	and.w	#2,d0
+#endif
 	beq	.not_chunky
 
 	move.w	mfdb_bitplanes(a1),d0
+#ifdef COLDFIRE
+	cmp.l	#16,d0
+#else
 	cmp.w	#16,d0
+#endif
 	bne	.not_16bit
 	move.l	mfdb_address(a2),a4
 	move.l	a4,a3
@@ -1001,19 +1150,32 @@ finish_up:
 
 
 .not_16bit:
+#ifdef COLDFIRE
+	cmp.l	#8,d0
+	bne	.not_8bit
+	sub.l	#16,a7			// This is specialized for 8 bit!
+#else
 	cmp.w	#8,d0
 	bne	.not_8bit
-
 	sub.w	#16,a7			// This is specialized for 8 bit!
+#endif
 	move.l	a7,a3
 	move.l	mfdb_address(a2),a4
 	move.w	mfdb_height(a1),d0
-
+#ifdef COLDFIRE
+	subq.l	#1,d0
+#else
 	subq.w	#1,d0
+#endif
 
 .loop_0_0_:
 	move.w	mfdb_wdwidth(a1),d1
+#ifdef COLDFIRE
+	ext.l	d1
+	subq.l	#1,d1
+#else
 	subq.w	#1,d1
+#endif
 
 .loop_1_1_:
 	movem.l	(a4),d2-d5
@@ -1025,23 +1187,47 @@ finish_up:
 
 .loop_3_3_:
 	move.w	0(a3,d4),d5
+#ifdef COLDFIRE
+	swap	d5
+	add.l	d5,d5
+	addx.l	d6,d6
+	swap	d5
+	move.w	d5,0(a3,d4)
+	subq.l	#2,d4
+#else
 	add.w	d5,d5
 	addx.b	d6,d6
 	move.w	d5,0(a3,d4)
 	subq.w	#2,d4
+#endif
 	lbpl	.loop_3_3_
 	move.b	d6,(a4)+
 
+#ifdef COLDFIRE
+	subq.l	#1,d3
+	bpl.s	.loop_2_2_
+	subq.l	#1,d1
+	bpl.s	.loop_1_1_
+	subq.l	#1,d0
+	bpl.s	.loop_0_0_
+
+	add.l	#16,a7
+#else
 	ldbra	d3,.loop_2_2_
 	ldbra	d1,.loop_1_1_
 	ldbra	d0,.loop_0_0_
 
 	add.w	#16,a7
+#endif
 	bra	end_vr_trn_fm
 
 
 .not_8bit:
+#ifdef COLDFIRE
+	cmp.l	#32,d0
+#else
 	cmp.w	#32,d0
+#endif
 	bne	.not_32bit
 
 	move.l	vwk_real_address(a0),a5
@@ -1053,16 +1239,29 @@ finish_up:
 .local_palette:
 	move.l	d0,a5
 
+#ifdef COLDFIRE
+	sub.l	#64,a7			// This is specialized for 32 bit!
+#else
 	sub.w	#64,a7			// This is specialized for 32 bit!
+#endif
 	move.l	a7,a3
 	move.l	mfdb_address(a2),a4
 	move.w	mfdb_height(a1),d0
-
+#ifdef COLDFIRE
+	ext.l	d0
+	subq.l	#1,d0
+#else
 	subq.w	#1,d0
+#endif
 
 .loop_0b0:
 	move.w	mfdb_wdwidth(a1),d1
+#ifdef COLDFIRE
+	ext.l	d1
+	subq.l	#1,d1
+#else
 	subq.w	#1,d1
+#endif
 
 .loop_1b1:
 	movem.l	(a4),d2-d5
@@ -1080,19 +1279,37 @@ finish_up:
 
 .loop_3b3:
 	move.w	0(a3,d4),d5
+#ifdef COLDFIRE
+	swap	d5
+	add.l	d5,d5
+#else
 	add.w	d5,d5
+#endif
+
 
   .ifne lookup32
 	addx.l	d6,d6
+#ifdef COLDFIRE
+	swap	d5
+	move.w	d5,0(a3,d4)
+	subq.l	#2,d4
+#else
 	move.w	d5,0(a3,d4)
 	subq.w	#2,d4
+#endif
 	lbpl	.loop_3b3
 
+#ifdef COLDFIRE
+	and.l	#$00ff,d6		// Higher palette entries aren't possible (optimize above!)
+	cmp.l	#16,d6
+	lblo	.lookup5		// 0-15
+	cmp.l	#255,d6
+#else
 	and.w	#$00ff,d6		// Higher palette entries aren't possible (optimize above!)
-
 	cmp.b	#16,d6
 	lblo	.lookup5		// 0-15
 	cmp.b	#255,d6
+#endif
 	lbne	.colour_ok,6		// 16-254
 	moveq	#1,d6
 	lbra	.colour_ok,6
@@ -1101,29 +1318,75 @@ finish_up:
 	move.b	0(a6,d6),d6
 
 .colour_ok6:
-
+#ifdef COLDFIRE
+	lsl.l	#4,d6			// Assume 16 byte palette entries
+#else
 	lsl.w	#4,d6			// Assume 16 byte palette entries
+#endif
 	move.l	12(a5,d6),d5
+#ifdef COLDFIRE
+	move.l	d5,d7
+	lsr.l	#8,d7
+	lsl.l	#8,d5
+	or.l	d7,d5
+	swap	d5
+	clr.w	d5
+	move.l	d5,-(a7)
+	move.w	12(a5,d6),d5
+	move.l	d5,d7
+	lsr.l	#8,d7
+	lsl.l	#8,d5
+	or.l	d7,d5
+	and.l	#0xffff,d5
+	or.l	(a7)+,d5
+#else
 	ror.w	#8,d5
 	swap	d5
 	ror.w	#8,d5
+#endif
 	swap	d5
 	move.l	d5,(a4)+
   .else
+#ifdef COLDFIRE
+	move.l	d5,-(a7)
+	addx.l	d7,d7
+	moveq	#31,d5
+	asl.l	d5,d7
+	lsr.l	#1,d6
+	or.l	d7,d6
+	move.l	(a7)+,d5
+	swap	d5
+#else
 	roxr.l	#1,d6		// This _is_ the right one!
+#endif
 	move.w	d5,0(a3,d4)
+#ifdef COLDFIRE
+	subq.l	#2,d4
+#else
 	subq.w	#2,d4
+#endif
 	lbpl	.loop_3b3
 
 	move.l	d6,(a4)+
   .endc
 
 .skipb4:
+#ifdef COLDFIRE
+	subq.l	#1,d3
+	bpl.s	.loop_2b2
+	subq.l	#1,d1
+	bpl.s	.loop_1b1
+	subq.l	#1,d0
+	bpl.s	.loop_0b0
+
+	add.l	#64,a7
+#else
 	ldbra	d3,.loop_2b2
 	ldbra	d1,.loop_1b1
 	ldbra	d0,.loop_0b0
 
 	add.w	#64,a7
+#endif
 	bra	end_vr_trn_fm
 
 .not_32bit:
@@ -1136,7 +1399,12 @@ end_vr_trn_fm:
 	moveq	#0,d0
 .was_not_standard:
 	move.w	d0,mfdb_standard(a2)
+#ifdef COLDFIRE
+	movem.l	(a7),d2-d7/a3-a6
+	lea	40(a7),a7
+#else
 	movem.l	(a7)+,d2-d7/a3-a6
+#endif
 	used_d1
 	rts
 	
@@ -1148,7 +1416,12 @@ end_vr_trn_fm:
 *       d1      Shift
 */
 rotate_mem:
+#ifdef COLDFIRE
+	lea	-24(a7),a7
+	movem.l	d0-d3/a2-a3,(a7)
+#else
 	movem.l	d0-d3/a2-a3,-(a7)
+#endif
 	move.l	a0,a2
 	cmp.l	d0,d1
 	bge	.end_rotate
@@ -1165,7 +1438,12 @@ rotate_mem:
 	move.b	(a2),d3
 	move.b	(a3),(a2)+
 	move.b	d3,(a3)+
+#ifdef COLDFIRE
+	subq.l	#1,d2
+	bpl.s	.loopr1
+#else
 	ldbra	d2,.loopr1
+#endif
 	sub.l	#0x10000,d2
 	lbpl	.loopr1
 	move.l	d0,d2
@@ -1180,7 +1458,12 @@ rotate_mem:
 	cmp.l	d0,d1
 	blt	.rotate
 .end_rotate:
+#ifdef COLDFIRE
+	movem.l	(a7),d0-d3/a2-a3
+	lea	24(a7),a7
+#else
 	movem.l	(a7)+,d0-d3/a2-a3
+#endif
 	rts
 
 
@@ -1188,4 +1471,5 @@ rotate_mem:
 
 vdi_colours:
 	dc.b	0,2,3,6,4,7,5,8,9,10,11,14,12,15,13,255
+
 

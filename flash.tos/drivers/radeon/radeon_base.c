@@ -451,15 +451,17 @@ static int radeon_probe_pll_params(struct radeonfb_info *rinfo)
 	/* Flush PCI buffers ? */
 	tmp = INREG16(DEVICE_ID);
 #ifdef COLDFIRE
-	asm("move.l D0,-(SP)");
-	asm("move.w SR,D0");
-	asm("move.w D0,save_d0");
-	asm("or.l #0x700,D0");   /* disable interrupts */
-	asm("move.w D0,SR");
-	asm("move.l (SP)+,D0");
+	asm volatile (
+		" move.l D0,-(SP)\n\t"
+		" move.w SR,D0\n\t"
+		" move.w D0,save_d0\n\t"
+		" or.l #0x700,D0\n\t"   /* disable interrupts */
+		" move.w D0,SR\n\t"
+		" move.l (SP)+,D0\n\t" );
 #else
-	asm("move.w SR,save_d0");
-	asm("or.w #0x700,SR");   /* disable interrupts */
+	asm volatile (
+		" move.w SR,save_d0\n\t"
+		" or.w #0x700,SR\n\t" );   /* disable interrupts */
 #endif
 	start_tv = get_timer();
 	while(read_vline_crnt(rinfo) != 0)
@@ -495,14 +497,16 @@ static int radeon_probe_pll_params(struct radeonfb_info *rinfo)
 	}
 	stop_tv = get_timer();
 #ifdef COLDFIRE
-	asm("move.w D0,-(SP)");
-	asm("move.w save_d0,D0");
-	asm("move.w D0,SR");
-	asm("move.w (SP)+,D0");
+	asm volatile (
+		" move.w D0,-(SP)\n\t"
+		" move.w save_d0,D0\n\t"
+		" move.w D0,SR\n\t"
+		" move.w (SP)+,D0\n\t" );
 	if(timeout)  /* 10 sec */
 		return -1; /* error */
 #else
-	asm("move.w save_d0,SR");
+	asm volatile (
+		"move.w save_d0,SR\n\t" );
 	if(timeout)  /* 10 sec */
 		return -1; /* error */
 #endif
@@ -730,6 +734,15 @@ int radeonfb_check_var(struct fb_var_screeninfo *var, struct fb_info *info)
 	int nom, den;
 	unsigned int pitch;
 //	DPRINT("radeonfb: radeonfb_check_var\r\n");
+	/* clocks over 135 MHz have heat isues with DVI on RV100 */
+	if((rinfo->mon1_type == MT_DFP) && (rinfo->family == CHIP_FAMILY_RV100) && ((100000000 / var->pixclock) > 13500))
+	{
+		DPRINTVAL("radeonfb: mode ",var->xres);
+		DPRINTVAL("x",var->yres);
+		DPRINTVAL("x",var->bits_per_pixel);
+		DPRINT(" rejected, RV100 DVI clock over 135 MHz\r\n");
+		return -EINVAL;
+	}
 	if(radeon_match_mode(rinfo, &v, var))
 		return -EINVAL;
 	switch(v.bits_per_pixel)
@@ -1151,7 +1164,7 @@ static void radeon_write_pll_regs(struct radeonfb_info *rinfo, struct radeon_reg
 				~PPLL_DIV_SEL_MASK);
 			radeon_pll_errata_after_index(rinfo);
 			radeon_pll_errata_after_data(rinfo);
-            		return;
+			return;
 		}
 	}
 #endif
@@ -1202,6 +1215,12 @@ static void radeon_write_pll_regs(struct radeonfb_info *rinfo, struct radeon_reg
 	radeon_msleep(5);
 	/* Switch back VCLK source to PPLL */
 	OUTPLLP(VCLK_ECP_CNTL, VCLK_SRC_SEL_PPLLCLK, ~VCLK_SRC_SEL_MASK);
+}
+
+static void radeon_wait_vbl(struct fb_info *info)
+{
+	unsigned long cnt = INREG(CRTC_CRNT_FRAME);
+	while(cnt == INREG(CRTC_CRNT_FRAME));
 }
 
 static void radeon_timer_func(void)
@@ -1255,16 +1274,18 @@ static void radeon_timer_func(void)
 	 || (info->var.yres_virtual != info->var.yres))
 	{
 #ifdef COLDFIRE
-		asm("clr.l -(SP)");		
-		asm("move.l D0,-(SP)");
-		asm("move.w SR,D0");
-		asm("move.l D0,4(SP)");
-		asm("or.l #0x700,D0");   /* disable interrupts */
-		asm("move.w D0,SR");
-		asm("move.l (SP)+,D0");
+		asm volatile (
+			" clr.l -(SP)\n\t"
+			" move.l D0,-(SP)\n\t"
+			" move.w SR,D0\n\t"
+			" move.l D0,4(SP)\n\t"
+			" or.l #0x700,D0\n\t"   /* disable interrupts */
+			" move.w D0,SR\n\t"
+			" move.l (SP)+,D0\n\t" );
 #else
-		asm("move.w SR,-(SP)");
-		asm("or.w #0x700,SR");   /* disable interrupts */
+		asm volatile (
+			" move.w SR,-(SP)\n\t"
+			" or.w #0x700,SR\n\t" ); /* disable interrupts */
 #endif
 		chg = 0;
 		x = info->var.xoffset;
@@ -1304,13 +1325,15 @@ static void radeon_timer_func(void)
 				RADEONShowCursor(info);
 		}
 #ifdef COLDFIRE
-		asm("move.l D0,-(SP)");
-		asm("move.l 4(SP),D0");
-		asm("move.w D0,SR");
-		asm("move.l (SP)+,D0");
-		asm("addq.l #4,SP");		
+		asm volatile (
+			" move.l D0,-(SP)\n\t"
+			" move.l 4(SP),D0\n\t"
+			" move.w D0,SR\n\t"
+			" move.l (SP)+,D0\n\t"
+			" addq.l #4,SP\n\t" );		
 #else
-		asm("move.w (SP)+,SR");
+			asm volatile (
+				" move.w (SP)+,SR\n\r" );
 #endif
 	}
 }
@@ -1786,6 +1809,7 @@ static struct fb_ops radeonfb_ops =
 	.HideCursor = RADEONHideCursor,
 	.ShowCursor = RADEONShowCursor,
 	.CursorInit = RADEONCursorInit,
+	.WaitVbl = radeon_wait_vbl,
 };
 
 static int radeon_set_fbinfo(struct radeonfb_info *rinfo)
@@ -1932,7 +1956,6 @@ int radeonfb_pci_register(long handle, const struct pci_device_id *ent)
 #ifndef PCI_XBIOS
   PCI_COOKIE *bios_cookie;
 #endif
-
 	info_fvdi = info = framebuffer_alloc(sizeof(struct radeonfb_info));
 	if(!info)
 		return(-ENOMEM);
@@ -1947,7 +1970,6 @@ int radeonfb_pci_register(long handle, const struct pci_device_id *ent)
 	rinfo->has_CRTC2 = (ent->driver_data & CHIP_HAS_CRTC2) != 0;
 	rinfo->is_mobility = (ent->driver_data & CHIP_IS_MOBILITY) != 0;
 	rinfo->is_IGP = (ent->driver_data & CHIP_IS_IGP) != 0;
-
 	/* Set base addrs */
 	DPRINT("radeonfb: radeonfb_pci_register: Set base addrs\r\n");
 	rinfo->fb_base_phys = rinfo->mmio_base_phys = rinfo->io_base_phys = 0xFFFFFFFF;
@@ -1957,7 +1979,7 @@ int radeonfb_pci_register(long handle, const struct pci_device_id *ent)
 #ifdef PCI_XBIOS
 	pci_rsc_desc = (PCI_RSC_DESC *)get_resource(handle);
 #else
-	bios_cookie = (PCI_COOKIE *)Funcs_get_cookie("_PCI",Super(1));
+	bios_cookie = (PCI_COOKIE *)Funcs_get_cookie((void *)"_PCI",Super(1));
 	if(bios_cookie == (void *)-1)   /* faster than XBIOS calls */
 		return(-EIO);
 	tab_funcs_pci = &bios_cookie->routine[0];
@@ -2019,7 +2041,7 @@ int radeonfb_pci_register(long handle, const struct pci_device_id *ent)
 				}
 			}
 			flags = pci_rsc_desc->flags;
-			(unsigned long)pci_rsc_desc += (unsigned long)pci_rsc_desc->next;
+			pci_rsc_desc = (PCI_RSC_DESC *)((unsigned long)pci_rsc_desc->next + (unsigned long)pci_rsc_desc);
 		}
 		while(!(flags & FLG_LAST));
 	}

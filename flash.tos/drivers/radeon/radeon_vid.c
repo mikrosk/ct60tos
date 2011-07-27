@@ -1786,7 +1786,7 @@ static int radeon_vid_init_video(vidix_playback_t *config)
 	struct radeonfb_info *rinfo = info_fvdi->par;
 	float H_scale_ratio, V_scale_ratio;
 	unsigned long i, src_w, src_h,dest_w, dest_h, pitch, left, leftUV, top, h_inc;
-	unsigned long val_OV0_P1_H_INC, val_OV0_P1_H_STEP_BY, val_OV0_P23_H_INC, val_OV0_P23_H_STEP_BY;
+	unsigned long val_OV0_P1_H_INC = 0, val_OV0_P1_H_STEP_BY, val_OV0_P23_H_INC = 0, val_OV0_P23_H_STEP_BY;
 	unsigned long val_OV0_P1_X_START, val_OV0_P2_X_START;
 	unsigned long val_OV0_P1_MAX_LN_IN_PER_LN_OUT, val_OV0_P23_MAX_LN_IN_PER_LN_OUT;
 	unsigned long CRT_V_INC;
@@ -2064,10 +2064,7 @@ static int radeon_vid_init_video(vidix_playback_t *config)
 	besr.v_inc <<= 8;
 	{
 		int ThereIsTwoTapVerticalFiltering,DoNotUseMostRecentlyFetchedLine;
-		int P1GroupSize;
-		int P23GroupSize;
-		int P1StepSize;
-		int P23StepSize;
+		int P1GroupSize, P23GroupSize, P1StepSize = 0, P23StepSize = 0;
 		Calc_H_INC_STEP_BY(besr.surf_id,H_scale_ratio,DisallowFourTapVertFiltering,DisallowFourTapUVVertFiltering,
 		 &val_OV0_P1_H_INC,&val_OV0_P1_H_STEP_BY,&val_OV0_P23_H_INC,&val_OV0_P23_H_STEP_BY,&P1GroupSize,&P1StepSize,&P23StepSize);
 #ifdef VIDIX_FILTER
@@ -2637,11 +2634,14 @@ int vixPlaybackCopyFrame(vidix_dma_t *dmai)
 	if((dmai->flags & BM_DMA_SYNC) == BM_DMA_SYNC)
 		while(vixQueryDMAStatus() != 0);
 #ifdef COLDFIRE
-	/* flush data cache from the cf68klib */
-	asm(" .chip 68060\n cpusha DC\n .chip 5200\n");
+#if (__GNUC__ > 3)
+		asm volatile (" .chip 68060\n\t cpusha DC\n\t .chip 5485\n\t"); /* from CF68KLIB */
 #else
-	asm(" cpusha DC\n");
+		asm volatile (" .chip 68060\n\t cpusha DC\n\t .chip 5200\n\t"); /* from CF68KLIB */
 #endif
+#else /* 68060 */
+		asm volatile (" cpusha DC\n\t");
+#endif /* COLDFIRE */
 
 //	n = dmai->size / 4096;
 //	if(dmai->size % 4096)

@@ -39,15 +39,44 @@ extern void call_mousevec(unsigned char *data, void (**mousevec)(void *));
 extern void call_ikbdvec(unsigned char code, _IOREC *iorec, void (**ikbdvec)());
 extern int asm_set_ipl(int level);
 
-static void (**ikbdvec)();
-static void (**mousevec)(void *);
-static _IOREC *iorec;
 static unsigned char *new;
 static unsigned char old[8];
 static int mouse_installed;
 
+extern void (**mousevec)(void *);
+extern _IOREC *iorec;
+extern void (**ikbdvec)();
+
 /* forward declaration */
 static int usb_mouse_probe(struct usb_device *dev, unsigned int ifnum);
+
+/* deregistering the mouse */
+int usb_mouse_deregister(struct usb_device *dev)
+{
+	dev->irq_handle = NULL;
+	if(new != NULL)
+	{
+		usb_free(new);
+		new = NULL;
+	}
+	mouse_installed = 0;
+	USB_MOUSE_PRINTF("USB MOUSE deregister\r\n");
+	return 1;
+}
+
+/* registering the mouse */
+int usb_mouse_register(struct usb_device *dev)
+{
+	if(!mouse_installed && (dev->devnum != -1) && (usb_mouse_probe(dev, 0) == 1))
+	{ /* Ok, we found a mouse */
+		USB_MOUSE_PRINTF("USB MOUSE found (USB: %d, devnum: %d)\r\n", dev->usbnum, dev->devnum);
+		mouse_installed = 1;
+		dev->deregister = usb_mouse_deregister;
+		return 1;
+	}
+	/* no USB Mouse found */
+	return -1;
+}
 
 /* search for mouse and register it if found */
 int drv_usb_mouse_init(void)
@@ -63,30 +92,12 @@ int drv_usb_mouse_init(void)
 			struct usb_device *dev = usb_get_dev_index(i, j); /* get device */
 			if(dev == NULL)
 				break;
-			if(dev->devnum != -1)
-			{
-				if(usb_mouse_probe(dev, 0) == 1)
-				{ /* Ok, we found a mouse */
-					USB_MOUSE_PRINTF("USB MOUSE found (devnum: %d)\r\n", dev->devnum);
-					mouse_installed = 1;
-					return 1;
-				}
-			}
+			if(usb_mouse_register(dev) > 0)
+				return 1;
 		}
 	}
 	/* no USB Mouse found */
 	return -1;
-}
-
-/* deregistering the mouse */
-int usb_mouse_deregister(void)
-{
-	if(new != NULL)
-	{
-		usb_free(new);
-		new = NULL;
-	}
-	return 1;
 }
 
 /**************************************************************************
@@ -94,7 +105,8 @@ int usb_mouse_deregister(void)
  */
 static void usb_kbd_send_code(unsigned char code)
 {
-	call_ikbdvec(code, iorec, ikbdvec);
+	if((iorec != NULL) && (ikbdvec != NULL))
+		call_ikbdvec(code, iorec, ikbdvec);
 }
 
 /* Interrupt service routine */
@@ -170,7 +182,8 @@ static int usb_mouse_irq(struct usb_device *dev)
 				}
 			}
 		}
-		call_mousevec(new, mousevec);
+		if(mousevec != NULL)
+			call_mousevec(new, mousevec);
 #ifdef CONFIG_USB_INTERRUPT_POLLING
 		asm_set_ipl(level);
 #endif
@@ -190,8 +203,6 @@ static int usb_mouse_probe(struct usb_device *dev, unsigned int ifnum)
 	struct usb_interface_descriptor *iface;
 	struct usb_endpoint_descriptor *ep;
 	int pipe, maxp;
-	_KBDVECS *kbdvecs = (_KBDVECS *)Kbdvbase();
-	void **kbdvecs2 = (void **)kbdvecs;
 	if(dev->descriptor.bNumConfigurations != 1)
 		return 0;
 	iface = &dev->config.if_desc[ifnum];
@@ -224,12 +235,8 @@ static int usb_mouse_probe(struct usb_device *dev, unsigned int ifnum)
 	memset(&new[0], 0, 8);
 	memset(&old[0], 0, 8);
 	dev->irq_handle = usb_mouse_irq;
-	mousevec = &kbdvecs->mousevec; 
-	ikbdvec = (void (**)())&kbdvecs2[-1]; /* undocumented */
-	iorec = (_IOREC *)Iorec(1);
 	USB_MOUSE_PRINTF("USB MOUSE enable interrupt pipe (maxp: %d)...\r\n", maxp);
 	usb_submit_int_msg(dev, pipe, &new[0], maxp > 8 ? 8 : maxp, ep->bInterval);
-	Cconws("USB HID mouse driver installed\r\n");
 	return 1;
 }
 

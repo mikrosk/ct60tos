@@ -154,7 +154,7 @@ long    ixlseek(register OFD *p, long n)
         curflg = 0 ;
     /***  end  ***/
 
-    clnum = (short)divmod(&p->o_curbyt,n,dm->m_clblog);
+    clnum = (short)divmod((short *)&p->o_curbyt,n,dm->m_clblog);
 
     if (p->o_curcl && (n >= p->o_bytnum))
     {
@@ -241,7 +241,7 @@ long    ixread(OFD *p, long len, void *ubufr)
 {
     long maxlen;
 
-#if 1  // bug to fix !!!!!!!!  
+#if 0  // bug to fix !!!!!!!!  
     if(p->o_dmd == NULL)
     {
         char buf[10];
@@ -379,7 +379,7 @@ static long xrw(short wrtflg, OFD *p, long len, char *ubufr,
 
     bytpos = p->o_bytnum;               /*  starting file position      */
 
-#if 0 // #if DBGFSIO
+#if DBGFSIO
     if(ubufr)
     {
         char buf[10];
@@ -403,6 +403,25 @@ static long xrw(short wrtflg, OFD *p, long len, char *ubufr,
 
     recn = divmod(&bytn,(long)p->o_curbyt,dm->m_rblog);
     recn += (long)p->o_currec;
+
+#if DBGFSIO
+		{
+        char buf[10];
+        display_string("xrw(recn=");
+        ltoa(buf, (long)recn, 10);
+        display_string(buf);
+        display_string(", bytn=");
+        ltoa(buf, (long)bytn, 10);
+        display_string(buf);
+        display_string(", o_curbyt=");
+        ltoa(buf, (long)p->o_curbyt & 0xFFFF, 10);
+        display_string(buf);
+        display_string(", m_rblog=");
+        ltoa(buf, (long)dm->m_rblog & 0xFFFF, 10);
+        display_string(buf);
+        display_string(")\r\n");
+    }
+#endif
 
     /* determine "header" of request. */
 

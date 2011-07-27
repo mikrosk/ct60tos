@@ -620,7 +620,7 @@ int radeon_match_mode(struct radeonfb_info *rinfo,
 		native_db = 1;
 	}
 	/* Check if we have a scaler allowing any fancy mode */
-	has_rmx = rinfo->mon1_type == MT_LCD || rinfo->mon1_type == MT_DFP;
+	has_rmx = (rinfo->mon1_type == MT_LCD) || (rinfo->mon1_type == MT_DFP);
 	/* If we have a scaler and are passed FB_ACTIVATE_TEST or
 	 * FB_ACTIVATE_NOW, just do basic checking and return if the
 	 * mode match
@@ -633,7 +633,7 @@ int radeon_match_mode(struct radeonfb_info *rinfo,
 		 * 640x480-60, but I assume userland knows what it's doing here
 		 * (though I may be proven wrong...)
 		 */
-		if(has_rmx == 0 && rinfo->mon1_modedb)
+		if((has_rmx == 0) && rinfo->mon1_modedb)
 		{
 			if(fb_validate_mode((struct fb_var_screeninfo *)src, rinfo->info))
 				return -EINVAL;
@@ -647,9 +647,7 @@ int radeon_match_mode(struct radeonfb_info *rinfo,
 		for(i = 0; i < dbsize; i++)
 		{
 			int d;
-			if(db[i].yres < src->yres)
-				continue;	
-			if(db[i].xres < src->xres)
+			if((db[i].yres < src->yres) || (db[i].xres < src->xres))
 				continue;
 			d = radeon_compare_modes(src, &db[i]);
 			/* If the new mode is at least as good as the previous one,

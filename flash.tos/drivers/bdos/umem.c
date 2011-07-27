@@ -235,12 +235,13 @@ long xsetblk(short n, void *blk, long len)
     /*
      * Always shrink to an even word length.
      */
-
-//    if (len & 1)
-//        len++;
-
-    len += 15; /* 16 bytes alignment */
-    len &= 0xFFFFFFF0;
+#if 0
+    if (len & 1)
+        len++;
+#else
+    len += 15; /* line (16 bytes) alignment */
+    len &= ~15;
+#endif
 
     /*
      * Create a memory descriptor for the freed portion of memory.
@@ -332,9 +333,13 @@ long xmxalloc(long amount, short mode)
     /*
      * Round odd-value requests to next higher even number.
      */
-
+#if 0
     if ((amount & 1))
         amount++;
+#else
+      amount += 15;
+      amount &= ~15; /* line alignment */
+#endif
 
     /*
      * Pass the request on to the internal routine. 
@@ -450,7 +455,10 @@ void umem_init(void)
     Getmpb((long)&pmd);
     /* derive the addresses, assuming the MPB is in clean state */ 
     start_stram = *_membot; // pmd.mp_mfl->m_start;
-    end_stram = start_stram + pmd.mp_mfl->m_length;
+    end_stram = pmd.mp_mfl->m_start + pmd.mp_mfl->m_length;
+    pmd.mp_mfl->m_start += 15;
+    pmd.mp_mfl->m_start &= ~15;
+    pmd.mp_mfl->m_length &= ~15;
     if(pmd.mp_rover == NULL)
         pmd.mp_rover = pmd.mp_mfl;
     /* there is no known TT RAM initially */

@@ -108,7 +108,7 @@ COOKIE *fcookie(void)
 COOKIE *ncookie(COOKIE *p)
 {
 	if(!p->ident)
-		return(0);
+		return((COOKIE *)0);
 	return(++p);
 }
 
@@ -409,11 +409,15 @@ void free_block(void *addr)
 static void cache_flush(void)
 {
 #ifdef COLDFIRE
-	asm("	.chip 68060");
+	asm volatile (" .chip 68060\n\t");
 #endif
-	asm(" cpusha BC");
+	asm volatile (" cpusha BC\n\t");
 #ifdef COLDFIRE
-	asm("	.chip 5200");
+#if (__GNUC__ > 3)
+	asm volatile (" .chip 5485\n\t");
+#else
+	asm volatile (" .chip 5200\n\t");
+#endif
 #endif
 }
 

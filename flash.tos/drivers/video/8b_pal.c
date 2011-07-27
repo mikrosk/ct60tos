@@ -53,7 +53,7 @@ void CDECL c_set_colours_8(Virtual *vwk, long start, long entries, unsigned shor
 	
 	if((long)requested & 1)
 	{			/* New entries? */
-		requested = (short *)((long)requested & 0xfffffffeL);
+		requested = (unsigned short *)((long)requested & 0xfffffffeL);
 		for(i = 0; i < entries; i++)
 		{
 			requested++;				/* First word is reserved */

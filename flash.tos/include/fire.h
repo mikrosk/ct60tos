@@ -1,5 +1,5 @@
-/* TOS 4.04 Xbios for the Fire Engine Coldfire board
-*  Didier Mequignon 2006, e-mail: aniplay@wanadoo.fr
+/* TOS 4.04 Xbios for Coldfire boards
+*  Didier Mequignon 2006-2010, e-mail: aniplay@wanadoo.fr
 *
 *  This library is free software; you can redistribute it and/or
 *  modify it under the terms of the GNU Lesser General Public
@@ -101,7 +101,7 @@
 #define LEDS_LED1             0x00000001
 #define LEDS_LED2             0x00000002
 
-#define SYSTEM_CLOCK 133    // system bus frequency in MHz
+#define SYSTEM_CLOCK 132    // system bus frequency in MHz
 
 #define CFG_SDRAM_CFG1        0x65311610
 #define CFG_SDRAM_CFG2        0x59670000
@@ -343,7 +343,7 @@
 /* FALCON I/O 1MB */
 #define FPGA_CS1_BASE  0xFFF00000
 #define FPGA_CS1_SIZE  0x00100000
-#define FPGA_CS1_ACCESS (MCF_FBCS_CSCR_AA + MCF_FBCS_CSCR_RDAH(1)	+ MCF_FBCS_CSCR_WS(16) + MCF_FBCS_CSCR_PS_16)
+#define FPGA_CS1_ACCESS (MCF_FBCS_CSCR_AA + MCF_FBCS_CSCR_RDAH(1) + MCF_FBCS_CSCR_WS(16) + MCF_FBCS_CSCR_PS_16)
 /* ACP I/O 128MB */ 
 #define FPGA_CS2_BASE  0xF0000000
 #define FPGA_CS2_SIZE  0x08000000
@@ -362,12 +362,14 @@
 #define ACP_VIDEO_CLUT         (FPGA_CS2_BASE)
 #define ACP_VIDEO_CONTROL      (FPGA_CS2_BASE + 0x400)
 #define ACP_VIDEO_BORDER_COLOR (FPGA_CS2_BASE + 0x404)
+#define ACP_ST_MODES           (FPGA_CS2_BASE + 0x410)
 #define ACP_BORDER_ON          0x02000000
 #define ACP_FIFO_ON            0x01000000
 #define ACP_CONFIG_ON          0x00080000
 #define ACP_REFRESH_ON         0x00040000
 #define ACP_VCS                0x00020000
 #define ACP_VCKE               0x00010000
+#define ACP_SYNC               0x00008000
 #define ACP_CLK25              0x00000000
 #define ACP_CLK33              0x00000100
 #define ACP_CLK_PLL            0x00000200
@@ -426,6 +428,8 @@
 #define ACP_CONFIG             (FPGA_CS2_BASE + 0x40000)
 #define ACP_CF_IDE             0xC0000000
 #define ACP_DD_HD              0x20000000
+#define ACP_IDE_INT_ENABLE     0x10000000
+#define ACP_SCSI_INT_ENABLE    0x08000000
 
 #else /* Fire Engine (M5484LITE/M5485EVB) only */
 
@@ -578,6 +582,7 @@
 #include "mcf548x_pci.h"    // PCI Bus Controller
 #include "mcf548x_pciarb.h" // PCI Arbiter Module
 #include "mcf548x_intc.h"   // Interrupt Controller
+#include "mcf548x_dspi.h"   // DSPI
 #include "mcf548x_i2c.h"    // I2C
 #include "mcf548x_pll.h"    // PLL
 

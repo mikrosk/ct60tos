@@ -353,10 +353,10 @@ void blit_copy(unsigned char *src_addr, int src_line_add, unsigned char *dst_add
 	switch(bpp)
 	{
 		case 16:
-			blit_copy_16((short *)src_addr,src_line_add,(short *)dst_addr,dst_line_add,w,h);
+			blit_copy_16((void *)src_addr,src_line_add,(void *)dst_addr,dst_line_add,w,h);
 			break;
 		case 32:
-			blit_copy_32((long *)src_addr,src_line_add,(long *)dst_addr,dst_line_add,w,h);
+			blit_copy_32((void *)src_addr,src_line_add,(void *)dst_addr,dst_line_add,w,h);
 			break;
 		default:
 			blit_copy_8(src_addr,src_line_add,dst_addr,dst_line_add,w,h);
@@ -1796,7 +1796,7 @@ long CDECL c_mouse_draw(Workstation *wk, long x, long y, Mouse *mouse)
 			info->fbops->SetCursorPosition(info,(int)(x-xoffset),(int)(y-yoffset));
 			break;
 		default:
-			colour = *(long*)&mouse->colour;
+			colour = *(unsigned long *)&mouse->colour;
 			/* mouse is always in 16M colours on Radeon so use default palette */
 			foreground = ((((unsigned long)colours[((short)colour)*3])*255/1000)<<16)
 			           + ((((unsigned long)colours[((short)colour)*3+1])*255/1000)<<8)
@@ -1932,13 +1932,13 @@ long CDECL c_expand_area(Virtual *vwk, MFDB *src, long src_x, long src_y, MFDB *
 					break;
 #endif
 				case 16:
-					replace_16(src_addr,src_line_add,dst_addr,dst_line_add,src_x,w,h,(unsigned short)foreground,(unsigned short)background);
+					replace_16((void *)src_addr,src_line_add,(void *)dst_addr,dst_line_add,src_x,w,h,(unsigned short)foreground,(unsigned short)background);
 					break;
 				case 32:
-					replace_32(src_addr,src_line_add,dst_addr,dst_line_add,src_x,w,h,foreground,background);
+					replace_32((void *)src_addr,src_line_add,(void *)dst_addr,dst_line_add,src_x,w,h,foreground,background);
 					break;				
 				default:
-					replace_8(src_addr,src_line_add,dst_addr,dst_line_add,src_x,w,h,(unsigned char)foreground,(unsigned char)background);
+					replace_8((void *)src_addr,src_line_add,(void *)dst_addr,dst_line_add,src_x,w,h,(unsigned char)foreground,(unsigned char)background);
 					break;
 			}				
 			break;
@@ -1951,13 +1951,13 @@ long CDECL c_expand_area(Virtual *vwk, MFDB *src, long src_x, long src_y, MFDB *
 					break;
 #endif
 				case 16:
-					transparent_16(src_addr,src_line_add,dst_addr,dst_line_add,src_x,w,h,(unsigned short)foreground,(unsigned short)background);
+					transparent_16((void *)src_addr,src_line_add,(void *)dst_addr,dst_line_add,src_x,w,h,(unsigned short)foreground,(unsigned short)background);
 					break;
 				case 32:
-					transparent_32(src_addr,src_line_add,dst_addr,dst_line_add,src_x,w,h,foreground,background);
+					transparent_32((void *)src_addr,src_line_add,(void *)dst_addr,dst_line_add,src_x,w,h,foreground,background);
 					break;
 				default:
-					transparent_8(src_addr,src_line_add,dst_addr,dst_line_add,src_x,w,h,(unsigned char)foreground,(unsigned char)background);
+					transparent_8((void *)src_addr,src_line_add,(void *)dst_addr,dst_line_add,src_x,w,h,(unsigned char)foreground,(unsigned char)background);
 					break;
 			}
 			break;
@@ -1970,13 +1970,13 @@ long CDECL c_expand_area(Virtual *vwk, MFDB *src, long src_x, long src_y, MFDB *
 					break;
 #endif
 				case 16:
-					xor_16(src_addr,src_line_add,dst_addr,dst_line_add,src_x,w,h,(unsigned short)foreground,(unsigned short)background);
+					xor_16((void *)src_addr,src_line_add,(void *)dst_addr,dst_line_add,src_x,w,h,(unsigned short)foreground,(unsigned short)background);
 					break;
 				case 32:
-					xor_32(src_addr,src_line_add,dst_addr,dst_line_add,src_x,w,h,foreground,background);
+					xor_32((void *)src_addr,src_line_add,(void *)dst_addr,dst_line_add,src_x,w,h,foreground,background);
 					break;
 				default:
-					xor_8(src_addr,src_line_add,dst_addr,dst_line_add,src_x,w,h,(unsigned char)foreground,(unsigned char)background);
+					xor_8((void *)src_addr,src_line_add,(void *)dst_addr,dst_line_add,src_x,w,h,(unsigned char)foreground,(unsigned char)background);
 					break;
 			}				
 			break;
@@ -1989,13 +1989,13 @@ long CDECL c_expand_area(Virtual *vwk, MFDB *src, long src_x, long src_y, MFDB *
 					break;
 #endif
 				case 16:			
-					revtransp_16(src_addr,src_line_add,dst_addr,dst_line_add,src_x,w,h,(unsigned short)foreground,(unsigned short)background);
+					revtransp_16((void *)src_addr,src_line_add,(void *)dst_addr,dst_line_add,src_x,w,h,(unsigned short)foreground,(unsigned short)background);
 					break;
 				case 32:
-					revtransp_32(src_addr,src_line_add,dst_addr,dst_line_add,src_x,w,h,foreground,background);
+					revtransp_32((void *)src_addr,src_line_add,(void *)dst_addr,dst_line_add,src_x,w,h,foreground,background);
 					break;
 				default:
-					revtransp_8(src_addr,src_line_add,dst_addr,dst_line_add,src_x,w,h,(unsigned char)foreground,(unsigned char)background);
+					revtransp_8((void *)src_addr,src_line_add,(void *)dst_addr,dst_line_add,src_x,w,h,(unsigned char)foreground,(unsigned char)background);
 					break;
 			}
 			break;

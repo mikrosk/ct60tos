@@ -299,8 +299,12 @@ long RADEONCursorInit(struct fb_info *info)
 		rinfo->cursor_start = 0;
 	else
 	{
+		unsigned short data[16], mask[16];
+		memset(data, 0, sizeof(data));
+		memset(mask, 0, sizeof(data));		
 		rinfo->cursor_start = RADEON_ALIGN(fbarea - (unsigned long)rinfo->fb_base, 256);
 		rinfo->cursor_end = rinfo->cursor_start + size_bytes;
+		RADEONLoadCursorImage(info, mask, data, 1);
 	}
 //	DPRINTVALHEX(" cursor_start ",rinfo->cursor_start);
 //	DPRINT("\r\n");

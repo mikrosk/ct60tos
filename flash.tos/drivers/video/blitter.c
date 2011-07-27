@@ -47,7 +47,11 @@ void blitter_copy(unsigned char *src_addr, int src_line_add, unsigned char *dst_
 	if(backward)
 		horizontal_incr = -horizontal_incr;
 	if(((long)src_addr >= 0x01000000) && ((long)src_addr < *(long *)ramtop))
-		asm(" .chip 68060\n cpusha DC\n .chip 5200\n");
+#if (__GNUC__ > 3)
+		asm volatile (" .chip 68060\n\t cpusha DC\n\t .chip 5485\n\t");
+#else
+		asm volatile (" .chip 68060\n\t cpusha DC\n\t .chip 5200\n\t");
+#endif
 	SRC_XINC = (short)horizontal_incr;
 	SRC_YINC = (short)src_line_add;
 	SCR_ADDR = (long)src_addr;
@@ -67,9 +71,17 @@ void blitter_copy(unsigned char *src_addr, int src_line_add, unsigned char *dst_
 		SKEW |= 0xC0;
 	LINE_NUM |= 0x80; // start transfer
 	while(LINE_NUM < 0) // wait end of transfer
-		asm(" nop");
+	{
+		asm volatile (" nop\n\t");
+	}
 	if(((long)dst_addr >= 0x01000000) && ((long)dst_addr < *(long *)ramtop))
-		asm(" .chip 68060\n cpusha DC\n .chip 5200\n");
+	{
+#if (__GNUC__ > 3)
+		asm volatile (" .chip 68060\n\t cpusha DC\n\t .chip 5485\n\t"); /* from CF68KLIB */
+#else
+		asm volatile (" .chip 68060\n\t cpusha DC\n\t .chip 5200\n\t"); /* from CF68KLIB */
+#endif
+	}
 }
 
 #endif /* defined(COLDFIRE) && defined(MCF547X) */

@@ -38,8 +38,8 @@
 extern void swp68w(short *);
 extern void swp68l(long *);
 
-#define swpw(x) swp68w(&x)
-#define swpl(x) swp68l(&x)
+#define swpw(x) swp68w((short *)&x)
+#define swpl(x) swp68l((long *)&x)
 
 /*
  * WORD set_sr(WORD new); 

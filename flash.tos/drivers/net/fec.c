@@ -546,8 +546,10 @@ fec_reset (uint8 ch)
     MCF_FEC_ECR(ch) = MCF_FEC_ECR_RESET;
 
     /* Wait at least 8 clock cycles */
-    for (i=0; i<10; ++i)
-        asm(" nop");
+    for (i = 0; i < 10; i++)
+    {
+  	    asm volatile (" nop\n\t"); 
+    }
 }
 /********************************************************************/
 /*
@@ -819,8 +821,11 @@ fec_rx_frame(uint8 ch, NIF *nif)
     display_string("fec_rx_frame\r\n");
 #endif
 
-    /* flush data cache from the cf68klib */
-    asm(" .chip 68060\n cpusha DC\n .chip 5200\n");
+#if (__GNUC__ > 3)
+    asm volatile (" .chip 68060\n\t cpusha DC\n\t .chip 5485\n\t"); /* from CF68KLIB */
+#else
+    asm volatile (" .chip 68060\n\t cpusha DC\n\t .chip 5200\n\t"); /* from CF68KLIB */
+#endif
     
     while ((pRxBD = fecbd_rx_alloc(ch)) != NULL)
     {
@@ -1246,8 +1251,11 @@ fec_send (uint8 ch, uint8 *dst, uint8 *src, uint16 type, NBUF *nbuf)
     display_string("\r\n");
 #endif
 
-    /* flush data cache from the cf68klib */
-    asm(" .chip 68060\n cpusha DC\n .chip 5200\n");
+#if (__GNUC__ > 3)
+    asm volatile (" .chip 68060\n\t cpusha DC\n\t .chip 5485\n\t"); /* from CF68KLIB */
+#else
+    asm volatile (" .chip 68060\n\t cpusha DC\n\t .chip 5200\n\t"); /* from CF68KLIB */
+#endif
 
     /* Save off the EIMR value */
     mask = MCF_FEC_EIMR(ch);

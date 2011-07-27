@@ -39,7 +39,7 @@ static int radeon_gpio_getscl(void* data)
 	struct radeonfb_info *rinfo = chan->rinfo;
 	unsigned long val;
 	val = INREG(chan->ddc_reg);
-	return (val & VGA_DDC_CLK_INPUT) ? 1 : 0;
+	return(val & VGA_DDC_CLK_INPUT) ? 1 : 0;
 }
 
 static int radeon_gpio_getsda(void* data)
@@ -48,7 +48,7 @@ static int radeon_gpio_getsda(void* data)
 	struct radeonfb_info *rinfo = chan->rinfo;
 	unsigned long val;
 	val = INREG(chan->ddc_reg);
-	return (val & VGA_DDC_DATA_INPUT) ? 1 : 0;
+	return(val & VGA_DDC_DATA_INPUT) ? 1 : 0;
 }
 
 static int radeon_setup_i2c_bus(struct radeon_i2c_chan *chan)

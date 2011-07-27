@@ -1,9 +1,9 @@
 FLASH060.PRG
 ------------
 The main task of this program is to put TOS binary (.BIN) and Srecord 
-files (.HEX) files into the flash, but the second task is to update 
-the CT60 hardware with the JEDEC files (.JED), for the ABE60, SDR60, 
-and CTPCI chips (XILINX XC95144XL / XC95288XL CPLD).
+files (.HEX) files into the CT60 or FIREBEE flash, but the second task 
+is to update the CT60 hardware with the JEDEC files (.JED), for the ABE60,
+SDR60, and CTPCI chips (XILINX XC95144XL / XC95288XL CPLD).
 
 - In order to load the JEDEC files, you must make the cable for the JTAG
   CT60 connector linked to the parallel port; look in CT60.HYP for the
@@ -30,19 +30,14 @@ Pin 16 TDO              --> Pin 4
 Pin 17 TDI              --> Pin 5
 Pin 18 TMS              --> Pin 6
 
-This 2009 update allows to change ABE et SDR boot display version:
-- You are in 060 mode.
-- Load the jedec file -> boot/version is editable.
-- You can change boot/version yourself.
-- Click on "Program".
-- At the alert box "Cannot update the hardware" arrives, click on :
-  "Write Version".
-This update allows to force the programming chip to ABE or SDR, 
-because since the CT63 it's impossible to detect the chip from the 
-jedec file (SDR60 was a XC95144XL-7-TQ144 and ABE60 a C95144XL-10-
-TQ144). When you load the jedec file, the filename it's also tested 
-and an alert box arrives for change the chip. This update allows CTPCI 
+You can force the programming chip to ABE or SDR, because since the 
+CT63 it's impossible to detect the chip from the jedec file 
+(SDR60 was a XC95144XL-7-TQ144 and ABE60 a C95144XL-10-TQ144). 
+When you load the jedec file, the filename it's also tested and an 
+alert box arrives for change the chip. This update allows CTPCI 
 device programming (XC95288XL). 
+
+This update allows to program the ETHERNAT (XC9572XL). 
 
 FLASH_CF.PRG
 ------------

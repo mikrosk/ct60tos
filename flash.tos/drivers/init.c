@@ -1,5 +1,5 @@
 /* TOS 4.04 PCI init for the CT60/CTPCI & Coldfire boards
- * Didier Mequignon 2005-2010, e-mail: aniplay@wanadoo.fr
+ * Didier Mequignon 2005-2011, e-mail: aniplay@wanadoo.fr
  *
  * This file is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -31,11 +31,9 @@
 #include "ct60.h"
 #include "vidix.h"
 
-#ifdef COLDFIRE
-#define DEBUG
-#else
+// #define BETA_VERSION "beta 8"
+
 #undef DEBUG
-#endif
 
 #ifndef Vsetscreen
 #ifdef VsetScreen
@@ -72,7 +70,7 @@ extern int sprintD(char *s, const char *fmt, ...);
 #include "lwip/net.h"
 #include "lwip/sockets.h"
 #include "lwip/tftp.h"
-extern int tftpreceive(unsigned char *server, char *sname, short handle);
+extern int tftpreceive(unsigned char *server, char *sname, short handle, long *size);
 extern int tftpsend(unsigned char *server, char *sname, short handle);
 extern int usb_load_files(void);
 typedef unsigned char IP_ADDR[4];
@@ -87,6 +85,10 @@ typedef unsigned char IP_ADDR[4];
 #include "get.h"
 
 extern long install_ram_disk(void);
+#ifdef MCF547X
+extern long check_sd_card(void);
+extern long install_sd_card(void);
+#endif
 extern void init_dma(void);
 extern int init_network(void);
 #ifndef LWIP
@@ -95,7 +97,7 @@ extern void end_network(void);
 extern int alert_tos(char *string);
 extern void init_dma_transfer(void);
 extern void minus(char *s);
-extern int InitSound(void);
+extern int InitSound(long gsxb);
 
 unsigned long write_protect_ram_disk;
 
@@ -104,6 +106,20 @@ unsigned long write_protect_ram_disk;
 extern void init_resolution(long modecode);
 extern long find_best_mode(long modecode);
 extern const struct fb_videomode *get_db_from_modecode(long modecode);
+
+typedef struct
+{
+	unsigned short bootpref;
+	char reserved[4];
+	unsigned char language;
+	unsigned char keyboard;
+	unsigned char datetime;
+	char separator;
+	unsigned char bootdelay;
+	char reserved2[3];
+	unsigned short vmode;
+	unsigned char scsi;
+} NVM;
 
 typedef struct
 {
@@ -139,13 +155,13 @@ extern int eddi_cookie(int);
 extern long initialize_pool(long size, long n);
 extern void display_atari_logo(void);
 extern void display_ati_logo(void);
-#if defined(CONFIG_USB_UHCI) || defined(CONFIG_USB_OHCI) || defined(CONFIG_USB_EHCI)
-#ifdef CONFIG_USB_STORAGE
-extern long install_usb_stor(int dev_num, unsigned long part_type, unsigned long part_offset, unsigned long part_size, char *vendor, char *revision, char *product);
-#endif
+#if (defined(CONFIG_USB_UHCI) || defined(CONFIG_USB_OHCI) || defined(CONFIG_USB_EHCI)) && defined(CONFIG_USB_INTERRUPT_POLLING)
+extern void install_vbl_timer(void *func, int remove);
 #endif
 
 /* global */
+extern unsigned short VERSION[];
+extern unsigned short DATE[];
 extern long second_screen;
 extern struct mode_option resolution;
 extern short accel_s, accel_c;
@@ -169,14 +185,16 @@ extern long fix_modecode;
 Virtual *base_vwk;
 long old_vector_xbios,old_vector_linea,old_vector_vdi;
 short video_found, usb_found, ata_found;
-short use_dma, restart, redirect, os_magic, memory_ok, drive_ok, video_log;
+short use_dma, restart, redirect, os_magic, memory_ok, drive_ok, video_log, swi;
+#if defined(COLDFIRE) && defined(MCF547X) && defined(NETWORK) && defined(LWIP)
+short boot_os;
+#endif
+NVM nvm;
 COOKIE eddi;
-#if defined(CONFIG_USB_UHCI) || defined(CONFIG_USB_OHCI) || defined(CONFIG_USB_EHCI)
-#ifdef CONFIG_USB_STORAGE
-int usb_stor_curr_dev;
-unsigned long usb_1st_disk_drive;
-#endif
-#endif
+void (**mousevec)(void *);
+_IOREC *iorec;
+void (**ikbdvec)();
+unsigned char **keytbl;
 long debug_traps[16];
 extern void trace_tos(void);
 m68k_word *old_address;
@@ -266,12 +284,14 @@ long install_xbra(short vector, void *handler)
 		xbra->jump[0] = 0x4EF9; /* JMP */
 		*(long *)&xbra->jump[1] = (long)handler;
 #ifdef COLDFIRE
-		asm("	.chip 68060");
+#if (__GNUC__ > 3)
+		asm volatile (" .chip 68060\n\t cpusha BC\n\t .chip 5485\n\t"); /* from CF68KLIB */
+#else
+		asm volatile (" .chip 68060\n\t cpusha BC\n\t .chip 5200\n\t"); /* from CF68KLIB */
 #endif
-		asm(" cpusha BC");
-#ifdef COLDFIRE
-		asm("	.chip 5200");
-#endif
+#else /* 68060 */
+		asm volatile (" cpusha BC\n\t");
+#endif /* COLDFIRE */
 		xbra->old_address = (long)Setexc(vector,(void(*)())&xbra->jump[0]);
 		return(xbra->old_address);
 	}
@@ -280,12 +300,13 @@ long install_xbra(short vector, void *handler)
 
 #ifdef NETWORK
 
-int tftp_load_file(int drive, char *name, char *path_server, IP_ADDR server)
+int tftp_load_file(int drive, char *name, char *path_server, IP_ADDR server, long free, long *size)
 {
 	int ch, i, ret;
 	long handle, err;
 	static char sname[80], fname[80], data[1024];
 	char *p;
+	*size = 0;
 	strcpy(sname, path_server);
 	strcat(sname, name);
 	minus(sname);
@@ -295,15 +316,15 @@ int tftp_load_file(int drive, char *name, char *path_server, IP_ADDR server)
 	else
 		strcpy(&fname[3], name);
 #ifdef LWIP
-	if(ch);
-	if(data);
+	(void)ch;
+	(void)data;
 	i=3;
 	while(fname[i])
 	{
 		if(fname[i] == '/' || fname[i] == '\\')
 		{
 			fname[i]=0;
-			Dcreate(fname);
+			(void)Dcreate(fname);
 			fname[i]='\\';
 		}
 		i++;	
@@ -312,7 +333,7 @@ int tftp_load_file(int drive, char *name, char *path_server, IP_ADDR server)
 	ret = TRUE;
 	if(err >= 0)
 	{
-		if((ret = tftpreceive((unsigned char *)server, sname, (short)handle)) == TRUE)
+		if((ret = tftpreceive((unsigned char *)server, sname, (short)handle, size)) == TRUE)
 			Fclose((short)handle);
 		else
 		{
@@ -340,12 +361,16 @@ int tftp_load_file(int drive, char *name, char *path_server, IP_ADDR server)
 			data[i++] = (char)ch;
 			if(i >= 1024)
 			{
+				*size += (long)i;
 				err = Fwrite((short)handle, i, data);
 				i = 0;
 			}
 		}
 		if((err >= 0) && i)
-				err = Fwrite((short)handle, i, data);
+		{
+			*size += (long)i;
+			err = Fwrite((short)handle, i, data);
+		}
 		if(handle >= 0) 
 			Fclose((short)handle);
 		tftp_end(1);
@@ -468,34 +493,169 @@ static void wait_key(void)
 	Crawcin();
 }
 
+#if defined(COLDFIRE) && defined(MCF547X) && defined(NETWORK) && defined(LWIP)
+
+int boot_menu(int index, int nb_lines, char *title, char *lines[])
+{
+#define DELAY_MENU 400 /* 2 seconds */
+	int i, j, end = 0;
+	char key;
+	long ret;
+	unsigned long start_hz_200 = *_hz_200;
+	unsigned long delay_menu = (unsigned long)nvm.bootdelay * 200;
+	if(delay_menu < DELAY_MENU)
+		delay_menu = DELAY_MENU;
+	Cconws(title);
+	while(1)
+	{
+		i = 0;
+		j = 0;
+		for(i = 0; i < nb_lines; i++)
+		{
+			Cconout(' ');
+			Cconout(' ');	
+			if(i == index)
+			{
+				Cconout(27); /* invert display */
+				Cconout('p');
+			}
+			Cconout(' ');
+			Cconout('1' + (char)i);
+			Cconout(':');			
+			Cconws(lines[i]);
+			if(i == index)
+			{
+				Cconout(27);
+				Cconout('q');
+				j = i;
+			}
+			Cconout('\r');
+			Cconout('\n');
+		}
+		while(1)
+		{
+			if((( *_hz_200 - start_hz_200) >= delay_menu) || end)
+			  return(index);
+			if(Cconis())
+			{
+				start_hz_200 = *_hz_200;
+				ret = Crawcin();
+				key = (char)ret;
+				if((key == ' ') || (key == '\r'))
+				  return(index);
+				if((key >= '1') && (key <= ((char)nb_lines + '1')))
+				{
+					j = (int)(key - '1');
+					end = 1;
+					break;
+				}
+				ret >>= 16; /* scancode */
+				if(ret ==  0x48) /* UP */
+				{
+					j--;
+					if(j < 0)
+						j = nb_lines - 1;
+					break;
+				}
+				if(ret == 0x50) /* DOWN */
+				{
+					j++;
+					if(j >= nb_lines)
+						j = 0;
+					break;
+				}
+			}
+		}
+		for(i = 0; i < nb_lines; i++)
+		{
+			Cconout(27);
+			Cconout('A');
+		}
+		Cconout('\r');
+		index = j;
+	}
+}
+
+void boot_os_menu(void)
+{
+	static char atari[] = { 0x1B,0x62,0x34,0x41,0x1B,0x62,0x32,0x54,0x1B,0x62,0x33,0x41,0x1B,0x62,0x31,0x52,0x1B,0x62,0x35,0x49,0x20,0x1B,0x62,0x3F };
+	static char title[] = "Start with...\r\n";
+	static char title_fr[] = "D‚marrer avec...\r\n";
+	static char *menu[] = {" TOS404 "," EMUTOS "};
+	static char *menu2[] = {" TOS404 for MiNT "," EMUTOS          "," TOS404 full     "};
+	static char *menu2_fr[] = {" TOS404 pour MiNT "," EMUTOS           "," TOS404 complet   "};
+	static char *menu3[] = {" TOS404 (at 0xE0000000 - boot)   "," EMUTOS (at 0xE0600000)          "," TOS404 (at 0xE0400000 - normal) "};
+	Cconws(atari);
+	Cconws("FIREBEE\r\n\n");
+	if(!(swi & 0x40) || !(swi & 1)) /* !SW5 (UP) */
+	{
+		if(swi & 0x80) /* SW6 (DOWN) */
+			boot_os = boot_menu(0, 2, (nvm.language == 2) ? title_fr : title, menu);
+		else /* SW6 (UP) */
+		{
+			boot_os = boot_menu(0, 3, (nvm.language == 2) ? title_fr : title, (nvm.language == 2) ? menu2_fr : menu2);
+			if(boot_os == 2)
+			{
+				Cconout(27);
+				Cconout('E');
+			}
+		}
+	}
+	else /* SW5 (DOWN) */
+		boot_os = boot_menu(0, 3, "Rescue boot, start with...\r\n", menu3);
+	if(!boot_os)
+	{
+		Cconout(27);
+		Cconout('E');
+	}
+	else
+		vTaskDelay(10); /* wait a little bit than ROOT task reboot on choice */
+}
+             
+#endif /* defined(COLDFIRE) && defined(MCF547X) && defined(NETWORK) && defined(LWIP) */
+
+void get_mouseikbdvec(void) /* for USB drivers and HTTP server (screen view) */
+{
+	_KBDVECS *kbdvecs = (_KBDVECS *)Kbdvbase();
+	void **kbdvecs2 = (void **)kbdvecs;
+	mousevec = &kbdvecs->mousevec; 
+	ikbdvec = (void (**)())&kbdvecs2[-1]; /* undocumented */
+	iorec = (_IOREC *)Iorec(1);
+	keytbl = (unsigned char **)Keytbl(-1,-1,-1);
+}
+
 /* Init TOS call is here ... */
 
 int init_devices(int no_reset, unsigned long hardware_flags) /* after the original setscreen with the modecode from NVRAM */
 {
 #ifdef COLDFIRE
+	COOKIE *p;
 #ifdef LWIP
 	extern void *run;
 	extern void *start_run;
 #endif
 	extern void osinit(void);
+	long end_used_stram = (long)Mxalloc(16, 0);
 	memset(_bss_start, 0, (int)(_end - _bss_start));
-/* 	*_membot = (long)_end; */ /* only if BDOS bss is inside STRAM */
+ 	*_membot = end_used_stram;
 	osinit();        /* BDOS */
 #ifdef LWIP
-  start_run = run; /* PD for BDOS malloc */
+	start_run = run; /* PD for BDOS malloc */
 #endif
 #else /* 68060 - use GEMDOS */
 	if(*((unsigned short *)0xE80000) < 0x200) /* check boot version  */
 		return(0);
 	memset(_bss_start, 0, (int)(_end-_bss_start));
 #endif /* COLDFIRE */
-#if defined(CONFIG_USB_UHCI) || defined(CONFIG_USB_OHCI) || defined(CONFIG_USB_EHCI)
-#ifdef CONFIG_USB_STORAGE
-	usb_stor_curr_dev = -1;
-	usb_1st_disk_drive = 0;
-#endif
-#endif
+	get_mouseikbdvec();
 	restart = (short)no_reset;
+	swi = 0;
+	(void)NVMaccess(0, 0, sizeof(NVM), (void *)&nvm);
+#ifdef COLDFIRE
+	p = get_cookie('_SWI');
+	if(p != NULL)
+		swi = (short)p->v.l; /* B7: SW6, B6: SW5, B0: BOOT from 0xE0000000 */
+#endif
 	if(restart == 2)
 	{
 		memory_ok = 0; /* not use M(x)alloc */
@@ -510,8 +670,8 @@ int init_devices(int no_reset, unsigned long hardware_flags) /* after the origin
 	redirect = 0; /* for debug to memory during boot (redirection impossible to file by GEMDOS) */
 	do
 	{
-		static char *spec_monitor_layout[]={"CRT,NONE","CRT,CRT","CRT,TMDS","TMDS,CRT","TMDS,TMDS"};
-		int second_loop = 0;
+		static char *spec_monitor_layout[] = {"CRT,NONE","CRT,CRT","CRT,TMDS","TMDS,CRT","TMDS,TMDS"};
+		int loop_counter = 0;
 		unsigned long temp;
 		short index, vmode = 0, key = 0;
 		long handle, err, ret;
@@ -583,7 +743,7 @@ int init_devices(int no_reset, unsigned long hardware_flags) /* after the origin
 					/* test Radeon ATI devices */
 					if((err >= 0) && !video_found && (key != 'V') && (key != 'v')) /* V => Videl use */
 					{
-						if(!second_loop)
+						if(!loop_counter)
 						{
 							board = radeonfb_pci_table; /* compare table */
 							while(board->vendor)
@@ -596,7 +756,7 @@ int init_devices(int no_reset, unsigned long hardware_flags) /* after the origin
 										Cconws(mess_ignore);
 #endif
 									resolution.used = 1;									
-									init_resolution((long)vmode & 0xFFFF); /* for monitor */
+									init_resolution(PAL|VGA|COL80|BPS16); /* for monitor */
 									if(radeonfb_pci_register(handle, board) >= 0)
  										video_found = 1;
 									resolution.used = 0;
@@ -606,7 +766,7 @@ int init_devices(int no_reset, unsigned long hardware_flags) /* after the origin
 							}
 						}
 #ifdef CONFIG_VIDEO_SMI_LYNXEM
-						else /* motherboard PCI video */
+						else if(loop_counter == 1) /* motherboard PCI video */
 						{
 							board = lynxfb_pci_table; /* compare table */
 							while(board->vendor)
@@ -615,7 +775,7 @@ int init_devices(int no_reset, unsigned long hardware_flags) /* after the origin
 								 && (board->device == (id >> 16)))
 								{
 									resolution.used = 1;
-									init_resolution((long)vmode & 0xFFFF); /* for monitor */
+									init_resolution(PAL|VGA|COL80|BPS16); /* for monitor */
 									board_printf("Mark, now you have 60 seconds before the Lynx driver start\r\nFor see Lynx mmio register use: dm.l 0xA0700300\r\n(fb_base + 0x400000 + 0x300000 + 0x300 - VGA registers)\r\n");
 									wait_ms(60000);
 									if(lynxfb_pci_register(handle, board) >= 0)
@@ -630,14 +790,13 @@ int init_devices(int no_reset, unsigned long hardware_flags) /* after the origin
 					}
 #endif
 					/* test USB devices */
-					if((err >= 0) && !os_magic
-					 && (usb_found < USB_MAX_BUS))
+					if((err >= 0) && !os_magic && loop_counter && (usb_found < USB_MAX_BUS))
 					{
 						unsigned long class;
 						if(read_config_longword(handle, PCIREV, &class) >= 0
 						 && ((class >> 16) == PCI_CLASS_SERIAL_USB))
 						{	
-							if(second_loop)
+							if(loop_counter == 2) /* install EHCI before */
 							{
 								if((class >> 8) == PCI_CLASS_SERIAL_USB_OHCI)
 								{
@@ -685,20 +844,19 @@ int init_devices(int no_reset, unsigned long hardware_flags) /* after the origin
 				}    
 			}
 			while(handle >= 0);
-			second_loop++;
+			loop_counter++;
 		}
-		while(second_loop < 2);
+		while(loop_counter <= 2);
 		old_vector_xbios = old_vector_linea = old_vector_vdi = 0;
 		if(usb_found)
 		{
 #if defined(CONFIG_USB_UHCI) || defined(CONFIG_USB_OHCI) || defined(CONFIG_USB_EHCI)
 #ifdef CONFIG_USB_INTERRUPT_POLLING
-			extern void install_vbl_timer(void *func, int remove);
 			install_vbl_timer(vbl_usb_event_poll, 0);
 #else
 			usb_enable_interrupt(1);
 #endif
-#endif
+#endif /*  defined(CONFIG_USB_UHCI) || defined(CONFIG_USB_OHCI) || defined(CONFIG_USB_EHCI) */
 		}
 		if(video_found)
 		{
@@ -743,11 +901,20 @@ int init_devices(int no_reset, unsigned long hardware_flags) /* after the origin
 			}
 #endif
 			if(!vmode)
-				vmode = (short)find_best_mode((long)vmode) | BPS16;			
+			{
+				vmode = (short)find_best_mode((long)vmode);
+				if(!vmode)
+					vmode = PAL | VGA | COL80 | BPS16;
+				else
+					vmode |= BPS16;
+			}
 			vmode = fix_boot_modecode(vmode);
 			ret = Vsetscreen(0, 0, 3, vmode); /* new Vsetscreen with internal driver installed */
 			if(!os_magic)
 			{
+#if defined(COLDFIRE) && defined(MCF547X) && defined(NETWORK) && defined(LWIP)
+				boot_os_menu();
+#endif
 				display_atari_logo();
 				if(vmode & (DEVID|VERTFLAG2|VESA_768|VESA_600|HORFLAG2|HORFLAG)) 
 					display_ati_logo();
@@ -760,27 +927,22 @@ int init_devices(int no_reset, unsigned long hardware_flags) /* after the origin
 #if defined(COLDFIRE) && defined(MCF547X)
 			extern void init_videl_i2c(void);
 			init_videl_i2c();
-			use_dma = 0; /* not works on Flexbus - FPGA */
+//			use_dma = 0; /* not works on Flexbus - FPGA */
 #endif
 			/* fVDI spec */
 			accel_s = A_MOUSE;
 			accel_c = A_SET_PIX | A_GET_PIX | A_BLIT | A_EXPAND | A_SET_PAL | A_GET_COL;
 			resolution.used = 1;
-#if 0
-			resolution.width = 640;
-			resolution.height = 480;
-			vmode = PAL | VGA | COL80 | BPS16;
-//			resolution.width = 320;
-//			resolution.height = 240;
-//			vmode = VERTFLAG | PAL | VGA | BPS16;
-			resolution.bpp = 16;
-			resolution.freq = 60;
-#else
 			if(!vmode)
-				vmode = (short)find_best_mode((long)vmode) | BPS16;
+			{
+				vmode = (short)find_best_mode((long)vmode);
+				if(!vmode)
+					vmode = PAL | VGA | COL80 | BPS16;
+				else
+					vmode |= BPS16;
+			}
 			vmode = fix_boot_modecode(vmode);
 			init_resolution((long)vmode & 0xFFFF);
-#endif
 			info_fvdi = framebuffer_alloc(0); /* => info_fvdi->par == NULL */
 			if(!info_fvdi)
 				continue;
@@ -789,35 +951,83 @@ int init_devices(int no_reset, unsigned long hardware_flags) /* after the origin
 			info_fvdi->var.bits_per_pixel = resolution.bpp;
 			if(!old_vector_xbios)
 				old_vector_xbios = install_xbra(46, det_xbios); /* TRAP #14 */
-			Vsetscreen(0, 0, 3, vmode);
+			(void)Vsetscreen(0, 0, 3, vmode);
 			if(!os_magic)
+			{
+#if defined(COLDFIRE) && defined(MCF547X) && defined(NETWORK) && defined(LWIP)
+				boot_os_menu();
+#endif
 				display_atari_logo();
+			}
 		}
 #endif /* COLDFIRE */
 		if(redirect)
 	  	debug = redirect = 0;
 	}
 	while(0);
+#if defined(NETWORK) && defined(LWIP) && !defined(MCF5445X) && defined(SOUND_AC97)
+	if(old_vector_xbios)
+		InitSound(1); // AC97
+#endif /* defined(NETWORK) && defined(LWIP) && !defined(MCF5445X) && defined(SOUND_AC97) */
 	return((int)video_found);
 }
 
 void init_with_sdram(void) /* before booting, after the SDRAM init and the PCI devices list */
 {
-#ifndef COLDFIRE
 	short key = 0;
-#endif
+#ifdef BETA_VERSION
+	int i;
+	char buf[8];
+	ltoa(buf, (long)VERSION[0], 16);
+	Cconout(27);
+	Cconws("p TOS drivers v");
+	Cconout(buf[0]);
+	Cconout('.');
+	Cconws(&buf[1]);
+	Cconws(" " BETA_VERSION " ");
+	for(i = 0; i < 5; i++) /* day, month, date, hour, min */
+	{
+		ltoa(buf, (long)DATE[i] + 10000, 10);
+		if(i < 2)
+		{
+			Cconws(&buf[3]);
+			Cconout('/');
+		}
+		else if(i == 2)
+		{
+			Cconws(&buf[1]);
+			Cconout(' ');
+		}
+		else
+		{
+			Cconws(&buf[3]);
+			if(i == 3)
+				Cconout(':');
+		}
+	}
+	Cconout(' ');
+	Cconout(27);
+	Cconout('q');
+	Cconws(" (build with GCC ");
+	ltoa(buf, (long)__GNUC__, 10);
+	Cconws(buf);
+//	Cconout('.');
+//	ltoa(buf, (long)__GCC_MINOR__, 10);
+//	Cconws(buf);
+	Cconws(")\r\n");
+#endif /* BETA_VERSION */
 	memory_ok = 1; /* use M(x)alloc */
 	if(os_magic)
 		drive_ok = 1;
-#ifdef COLDFIRE
-	if((info_fvdi != NULL) /* Videl / Radeon / Lynx driver */
-#else /* !COLDFIRE */
 	if(!os_magic && Cconis())
 	{
 		key = Crawcin() & 0xFF;
 		while(Cconis())
 			Crawcin();
 	}
+#ifdef COLDFIRE
+	if((info_fvdi != NULL) /* Videl / Radeon / Lynx driver */
+#else /* !COLDFIRE */
 	if(*((unsigned short *)0xE80000) < 0x200) /* check boot version  */
 		return;
 	if(video_found /* Radeon driver */
@@ -867,28 +1077,29 @@ void init_with_sdram(void) /* before booting, after the SDRAM init and the PCI d
 			old_vector_xbios = install_xbra(46, det_xbios); /* TRAP #14 */
 
 	}
-#ifdef NETWORK
-#ifndef LWIP
+#if defined(NETWORK) && !defined(LWIP)
 	init_dma();
-#endif
-#ifndef MCF5445X
-#ifdef SOUND_AC97
+#if !defined(MCF5445X) && defined(SOUND_AC97)
 	if(old_vector_xbios)
-		InitSound(); // AC97
-#endif
+		InitSound(1); // AC97
+#endif /* !defined(MCF5445X) && defined(SOUND_AC97) */
+#endif /* defined(NETWORK) && !defined(LWIP) */
+#ifdef COLDFIRE
+#ifdef MCF547X
+	check_sd_card();
 #endif
 #endif
 #ifdef DEBUG
 #ifndef COLDFIRE
-		if(os_magic)
-		{
-			Cconws("Debug Magic\r\n");
-			/* debug on videl output */
-//			debug_traps[1] = install_xbra(33, trace_tos);  /* TRAP #1 */
-//			debug_traps[2] = install_xbra(34, trace_tos);  /* TRAP #2 */
-//			debug_traps[13] = install_xbra(45, trace_tos); /* TRAP #13 */
-//			debug_traps[14] = install_xbra(46, trace_tos); /* TRAP #14 */
-		}
+	if(os_magic)
+	{
+		Cconws("Debug Magic\r\n");
+		/* debug on videl output */
+//		debug_traps[1] = install_xbra(33, trace_tos);  /* TRAP #1 */
+//		debug_traps[2] = install_xbra(34, trace_tos);  /* TRAP #2 */
+//		debug_traps[13] = install_xbra(45, trace_tos); /* TRAP #13 */
+//		debug_traps[14] = install_xbra(46, trace_tos); /* TRAP #14 */
+	}
 #endif
 #endif
 }
@@ -899,7 +1110,7 @@ void init_before_autofolder(void) /* after booting, before start AUTO folder */
 	IP_ADDR server;
 	char path_server[80], name[80], speed[10];
 	char *buf;
-	long handle, len;
+	long handle, len, free, cluster_size, size, info[4];
 	int i, j, drive;
 #endif
 #ifndef COLDFIRE
@@ -910,30 +1121,25 @@ void init_before_autofolder(void) /* after booting, before start AUTO folder */
 #if defined(CONFIG_USB_UHCI) || defined(CONFIG_USB_OHCI) || defined(CONFIG_USB_EHCI)
 #ifdef CONFIG_USB_STORAGE
 	if(usb_found)
-	{
-		usb_stor_curr_dev = usb_stor_scan();
-		if(usb_stor_curr_dev != -1)
-		{
-			int dev_num = usb_stor_curr_dev;
-			block_dev_desc_t *stor_dev;
-			while((stor_dev = usb_stor_get_dev(dev_num)) != NULL)
-			{
-				int part_num = 1;
-				unsigned long part_type, part_offset, part_size;
-				while(!fat_register_device(stor_dev, part_num, &part_type, &part_offset, &part_size))
-			  {
-					install_usb_stor(dev_num, part_type, part_offset, part_size, stor_dev->vendor, stor_dev->revision, stor_dev->product);
-					part_num++;
-				}		
-				dev_num++;
-			}
-		}
-	}
-#endif /* CONFIG_USB_UHCI || CONFIG_USB_OHCI || CONFIG_USB_EHCI */
-#endif	
+		usb_stor_scan();
+#endif /* CONFIG_USB_STORAGE */
+#endif /* CONFIG_USB_UHCI || CONFIG_USB_OHCI || CONFIG_USB_EHCI */	
+#ifdef COLDFIRE
+#ifdef MCF547X
+	install_sd_card();
+#endif
+#endif
 #ifdef NETWORK
+#ifdef MCF547X
+	if(((swi & 0x80) || (boot_os == 2)) /* SW6 (DOWN) */
+	  && ((drive = install_ram_disk()) != 0))
+#else /* MCF548X */
 	if((drive = install_ram_disk()) != 0)
+#endif /* MCF547X */
 	{
+		Dfree(info, drive + 1);
+		cluster_size = info[2] * info[3];
+		free = info[0] * cluster_size;
 		board_get_filename(path_server);
 		i = j = 0;
 		while(path_server[i])
@@ -952,7 +1158,7 @@ void init_before_autofolder(void) /* after booting, before start AUTO folder */
 			name[1] = ':';
 			name[2] = '\\';
 			strcpy(&name[3], "tftp.inf");
-			if(tftp_load_file(drive, &name[3], path_server, server) == TRUE)
+			if(tftp_load_file(drive, &name[3], path_server, server, free, &size) == TRUE)
 			{			
 				handle = Fopen(name, 2);
 				if(handle >=  0)
@@ -985,6 +1191,7 @@ void init_before_autofolder(void) /* after booting, before start AUTO folder */
 									}
 								}
 #endif
+								free -= ((size + cluster_size) & ~cluster_size);
 								while(len > 0)
 								{
 									j=0;
@@ -994,22 +1201,22 @@ void init_before_autofolder(void) /* after booting, before start AUTO folder */
 										len--;
 									}
 									name[j]=0;
-									if(j)
+									while(j)
 									{
 										unsigned long start_hz_200 = *_hz_200;
 				  					Cconws("TFTP load ");
 								  	Cconws(name);
 								  	Cconws(" ... ");	
-										if(tftp_load_file(drive, name, path_server, server) != TRUE)
+										if(tftp_load_file(drive, name, path_server, server, free, &size) != TRUE)
 										{
 											Cconws("\r\n");
 											Cconws(tftp_get_error());
 											Cconws("\r\n");
+											break;
 										}
 										else
 										{
 											int i;
-											long handle, len = 0;
 											char fname[80];
 											unsigned long tps = *_hz_200 - start_hz_200;
 											fname[0] = (char)drive+'A'; fname[1] = ':'; fname[2] = '\\';
@@ -1024,21 +1231,21 @@ void init_before_autofolder(void) /* after booting, before start AUTO folder */
 													fname[i]='\\';
 												i++;	
 											}
-											handle = (long)Fopen(fname, 0);
-											if(handle >=  0)
-											{
-												len = Fseek(0, (short)handle, 2);
-												if(len > 0)
-													Fseek(0, (short)handle, 0);
-												Fclose((short)handle);
-											}
-											if(len < 0)
-												len = 0;
-                      len /= tps;
-                      len /= 5;
-											ltoa(speed, len, 10);
+											free -= ((size + cluster_size) & ~cluster_size);
+											if(size < 0)
+												size = 0;
+                      size /= tps;
+                      size /= 5;
+											ltoa(speed, size, 10);
 											Cconws(speed);
 									  	Cconws("KB/S\r\n");																			
+											if((free < 0) && (drive > 2)) /* not enough space and not drive C */
+											{
+												Cconws("Not enough space on Ram-disk => try again on drive C\r\n");
+												drive = 2; /* try again on drive C */
+											}
+											else
+												j = 0;
 										}
 									}		
 									if(buf[i]==0)
@@ -1067,7 +1274,7 @@ void init_before_autofolder(void) /* after booting, before start AUTO folder */
 				Cconws("\r\n");
 			}
 			if(Fsfirst("C:\\tftpsend",0x10) != 0)
-				Dcreate("C:\\tftpsend");      /* for later */
+				(void)Dcreate("C:\\tftpsend");      /* for later */
 #ifndef LWIP
 #ifdef TEST_NETWORK
 			{
@@ -1126,9 +1333,14 @@ void init_before_autofolder(void) /* after booting, before start AUTO folder */
 			write_protect_ram_disk = FALSE;
 		}
 	}
+#ifdef MCF547X
+	else if(!(swi & 0x80)) /* !SW6 (UP) */
+		init_network();
+#else
 	else
 		wait_key();
-#endif
+#endif /* MCF547X */
+#endif /* NETWORK */
 	drive_ok = 1;
 }
 
@@ -1264,11 +1476,15 @@ void event_aes(void)
 	_DTA *save_dta;
 	_DTA tp_dta;
 	static char subdir[] = "C:\\tftpsend\\";
-	static char path[80], path_server[80], name[80], buf[48], buf_alert[256];
+	static char path[80], path_server[80], name[80], buf_alert[256];
 	char *p, *p2;
 	char c;
 	int i, j, ok, nb_files;
 	long total_size;
+#ifdef MCF547X
+	if(!(swi & 0x80))
+		return;
+#endif
 	if((*_hz_200 - old_hz_200) < 200) /* 1 second */
 		return;
 	if(lock)
@@ -1295,8 +1511,7 @@ void event_aes(void)
 	}
 	if(nb_files && (total_size == mem_size))
 	{
-		NVMaccess(0, 0, 48, buf);
-		if(buf[6] == 2)	/* language */
+		if(nvm.language == 2)
 			i = alert_tos("[1][Envoi des fichiers|au serveur TFTP ?][Oui|Non]");
 		else	
 			i = alert_tos("[1][Send files to|the TFTP server?][Yes|No]");
@@ -1349,7 +1564,7 @@ void event_aes(void)
 										}
 									}
 									*p2 = 0;
-									if(buf[6] == 2)     /* language */
+									if(nvm.language == 2)
 										strcat(buf_alert, "][Suivant|Abandon]");
 									else
 										strcat(buf_alert, "][Next|Cancel]");
@@ -1366,7 +1581,7 @@ void event_aes(void)
 			}
 			else
 			{
-				if(buf[6] == 2)	/* language */
+				if(nvm.language == 2)
 					alert_tos("[3][Ethernet en d‚faut!][Abandon]");
 				else	
 					alert_tos("[3][Ethernet failure!][Cancel]");			
@@ -1382,7 +1597,7 @@ void event_aes(void)
 				{
 					strcpy(name, subdir);
 					strcat(name, tp_dta.dta_name);
-					Fattrib(name, 1, 0);
+					(void)Fattrib(name, 1, 0);
 					Fdelete(name);
 				}
 			}

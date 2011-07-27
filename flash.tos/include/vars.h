@@ -23,13 +23,18 @@
 #define XBIOS_VEC       0xB8
 #define VBL_VEC         0x70
 /* MFP vectors */
-#define PSEUDO_DMA_VEC 0x13C
-#define TIMER_A_VEC    0x134
-#define TIMER_B_VEC    0x120
-#define FLOPPY_DMA_VEC 0x11C
-#define IKBD_VEC       0x118
-#define TIMER_C_VEC    0x114
-#define TIMER_D_VEC    0x110
+#define PSEUDO_DMA_VEC 0x13C // 15
+#define TIMER_A_VEC    0x134 // 13
+#define RX_FULL_VEC    0x130 // 12
+#define RX_ERROR_VEC   0x12C // 11
+#define TX_EMPTY_VEC   0x128 // 10
+#define TX_ERROR_VEC   0x124 // 9
+#define TIMER_B_VEC    0x120 // 8
+#define FLOPPY_DMA_VEC 0x11C // 7
+#define IKBD_VEC       0x118 // 6
+#define TIMER_C_VEC    0x114 // 5
+#define TIMER_D_VEC    0x110 // 4
+#define CTS_VEC        0x104 // 2
 
 #define etv_timer   0x400
 #define etv_critic  0x404
@@ -104,8 +109,8 @@
 #define pinfo_ptype   94  // 16 x 4 bytes
 #define pinfo_psize  158  // 16 x 4 bytes
 #define pinfo_flags  222  // 16 x 2 bytes, internal use: B15:swap, B7:change, B0:bootable
-#define pinfo_bpb    256  // 16 x 32 bytes
-#define pinfo_size   768
+#define pinfo_bpb    256  // 16 x 18 bytes
+#define pinfo_size   544
                   
 /* line A offset vars */
 

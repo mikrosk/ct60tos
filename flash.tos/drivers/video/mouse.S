@@ -71,7 +71,7 @@ mouse_draw:
 	lea	mouse_data(a0),a1
 	move.l	a1,cursor
 	lea	mouse_mask(a0),a1
-	move.l	a1,mask
+	move.l	a1,_mask
 	move.l	mouse_colour(a0),d0
 	move.l	_me,a0
 	move.l	driver_default_vwk(a0),a0
@@ -339,7 +339,7 @@ draw_cursor:
 	move.l	driver_default_vwk(a1),a1
 	move.l	vwk_real_address(a1),a1
 	lea	back_buffer,a0
-	move.l	mask,a2
+	move.l	_mask,a2
 	move.l	cursor,a5	
 	move.l	wk_screen_mfdb_address(a1),a3
 	move.w	d1,d2
@@ -599,7 +599,7 @@ draw_cursor:
 
 	.lcomm hotspot_x,2
 	.lcomm hotspot_y,2
-	.lcomm mask,4
+	.lcomm _mask,4
 	.lcomm cursor,4
 	.lcomm colour,4
 //	.lcomm here_already,2
@@ -607,7 +607,7 @@ draw_cursor:
 	.lcomm back_pos,4
 //	.lcomm shape_data,4
 	.lcomm back_address,4 	// Address at which to replace background
-	.lcomm back_buffer,16*16*2	// Maximal backbuffer needed for mouse
+	.lcomm back_buffer,16*16*4	// Maximal backbuffer needed for mouse
 				// 2*8*16 words are needed for 8 bpp modes
 				// 16*16, words for 16 bpps modes
 

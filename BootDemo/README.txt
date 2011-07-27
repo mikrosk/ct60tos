@@ -1,5 +1,5 @@
-This is an example for build a boot demo with gcc, the target is in 
-Motorola srecord format (.HEX) and you can load this demo with the 
+This is an example for build a boot demo on the CT60 with gcc, the target 
+is in Motorola srecord format (.HEX) and you can load this demo with the 
 latest flash060.prg and without destroy the TOS.
 The Atari Diagnostics are not available because the same zone is used 
 in flash (0xED0000-0xEEFFFF).

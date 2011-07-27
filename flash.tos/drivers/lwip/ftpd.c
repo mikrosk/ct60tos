@@ -365,6 +365,24 @@ static void ftcmd_appe(connection_t *conn, char *param)
   ft_execStore(conn, param, 1);
 }
 
+static char *fixPathNameDos(char *pathname)
+{
+	static char path[256];
+	char *p = path;
+  while(*pathname)
+  {
+    if(*pathname == '/')
+    {
+      *p++ = '\\';
+      pathname++;
+    }
+    else
+      *p++ = *pathname++;
+  }
+  *p = '\0';
+  return(path);
+}
+
 #if FS_SUBDIRECTORIES
 
 static sint_t buildPathName(char *outbuf, const char *pathname, const char *filename)
@@ -496,7 +514,7 @@ static sint_t ft_changeCurrentPath(connection_t *conn, char *path)
 
   if (*fnamebuf_g != 0)
   {
-    if (Fsfirst(fnamebuf_g, FA_SUBDIR) < 0)
+    if (Fsfirst(fixPathNameDos(fnamebuf_g), FA_SUBDIR) < 0)
       return -1;
   }
   strcpy(conn->curpath, fnamebuf_g);
@@ -613,7 +631,7 @@ static void ftcmd_mkd(connection_t *conn, char *param)
 
   if (buildPathName(fnamebuf_g, conn->curpath, param) >= 0)
   {
-    if (Dcreate(fnamebuf_g) == 0)
+    if (Dcreate(fixPathNameDos(fnamebuf_g)) == 0)
     {
       ft_reply(conn, 257, "\"%s\" created.", fnamebuf_g);
       return;
@@ -955,9 +973,9 @@ static void ftcmd_retr(connection_t *conn, char *param)
   if (*tran->filename != 0)
   {
 #ifdef DEBUG
-  	board_printf("Fopen\r\n");
+  	board_printf("Fopen %s\r\n", fixPathNameDos(tran->filename));
 #endif  
-    tran->filehandle = Fopen(tran->filename, 0);
+    tran->filehandle = Fopen(fixPathNameDos(tran->filename), 0);
   }
   if (tran->filehandle < 0)
   {
@@ -981,7 +999,7 @@ static void ftcmd_rmd(connection_t *conn, char *param)
 
   if (buildPathName(fnamebuf_g, conn->curpath, param) >= 0)
   {
-    if (Ddelete(fnamebuf_g) == 0)
+    if (Ddelete(fixPathNameDos(fnamebuf_g)) == 0)
     {
       ft_reply(conn, 250, "Directory successfully removed.");
       return;
@@ -1006,7 +1024,7 @@ static void ftcmd_rnfr(connection_t *conn, char *param)
   long fd;
 
   ft_getFilename(conn, param, conn->renfrom);
-  fd = Fopen(tempbuf_g, 0);
+  fd = Fopen(fixPathNameDos(tempbuf_g), 0);
   if (fd >= 0)
   {
     Fclose(fd);
@@ -1058,7 +1076,7 @@ static void ftcmd_size(connection_t *conn, char *param)
   long fd, size = 0;
 
   ft_getFilename(conn, param, tempbuf_g);
-  fd = Fopen(tempbuf_g, 0);
+  fd = Fopen(fixPathNameDos(tempbuf_g), 0);
   if (fd >= 0)
   {
     size = Fseek(0, fd, 2);
@@ -1271,9 +1289,9 @@ static void ft_abortTransfer(connection_t *conn)
   if (tran->upload)
   {
 #ifdef DEBUG
-  	board_printf("Fdelete\r\n");
+  	board_printf("Fdelete %S\r\n", fixPathNameDos(tran->filename));
 #endif  
-    Fdelete(tran->filename);
+    Fdelete(fixPathNameDos(tran->filename));
   }
   ft_destroyTransfer(conn->transfer);
 }
@@ -1298,12 +1316,12 @@ static void ft_execStore(connection_t *conn, char *param, sint_t appflag)
     return;
   }
 #ifdef DEBUG
-  board_printf("Fopen/Fcreate\r\n");
+  board_printf("Fopen/Fcreate %s\r\n", fixPathNameDos(tran->filename));
 #endif
   if ((appflag != 0) || (conn->resumePos > 0))
-    tran->filehandle = Fopen(tran->filename, 1);
+    tran->filehandle = Fopen(fixPathNameDos(tran->filename), 1);
   else
-    tran->filehandle = Fcreate(tran->filename, 0);
+    tran->filehandle = Fcreate(fixPathNameDos(tran->filename), 0);
 //                               FSO_WRONLY | FSO_CREAT |
 //                               (((appflag != 0) ||
 //                               (conn->resumePos > 0)) ? 0 : FSO_TRUNC));
@@ -1560,12 +1578,12 @@ static sint_t ft_getNextDirEntry(transfer_t *tran, char *buf)
     if (buildPathName(fnamebuf_g, tran->owner->curpath, tran->filename) >= 0)
     {
 #ifdef DEBUG    
-      board_printf("ft_getNextDirEntry Fsfirst(%s)\r\n", fnamebuf_g);
+      board_printf("ft_getNextDirEntry Fsfirst(%s)\r\n", fixPathNameDos(fnamebuf_g));
 #endif
-      tran->dirhandle = Fsfirst(fnamebuf_g, FA_SUBDIR|FA_RO);
+      tran->dirhandle = Fsfirst(fixPathNameDos(fnamebuf_g), FA_SUBDIR|FA_RO);
     }
 #else
-    tran->dirhandle = Fsfirst(tran->filename, FA_SUBDIR|FA_RO);
+    tran->dirhandle = Fsfirst(fixPathNameDos(tran->filename), FA_SUBDIR|FA_RO);
 #endif
   }
   else
@@ -1955,13 +1973,19 @@ static sint_t ft_handleDownload(transfer_t *tran)
     if (tran->dirlisting)
     {
       bytes = ft_getNextDirEntry(tran, tran->dlbuf);
+#ifdef DEBUG
+      board_printf("dirlisting %d bytes\r\n", bytes);
+#endif  	
     }
     else
     {
 #ifdef DEBUG
-      board_printf("Fread\r\n");
+      board_printf("Fread...");
 #endif  	
       bytes = Fread(tran->filehandle, MAX_BLOCKSIZE, tran->dlbuf);
+#ifdef DEBUG
+      board_printf("%d bytes\r\n", bytes);
+#endif  	
     }
 
     if (bytes >= MAX_BLOCKSIZE)
@@ -1988,8 +2012,7 @@ static sint_t ft_handleDownload(transfer_t *tran)
     }
 #endif
 
-    size = send(tran->sock, tran->dlbuf + tran->dlbufpos, 
-                tran->dlbufremain, 0);
+    size = send(tran->sock, tran->dlbuf + tran->dlbufpos, tran->dlbufremain, 0);
 
     if (size < 0)
     {

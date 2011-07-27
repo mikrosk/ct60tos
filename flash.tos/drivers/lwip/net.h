@@ -44,8 +44,8 @@
 #endif /* MCF5445X */
 
 /* Interrupt Priorities */
-#define DMA_INTC_LVL 5
-#define DMA_INTC_PRI 3
+#define DMA_INTC_LVL 6 // 5
+#define DMA_INTC_PRI 7 // 3
 #define FEC_INTC_LVL 5
 #define FEC0_INTC_PRI 1
 #define FEC1_INTC_PRI 0
@@ -53,23 +53,22 @@
 #ifdef MCF5445X
 
 /* System Bus Clock Info */
-#define SYSTEM_CLOCK 133    // system bus frequency in MHz
+#define SYSTEM_CLOCK 132    // system bus frequency in MHz
 
 #else /* MCF548X */
 
 /* DMA Task Priorities */
-#define FEC0TX_DMA_PRI 6
-#define FEC0RX_DMA_PRI 5
-#define FEC1TX_DMA_PRI 4
+#define FEC0TX_DMA_PRI 4
+#define FEC0RX_DMA_PRI 3
+#define FEC1TX_DMA_PRI 2
+#define FEC1RX_DMA_PRI 1
 
 /* System Bus Clock Info */
 #ifdef MCF547X
-#define SYSTEM_CLOCK 133    // system bus frequency in MHz
+#define SYSTEM_CLOCK 132    // system bus frequency in MHz
 #else /* MCF548X */
 #define SYSTEM_CLOCK 100    // system bus frequency in MHz
 #endif /* MCF547X */
-
-#define FEC1RX_DMA_PRI 3
 
 /* Flash */
 #define INTEL_C3_FLASH_28F320C3B

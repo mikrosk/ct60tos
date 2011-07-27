@@ -36,11 +36,17 @@
 _get_colour:
 get_colour:
 	move.l	a1,-(a7)
+	move.l	d1,-(a7)
 	lea	tos_colours,a1
-	move.b	0(a1,d0.w),d0
+	move.w	d0,d1
+	ext.l	d1
+	move.b	0(a1,d1.l),d0
 	swap	d0
-	move.b	0(a1,d0.w),d0
+	move.w	d0,d1
+	ext.l	d1
+	move.b	0(a1,d1.l),d0
 	swap	d0
+	move.l	(a7)+,d1
 	move.l	(a7)+,a1
 	rts
 

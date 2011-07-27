@@ -754,7 +754,7 @@ void run_bios(struct radeonfb_info *rinfo)
 		{
 			extern u32 swap_long(u32 val);
 			long bytes_align = (long)rom_header & 3;
-			ptr = (char *)biosmem;
+			ptr = (unsigned char *)biosmem;
 			i = (long)rom_header;
 			j = PCI_VGA_RAM_IMAGE_START;
 			if(bytes_align)
@@ -786,7 +786,7 @@ void run_bios(struct radeonfb_info *rinfo)
 		DPRINTVALHEX(" to ", biosmem+PCI_RAM_IMAGE_START);
 		DPRINTVALHEX(", ", rom_size);
 		DPRINT(" bytes\r\n");		
-		ptr = (char *)biosmem;
+		ptr = (unsigned char *)biosmem;
 		for(i = (long)rom_header, j = PCI_RAM_IMAGE_START; i < (long)rom_header+rom_size; ptr[j++] = BIOS_IN8(i++));
 		addr = PCI_RAM_IMAGE_START;
 	}

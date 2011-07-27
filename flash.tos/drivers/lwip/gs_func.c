@@ -163,7 +163,7 @@ static long gs_read_socket (int fd, void *buf, int size)
 		}
 		memcpy(buf, gs->pos_cache_read, len);
 		size -= len;
-		(char *)buf += len;
+		buf = (void *)((int)buf + len);
 		bytes += len;
 		gs->end_cache_read = gs->pos_cache_read = gs->cache_read;
   }

@@ -1,6 +1,6 @@
 	
 /* CT60 TEMPerature - Pure C */
-/* Didier MEQUIGNON - v2.00 - June 2010 */
+/* Didier MEQUIGNON - v2.01 - June 2011 */
 
 #include <portab.h>
 #include <tos.h>
@@ -10,6 +10,8 @@
 #include <string.h>
 #include <time.h>
 #include "ct60.h"
+
+#define Vsetscreen(log,phy,rez,mode) (void)xbios((short)0x05,(long)(log),(long)(phy),(short)(rez),(short)(mode))
 
 #define ID_CF (long)'_CF_'
 
@@ -192,9 +194,9 @@ int main(int argc,const char *argv[])
 
 {
 	register int i,temp;
-	unsigned long daytime;
-	unsigned int time,trigger_temp,daystop,timestop,beep;
-	int temp_id,app_id=-1,app_sid,app_stype,flag_cpuload,event,ret,end=0,count=0,count_mn=0,loops=1,stop,cpu_060,flag_msg=0;
+	unsigned long daytime,physbase;
+	unsigned int time,trigger_temp,daystop,timestop,beep,timeblank,timeoutblank=0;
+	int temp_id,app_id=-1,app_sid,app_stype,flag_cpuload,event,ret,end=0,count=0,count_mn=0,loops=1,stop,cpu_060,flag_msg=0,blank=0;
 	unsigned long ticks,run_ticks,start_ticks,new_ticks,sum_ticks=0;
 	long uptime,load,old_load=0,load_avg=0,load_avg_mn=0,delay=ITIME,avenrun[3]={0,0,0};
 	char *eiffel_temp;
@@ -210,14 +212,14 @@ int main(int argc,const char *argv[])
 	char mess_alert[256];
 	char app_name[9];
 	GRECT rect={0,0,0,0};
-	EVNTDATA mouse;
+	EVNTDATA mouse,old_mouse;
 	OBJECT *alert_tree;
 	TEDINFO *t_edinfo;
 	BITBLK *b_itblk;
 	COOKIE cookie_temp;
 	COOKIE *p;
 	MX_KERNEL *mx_kernel;
-	trigger_temp=daystop=timestop=0;
+	trigger_temp=daystop=timestop=timeblank=0;
 	beep=1;
 	if(_app)
 	{
@@ -229,6 +231,8 @@ int main(int argc,const char *argv[])
 			timestop=(unsigned int)atoi(argv[3]);
 		if(argc>4)
 			beep=(unsigned int)atoi(argv[4])&1;
+		if(argc>5)
+			timeblank=(unsigned int)atoi(argv[5]);
 	}
 	else
 	{
@@ -243,6 +247,7 @@ int main(int argc,const char *argv[])
 					daystop=(unsigned int)ct60_arg->daystop;
 					timestop=(unsigned int)ct60_arg->timestop;
 					beep=(unsigned int)ct60_arg->beep;
+					timeblank=(unsigned int)ct60_arg->timeblank;
 			}
 		}
 	}
@@ -347,6 +352,8 @@ int main(int argc,const char *argv[])
 	}
 	for(i=0;i<61;i++)
 		tab_temp[i]=tab_temp[i+61]=tab_cpuload[i]=0;
+	physbase=(unsigned long)Physbase();
+	MT_graf_mkstate(&old_mouse,myglobal);
 	ticks=start_ticks=run_ticks=clock();
 	while(!end)
 	{
@@ -512,11 +519,34 @@ int main(int argc,const char *argv[])
 			event=MT_evnt_multi(MU_MESAG|MU_TIMER,0,0,0,0,&rect,0,&rect,message,delay,&mouse,&ret,&ret,myglobal);
 			if(event & MU_TIMER)
 			{
-				if(!flag_msg && !_app && ct60_arg!=NULL)
+				if(!flag_msg && !_app && (ct60_arg!=NULL))
 				{
 					trigger_temp=(unsigned int)ct60_arg->trigger_temp;
 					daystop=(unsigned int)ct60_arg->daystop;
 					timestop=(unsigned int)ct60_arg->timestop;
+					timeblank=(unsigned int)ct60_arg->timeblank;
+				}
+				if((ct60_arg!=NULL) && (physbase>=0x1000000))
+				{
+					MT_graf_mkstate(&mouse,myglobal);
+					if((mouse.x!=old_mouse.x) || (mouse.y!=old_mouse.y) || (mouse.bstate!=old_mouse.bstate))
+					{
+						if(blank)
+							Vsetscreen(-1,0,'VN',CMD_BLANK);
+						blank=0;
+						timeoutblank=0;
+						old_mouse=mouse;
+					}
+					if(!blank && timeblank)
+					{
+						if(timeoutblank >= (timeblank*60))
+						{
+							Vsetscreen(-1,1,'VN',CMD_BLANK);
+							blank=1;				
+						}
+						if(!i)
+							timeoutblank++;
+					}
 				}
 			}			
 			if(loops>1)					/* Suptime() not supported */
@@ -553,12 +583,12 @@ int main(int argc,const char *argv[])
 						}
 					 	if(!start_lang)
 							sprintf(mess_alert,
-							"[0][      CT60 TEMPERATURE       |V2.00 MEQUIGNON Didier 06/2010| |Temp.: %d øC     Seuil: %d øC |Lien avec processus %d %s][OK]",
-							temp,trigger_temp,app_id,app_name);
+							"[0][           CT60 TEMPERATURE       |     V2.01 MEQUIGNON Didier 06/2011| |Temp.: %d øC Seuil: %d øC Veille: %d mm |Lien avec processus %d %s][OK]",
+							temp,trigger_temp,timeblank,app_id,app_name);
 						else
 							sprintf(mess_alert,
-							"[0][      CT60 TEMPERATURE       |V2.00 MEQUIGNON Didier 06/2010| |Temp.: %d øC Threshold: %d øC |Link with process %d %s][OK]",
-							temp,trigger_temp,app_id,app_name);
+							"[0][           CT60 TEMPERATURE       |     V2.01 MEQUIGNON Didier 06/2011| |Temp.: %d øC Thres.: %d øC Blank: %d mm |Link with process %d %s][OK]",
+							temp,trigger_temp,timeblank,app_id,app_name);
 						MT_form_xalert(1,mess_alert,ITIME*10L,0L,myglobal);
 						break;
 					case AP_TERM:
@@ -571,6 +601,7 @@ int main(int argc,const char *argv[])
 						daystop=(unsigned int)message[4];
 						timestop=(unsigned int)message[5];
 						beep=(unsigned int)message[6];
+						timeblank=(unsigned int)message[7];
 						if(avenrun[0]>=0)
 							load=avenrun[0];
 						else

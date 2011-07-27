@@ -189,9 +189,9 @@ enum {
 struct usb_device {
 	int	devnum;			/* Device number on USB bus */
 	int	speed;			/* full/low/high */
-	char	mf[32];			/* manufacturer */
-	char	prod[32];		/* product */
-	char	serial[32];		/* serial number */
+	char mf[32];			/* manufacturer */
+	char prod[32];		/* product */
+	char serial[32];		/* serial number */
 
 	/* Maximum packet size; one of: PACKET_SIZE_* */
 	int maxpacketsize;
@@ -225,6 +225,10 @@ struct usb_device {
 	struct usb_device *parent;
 	struct usb_device *children[USB_MAXCHILDREN];
 	void *priv_hcd;
+	int (*deregister)(struct usb_device *dev);
+
+	struct usb_hub_device *hub;
+	int usbnum;
 };
 
 /**********************************************************************
@@ -283,21 +287,24 @@ void usb_enable_interrupt(int enable);
 #endif /* CONFIG_USB_INTERRUPT_POLLING */
 
 #ifdef CONFIG_USB_STORAGE
-
 #define USB_MAX_STOR_DEV 5
 block_dev_desc_t *usb_stor_get_dev(int index);
 int usb_stor_scan(void);
 int usb_stor_info(void);
+int usb_stor_register(struct usb_device *dev);
+int usb_stor_deregister(struct usb_device *dev);
 #endif
 
 #ifdef CONFIG_USB_KEYBOARD
 int drv_usb_kbd_init(void);
-int usb_kbd_deregister(void);
+int usb_kbd_register(struct usb_device *dev);
+int usb_kbd_deregister(struct usb_device *dev);
 #endif
 
 #ifdef CONFIG_USB_MOUSE
 int drv_usb_mouse_init(void);
-int usb_mouse_deregister(void);
+int usb_mouse_register(struct usb_device *dev);
+int usb_mouse_deregister(struct usb_device *dev);
 #endif
 
 extern char usb_error_str[256];

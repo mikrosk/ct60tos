@@ -1,7 +1,7 @@
 #ifndef __jtag_H
 #define __jtag_H
 /* Flashing hard CT60, JTAG part
-*  Didier Mequignon 2003 February, e-mail: aniplay@wanadoo.fr
+*  Didier Mequignon 2003-2011, e-mail: aniplay@wanadoo.fr
 *
 *  This program is free software; you can redistribute it and/or modify
 *  it under the terms of the GNU General Public License as published by
@@ -71,6 +71,7 @@
 #define JTAG_CMD_IDCODE   0xFE /* allows blind interrogation of the components assembled on the board */
 #define JTAG_CMD_BYPASS   0xFF /* configures the device to bypass the scan registers */
 
+#define IDCODE_XC9572XL  0x09604093
 #define IDCODE_XC95144XL 0x09608093
 #define IDCODE_XC95288XL 0x09616093
 #define IDMASK           0x0FFFFFFF
@@ -83,6 +84,7 @@
 #define ABE 1
 #define SDR 2
 #define CTPCI 3
+#define ETHERNAT 4
 
 typedef struct var_len_byte
 {

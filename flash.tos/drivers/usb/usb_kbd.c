@@ -103,8 +103,9 @@ static int usb_kbd_get_hid_desc(struct usb_device *dev);
 #define SWF 7 /* Swiss French */
 #define SWG 8 /* Swiss German */
 
-static void (**ikbdvec)();
-static _IOREC *iorec;
+extern _IOREC *iorec;
+extern void (**ikbdvec)();
+
 static unsigned char *new;
 static unsigned char old[8];
 static unsigned char num_lock;
@@ -559,6 +560,41 @@ static void *memscan(void *addr, int c, int size)
 /* forward declaration */
 static int usb_kbd_probe(struct usb_device *dev, unsigned int ifnum);
 
+/* deregistering the keyboard */
+int usb_kbd_deregister(struct usb_device *dev)
+{
+	dev->irq_handle = NULL;
+	if(new != NULL)
+	{
+		usb_free(new);
+		new = NULL;
+	}
+	if(leds != NULL)
+	{
+		usb_free(leds);
+		leds = NULL;
+	}
+	kbd_installed = 0;
+	USB_KBD_PRINTF("USB KBD deregister\r\n");
+	return 1;
+}
+
+/* registering the keyboard */
+int usb_kbd_register(struct usb_device *dev)
+{
+	if(!kbd_installed && (dev->devnum != -1) && (usb_kbd_probe(dev, 0) == 1))
+	{ /* Ok, we found a keyboard */
+		USB_KBD_PRINTF("USB KBD found (iorec: 0x%x, USB: %d, devnum: %d)\r\n", iorec, dev->usbnum, dev->devnum);
+		num_lock = caps_lock = scroll_lock = old_modifier = 0;
+		flags.s = 0;
+		kbd_installed = 1;
+		dev->deregister = usb_kbd_deregister;
+		return 1;
+	}
+	/* no USB Keyboard found */
+	return -1;
+}
+
 /* search for keyboard and register it if found */
 int drv_usb_kbd_init(void)
 {
@@ -573,42 +609,12 @@ int drv_usb_kbd_init(void)
 			struct usb_device *dev = usb_get_dev_index(i, j); /* get device */
 			if(dev == NULL)
 				break;
-			leds = (unsigned char *)usb_malloc(8);
-			if(leds == NULL)
-				return -1;
-			if(dev->devnum != -1)
-			{
-				if(usb_kbd_probe(dev, 0) == 1)
-				{ /* Ok, we found a keyboard */
-					USB_KBD_PRINTF("USB KBD found (iorec: 0x%x, devnum: %d)\r\n", iorec, dev->devnum);
-					num_lock = caps_lock = scroll_lock = old_modifier = 0;
-					flags.s = 0;
-					kbd_installed = 1;
-					return 1;
-				}
-			}
-			usb_free(leds);
-			leds = NULL;
+			if(usb_kbd_register(dev) > 0)
+				return 1;
 		}
 	}
 	/* no USB Keyboard found */
 	return -1;
-}
-
-/* deregistering the keyboard */
-int usb_kbd_deregister(void)
-{
-	if(new != NULL)
-	{
-		usb_free(new);
-		new = NULL;
-	}
-	if(leds != NULL)
-	{
-		usb_free(leds);
-		leds = NULL;
-	}
-	return 1;
 }
 
 /**************************************************************************
@@ -622,7 +628,7 @@ int usb_kbd_deregister(void)
 static void usb_kbd_setled(struct usb_device *dev)
 {
 	struct usb_interface_descriptor *iface = &dev->config.if_desc[0];
-	unsigned char *pleds = (char *)(((unsigned long)leds + 3) & ~3);
+	unsigned char *pleds = (unsigned char *)(((unsigned long)leds + 3) & ~3);
 	if(scroll_lock != 0)
 		*pleds = 4;
 	else
@@ -637,7 +643,8 @@ static void usb_kbd_setled(struct usb_device *dev)
 
 static void usb_kbd_send_code(unsigned char code)
 {
-	call_ikbdvec(code, iorec, ikbdvec);
+	if((iorec != NULL) && (ikbdvec != NULL))
+		call_ikbdvec(code, iorec, ikbdvec);
 }
 
 /* Translate the scancode */
@@ -942,7 +949,6 @@ static int usb_kbd_probe(struct usb_device *dev, unsigned int ifnum)
 	struct usb_interface_descriptor *iface;
 	struct usb_endpoint_descriptor *ep;
 	int pipe,maxp;
-	void **kbdvecs = (void **)Kbdvbase();
 	if(dev->descriptor.bNumConfigurations != 1)
 		return 0;
 	iface = &dev->config.if_desc[ifnum];
@@ -959,9 +965,16 @@ static int usb_kbd_probe(struct usb_device *dev, unsigned int ifnum)
 		return 0;
 	if((ep->bmAttributes & 3) != 3)
 		return 0;
+	leds = (unsigned char *)usb_malloc(8);
+	if(leds == NULL)
+		return 0;
 	new = (unsigned char *)usb_malloc(8);
 	if(new == NULL)
+	{
+		usb_free(leds);
+		new = NULL;
 		return 0;
+	}
 	USB_KBD_PRINTF("USB KBD found set protocol...\r\n");
 	/* ok, we found a USB Keyboard, install it */
 #ifdef USE_COUNTRYCODE 
@@ -976,11 +989,8 @@ static int usb_kbd_probe(struct usb_device *dev, unsigned int ifnum)
 	pipe = usb_rcvintpipe(dev, ep->bEndpointAddress);
 	maxp = usb_maxpacket(dev, pipe);
 	dev->irq_handle = usb_kbd_irq;
-	ikbdvec = (void (**)())&kbdvecs[-1]; /* undocumented */
-	iorec = (_IOREC *)Iorec(1);
 	USB_KBD_PRINTF("USB KBD enable interrupt pipe (maxp: %d)...\r\n", maxp);
 	usb_submit_int_msg(dev, pipe, &new[0], maxp > 8 ? 8 : maxp, ep->bInterval);
-	Cconws("USB HID keyboard driver installed\r\n");
 	return 1;
 }
 

@@ -1,6 +1,6 @@
-/* TOS 4.04 Xbios dispatcher for the CT60/CTPCI boards
- * and USB-disk / Ram-Disk utility
- * Didier Mequignon 2005-2010, e-mail: aniplay@wanadoo.fr
+/* TOS 4.04 Xbios dispatcher for the CT60/CTPCI and Coldfire boards
+ * and USB-disk / SD-card / Ram-Disk utility
+ * Didier Mequignon 2005-2011, e-mail: aniplay@wanadoo.fr
  *
  * This file is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -26,19 +26,24 @@
 #define pun_ptr pun_ptr_usb
 #endif
 
+#undef DEBUG
+#undef DEBUG_XHDI
+
 // #define RAM_DISK_FAT12
 #define RAM_DISK_SEC_FAT    64
 #define RAM_DISK_SIZE_KB    8192
+
+#define SD_CARD_VERIFY
+#define SD_CARD_REPLACE_FLOPPY
+#define RAM_DISK_REPLACE_B
 
 #define MAX_LOGICAL_DRIVE 16
 
 #define Modecode    0x184C
 
-#undef DEBUG
-
 	.global _det_xbios,_old_vector_xbios
-	.global _physbase,_getrez,_vsetscreen,_vsetmode,_montype,_vgetsize,_vsetrgb,_vgetrgb
-	.global _cursconf
+	.global _physbase,_logbase,_getrez,_vsetscreen,_wait_vbl,_vsetmode,_montype,_vgetsize,_vsetrgb,_vgetrgb
+	.global _cursconf,_info_fvdi,_ltoa
 #ifdef COLDFIRE
 	.global _acp_new_hardware
 #ifndef MCF5445X
@@ -58,6 +63,7 @@
 	.global _locksnd,_unlocksnd,_soundcmd,_setbuffer,_setmode,_settracks,_setmontracks
 	.global _setinterrupt,_buffoper,_gpio,_devconnect,_sndstatus,_buffptr
 	.global _flag_snd_init,_count_timer_a,_preload_timer_a,_timer_a_enabled,_io7_enabled;
+	.global _mcf548x_ac97_playback_resample,_mcf548x_ac97_record_resample
 #endif
 #endif
 #endif
@@ -69,10 +75,11 @@
 	.global _vixPlaybackGetEq,_vixPlaybackSetEq,_vixPlaybackGetDeint,_vixPlaybackSetDeint
 	.global _InitVideo
 	.global _asm_set_ipl
-#if defined(CONFIG_USB_UHCI) || defined(CONFIG_USB_OHCI) || defined(CONFIG_USB_EHCI)
-#ifdef CONFIG_USB_STORAGE
-	.global _install_usb_stor,_usb_stor_read,_usb_stor_write,_usb_1st_disk_drive
+#ifdef MCF547X
+	.global _check_sd_card,_install_sd_card
 #endif
+#if (defined(CONFIG_USB_UHCI) || defined(CONFIG_USB_OHCI) || defined(CONFIG_USB_EHCI)) && defined(CONFIG_USB_STORAGE)
+	.global _install_usb_stor,_uninstall_usb_stor,_usb_stor_read,_usb_stor_write,_usb_malloc,_usb_1st_disk_drive
 #endif
 #ifdef NETWORK
 #ifdef COLDFIRE
@@ -83,12 +90,12 @@
 #endif
 #endif /* LWIP */
 #endif /* COLDFIRE */
-	.global _install_ram_disk,_address_ram_disk,_size_ram_disk,_change_ram_disk,_ext_write_protect_ram_disk
+	.global _install_ram_disk,_address_ram_disk,_size_ram_disk,_change_ram_disk,_ext_write_protect_ram_disk,_ram_disk_drive
 	.global _alert_tos
 #endif /* NETWORK */
 	.global _call_enumfunc,_call_ikbdvec,_call_mousevec,_direct_conout
 	.global _critical_error,_get_sr
-#ifdef DEBUG
+#if defined(DEBUG) || defined(DEBUG_XHDI)
 	.global display_string,hex_long,hex_word,hex_byte,display_char,wait_key,_video_found
 #endif
 
@@ -125,8 +132,8 @@
 #define pinfo_ptype   94  // 16 x 4 bytes
 #define pinfo_psize  158  // 16 x 4 bytes
 #define pinfo_flags  222  // 16 x 2 bytes, internal use: B15:swap, B7:change, B0:bootable
-#define pinfo_bpb    256  // 16 x 32 bytes
-#define pinfo_size   768
+#define pinfo_bpb    256  // 16 x 18 bytes
+#define pinfo_size   544
 
 #ifdef DEBUG
 debug1:	.asciz "XBIOS #0x"
@@ -139,24 +146,31 @@ debug5:	.ascii "hdv_mediach"
 debug6:	.asciz "Vsetmode 0x"
 debug7:	.asciz "ValidMode 0x"
 debug8:	.asciz "Gettime 0x"
-debug132:	.asciz "XHDI XHReadWrite 0x"
-debug133:	.ascii "XHDI XHInqTarget"
-	.byte 13,10,0
-debug134:	.ascii "XHDI XHInqDev"
-	.byte 13,10,0
-debug135:	.ascii "XHDI XHInqDriver"
-	.byte 13,10,0
-debug136:	.ascii "XHDI XHInqDev2"
-	.byte 13,10,0
-debug137:	.ascii "XHDI XHDOSLimits"
-	.byte 13,10,0
-	
-	.align 2
 #endif
+#ifdef DEBUG_XHDI
+debug130:	.asciz "XHDI return 0x"
+debug131:	.asciz "XHDI XHDrvMap 0x"
+debug132:	.asciz "XHDI XHReadWrite major 0x"
+debug133:	.asciz "XHDI XHInqTarget major 0x"
+debug133a:	.asciz "XHDI XHInqTarget2 major 0x"
+debug134:	.asciz "XHDI XHInqDev device 0x"
+debug135:	.asciz "XHDI XHInqDriver device 0x"
+debug136:	.asciz "XHDI XHInqDev2 device 0x"
+debug137:	.asciz "XHDI XHDOSLimits which 0x"
+debug138:	.ascii "XHDI XHGetVersion"
+	.byte 13,10,0
+debug139:	.asciz ", minor 0x"
+debug140:	.asciz ", rwflag 0x"
+debug141:	.asciz ", sector 0x"
+debug142:	.asciz ", count 0x"
+debug143:	.asciz ", buffer 0x"
+#endif
+
+	.align 2
 
 _det_xbios:
 
-#ifdef COLDFIRE
+#if defined(COLDFIRE) && (__GNUC__ <= 3)
 	.chip 68060
 	move.l USP,A0            // V4
 	.chip 5200
@@ -165,7 +179,7 @@ _det_xbios:
 #endif
 	btst #5,(SP)             // call in supervisor state
 	beq.s .x2
-	lea.l 6(SP),A0
+	lea 6(SP),A0
 	tst.w proc_type
 	beq.s .x2
 	tst.w (A0)+              // if > 68000
@@ -218,12 +232,24 @@ _det_xbios:
 	move.l (SP)+,A0
 #endif
 #ifdef PATCH_NVDI
-#ifndef COLDFIRE
 	move.l A2,-(SP)
 	move.l 0xB8,A1           // TRAP #14
 	move.l A1,A2
 	moveq #0,D1
 .loop_xbra:
+#ifdef COLDFIRE
+		move.l -12(A1),D0
+		cmp.l #0x58425241,D0     // XBRA
+		bne.s .no_xbra
+		move.l -8(A1),D0
+		cmp.l #0x4E564449,D0     // NVDI
+		bne.s .not_nvdi
+		move.l A1,D1
+		bra.s .next_xbra
+.not_nvdi:
+		move.l -8(A1),D0
+		cmp.l #0x5F504349,D0     // _PCI
+#else /* !COLDFIRE */
 		cmp.l #0x58425241,-12(A1) // XBRA
 		bne.s .no_xbra
 		cmp.l #0x4E564449,-8(A1)  // NVDI
@@ -231,7 +257,8 @@ _det_xbios:
 		move.l A1,D1
 		bra.s .next_xbra
 .not_nvdi:
-		cmp.l #0x5F504349,-8(A1)  // _PCI
+		cmp.l #0x5F504349,-8(A1) // _PCI
+#endif /* COLDFIRE */
 		bne.s .next_xbra
 		tst.l D1
 		beq.s .no_xbra           // NVDI not found before _PCI
@@ -247,12 +274,13 @@ _det_xbios:
 	bra.s .loop_xbra
 .no_xbra:
 	move.l (SP)+,A2
-#endif /* COLDIRE */
 #endif /* PATCH_NVDI */
 #ifdef COLDFIRE
 	moveq #0,D0
 #endif
 	move.w (A0),D0           // function
+	tst.l _info_fvdi
+	beq .x11
 #ifdef COLDFIRE
 	cmp.l #2,D0              // Physbase
 #else
@@ -262,6 +290,15 @@ _det_xbios:
 	jsr _physbase
 	rte	
 .x9:
+#ifdef COLDFIRE
+	cmp.l #3,D0              // Logbase
+#else
+	cmp.w #3,D0              // Logbase
+#endif
+	bne.s .x31
+	jsr _logbase
+	rte	
+.x31:
 #ifdef COLDFIRE
 	cmp.l #4,D0              // Getrez
 #else
@@ -378,6 +415,39 @@ _det_xbios:
 #endif /* MCF547X */
 #endif /* MCF5445X */
 #endif /* RTC */
+#endif /* COLDFIRE */
+#ifdef COLDFIRE
+	cmp.l #37,D0             // Vsync
+#else
+	cmp.w #37,D0             // Vsync
+#endif
+	bne.s .x28
+	jsr _wait_vbl
+	beq.s .x29               // TOS routine
+	rte
+.x29:
+#ifdef COLDFIRE
+	move.w SR,D0
+	move.w D0,-(SP)
+	and.l #0xF8FF,D0         // enable VBL interrupt
+	move D0,SR
+#else
+	move.w SR,-(SP)
+	and.w #0xF8FF,SR
+#endif
+	move.l _frclock,D0
+.x30:
+	cmp.l _frclock,D0        // enable VBL interrupt
+	beq.s .x30
+#ifdef COLDFIRE
+	move.w (SP)+,D0
+	move D0,SR
+#else
+	move.w (SP)+,SR
+#endif
+	rte
+.x28:
+#ifdef COLDFIRE
 	cmp.l #64,D0             // Blitmode
 #else
 	cmp.w #64,D0             // Blitmode
@@ -517,11 +587,14 @@ _det_xbios:
 .x21:
 	cmp.l #31,D0             // Xbtimer
 	bne.s .x22
+	move.l D2,-(SP)
 	move.w 2(A0),D0          // timer
 	move.w 4(A0),D1          // control
 	move.w 6(A0),D2          // data
 	move.l 8(A0),A0          // vector
 	bsr xbtimer
+	move.l (SP)+,D2
+	tst.l D0
 	bne .x15
 	rte	
 .x22:	
@@ -742,10 +815,14 @@ buffptr:
 #endif /* SOUND_AC97 */
 #endif /* MCF5445X */
 #endif /* NETWORK */
+	tst.l _info_fvdi
+	beq.s .x1
 	cmp.l #0xc60e,D0         // ct60_vmalloc
 	beq.s .x12
 	cmp.l #0xc6e,D0          // bis
 #else /* !COLDFIRE */
+	tst.l _info_fvdi
+	beq.s .x1
 	cmp.w #0xc60e,D0         // ct60_vmalloc
 	beq.s .x12
 	cmp.w #0xc6e,D0          // bis
@@ -943,7 +1020,6 @@ InitVideo:
 	jmp _InitVideo
 #endif /* VIDIX */
 
-#ifdef NETWORK
 #ifdef DEBUG
 dump:
 	lea -20(SP),SP
@@ -983,7 +1059,6 @@ dump:
 	lea 20(SP),SP
 	rts
 #endif /* DEBUG */
-#endif /* NETWORK */
 
 install_xbra:	// A0: handler, D0: vector, D1: ID 
 
@@ -993,6 +1068,30 @@ install_xbra:	// A0: handler, D0: vector, D1: ID
 	move.w D0,D3             // vector
 	move.l A0,A3             // handler
 	move.l D1,-(SP)
+#if defined(COLDFIRE) && defined(NETWORK) && defined(LWIP)
+#if (defined(CONFIG_USB_UHCI) || defined(CONFIG_USB_OHCI) || defined(CONFIG_USB_EHCI)) && defined(CONFIG_USB_STORAGE) && defined(CONFIG_USB_MEM_NO_CACHE)
+	move.l _pxCurrentTCB,D1
+	cmp.l _tid_TOS,D1
+	beq.s .use_tos_mxalloc
+	move.l #18,-(SP)         // size
+	jsr _usb_malloc
+	addq.l #4,SP
+	move.l (SP)+,D1
+	tst.l D0
+	beq.s .error_xbra
+	move.l D0,A0
+	move.l #0x58425241,(A0)+ // XBRA
+	move.l D1,(A0)+
+	clr.l (A0)+	
+	move.w #0x4EF9,(A0)+     // JMP
+	move.l A3,(A0)+          // handler
+	lea -10(A0),A0
+	bsr _flush_dc
+	bsr _flush_ic
+	bra.s .end_install_xbra
+.use_tos_mxalloc:
+#endif /* (defined(CONFIG_USB_UHCI) || defined(CONFIG_USB_OHCI) || defined(CONFIG_USB_EHCI)) && defined(CONFIG_USB_STORAGE) && defined(CONFIG_USB_MEM_NO_CACHE) */
+#endif /* defined(COLDFIRE) && defined(NETWORK) && defined(LWIP) */
 	move.w #3,-(SP)          // TT ram if possible
 	move.l #18,-(SP)         // size
 	move.w #0x44,-(SP)       // Mxalloc
@@ -1015,6 +1114,7 @@ install_xbra:	// A0: handler, D0: vector, D1: ID
 #else
 	cpusha BC
 #endif
+.end_install_xbra:
 	move.l D3,A1
 	move.l (A1),D0
 	move.l D0,(A0)+          // old vector
@@ -1025,8 +1125,603 @@ install_xbra:	// A0: handler, D0: vector, D1: ID
 	lea 28(SP),SP
 	rts
 
-#if defined(CONFIG_USB_UHCI) || defined(CONFIG_USB_OHCI) || defined(CONFIG_USB_EHCI)	
-#ifdef CONFIG_USB_STORAGE
+#ifdef MCF547X /* FIREBEE */
+
+_check_sd_card:
+
+#ifdef SD_CARD_REPLACE_FLOPPY
+	moveq #-1,D0
+	move.l D0,_sd_disk_drive
+	bsr sd_card_init
+	bmi.s .error_found_sd_card
+	// Floppy BIOS routines removed
+	lea error_loadable(PC),A0
+	move.l A0,hdv_boot
+	lea error_ok(PC),A0
+	move.l A0,hdv_bpb
+	lea error_unknow_device(PC),A0
+	move.l A0,hdv_rw
+	move.l A0,hdv_mediach
+	move.l A0,hdv_init
+	moveq #1,D0
+	rts
+.error_found_sd_card:
+#endif
+	moveq #0,D0              // nothing
+	rts
+
+error_loadable:
+
+	moveq #1,D0              // not loadable
+	rts
+
+error_unknow_device:
+
+	moveq #-15,D0
+	rts
+
+error_ok:
+
+	moveq #0,D0
+	rts
+
+_install_sd_card:
+
+	lea -32(SP),SP
+	movem.l D1-D4/A0-A3,(SP)
+#ifdef SD_CARD_REPLACE_FLOPPY
+	moveq #-1,D0
+	move.l D0,_sd_disk_drive
+#endif
+	bsr sd_card_init
+	bmi .error_install_sd_card
+	moveq #0,D0              // root sector / MBR
+	move.l _dskbufp,A0
+	bsr sd_card_sector_read
+	bmi .error_install_sd_card
+	moveq #0,D2
+	move.l #256,D1
+.loop_sum_root_sd_card:
+		moveq #0,D0
+		move.w (A0)+,D0
+		add.l D0,D2
+	subq.l #1,D1
+	bgt.s .loop_sum_root_sd_card
+	move.l _dskbufp,A0
+	and.l #0xFFFF,D2
+	cmp.l #0x1234,D2         // checksum
+	bne.s .check_partition_dos_sd_card
+	lea 0x1C6(A0),A0         // partition table
+	moveq #4,D4
+.loop_partitions_tos_sd_card:
+		move.l (A0),D1
+		and.l #0xFFFFFF,D1 // part_type
+		beq.s .next_partition_tos_sd_card
+		cmp.l #0x58474D,D1 // XGM
+		beq.s .next_partition_tos_sd_card
+		move.l 4(A0),D2  // part_offset
+		move.l 8(A0),D3  // part_size
+		bra.s .install_partition_sd_card
+.next_partition_tos_sd_card:
+		lea 12(A0),A0
+	subq.l #1,D4
+	bgt.s .loop_partitions_tos_sd_card
+	bra.s .error_install_sd_card
+.check_partition_dos_sd_card:
+	moveq #0,D0
+	move.w 510(A0),D0
+	cmp.l #0x55AA,D0         // DOS magic
+	bne.s .error_install_sd_card
+	lea 0x1BE(A0),A0         // partition table
+	moveq #4,D4
+.loop_partitions_dos_sd_card:
+		moveq #0,D1
+		move.b 4(A0),D1  // part_type
+		beq.s .next_partition_dos_sd_card
+		move.l 8(A0),D2  // part_offset
+		swap D2
+		move.l D2,D0
+		asl.l #8,D0
+		lsr.l #8,D2
+		and.l #0xFF00FF00,D0
+		and.l #0x00FF00FF,D2
+		or.l D0,D2
+		move.l 12(A0),D3 // part_size
+		swap D3
+		move.l D3,D0
+		asl.l #8,D0
+		lsr.l #8,D3
+		and.l #0xFF00FF00,D0
+		and.l #0x00FF00FF,D3
+		or.l D0,D3
+		bra.s .install_partition_sd_card
+.next_partition_dos_sd_card:
+		lea 16(A0),A0
+	subq.l #1,D4
+	bgt.s .loop_partitions_dos_sd_card
+.error_install_sd_card:
+	moveq #0,D0              // nothing installed
+	bra.s .end_install_sd_card
+.install_partition_sd_card:
+	pea name_sd_card         // product
+	pea 0                    // revision      
+	pea 0                    // vendor  
+	move.l D3,-(SP)          // part_size
+	move.l D2,-(SP)          // part_offset
+	move.l D1,-(SP)          // part_type	
+	clr.l -(SP)              // dev_num
+	bsr install_pun_drive
+	lea 28(SP),SP
+.end_install_sd_card:
+	movem.l (SP),D1-D4/A0-A3
+	lea 32(SP),SP
+	rts
+
+sd_card_init:
+
+	lea -20(SP),SP
+	movem.l D1-D3/A0-A1,(SP)
+	move.l #MCF_DSPI_DMCR_MSTR+MCF_DSPI_DMCR_CSIS5+MCF_DSPI_DMCR_CSIS3+MCF_DSPI_DMCR_CSIS2+MCF_DSPI_DMCR_CSIS0+MCF_DSPI_DMCR_DTXF+MCF_DSPI_DMCR_DRXF+MCF_DSPI_DMCR_CTXF+MCF_DSPI_DMCR_CRXF,D0
+	move.l D0,MCF_DSPI_DMCR   // 8 bit cs off clear fifo
+	move.l #MCF_DSPI_DCTARn_TRSZ(7)+MCF_DSPI_DCTARn_PCSSCK_3CLK+MCF_DSPI_DCTARn_PASC_3CLK+MCF_DSPI_DCTARn_PDT_3CLK+MCF_DSPI_DCTARn_PBR_3CLK+MCF_DSPI_DCTARn_CSSCK(8)+MCF_DSPI_DCTARn_ASC(8)+MCF_DSPI_DCTARn_DT(9)+MCF_DSPI_DCTARn_BR(7),D0
+	move.l D0,MCF_DSPI_DCTAR0 // 400kHz 
+	move.l #MCF_DSPI_DTFR_EOQ+MCF_DSPI_DTFR_CS5+MCF_DSPI_DTFR_TXDATA(0xFF),D0
+	move.l D0,MCF_DSPI_DTFR
+	moveq #-1,D0
+	move.l D0,MCF_DSPI_DSR
+	move.l #MCF_DSPI_DMCR_MSTR+MCF_DSPI_DMCR_CSCK+MCF_DSPI_DMCR_CSIS3+MCF_DSPI_DMCR_CSIS2+MCF_DSPI_DMCR_CSIS0+MCF_DSPI_DMCR_DTXF+MCF_DSPI_DMCR_DRXF+MCF_DSPI_DMCR_CTXF+MCF_DSPI_DMCR_CRXF,D0
+	move.l D0,MCF_DSPI_DMCR   // clock on cs on
+	bsr wait_10ms
+	move.l #MCF_DSPI_DMCR_MSTR+MCF_DSPI_DMCR_CSIS5+MCF_DSPI_DMCR_CSIS3+MCF_DSPI_DMCR_CSIS2+MCF_DSPI_DMCR_CSIS0+MCF_DSPI_DMCR_DTXF+MCF_DSPI_DMCR_DRXF+MCF_DSPI_DMCR_CTXF+MCF_DSPI_DMCR_CRXF,D0
+	move.l D0,MCF_DSPI_DMCR   // clock off cs off
+	moveq #10,D1
+.loop_sd_com:
+		move.b #0xFF,D0
+		bsr sd_com
+	subq.l #1,D1
+	bgt.s .loop_sd_com
+	move.l #MCF_DSPI_DMCR_MSTR+MCF_DSPI_DMCR_CSIS3+MCF_DSPI_DMCR_CSIS2+MCF_DSPI_DMCR_CSIS0+MCF_DSPI_DMCR_DTXF+MCF_DSPI_DMCR_DRXF+MCF_DSPI_DMCR_CTXF+MCF_DSPI_DMCR_CRXF,D0
+	move.l D0,MCF_DSPI_DMCR   // cs on
+	move.b #0xFF,D0
+	bsr sd_com					
+	move.b #0xFF,D0
+	bsr sd_com
+	move.l #MCF_DSPI_DMCR_MSTR+MCF_DSPI_DMCR_CSIS5+MCF_DSPI_DMCR_CSIS3+MCF_DSPI_DMCR_CSIS2+MCF_DSPI_DMCR_CSIS0+MCF_DSPI_DMCR_DTXF+MCF_DSPI_DMCR_DRXF+MCF_DSPI_DMCR_CTXF+MCF_DSPI_DMCR_CRXF,D0
+	move.l D0,MCF_DSPI_DMCR   // cs off
+	move.b #0xFF,D0
+	bsr sd_com
+	move.b #0xFF,D0
+	bsr sd_com
+	bsr wait_10ms
+// sd idle
+	moveq #10,D3              // retry counter
+	moveq #100,D1
+.sd_idle:
+			bsr sd_card_idle
+			moveq #10,D2
+.sd_idle2:
+				move.b #0xFF,D0
+				bsr sd_com
+				cmp.l #0x01,D0
+				beq.s .idle_end
+			subq.l #1,D2
+			bgt.s .sd_idle2
+		subq.l #1,D1
+		bgt.s .sd_idle
+		bra .sd_not
+.idle_end:
+.read_ic:
+			move.b #0xFF,D0 // clocks
+			bsr sd_com
+			moveq #0x48,D0  // cmd 8, SEND_IF_COND
+			bsr sd_com
+			moveq #0x00,D0
+			bsr sd_com
+			moveq #0x00,D0
+			bsr sd_com
+			moveq #0x01,D0
+			bsr sd_com
+			move.b #0xAA,D0
+			bsr sd_com
+			move.b #0x87,D0
+			bsr sd_com
+			bsr sd_get_status
+			cmp.l #5,D0
+			beq.s .sd_v1
+		cmp.l #1,D0
+		bne.s .read_ic
+		move.b #0xFF,D0
+		bsr sd_com                // 4 bytes
+		move.b #0xFF,D0
+		bsr sd_com
+		move.b #0xFF,D0
+		bsr sd_com
+		move.b #0xFF,D0
+		bsr sd_com
+		cmp.l #0xAA,D0            // pattern ?
+		bne .sd_testd3
+.sd_v1:		// SDHC
+.read_ocr:
+			move.b #0xFF,D0 // clocks
+			bsr sd_com
+			moveq #0x7A,D0  // cmd 58, READ_OCR
+			bsr sd_com
+			moveq #0x00,D0
+			bsr sd_com
+			moveq #0x00,D0
+			bsr sd_com
+			moveq #0x00,D0
+			bsr sd_com
+			moveq #0x00,D0
+			bsr sd_com
+			moveq #0x01,D0
+			bsr sd_com
+			bsr sd_get_status
+			// Ver1
+		cmp.l #5,D0
+		beq.s .read_ocr
+		cmp.l #1,D0
+		bne.s .read_ocr
+		move.b #0xFF,D0
+		bsr sd_com                // 4 bytes
+		move.b #0xFF,D0
+		bsr sd_com
+		move.b #0xFF,D0
+		bsr sd_com
+		move.b #0xFF,D0
+		bsr sd_com
+		move.l #20000,D1          // timeout
+.wait_activity:
+			move.b #0xFF,D0 // clocks
+			bsr sd_com
+			moveq #0x77,D0  // cmd 55, APP_CMD
+			bsr sd_com
+			moveq #0x00,D0
+			bsr sd_com
+			moveq #0x00,D0
+			bsr sd_com
+			moveq #0x00,D0
+			bsr sd_com
+			moveq #0x00,D0
+			bsr sd_com
+			move.b #0x95,D0
+			bsr sd_com
+			bsr sd_get_status
+		cmp.l #0x05,D0
+		beq.s .wait_activity
+.wait_activity2:
+				move.b #0xFF,D0 // clocks
+				bsr sd_com
+				moveq #0x69,D0  // app cmd 41
+				bsr sd_com
+				moveq #0x40,D0
+				bsr sd_com
+				moveq #0x00,D0
+				bsr sd_com
+				moveq #0x00,D0
+				bsr sd_com
+				moveq #0x00,D0
+				bsr sd_com
+				move.b #0x95,D0
+				bsr sd_com
+				bsr sd_get_status
+				tst.l D0
+				beq.s .sd_init_ok
+			cmp.l #0x05,D0
+			beq.s .wait_activity2	
+		subq.l #1,D1
+		bgt .wait_activity
+.sd_testd3:
+	subq.l #1,D3 // retry counter
+	bgt .sd_idle
+	bra .sd_error
+.sd_init_ok:
+// fullspeed 
+	move.l #MCF_DSPI_DCTARn_TRSZ(7)+MCF_DSPI_DCTARn_PCSSCK_3CLK+MCF_DSPI_DCTARn_PASC_3CLK+MCF_DSPI_DCTARn_PDT_3CLK+MCF_DSPI_DCTARn_PBR_3CLK+MCF_DSPI_DCTARn_CSSCK(1)+MCF_DSPI_DCTARn_ASC(1)+MCF_DSPI_DCTARn_DT(2)+MCF_DSPI_DCTARn_BR(0),D0
+	move.l D0,MCF_DSPI_DCTAR0 // 22Mbit/sec
+read_cid:
+	move.b #0xFF,D0           // clocks
+	bsr sd_com
+	moveq #0x4A,D0            // cmd 10, SEND_CID
+	bsr sd_com
+	moveq #0x00,D0
+	bsr sd_com
+	moveq #0x00,D0
+	bsr sd_com
+	moveq #0x00,D0
+	bsr sd_com
+	moveq #0x00,D0
+	bsr sd_com
+	move.b #0x95,D0
+	bsr sd_com
+	move.l _dskbufp,A0
+	bsr sd_rcv_info
+	addq.l #1,A0 // name
+	moveq #7,D0
+	lea name_sd_card,A1
+.sd_name_loop:
+		move.b (A0)+,(A1)+
+	subq.l #1,D0
+	bgt.s .sd_name_loop
+	clr.b (A1)
+.read_csd:
+	move.b #0xFF,D0           // clocks
+	bsr sd_com
+	move.b #0x49,D0           // cmd 9, SEND_CSD
+	bsr sd_com
+	moveq #0x00,D0
+	bsr sd_com
+	moveq #0x00,D0
+	bsr sd_com
+	moveq #0x00,D0
+	bsr sd_com
+	moveq #0x00,D0
+	bsr sd_com
+	moveq #0x01,D0
+	bsr sd_com
+	move.l _dskbufp,A0
+	bsr sd_rcv_info
+	moveq #0,D0
+	move.b (A0),D0
+	lsr.l #6,D0
+	bne.s .sd_csd2            // format v2
+	move.l 6(A0),D1
+	moveq #14,D0	             // bit 73..62 c_size
+	lsr.l D0,D1
+	and.l #0xFFF,D1           // 12 bits
+	addq.l #1,D1
+	move.b 9(A0),D0
+	lsr.l #7,D0               // bits 49..47
+	and.l #7,D0               // 3 bits
+	moveq.l #8,D2             // x256 (dif v1 v2)
+	sub.l D0,D2		
+	lsr.l D2,D1
+	bra.s .sd_return_size
+.sd_not:
+	moveq #-2,D0
+	bra.s .sd_init_end
+.sd_error:
+	moveq #-1,D0
+	bra.s .sd_init_end
+.sd_csd2:
+	moveq #0,D1
+	move.w 8(A0),D1
+	addq.l #1,D1
+.sd_return_size:
+	swap D1
+	move.l D1,D0
+	lsr.l #6,D0               // x 65636 / 64 -> total sectors
+.sd_init_end:
+	movem.l (SP),D1-D3/A0-A1
+	lea 20(SP),SP
+	rts
+
+sd_card_sector_read: // D0.L:sec_nr, A0:buf_addr
+
+	lea -12(SP),SP
+	movem.l D1-D2/A0,(SP)
+	asl.l #8,D0
+	add.l D0,D0               // x 512 !
+	move.l D0,D1	             // bytes
+	move.l D0,D2
+	swap D1
+	move.b #0xFF,D0           // clocks
+	bsr sd_com	
+	moveq #0x51,D0            // cmd 17, READ_SINGLE_BLOCK
+	bsr sd_com	
+	move.l D1,D0
+	lsr.l #8,D0
+	bsr sd_com	
+	move.b D1,D0
+	bsr sd_com
+	move.l D2,D0              // bytes
+	lsr.l #8,D0
+	bsr sd_com	
+	move.b D2,D0
+	bsr sd_com	
+	moveq #0x01,D0
+	bsr sd_com
+	moveq #0,D1               // status, no error
+	bsr sd_get_status
+	tst.l D0
+	bne.s .sd_csr_end
+	bsr sd_rcv_sector         // sector read
+.sd_csr_end:
+	tst.l D0
+	beq.s .sd_csr_ok
+	neg.l D1
+	move.l D0,D1
+.sd_csr_ok:
+	move.l D1,D0
+	movem.l (SP),D1-D2/A0
+	lea 12(SP),SP
+	rts
+
+sd_card_sector_write: // D0.L:sec_nr, A0:buf_addr
+
+	lea -12(SP),SP
+	movem.l D1-D2/A0,(SP)
+	asl.l #8,D0
+	add.l D0,D0               // x 512 !
+	move.l D0,D1	             // bytes
+	move.l D0,D2
+	swap D1
+	move.b #0xFF,D0           // clocks
+	bsr sd_com	
+	moveq #0x58,D0            // cmd 24, WRITE_SINGLE_BLOCK
+	bsr sd_com	
+	move.l D1,D0
+	lsr.l #8,D0
+	bsr sd_com	
+	move.b D1,D0
+	bsr sd_com
+	move.l D2,D0              // bytes
+	lsr.l #8,D0
+	bsr sd_com	
+	move.b D2,D0
+	bsr sd_com	
+	moveq #0x01,D0
+	bsr sd_com
+	moveq #0,D1               // status, no error
+	bsr sd_get_status
+	tst.l D0
+	bne.s .sd_csw_end
+	bsr sd_send_sector        // sector write
+.sd_csw_end:
+	tst.l D0
+	beq.s .sd_csw_ok
+	neg.l D1
+	move.l D0,D1
+.sd_csw_ok:
+	move.l D1,D0
+	movem.l (SP),D1-D2/A0
+	lea 12(SP),SP
+	rts
+
+sd_card_idle:
+
+	move.l #MCF_DSPI_DCTARn_TRSZ(8-1)+MCF_DSPI_DCTARn_PCSSCK_3CLK+MCF_DSPI_DCTARn_PASC_3CLK+MCF_DSPI_DCTARn_PDT_3CLK+MCF_DSPI_DCTARn_PBR_3CLK+MCF_DSPI_DCTARn_CSSCK(8)+MCF_DSPI_DCTARn_ASC(8)+MCF_DSPI_DCTARn_DT(9)+MCF_DSPI_DCTARn_BR(7),D0
+	move.l D0,MCF_DSPI_DCTAR0	// 400kHz 
+	move.b #0xFF,D0
+	bsr sd_com                // clocks 
+	moveq #0x40,D0            // cmd 0, GO_IDLE_STATE
+	bsr sd_com
+	moveq #0x00,D0
+	bsr sd_com
+	moveq #0x00,D0
+	bsr sd_com
+	moveq #0x00,D0
+	bsr sd_com
+	moveq #0x00,D0
+	bsr sd_com
+	move.b #0x95,D0
+	bsr sd_com
+	rts
+
+sd_rcv_sector: // 1 sector data to A0 pointer
+
+	move.l A0,-(SP)
+	move.l D1,-(SP)
+	bsr sd_get_status 
+	cmp.l #0xFE,D0
+	bne .sd_rs_end // error
+	move.l #512,D1
+.sd_rs_loop:
+		move.b #0xFF,D0
+		bsr sd_com
+		move.b D0,(A0)+
+	subq.l #1,D1
+	bgt.s .sd_rs_loop
+	// crc
+	move.b #0xFF,D0
+	bsr sd_com
+	move.b #0xFF,D0
+	bsr sd_com
+	moveq #0,D0 // all ok
+.sd_rs_end:
+	move.l (SP)+,D1
+	move.l (SP)+,A0
+	tst.l D0
+	rts
+
+sd_send_sector: // 1 sector data to A0 pointer
+
+	move.l A0,-(SP)
+	move.l D1,-(SP)
+	move.l #512,D1		
+	move.b #0xFE,D0 // start token
+	bsr sd_com // send
+.sd_send_wr_wb:
+		move.b (A0)+,D0 // data
+		bsr sd_com   // send
+	subq.l #1,D1
+	bgt.s .sd_send_wr_wb	
+// send crc
+	moveq #0x01,D0			
+	bsr sd_com                // crc 1st byte
+	moveq #0x01,D0			
+	bsr sd_com                // crc 2nd byte
+	bsr sd_get_status
+	and.l #0x1F,D0
+	moveq #0,D1               // status, no error
+	cmp.l #5,D0               // data accepted ?
+	beq.s .sd_send_end        // OK
+	move.l D0,D1              // status
+.sd_send_end:
+		move.b #0xFF,D0
+		bsr sd_com
+	tst.l D0
+	beq.s .sd_send_end
+	move.l D1,D0 // status
+	move.l (SP)+,D1
+	move.l (SP)+,A0
+	rts
+
+sd_rcv_info: // A0: data
+
+	lea -12(SP),SP
+	movem.l D0-D1/A0,(SP)
+	moveq #18,D1             // 16 bytes + 2 bytes crc
+.sd_rcv_rb_w:		
+			move.b #0xFF,D0
+			bsr sd_get_status 
+		cmp.l #0xFE,D0
+		bne.s .sd_rcv_rb_w
+.sd_rcv_rd_rb:
+		move.b #0xFF,D0
+		bsr sd_com
+		move.b D0,(A0)+
+	subq.l #1,D1
+	bgt.s .sd_rcv_rd_rb
+	movem.l (SP),D0-D1/A0
+	lea 12(SP),SP
+	rts
+
+sd_get_status:
+
+		move.b #0xFF,D0
+		bsr sd_com
+	cmp.l #0xFF,D0
+	beq.s sd_get_status
+	rts
+
+sd_com:
+
+	and.l #MCF_DSPI_DTFR_TXDATA(0xFF),D0 // 8 bits data
+	or.l #MCF_DSPI_DTFR_EOQ+MCF_DSPI_DTFR_CS5,D0
+	move.l D0,MCF_DSPI_DTFR  // TX fifo
+.wait_complete:
+		move.l MCF_DSPI_DSR,D0
+#if 1
+	bpl.s .wait_complete
+#else
+	and.l #MCF_DSPI_DSR_TCF,D0
+	beq.s .wait_complete
+#endif
+	move.l MCF_DSPI_DRFR,-(SP) // RX fifo
+	moveq #-1,D0
+	move.l D0,MCF_DSPI_DSR   // clear status register
+	move.l (SP)+,D0
+	and.l #MCF_DSPI_DRFR_RXDATA(0xFF),D0 // 8 bits data
+	rts
+
+wait_10ms:
+
+ 	move.l D1,-(SP)
+	move.l D0,-(SP)
+	move.l MCF_SLT_SCNT1,D1
+.wait_10ms_loop:
+		move.l D1,D0
+		sub.l MCF_SLT_SCNT1,D0
+	cmp.l #10000*SYSTEM_CLOCK,D0
+	bcs.s .wait_10ms_loop
+	move.l (SP)+,D0
+	move.l (SP)+,D1
+	rts
+
+#endif /* MCF547X */
+
+#if (defined(CONFIG_USB_UHCI) || defined(CONFIG_USB_OHCI) || defined(CONFIG_USB_EHCI)) && defined(CONFIG_USB_STORAGE)
 
 _install_usb_stor:
 
@@ -1034,25 +1729,71 @@ _install_usb_stor:
 	movem.l D1-D4/A0-A3,(SP)
 	move.l 36(SP),D0         // dev_num
 	cmp.l #PUN_DEV,D0
-	bhi .no_pinfo            // error
-	move.l 40(SP),D2         // part_type
-	move.l D2,D1
-	and.l #0xFFFFFF,D1       // ID
-	// GEMDOS
-	cmp.l #0x47454D,D1       // GEM up to 16M
-	beq.s .partition_ok
-	cmp.l #0x42474D,D1       // BGM over 16M
-	beq.s .partition_ok
-	cmp.l #0x524157,D1       // RAW
-	beq.s .partition_ok
-	// DOS 1:FAT12, 0xB/0xC:FAT32
-	cmp.l #0x4,D2            // FAT16 up to 32M
-	beq.s .partition_ok
-	cmp.l #0x6,D2            // FAT16 over 32M
-	beq.s .partition_ok
-	cmp.l #0xE,D2            // WIN95 FAT16
-	bne .invalid_partition_type
-.partition_ok:
+	bhi .error_usb_install   // error
+	or.l #PUN_USB,D0
+	movem.l 40(SP),D1-D3     // part_type, part_offset, part_size
+	movem.l 52(SP),A1/A2/A3  // vendor / revision / product
+	move.l A3,-(SP)          // product
+	move.l A2,-(SP)          // revision      
+	move.l A1,-(SP)          // vendor  
+	move.l D3,-(SP)          // part_size
+	move.l D2,-(SP)          // part_offset
+	move.l D1,-(SP)          // part_type	
+	move.l D0,-(SP)          // dev_num
+	bsr install_pun_drive
+	lea 28(SP),SP
+	bra.s .end_usb_install
+.error_usb_install:
+	moveq #0,D0              // not installed
+.end_usb_install:
+	movem.l (SP),D1-D4/A0-A3
+	lea 32(SP),SP
+	rts
+
+_uninstall_usb_stor:
+
+	lea -24(SP),SP
+	movem.l D0-D3/A0-A1,(SP)
+	move.l 28(SP),D0         // dev_num
+	cmp.l #PUN_DEV,D0
+	bhi.s .error_usb_uninstall   // error
+	move.l _usb_1st_disk_drive,D2
+	beq.s .error_usb_uninstall
+	or.l #PUN_USB,D0
+	move.l pun_ptr,A1
+.loop_uninstall_usb_part:
+		moveq #0,D1
+		move.b pinfo_pun(A1,D2.l),D1
+		cmp.l D1,D0
+		bne.s .not_this_usb_devnum
+		move.w pinfo_puns(A1),D1
+		subq.l #1,D1
+		move.w D1,pinfo_puns(A1)
+		moveq #-1,D1
+		move.b D1,pinfo_pun(A1,D2.l)
+		clr.l pinfo_pstart(A1,D2.l*4)
+		lea pinfo_psize(A1),A0
+		clr.l (A0,D2.l*4) 
+		move.l _drvbits,D1
+		bclr D2,D1
+		move.l D1,_drvbits
+.not_this_usb_devnum:
+		addq.l #1,D2
+	cmp.l #MAX_LOGICAL_DRIVE,D2
+	bcs.s .loop_uninstall_usb_part
+.error_usb_uninstall:
+	movem.l (SP),D0-D3/A0-A1
+	lea 24(SP),SP
+	rts
+
+#endif /* (defined(CONFIG_USB_UHCI) || defined(CONFIG_USB_OHCI) || defined(CONFIG_USB_EHCI)) && defined(CONFIG_USB_STORAGE) */
+
+#if ((defined(CONFIG_USB_UHCI) || defined(CONFIG_USB_OHCI) || defined(CONFIG_USB_EHCI)) && defined(CONFIG_USB_STORAGE)) || defined(MCF547X)
+
+install_pun_drive:
+
+	lea -32(SP),SP
+	movem.l D1-D4/A0-A3,(SP)
 	move.l pun_ptr,D0
 	bne.s .pinfo_ok
 	move.w #3,-(SP)          // TT ram if possible
@@ -1064,10 +1805,6 @@ _install_usb_stor:
 	beq.s .no_pinfo
 	move.l D0,A3
 	clr.w pinfo_puns(A3)
-	move.w #0x0300,D0
-	move.w D0,pinfo_vernum(A3)
-	move.w #0x4000,D0
-	move.w D0,pinfo_maxsiz(A3)
 	lea pinfo_pun(A3),A0
 	moveq #-1,D0
 	move.w D0,(A0)+          // drives A/B
@@ -1081,11 +1818,27 @@ _install_usb_stor:
 		clr.w -(A1)
 	cmp.l A0,A1
 	bgt.s .clrpun
+	lea pinfo_cookie(A3),A0
+	move.l #0x41484449,(A0)  // AHDI
+	move.l A0,4(A0)
+	move.w #0x0300,D0
+	move.w D0,pinfo_vernum(A3)
+	move.w #0x4000,D0
+	move.w D0,pinfo_maxsiz(A3)
 	move.l A3,D0             // pun_ptr
 .pinfo_ok:
 	move.l D0,A3             // pun_ptr
-	moveq #2,D4              // drive C
+#if defined(MCF547X) && defined(SD_CARD_REPLACE_FLOPPY)
+	move.l 36(SP),D2         // dev_num
+	moveq #PUN_USB,D0
+	and.l D2,D0
+	bne.s .usb_pun
+	moveq #0,D4              // drive A
+	bra.s .drive_not_exist_usb
+.usb_pun:	
+#endif /* defined(MCF547X) && defined(SD_CARD_REPLACE_FLOPPY) */
 	move.l _drvbits,D0
+	moveq #2,D4              // drive C
 .search_empty_drive_usb:
 		btst D4,D0
 		beq.s .drive_not_exist_usb
@@ -1110,23 +1863,70 @@ _install_usb_stor:
 	move.l 40(SP),D2         // part_type
 	move.l 36(SP),D0         // dev_num
 	move.l D2,pinfo_ptype(A3,D4.l*4)
+	and.l #0xFFFFFF,D2       // ID
+	// GEMDOS
+	cmp.l #0x47454D,D2       // GEM up to 16M
+	beq.s .check_size
+	cmp.l #0x42474D,D2       // BGM over 16M
+	beq.s .check_size
+	// DOS 1:FAT12, 0xB/0xC:FAT32
+	cmp.l #0x4,D2            // FAT16 up to 32M
+	beq.s .check_size
+	cmp.l #0x6,D2            // FAT16 over 32M
+	beq.s .check_size
+	cmp.l #0xE,D2            // WIN95 FAT16
+	bne.s .no_limit_size
+.check_size:
+	cmp.l #0x400000,D3
+	bcs.s .no_limit_size
+	move.l #0x400000,D3      // 2GB limit
+.no_limit_size:
 	move.l D0,D2
-	or.l #PUN_USB,D2
 	move.b D2,pinfo_pun(A3,D4.l)
 	move.l D3,(A0,D4.l*4)    // size
-	move.l D1,pinfo_pstart(A3,D4.l*4)	
+	move.l D1,pinfo_pstart(A3,D4.l*4)
 	move.l _dskbufp,A0 
+#ifdef MCF547X
+	moveq #PUN_USB,D0
+	and.l D2,D0
+	beq.s .not_usb_pun
+#endif
 	move.l A0,-(SP)          // buffer
 	move.l #1,-(SP)          // blkcnt	
 	move.l D1,-(SP)          // blknr
+	moveq #PUN_DEV,D0
+	and.l D2,D0
 	move.l D0,-(SP)          // devnum
 	jsr _usb_stor_read
 	lea 16(SP),SP
 	tst.l D0
-	beq .end_usb_disk        // read error
+	ble .end_usb_disk        // read error
+#ifdef MCF547X
+	move.l _sd_disk_drive,D0
+#ifdef SD_CARD_REPLACE_FLOPPY
+	addq.l #1,D0
+#endif
+	or.l _usb_1st_disk_drive,D0
+#else /* !MCF547X */
 	tst.l _usb_1st_disk_drive
+#endif /* MCF547X */
 	bne .usb_1st_drive_ok    // hdv vectors installed
-	move.l D4,_usb_1st_disk_drive
+#ifdef MCF547X
+	bra.s .install_hdv_xbra
+.not_usb_pun:                                        
+	move.l D1,D0             // sector number
+	move.l _dskbufp,A0
+	bsr sd_card_sector_read  // read boot sector
+	bmi .end_usb_disk        // read error
+	move.l _sd_disk_drive,D0
+#ifdef SD_CARD_REPLACE_FLOPPY
+	addq.l #1,D0
+#endif
+	move.l D4,_sd_disk_drive
+	or.l _usb_1st_disk_drive,D0
+	bne .sd_1st_drive_ok    // hdv vectors installed
+.install_hdv_xbra:
+#endif /* MCF547X */
 	move.w SR,D0
 	move.w D0,-(SP)
 	or.l #0x700,D0           // mask interrupts
@@ -1156,39 +1956,69 @@ _install_usb_stor:
 		addq.l #8,A0
 	bra.s .find_cookie_jar
 .cookie_found:
+	move.l A0,-(SP)
 	move.l 4(A0),D0
 	move.l D0,old_xhdi
-	lea xhdi(PC),A1
-	move.l A1,4(A0)
 	clr.l -(SP)              // XHGetVersion
 	move.l D0,A0
 	jsr (A0)
 	addq.l #4,SP
 	move.l D0,old_xhdi_version
+	lea xhdi(PC),A1
+	move.l A1,-(SP)			
+	move.w #9,-(SP)          // XHNewCookie
+	move.l old_xhdi,A0
+	jsr (A0)
+	add.l #2,SP
+	move.l (SP)+,A1
+	move.l (SP)+,A0
+	tst.l D0
+	beq.s .no_cookie_jar
+	move.l A1,4(A0)          // replace cookie			
 	bra.s .no_cookie_jar
 .cookie_slot_free:
 	move.l 4(A0),12(A0)      // copy size
-	move.l D1,(A0)+ // XHDI
+	move.l #0x58484449,(A0)+ // XHDI new cookie name
 	lea xhdi(PC),A1
-	move.l A1,(A0)+
-	clr.l (A0)
+	move.l A1,(A0)+          // cookie data
+	clr.l (A0)               // end (size is already copied after)
 	clr.l old_xhdi
-	move.l #0x120,D0         //  protocol version
-	move.l D0,old_xhdi_version
+	clr.l old_xhdi_version   //  protocol version
 .no_cookie_jar:
 	move.w (SP)+,D0
 	move.w D0,SR
 .usb_1st_drive_ok:
+	tst.l _usb_1st_disk_drive
+	bne.s .sd_1st_drive_ok
+	move.l D4,_usb_1st_disk_drive
+.sd_1st_drive_ok:
 	move.l _dskbufp,A0       // boot sector
 	lea pinfo_bpb(A3),A1
 	move.l D4,D2             // logical drive
-	asl.l #5,D2              // * 32
+	mulu #18,D2              // * 18
 	add.l D2,A1
+	move.l pinfo_ptype(A3,D4.l*4),D2 // part_type
+	move.l D2,D1
+	and.l #0xFFFFFF,D1       // ID
+	// GEMDOS
+	cmp.l #0x47454D,D1       // GEM up to 16M
+	beq.s .partition_ok
+	cmp.l #0x42474D,D1       // BGM over 16M
+	beq.s .partition_ok
+	// DOS 1:FAT12, 0xB/0xC:FAT32
+	cmp.l #0x4,D2            // FAT16 up to 32M
+	beq.s .partition_ok
+	cmp.l #0x6,D2            // FAT16 over 32M
+	beq.s .partition_ok
+	cmp.l #0xE,D2            // WIN95 FAT16
+	bne .no_bpb
+.partition_ok:
 	moveq #0,D2
 	move.b 0xC(A0),D2
 	asl.l #8,D2
 	move.b 0xB(A0),D2        // BPS
-	move.w D2,(A1)           // sector size
+	move.w D2,(A1)           // sector size in bytes
+	beq .no_bpb
 	moveq #0,D1
 	move.b 0xD(A0),D1        // SPC
 	move.w D1,2(A1)          // cluster size in sectors
@@ -1200,6 +2030,8 @@ _install_usb_stor:
 	asl.l #8,D0
 	move.b 0x11(A0),D0       // NDIRS
 	asl.l #5,D0              // * 32
+	tst.l D2
+	beq.s .no_dirs
 #ifdef COLDFIRE
 	.chip 68060
 #endif
@@ -1207,6 +2039,7 @@ _install_usb_stor:
 #ifdef COLDFIRE
 	.chip 5200
 #endif
+.no_dirs:
 	move.w D0,6(A1)          // size directory in sectors
 	moveq #0,D2
 	move.b 0x17(A0),D2
@@ -1237,6 +2070,8 @@ _install_usb_stor:
 	move.l (A2,D4.l*4),D2    // partition size in sectors
 	sub.l D0,D2              // - 1st data sector
 .nsects_ok_usb:
+	tst.l D1
+	beq.s .no_cluster_size
 #ifdef COLDFIRE
 	.chip 68060
 #endif
@@ -1244,13 +2079,18 @@ _install_usb_stor:
 #ifdef COLDFIRE
 	.chip 5200
 #endif
+.no_cluster_size:
 	move.w D2,14(A1)         // total clusters
 	moveq #1,D0
 	move.w D0,16(A1)         // FAT 16
-	clr.w 18(A1)
-	clr.l 20(A1)
-	clr.l 24(A1)
-	clr.l 28(A1)
+	bra.s .end_bpb
+.no_bpb:
+	clr.w (A1)
+	clr.l 2(A1)
+	clr.l 6(A1)
+	clr.l 10(A1)
+	clr.l 14(A1)
+.end_bpb:
 	move.l _drvbits,D0
 	bset D4,D0
 	move.l D0,_drvbits
@@ -1258,30 +2098,33 @@ _install_usb_stor:
 	cmp.l D4,D0
 	bne.s .no_set_drive_usb
 	move.w D0,_bootdev
+#if defined(COLDFIRE) && defined(NETWORK) && defined(LWIP)
+	move.l _pxCurrentTCB,D1
+	cmp.l _tid_TOS,D1
+	bne.s .no_set_drive_usb
+#endif
 	move.w D0,-(SP)
 	move.w #0xE,-(SP)        // Dsetdrv
 	trap #1
 	addq.l #4,SP
 .no_set_drive_usb:
-	move.l 36(SP),D0         // devnum        
+	move.l D4,D1             // logical drive
+	move.l pinfo_ptype(A3,D4.l*4),D2 // part_type
+	lea pinfo_psize(A3),A0
+	move.l (A0,D4.l*4),D3    // partition size in sectors
+	moveq #PUN_USB+PUN_DEV,D0
+	and.l 36(SP),D0          // devnum
 	movem.l 52(SP),A1/A2/A3  // vendor / revision / product
 	lea product_name,A0      // save product name pointer for XHDI
 	move.l A3,(A0,D0.l*4)
+#if defined(COLDFIRE) && defined(NETWORK) && defined(LWIP)
+	move.l _pxCurrentTCB,D0
+	cmp.l _tid_TOS,D0
+	bne.s .no_display_drive_usb
+#endif
+	move.l 36(SP),D0         // devnum
 	bsr display_drive_usb
-	pea message2b(PC)
-	move.w #9,-(SP)
-	trap #1                  // Cconws
-	addq.l #6,SP
-	moveq #0x41,D0           // A
-	add.l D4,D0
-	move.w D0,-(SP)
-	move.w #2,-(SP)
-	trap #1                  // Cconout
-	addq.l #4,SP
-	pea crlf(PC)
-	move.w #9,-(SP)
-	trap #1                  // Cconws
-	addq.l #6,SP
+.no_display_drive_usb:
 	move.l D4,D0             // OK
 	bra.s .end_usb_disk
 .invalid_partition_type:
@@ -1290,7 +2133,12 @@ _install_usb_stor:
 .drive_full_usb:
 	pea error2(PC)
 .display_error_usb:
-	move.l 36+4(SP),D0       // devnum      
+#if defined(COLDFIRE) && defined(NETWORK) && defined(LWIP)
+	move.l _pxCurrentTCB,D0
+	cmp.l _tid_TOS,D0
+	bne.s .no_display_error_usb
+#endif
+	move.l 36+4(SP),D0       // devnum 
 	movem.l 52+4(SP),A1/A2/A3// vendor / revision / product
 	bsr display_drive_usb
 	move.w #0x2C,-(SP)
@@ -1303,7 +2151,9 @@ _install_usb_stor:
 	addq.l #4,SP
 	move.w #9,-(SP)
 	trap #1                  // Cconws
-	addq.l #6,SP
+	addq.l #2,SP
+.no_display_error_usb:	
+	addq.l #4,SP
 	moveq #0,D0              // not installed
 .end_usb_disk:
 	movem.l (SP),D1-D4/A0-A3
@@ -1313,52 +2163,118 @@ _install_usb_stor:
 
 display_drive_usb:
 
-	move.l A1,-(SP)
+	link A6,#-16
+	add.l #0x41,D1
+	move.w D1,-(SP)          // logical drive
+	move.l A1,-(SP)          // vendor
 	moveq #0x30,D1
-	add.l D1,D0	            // dev_num
-	move.w D0,-(SP)         
+	or.l D0,D1	            // device number
+	move.w D1,-(SP)         
 	lea blue(PC),A0
-	bsr text_color
+	moveq #PUN_USB,D1
+	and.l D0,D1
+	bne.s .display_usb
+	pea message3(PC)         // SD-disk installed
+	bra.s .display_color
+.display_usb:
 	pea message2(PC)         // USB-disk installed
+.display_color:
+	bsr text_color
 	move.w #9,-(SP)
 	trap #1                  // Cconws
 	addq.l #6,SP
 	move.w #2,-(SP)
 	trap #1                  // Cconout
 	addq.l #4,SP
-	move.w #0x2E,-(SP)
+	move.w #0x2E,-(SP)       // .
 	move.w #2,-(SP)
 	trap #1                  // Cconout
 	addq.l #4,SP
-	move.w #0x30,-(SP)
+	move.w #0x30,-(SP)       // 0
 	move.w #2,-(SP)
 	trap #1                  // Cconout
 	addq.l #4,SP
 	lea black(PC),A0
 	bsr text_color
+	tst.l (SP)               // vendor
+	beq.s .no_vendor
 	move.w #0x20,-(SP)
 	move.w #2,-(SP)
 	trap #1                  // Cconout
 	addq.l #4,SP
 	move.w #9,-(SP)
 	trap #1                  // Cconws
-	addq.l #6,SP    
+	addq.l #2,SP
+.no_vendor:
+	addq.l #4,SP
+	move.l A2,D0
+	beq.s .no_revision
 	move.w #0x20,-(SP)
 	move.w #2,-(SP)
 	trap #1                  // Cconout
 	addq.l #4,SP
-	move.l A2,-(SP)
-	move.w #9,-(SP)
-	trap #1                  // Cconws
-	addq.l #6,SP             
-	move.w #0x20,-(SP)
-	move.w #2,-(SP)
-	trap #1                  // Cconout
-	addq.l #4,SP
-	move.l A3,-(SP)
+	move.l A2,-(SP)          // revision
 	move.w #9,-(SP)
 	trap #1                  // Cconws
 	addq.l #6,SP
+.no_revision:
+	move.w #0x20,-(SP)
+	move.w #2,-(SP)
+	trap #1                  // Cconout
+	addq.l #4,SP
+	move.l A3,-(SP)          // product
+	move.w #9,-(SP)
+	trap #1                  // Cconws
+	addq.l #6,SP
+	pea message4(PC)
+	move.w #9,-(SP)
+	trap #1                  // Cconws
+	addq.l #6,SP
+	move.w #2,-(SP)
+	trap #1                  // Cconout
+	addq.l #4,SP
+	pea message5(PC)
+	move.w #9,-(SP)
+	trap #1                  // Cconws
+	addq.l #6,SP
+	cmp.l #0xFF,D2           // part_type
+	bhi.s .gem_part
+	move.l #16,-(SP)
+	move.l D2,-(SP)
+	pea -16(A6)
+	jsr _ltoa
+	lea 12(SP),SP
+	bra.s .size_part
+.gem_part:
+	move.l D2,D0
+	asl.l #8,D0
+	move.l D0,-16(A6)
+.size_part:
+	pea -16(A6)
+	move.w #9,-(SP)
+	trap #1                  // Cconws
+	addq.l #6,SP	
+	pea message6(PC)
+	move.w #9,-(SP)
+	trap #1                  // Cconws
+	addq.l #6,SP
+	add.l #1024,D3	
+	moveq #11,D0
+	lsr.l D0,D3              // sector size / 1024*2 => MB
+	move.l #10,-(SP)
+	move.l D3,-(SP)
+	pea -16(A6)
+	jsr _ltoa
+	lea 12(SP),SP
+	pea -16(A6)
+	move.w #9,-(SP)
+	trap #1                  // Cconws
+	addq.l #6,SP	
+	pea message7(PC)         // MB
+	move.w #9,-(SP)
+	trap #1                  // Cconws
+	addq.l #6,SP	
+	unlk A6
 	rts
 
 det_hdv_bpb_usb:
@@ -1367,10 +2283,27 @@ det_hdv_bpb_usb:
 	move.l pun_ptr,A0
  	moveq #0,D0
 	move.w 4+4(SP),D0        // drive
+#ifdef MCF547X
+	tst.l _sd_disk_drive
+#ifdef SD_CARD_REPLACE_FLOPPY
+	bmi.s .dhbu5
+#else
+	beq.s .dhbu5
+#endif
+	cmp.l _sd_disk_drive,D0
+	beq.s .dhbu4
+.dhbu5:
+#endif
+#if (defined(CONFIG_USB_UHCI) || defined(CONFIG_USB_OHCI) || defined(CONFIG_USB_EHCI)) && defined(CONFIG_USB_STORAGE)
+	tst.l _usb_1st_disk_drive
+	beq.s .dhbu2             // error
 	cmp.l _usb_1st_disk_drive,D0
 	bcs.s .dhbu2
 	cmp.l #MAX_LOGICAL_DRIVE,D0
-	bcc.s .dhbu2
+	bcs.s .dhbu4
+#endif
+	bra.s .dhbu2             // error
+.dhbu4:
 	tst.b pinfo_pun(A0,D0.l)
 	bpl.s .dhbu1
 .dhbu2:
@@ -1381,17 +2314,30 @@ det_hdv_bpb_usb:
 .dhbu1:
 	move.l D1,-(SP)
 	move.l pinfo_ptype(A0,D0.l*4),D1
-	and.l #0xFFFFFF,D1
-	cmp.l #0x524157,D1       // RAW
-	bne.s .dhbu3
-	move.L (SP)+,D1
+	// from ROOT sector
+	cmp.l #0x47454D,D1       // GEM
+	beq.s .dhbu3
+	cmp.l #0x42474D,D1       // BGM
+	beq.s .dhbu3
+	// from MBR
+	cmp.l #0x4,D1            // FAT16 up to 32M
+	beq.s .dhbu3
+	cmp.l #0x6,D1            // FAT16 over 32M
+	beq.s .dhbu3
+	cmp.l #0xE,D1            // WIN95 FAT16
+	beq.s .dhbu3
+.dhbu6:
+	move.l (SP)+,D1
 	move.l (SP)+,A0
-	moveq #0,D0
-	rts	
+	moveq #0,D0              // not for TOS
+	rts
 .dhbu3:
 	lea pinfo_bpb(A0),A0
-	asl.l #5,D0              // * 32
+	mulu #18,D0              // * 18
 	add.l A0,D0
+	move.l D0,A0
+	tst.w (A0)               // sector size
+	beq.s .dhbu6
 #ifdef DEBUG
 	move.l D0,-(SP)
 	moveq #0x30,D0
@@ -1414,57 +2360,32 @@ det_hdv_rw_usb:
 
 	lea -28(SP),SP
 	movem.l D1-D4/A0-A2,(SP)
-#ifdef DEBUG
-	lea debug3(PC),A0
-	jsr display_string	
-	move.w 4+28(SP),D0       // rwflag
-	jsr hex_word
-	moveq #0x20,D0
-	jsr display_char
-	moveq #0x30,D0
-	jsr display_char
-	moveq #0x78,D0
-	jsr display_char
-	move.l 6+28(SP),D0       // buffer
-	jsr hex_long
-	moveq #0x20,D0
-	jsr display_char
-	moveq #0x30,D0
-	jsr display_char
-	moveq #0x78,D0
-	jsr display_char
-	move.w 10+28(SP),D0      // num sectors
-	jsr hex_word
-	moveq #0x20,D0
-	jsr display_char
-	moveq #0x30,D0
-	jsr display_char
-	moveq #0x78,D0
-	jsr display_char
-	move.w 12+28(SP),D0      // logical sector
-	jsr hex_word
-	moveq #0x20,D0
-	jsr display_char
-	moveq #0x30,D0
-	jsr display_char
-	moveq #0x78,D0
-	jsr display_char
-	move.w 14+28(SP),D0      // drive
-	jsr hex_word
-	moveq #13,D0
-	jsr display_char
-	moveq #10,D0
-	jsr display_char
-#endif
 	btst #3,5+28(SP)         // rwflag
 	bne.s .dhru8             // physical
 	move.l pun_ptr,A0
  	moveq #0,D0
 	move.w 14+28(SP),D0      // drive
+#ifdef MCF547X
+	tst.l _sd_disk_drive
+#ifdef SD_CARD_REPLACE_FLOPPY
+	bmi.s .dhru17
+#else
+	beq.s .dhru17
+#endif
+	cmp.l _sd_disk_drive,D0
+	beq.s .dhru9
+.dhru17:
+#endif
+#if (defined(CONFIG_USB_UHCI) || defined(CONFIG_USB_OHCI) || defined(CONFIG_USB_EHCI)) && defined(CONFIG_USB_STORAGE)
+	tst.l _usb_1st_disk_drive
+	beq.s .dhru8             // error
 	cmp.l _usb_1st_disk_drive,D0
 	bcs.s .dhru8
 	cmp.l #MAX_LOGICAL_DRIVE,D0
-	bcc.s .dhru8
+	bcs.s .dhru9
+#endif
+	bra.s .dhru8             // error
+.dhru9:
 	moveq #0,D4
 	move.b pinfo_pun(A0,D0.l),D4
 	bpl.s .dhru1             // valid
@@ -1475,10 +2396,63 @@ det_hdv_rw_usb:
 	move.l old_hdv_rw_usb,-(SP)
 	rts
 .dhru1:
+#ifdef DEBUG
+	move.l D0,-(SP)
+	move.l A0,-(SP)
+	lea debug3(PC),A0
+	jsr display_string	
+	move.w 4+28+8(SP),D0     // rwflag
+	jsr hex_word
+	moveq #0x20,D0
+	jsr display_char
+	moveq #0x30,D0
+	jsr display_char
+	moveq #0x78,D0
+	jsr display_char
+	move.l 6+28+8(SP),D0     // buffer
+	jsr hex_long
+	moveq #0x20,D0
+	jsr display_char
+	moveq #0x30,D0
+	jsr display_char
+	moveq #0x78,D0
+	jsr display_char
+	move.w 10+28+8(SP),D0    // num sectors
+	jsr hex_word
+	moveq #0x20,D0
+	jsr display_char
+	moveq #0x30,D0
+	jsr display_char
+	moveq #0x78,D0
+	jsr display_char
+	move.w 12+28+8(SP),D0    // logical sector
+	jsr hex_word
+	moveq #0x20,D0
+	jsr display_char
+	moveq #0x30,D0
+	jsr display_char
+	moveq #0x78,D0
+	jsr display_char
+	move.w 14+28+8(SP),D0    // drive
+	jsr hex_word
+	moveq #13,D0
+	jsr display_char
+	moveq #10,D0
+	jsr display_char
+	move.l (SP)+,A0
+	move.l (SP)+,D0
+#endif
+#ifdef MCF547X
+	move.l D4,D2
+	beq.s .dhru10
+#endif	
+#if (defined(CONFIG_USB_UHCI) || defined(CONFIG_USB_OHCI) || defined(CONFIG_USB_EHCI)) && defined(CONFIG_USB_STORAGE)
 	move.l D4,D2
 	and.l #PUN_USB,D2
-	beq.s .dhru8             // not USB
-	and.l #PUN_DEV,D4
+	bne.s .dhru10
+#endif
+	bra .dhru8               // error
+.dhru10:
 	moveq #0,D2
 	move.w 12+28(SP),D2      // logical sector
 	bpl.s .dhru6
@@ -1490,7 +2464,7 @@ det_hdv_rw_usb:
 	beq .dhru4               // no buffer
 	move.l pinfo_pstart(A0,D0.l*4),D3
 	lea pinfo_bpb(A0),A0
-	asl.l #5,D0              // * 32
+	mulu #18,D0              // * 18
 	add.l D0,A0
 	move.w 14(A0),D0         // total clusters
 	mulu.w 2(A0),D0          // cluster size in sectors
@@ -1512,12 +2486,57 @@ det_hdv_rw_usb:
 	// write
 	tst.l D2                 // logical sector
 	beq.s .dhru2             // root sector
+#ifdef MCF547X
+	moveq #PUN_USB,D0
+	and.l D4,D0
+	bne.s .dhru14            // USB
+	move.l A0,A2
+.dhru11:
+		move.l D2,D0  // sector number
+		move.l A2,A0
+		bsr sd_card_sector_write
+		bmi.s .dhru2  // error
+#if 0 // #ifdef DEBUG
+		move.l A2,A1
+		bsr dump
+#endif
+#ifdef SD_CARD_VERIFY
+		move.l D2,D0  // sector number
+		lea sd_buffer_verify,A0
+		bsr sd_card_sector_read
+		bmi.s .dhru2  // error
+		move.l A2,A0
+		lea sd_buffer_verify,A1
+		move.l #512/4,D1
+.dhru15:
+			move.l (A0)+,D0
+			cmp.l (A1)+,D0
+			bne.s .dhru16 // error
+		subq.l #1,D1
+		bgt.s .dhru15
+#endif /* SD_CARD_VERIFY */
+		addq.l #1,D2  // sector number
+		add.l #512,A2 // buffer
+	subq.l #1,D3             // blkcnt
+	bgt.s .dhru11
+	bra.s .dhru4             // OK
+#ifdef SD_CARD_VERIFY
+.dhru16:
+	moveq #-4,D0             // CRC error
+	bra.s .dhru3
+#endif
+.dhru14:
+#endif /* MCF547X */
+#if (defined(CONFIG_USB_UHCI) || defined(CONFIG_USB_OHCI) || defined(CONFIG_USB_EHCI)) && defined(CONFIG_USB_STORAGE)
 	move.l A0,-(SP)          // buffer
 	move.l D3,-(SP)          // blkcnt	
 	move.l D2,-(SP)          // blknr
-	move.l D4,-(SP)          // devnum
+	moveq #PUN_DEV,D0
+	and.l D4,D0
+	move.l D0,-(SP)          // devnum
 	jsr _usb_stor_write
 	bra.s .dhru5
+#endif /* (defined(CONFIG_USB_UHCI) || defined(CONFIG_USB_OHCI) || defined(CONFIG_USB_EHCI)) && defined(CONFIG_USB_STORAGE) */
 .dhru2:
 	moveq #-1,D0             // error
 	bra.s .dhru3
@@ -1525,18 +2544,39 @@ det_hdv_rw_usb:
 	moveq #0,D0              // OK
 	bra.s .dhru3
 .dhru7:
+#ifdef MCF547X
+	moveq #PUN_USB,D0
+	and.l D4,D0
+	bne.s .dhru12            // USB
+.dhru13:
+		move.l D2,D0  // sector number
+		bsr sd_card_sector_read
+		bmi.s .dhru2  // error
+#if 0 // #ifdef DEBUG
+		move.l A0,A1
+		bsr dump
+#endif
+		addq.l #1,D2  // sector number
+		add.l #512,A0 // buffer
+	subq.l #1,D3             // blkcnt
+	bgt.s .dhru13
+	bra.s .dhru4             // OK
+.dhru12:
+#endif /* MCF547X */
+#if (defined(CONFIG_USB_UHCI) || defined(CONFIG_USB_OHCI) || defined(CONFIG_USB_EHCI)) && defined(CONFIG_USB_STORAGE)
 	move.l A0,-(SP)          // buffer
 	move.l D3,-(SP)          // blkcnt	
 	move.l D2,-(SP)          // blknr
-	move.l D4,-(SP)          // devnum
+	moveq #PUN_DEV,D0
+	and.l D4,D0
+	move.l D0,-(SP)          // devnum
 	jsr _usb_stor_read
 .dhru5:
 	lea 16(SP),SP
-	tst.l D0
-	seq.b D0
-	ext.w D0
-	ext.l D0
-	bclr #0,D0               // OK or device not responding -2
+ 	tst.l D0
+	bmi.s .dhru3             // error
+	moveq #0,D0
+#endif /* (defined(CONFIG_USB_UHCI) || defined(CONFIG_USB_OHCI) || defined(CONFIG_USB_EHCI)) && defined(CONFIG_USB_STORAGE) */
 .dhru3:
 	movem.l (SP),D1-D4/A0-A2
 	lea 28(SP),SP
@@ -1548,10 +2588,27 @@ det_hdv_mediach_usb:
 	move.l pun_ptr,A0
  	moveq #0,D0
 	move.w 4+4(SP),D0        // drive
+#ifdef MCF547X
+	tst.l _sd_disk_drive
+#ifdef SD_CARD_REPLACE_FLOPPY
+	bmi.s .dhmu4
+#else
+	beq.s .dhmu4
+#endif
+	cmp.l _sd_disk_drive,D0
+	beq.s .dhmu3
+.dhmu4:
+#endif
+#if (defined(CONFIG_USB_UHCI) || defined(CONFIG_USB_OHCI) || defined(CONFIG_USB_EHCI)) && defined(CONFIG_USB_STORAGE)
+	tst.l _usb_1st_disk_drive
+	beq.s .dhmu2             // error
 	cmp.l _usb_1st_disk_drive,D0
 	bcs.s .dhmu2
 	cmp.l #MAX_LOGICAL_DRIVE,D0
-	bcc.s .dhmu2
+	bcs.s .dhmu3
+#endif
+	bra.s .dhmu2             // error
+.dhmu3:
 	tst.b pinfo_pun(A0,D0.l)
 	bpl.s .dhmu1
 .dhmu2:
@@ -1580,7 +2637,7 @@ det_hdv_mediach_usb:
 	dc.l 0x27011992
 	
 xhdi:
-	
+
 	link A6,#0
 #ifdef COLDFIRE
 	lea -52(SP),SP
@@ -1591,13 +2648,27 @@ xhdi:
 	moveq #0,D1
 	move.w 8(A6),D1
 	moveq #-32,D0            // invalid function
-	cmp.l #18,d1
-	bcc.s .bad_xhdi
+	cmp.l #18,D1
+	bcc.s .default_xhdi
 	move.w SR,D0             // supervisor only
-	moveq #-1,d0             // error
+	moveq #-1,D0             // error
 	move.w tab_xhdi(PC,D1.l*2),D1
-	jsr tab_xhdi(PC,D1.W)
-.bad_xhdi:
+	bmi.s .default_xhdi
+	jsr tab_xhdi(PC,D1.l)
+#ifdef DEBUG_XHDI
+	move.l D0,-(SP)
+	lea debug130(PC),A0
+	jsr display_string
+	move.l (SP),D0
+	jsr hex_long
+	moveq #13,D0
+	jsr display_char
+	moveq #10,D0
+	jsr display_char
+	move.l (SP)+,D0
+#endif
+	cmp.l #0xBAD0CA11,D0     // key word BAD CALL =>  call old_xhdi handler
+	beq.s .default_xhdi
 #ifdef COLDFIRE
 	movem.l (SP),D1-A5
 	lea 52(SP),SP
@@ -1606,6 +2677,20 @@ xhdi:
 #endif
 	unlk A6
 	rts
+.default_xhdi:
+#ifdef COLDFIRE
+	movem.l (SP),D1-A5
+	lea 52(SP),SP
+#else
+	movem.l (SP)+,D1-A5
+#endif
+	unlk A6
+	tst.l old_xhdi
+	beq.s .no_old_xhdi
+	move.l old_xhdi,-(SP)    // parameters are on the stack
+.no_old_xhdi:
+	rts 
+
 tab_xhdi:
 	dc.w XHGetVersion-tab_xhdi    // 0
 	dc.w XHInqTarget-tab_xhdi     // 1
@@ -1628,8 +2713,15 @@ tab_xhdi:
 	
 XHGetVersion:
 
+#ifdef DEBUG_XHDI
+	move.l A0,-(SP)
+	lea debug138(PC),A0
+	jsr display_string
+	move.l (SP)+,A0
+#endif
 	move.l #0x120,D0         //  protocol version
 	move.l old_xhdi_version,D1
+	beq.s .xv1
 	cmp.l D1,D0
 	bcs.s .xv1
 	move.l D1,D0             // minimum version
@@ -1638,42 +2730,81 @@ XHGetVersion:
 	
 XHInqTarget:
 
+#ifdef DEBUG_XHDI
+	lea debug133(PC),A0
+	jsr display_string
+#endif
 	moveq #32,D2             // stringlen
 	bra.s .xi1
 	
 XHInqTarget2:
 
-#ifdef DEBUG
-	lea debug133(PC),A0
+#ifdef DEBUG_XHDI
+	lea debug133a(PC),A0
 	jsr display_string
 #endif
 	move.l 26(A6),D2         // stringlen
 .xi1:
+#ifdef DEBUG_XHDI
+	move.w 10(A6),D0         // major
+	jsr hex_word
+	lea debug139(PC),A0
+	jsr display_string	
+	move.w 12(A6),D0         // minor
+	jsr hex_word
+	moveq #13,D0
+	jsr display_char
+	moveq #10,D0
+	jsr display_char
+#endif
 	tst.w 12(A6)             // minor
 	bne.s .xi2
 	moveq #0,D0
 	move.w 10(A6),D0         // major
+#ifdef MCF547X
+	tst.l _sd_disk_drive
+#ifdef SD_CARD_REPLACE_FLOPPY
+	bmi.s .xi10
+#else
+	beq.s .xi10
+#endif
+	tst.l D0
+	beq.s .xi3               // OK
+.xi10:
+#endif /* MCF547X */
+#if (defined(CONFIG_USB_UHCI) || defined(CONFIG_USB_OHCI) || defined(CONFIG_USB_EHCI)) && defined(CONFIG_USB_STORAGE)
+	tst.l _usb_1st_disk_drive
+	beq.s .xi2               // error
 	cmp.l #PUN_USB,D0
 	bcs.s .xi2
 	cmp.l #PUN_USB+PUN_DEV,D0
-	bls.s .xi3
+	bls.s .xi3               // OK
+#endif /* (defined(CONFIG_USB_UHCI) || defined(CONFIG_USB_OHCI) || defined(CONFIG_USB_EHCI)) && defined(CONFIG_USB_STORAGE) */
 .xi2:
 	tst.l old_xhdi
-	beq.s .xi7
+	bne.s .xi7
 	moveq #-15,D0            // unknown device
 	rts
 .xi7:
-	move.l old_xhdi,-(SP)
+	move.l #0xBAD0CA11,D0
 	rts
 .xi3:
-	lea 14(A6),A0            // blocksize
+	move.l 14(A6),D1
+	beq.s .xi8
+	move.l D1,A0             // blocksize
 	move.l #512,(A0)
-	lea 18(A6),A0            // device_flags
+.xi8:
+	move.l 18(A6),D1
+	beq.s .xi9
+	move.l D1,A0             // device_flags
+//	move.l #2,(A0)           // removable
 	clr.l (A0)
+.xi9:
 	move.l 22(A6),D1         // product_name
-	beq.s .xi3
+	beq.s .xi6
 	move.l D1,A0
 	clr.b (A0)
+	and.l #PUN_USB+PUN_DEV,D0
 	lea product_name,A1
 	move.l (A1,D0.l*4),D0
 	beq.s .xi6               // no pointer
@@ -1682,7 +2813,7 @@ XHInqTarget2:
 		move.b (A1)+,(A0)+
 		beq.s .xi4
 	subq.l #1,D2
-	ble.s .xi4
+	bgt.s .xi5
 .xi4:
 	clr.b -1(A0)
 .xi6:
@@ -1695,46 +2826,129 @@ XHStop:
 XHEject:
 
 	tst.l old_xhdi
-	beq.s .xnu1
+	bne.s .xnu1
 	moveq #0,D0
 	rts
 .xnu1:
-	move.l old_xhdi,-(SP)
+	move.l #0xBAD0CA11,D0
 	rts
 	
 XHDrvMap:
 
 	move.l _drvbits,D0
+	moveq #0,D1
+	moveq #0,D2
+	move.l pun_ptr,A0
+.xdm1:
+		move.b pinfo_pun(A0,D1.L),D2
+		bmi.s .xdm4 // nothing
+#ifdef MCF547X
+		tst.l _sd_disk_drive
+#ifdef SD_CARD_REPLACE_FLOPPY
+		bmi.s .xdm5
+#else
+		beq.s .xdm5
+#endif
+		tst.l D2
+		beq.s .xdm2 // OK
+.xdm5:
+#endif /* MCF547X */
+#if (defined(CONFIG_USB_UHCI) || defined(CONFIG_USB_OHCI) || defined(CONFIG_USB_EHCI)) && defined(CONFIG_USB_STORAGE)
+		tst.l _usb_1st_disk_drive
+		beq.s .xdm4 // error
+		cmp.l #PUN_USB,D2
+		bcs.s .xdm4
+		cmp.l #PUN_USB+PUN_DEV,D2
+		bls.s .xdm2 // OK
+#endif /* (defined(CONFIG_USB_UHCI) || defined(CONFIG_USB_OHCI) || defined(CONFIG_USB_EHCI)) && defined(CONFIG_USB_STORAGE) */
+.xdm4:
+		bclr D1,D0  // remove drive not in pun table
+.xdm2:
+		addq.l #1,D1
+	cmp.l #MAX_LOGICAL_DRIVE,D1
+	bcs.s .xdm1
+	tst.l old_xhdi
+	beq.s .xdm3
+	move.l D0,-(SP)	
+	move.w 8(A6),-(SP)
+	move.l old_xhdi,A0
+	jsr (A0)
+	addq.l #2,SP
+	or.l (SP)+,D0
+.xdm3:	
+#ifdef DEBUG_XHDI
+	move.l D0,-(SP)
+	lea debug131(PC),A0
+	jsr display_string
+	move.l (SP),D0
+	jsr hex_long
+	moveq #13,D0
+	jsr display_char
+	moveq #10,D0
+	jsr display_char
+	move.l (SP)+,D0
+#endif
 	rts
 
 XHInqDev:
 
-#ifdef DEBUG
+#ifdef DEBUG_XHDI
 	lea debug134(PC),A0
 	jsr display_string
+	move.w 10(A6),D0
+	jsr hex_word
+	moveq #13,D0
+	jsr display_char
+	moveq #10,D0
+	jsr display_char
 #endif
 	move.l pun_ptr,A0
  	moveq #0,D0
 	move.w 10(A6),D0         // bios_device
+#ifdef MCF547X
+	tst.l _sd_disk_drive
+#ifdef SD_CARD_REPLACE_FLOPPY
+	bmi.s .xd10
+#else
+	beq.s .xd10
+#endif
+	cmp.l _sd_disk_drive,D0
+	beq.s .xd8
+.xd10:
+#endif /* MCF547X */
+#if (defined(CONFIG_USB_UHCI) || defined(CONFIG_USB_OHCI) || defined(CONFIG_USB_EHCI)) && defined(CONFIG_USB_STORAGE)
+	tst.l _usb_1st_disk_drive
+	beq.s .xd2               // error
 	cmp.l _usb_1st_disk_drive,D0
 	bcs.s .xd2
 	cmp.l #MAX_LOGICAL_DRIVE,D0
-	bcc.s .xd2
+	bcs.s .xd8
+#endif /* (defined(CONFIG_USB_UHCI) || defined(CONFIG_USB_OHCI) || defined(CONFIG_USB_EHCI)) && defined(CONFIG_USB_STORAGE) */
+	bra.s .xd2               // error
+.xd8:
 	moveq #0,D1
 	move.b pinfo_pun(A0,D0.l),D1
 	bpl.s .xd1
 .xd2:	
 	tst.l old_xhdi
-	beq.s .xd3
+	bne.s .xd3
 	moveq #-46,D0            // invalid drive number
 	rts
 .xd3:
-	move.l old_xhdi,-(SP)
+	move.l #0xBAD0CA11,D0
 	rts
 .xd1:	
+#ifdef MCF547X
+	move.l D1,D2
+	beq.s .xd9
+#endif	
+#if (defined(CONFIG_USB_UHCI) || defined(CONFIG_USB_OHCI) || defined(CONFIG_USB_EHCI)) && defined(CONFIG_USB_STORAGE)
 	move.l D1,D2
 	and.l #PUN_USB,D2
-	beq.s .xd2
+	bne.s .xd9
+#endif
+	bra.s .xd2               // error
+.xd9:
 	tst.l 12(A6)
 	beq.s .xd4
 	move.l 12(A6),A1         // major
@@ -1752,44 +2966,79 @@ XHInqDev:
 	move.l D1,(A1)
 .xd6:
 	lea pinfo_bpb(A0),A0
-	asl.l #5,D0              // * 32
-	add.l A0,D0
+	mulu #18,D0              // * 18
+	add.l D0,A0
 	tst.l 24(A6)
 	beq.s .xd7
 	move.l 24(A6),A1         // bpb
-	move.l D0,(A1)
+	move.l (A0)+,(A1)+
+	move.l (A0)+,(A1)+
+	move.l (A0)+,(A1)+
+	move.l (A0)+,(A1)+
+	move.w (A0)+,(A1)+
 .xd7:
 	moveq #0,D0
 	rts
 
 XHInqDriver:
 
-#ifdef DEBUG
+#ifdef DEBUG_XHDI
 	lea debug135(PC),A0
 	jsr display_string
+	move.w 10(A6),D0
+	jsr hex_word
+	moveq #13,D0
+	jsr display_char
+	moveq #10,D0
+	jsr display_char
 #endif
 	move.l pun_ptr,A0
  	moveq #0,D0
 	move.w 10(A6),D0         // bios_device
+#ifdef MCF547X
+	tst.l _sd_disk_drive
+#ifdef SD_CARD_REPLACE_FLOPPY
+	bmi.s .xdr11
+#else
+	beq.s .xdr11
+#endif
+	cmp.l _sd_disk_drive,D0
+	beq.s .xdr9
+.xdr11:
+#endif /* MCF547X */
+#if (defined(CONFIG_USB_UHCI) || defined(CONFIG_USB_OHCI) || defined(CONFIG_USB_EHCI)) && defined(CONFIG_USB_STORAGE)
+	tst.l _usb_1st_disk_drive
+	beq.s .xdr2              // error
 	cmp.l _usb_1st_disk_drive,D0
 	bcs.s .xdr2
 	cmp.l #MAX_LOGICAL_DRIVE,D0
-	bcc.s .xdr2
+	bcs.s .xdr9
+#endif /* (defined(CONFIG_USB_UHCI) || defined(CONFIG_USB_OHCI) || defined(CONFIG_USB_EHCI)) && defined(CONFIG_USB_STORAGE) */
+	bra.s .xdr2              // error
+.xdr9:
 	moveq #0,D1
 	move.b pinfo_pun(A0,D0.l),D1
 	bpl.s .xdr1
 .xdr2:	
 	tst.l old_xhdi
-	beq.s .xdr8
+	bne.s .xdr8
 	moveq #-46,D0            // invalid drive number
 	rts
 .xdr8:
-	move.l old_xhdi,-(SP)
+	move.l #0xBAD0CA11,D0
 	rts
 .xdr1:
+#ifdef MCF547X
+	move.l D1,D0
+	beq.s .xdr10
+#endif	
+#if (defined(CONFIG_USB_UHCI) || defined(CONFIG_USB_OHCI) || defined(CONFIG_USB_EHCI)) && defined(CONFIG_USB_STORAGE)
 	move.l D1,D0
 	and.l #PUN_USB,D0
-	beq.s .xdr2
+	bne.s .xdr10
+#endif
+	bra.s .xdr2              // error
+.xdr10:
 	move.l 12(A6),D0         // name, 17 characters
 	beq.s .xdr3
 	move.l D0,A1
@@ -1819,6 +3068,7 @@ XHInqDriver:
 	clr.b (A1)
 .xdr5:
 	move.l 24(A6),A1         // ahdi_version
+	move.l pun_ptr,A0
 	move.w pinfo_vernum(A0),(A1)
 	move.l 28(A6),A1         // maxIPL
 	moveq #5,D0
@@ -1828,122 +3078,196 @@ XHInqDriver:
 
 XHReadWrite:                          // read / write physical sectors
 
-	tst.w 12(A6)             // minor
-	bne.s .xr4
-	moveq #0,D4
-	move.w 10(A6),D4         // major
-	cmp.l #PUN_USB,D4
-	bcs.s .xr4
-	cmp.l #PUN_USB+PUN_DEV,D4
-	bls.s .xr1
-.xr4:
-	tst.l old_xhdi
-	beq.s .xr6
-	moveq #-15,D0            // unknown device
-	rts
-.xr6:
-	move.l old_xhdi,-(SP)
-	rts
-.xr1:
-#ifdef DEBUG
+#ifdef DEBUG_XHDI
 	lea debug132(PC),A0
+	jsr display_string
+	move.w 10(A6),D0         // major
+	jsr hex_word
+	lea debug139(PC),A0
+	jsr display_string	
+	move.w 12(A6),D0         // minor
+	jsr hex_word
+	lea debug140(PC),A0
 	jsr display_string
 	move.w 14(A6),D0         // rwflag
 	jsr hex_word
-	moveq #0x20,D0
-	jsr display_char
-	moveq #0x30,D0
-	jsr display_char
-	moveq #0x78,D0
-	jsr display_char
-	move.l 24(A6),D0         // buffer
+	lea debug141(PC),A0
+	jsr display_string
+	move.l 16(A6),D0         // recno
 	jsr hex_long
-	moveq #0x20,D0
-	jsr display_char
-	moveq #0x30,D0
-	jsr display_char
-	moveq #0x78,D0
-	jsr display_char
-	move.w 20(A6),D0         // num sectors
+	lea debug142(PC),A0
+	jsr display_string
+	move.w 20(A6),D0         // count
 	jsr hex_word
-	moveq #0x20,D0
-	jsr display_char
-	moveq #0x30,D0
-	jsr display_char
-	moveq #0x78,D0
-	jsr display_char
-	move.l 16(A6),D0         // logical sector
+	lea debug143(PC),A0
+	jsr display_string
+	move.l 22(A6),D0         // buffer
 	jsr hex_long
 	moveq #13,D0
 	jsr display_char
 	moveq #10,D0
 	jsr display_char	
 #endif
-	move.l 24(A6),A0         // buffer
+	tst.w 12(A6)             // minor
+	bne.s .xr4
+	moveq #0,D4
+	move.w 10(A6),D4         // major
+#ifdef MCF547X
+	tst.l _sd_disk_drive
+#ifdef SD_CARD_REPLACE_FLOPPY
+	bmi.s .xr12
+#else
+	beq.s .xr12
+#endif
+	tst.l D4
+	beq.s .xr1               // SD-card
+.xr12:
+#endif /* MCF547X */
+#if (defined(CONFIG_USB_UHCI) || defined(CONFIG_USB_OHCI) || defined(CONFIG_USB_EHCI)) && defined(CONFIG_USB_STORAGE)
+	tst.l _usb_1st_disk_drive
+	beq.s .xr4               // error
+	cmp.l #PUN_USB,D4
+	bcs.s .xr4
+	cmp.l #PUN_USB+PUN_DEV,D4
+	bls.s .xr1               // OK
+#endif /* (defined(CONFIG_USB_UHCI) || defined(CONFIG_USB_OHCI) || defined(CONFIG_USB_EHCI)) && defined(CONFIG_USB_STORAGE) */
+.xr4:
+	tst.l old_xhdi
+	bne.s .xr6
+	moveq #-15,D0            // unknown device
+	rts
+.xr6:
+	move.l #0xBAD0CA11,D0
+	rts
+.xr1:
+	move.l 22(A6),A0         // buffer
 	moveq #0,D3
 	move.w 20(A6),D3         // count
 	beq .xr2                 // no sectors
-             move.l 16(A6),D2         // start sector
+             move.l 16(A6),D2         // recno
 	btst #0,15(A6)           // rwflag
 	beq.s .xr7               // read
 	// write
+#ifdef MCF547X
+	moveq #PUN_USB,D0
+	and.l D4,D0
+	bne.s .xr10              // USB
+.xr11:
+		move.l D2,D0
+		bsr sd_card_sector_write
+		bmi.s .xr2    // error
+		addq.l #1,D2  // blknr
+		add.l #512,A0 // buffer
+	subq.l #1,D3             // blkcnt
+	bgt.s .xr11
+	bra.s .xr3
+.xr10:
+#endif /* MCF547X */
+#if (defined(CONFIG_USB_UHCI) || defined(CONFIG_USB_OHCI) || defined(CONFIG_USB_EHCI)) && defined(CONFIG_USB_STORAGE)
 	move.l A0,-(SP)          // buffer
 	move.l D3,-(SP)          // blkcnt	
 	move.l D2,-(SP)          // blknr
-	move.l D4,D0             // major
-	and.l #PUN_DEV,D0
+	moveq #PUN_DEV,D0
+	and.l D4,D0              // major
 	move.l D0,-(SP)          // devnum
 	jsr _usb_stor_write
 	bra.s .xr5
+#endif /* (defined(CONFIG_USB_UHCI) || defined(CONFIG_USB_OHCI) || defined(CONFIG_USB_EHCI)) && defined(CONFIG_USB_STORAGE) */
 .xr2:
 	moveq #-1,D0             // error
 	bra.s .xr3
 .xr7:
+#ifdef MCF547X
+	moveq #PUN_USB,D0
+	and.l D4,D0
+	bne.s .xr8               // USB
+.xr9:
+		move.l D2,D0
+		bsr sd_card_sector_read
+		bmi.s .xr2    // error
+		addq.l #1,D2  // blknr
+		add.l #512,A0 // buffer
+	subq.l #1,D3             // blkcnt
+	bgt.s .xr9
+	bra.s .xr3
+.xr8:
+#endif /* MCF547X */
+#if (defined(CONFIG_USB_UHCI) || defined(CONFIG_USB_OHCI) || defined(CONFIG_USB_EHCI)) && defined(CONFIG_USB_STORAGE)
 	move.l A0,-(SP)          // buffer
 	move.l D3,-(SP)          // blkcnt	
 	move.l D2,-(SP)          // blknr
-	move.l D4,D0             // major
-	and.l #PUN_DEV,D0
+	moveq #PUN_DEV,D0
+	and.l D4,D0              // major
 	move.l D0,-(SP)          // devnum
 	jsr _usb_stor_read
 .xr5:
 	lea 16(SP),SP
 	tst.l D0
-	seq.b D0
-	ext.w D0
-	ext.l D0
-	bclr #0,D0               // OK or device not responding -2
+	bmi.s .xr3               // error
+	moveq #0,D0
+#endif /* (defined(CONFIG_USB_UHCI) || defined(CONFIG_USB_OHCI) || defined(CONFIG_USB_EHCI)) && defined(CONFIG_USB_STORAGE) */
 .xr3:
  	rts
 
 XHInqDev2:
 
-#ifdef DEBUG
+#ifdef DEBUG_XHDI
 	lea debug136(PC),A0
 	bsr display_string
+	move.w 10(A6),D0
+	jsr hex_word
+	moveq #13,D0
+	jsr display_char
+	moveq #10,D0
+	jsr display_char	
 #endif
 	move.l pun_ptr,A0
  	moveq #0,D0
 	move.w 10(A6),D0         // bios_device
+#ifdef MCF547X
+	tst.l _sd_disk_drive
+#ifdef SD_CARD_REPLACE_FLOPPY
+	bmi.s .xdd13
+#else
+	beq.s .xdd13
+#endif
+	cmp.l _sd_disk_drive,D0
+	beq.s .xdd12
+.xdd13:
+#endif /* MCF547X */
+#if (defined(CONFIG_USB_UHCI) || defined(CONFIG_USB_OHCI) || defined(CONFIG_USB_EHCI)) && defined(CONFIG_USB_STORAGE)
+	tst.l _usb_1st_disk_drive
+	beq.s .xdd2              // error
 	cmp.l _usb_1st_disk_drive,D0
 	bcs.s .xdd2
 	cmp.l #MAX_LOGICAL_DRIVE,D0
-	bcc.s .xdd2
+	bcs.s .xdd12
+#endif /* (defined(CONFIG_USB_UHCI) || defined(CONFIG_USB_OHCI) || defined(CONFIG_USB_EHCI)) && defined(CONFIG_USB_STORAGE) */
+	bra.s .xdd2              // error
+.xdd12:
 	moveq #0,D1
 	move.b pinfo_pun(A0,D0.l),D1
 	bpl.s .xdd1
 .xdd2:	
 	tst.l old_xhdi
-	beq.s .xdd4
+	bne.s .xdd4
 	moveq #-46,D0            // invalid drive number
 	rts
 .xdd4:
-	move.l old_xhdi,-(SP)
+	move.l #0xBAD0CA11,D0
 	rts
-.xdd1:	
+.xdd1:
+#ifdef MCF547X
+	move.l D1,D2
+	beq.s .xdd11
+#endif	
+#if (defined(CONFIG_USB_UHCI) || defined(CONFIG_USB_OHCI) || defined(CONFIG_USB_EHCI)) && defined(CONFIG_USB_STORAGE)
 	move.l D1,D2
 	and.l #PUN_USB,D2
-	beq.s .xdd2
+	bne.s .xdd11
+#endif
+	bra.s .xdd2              // error
+.xdd11:
 	tst.l 12(A6)
 	beq.s .xdd5
 	move.l 12(A6),A1         // major
@@ -1964,10 +3288,14 @@ XHInqDev2:
 	beq.s .xdd8
 	lea pinfo_bpb(A0),A2
 	move.l D0,D1
-	asl.l #5,D1              // * 32
-	add.l A2,D1
+	mulu #18,D1              // * 18
+	add.l D1,A2
 	move.l 24(A6),A1         // bpb
-	move.l D1,(A1)
+	move.l (A2)+,(A1)+
+	move.l (A2)+,(A1)+
+	move.l (A2)+,(A1)+
+	move.l (A2)+,(A1)+
+	move.w (A2)+,(A1)+
 .xdd8:
 	tst.l 28(A6)
 	beq.s .xdd9
@@ -1978,13 +3306,13 @@ XHInqDev2:
 	tst.l 32(A6)
 	beq.s .xdd10
 	move.l 32(A6),A1         // partid
-	move.b pinfo_ptype+1(A2,D0.l*4),(A1)
-	move.b pinfo_ptype+2(A2,D0.l*4),D1
-	bne.s .xdd3
-	moveq #0x44,D1           // D
+	move.b pinfo_ptype+1(A0,D0.l*4),(A1)+
+	move.b pinfo_ptype+2(A0,D0.l*4),D1
+	bne.s .xdd3              // Atari partition
+	moveq #0x44,D1           // D for MSDOS
 .xdd3:
-	move.b D1,1(A1)
-	move.b pinfo_ptype+3(A2,D0.l*4),(A1)
+	move.b D1,(A1)+
+	move.b pinfo_ptype+3(A0,D0.l*4),(A1)
 .xdd10:
 	moveq #0,D0
 	rts
@@ -1996,21 +3324,27 @@ XHMiNTInfo:
 XHNewCookie:
 
 	tst.l old_xhdi
-	beq.s .xn1
+	bne.s .xn1
 	moveq #-32,D0            //  invalid function number 
 	rts
 .xn1:
-	move.l old_xhdi,-(SP)
+	move.l #0xBAD0CA11,D0
 	rts
 
 XHDOSLimits:
 
-	tst.l old_xhdi
-	bne.s .xn1
-#ifdef DEBUG
+#ifdef DEBUG_XHDI
 	lea debug137(PC),A0
 	jsr display_string
+	move.w 10(A6),D0
+	jsr hex_word
+	moveq #13,D0
+	jsr display_char
+	moveq #10,D0
+	jsr display_char	
 #endif
+	tst.l old_xhdi
+	bne.s .xn1
 	moveq #0,D0
 	move.w 10(A6),D0         // which
 	cmp.l #XH_DL_SECSIZ,D0   // maximal sector size (BIOS level)
@@ -2058,14 +3392,14 @@ XHDOSLimits:
 .xl7:
 	cmp.l #XH_DL_DRIVES,D0   // maximal number of BIOS drives supported by the DOS
 	bne.s .xl8
-	moveq #16,D0
+	moveq #MAX_LOGICAL_DRIVE,D0
 	rts
 .xl8:
 	moveq #-32,D0            // invalid function number 
 	rts
 
-#endif /* CONFIG_USB_STORAGE */
-#endif /* CONFIG_USB_UHCI || CONFIG_USB_OHCI || CONFIG_USB_EHCI */
+#endif /* ((defined(CONFIG_USB_UHCI) || defined(CONFIG_USB_OHCI) || defined(CONFIG_USB_EHCI)) && defined(CONFIG_USB_STORAGE)) || defined(MCF547X) */
+
 
 #ifdef NETWORK
 
@@ -2074,6 +3408,9 @@ _install_ram_disk:
 	lea -20(SP),SP
 	movem.l D1-D2/A0-A2,(SP)
 	link A6,#-16
+#ifdef RAM_DISK_REPLACE_B
+	moveq #1,D1              // drive B
+#else
 	moveq #2,D1              // drive C
 	move.l _drvbits,D0
 .search_empty_drive:
@@ -2084,7 +3421,8 @@ _install_ram_disk:
 	bcs.s .search_empty_drive
 	bra .drive_full          // all drives already used
 .drive_not_exist:
-	move.l D1,ram_disk_drive
+#endif /* RAM_DISK_REPLACE_B */
+	move.l D1,_ram_disk_drive
 	moveq #2,D0
 	move.l D0,_change_ram_disk
 	clr.l _ext_write_protect_ram_disk
@@ -2167,7 +3505,7 @@ _install_ram_disk:
 	or.l D2,D1
 	move.l D1,20(A0)
 	move.l _drvbits,D0
-	move.l ram_disk_drive,D1
+	move.l _ram_disk_drive,D1
 	bset D1,D0
 	move.l D0,_drvbits
 	lea -16(A6),A0           // name
@@ -2189,7 +3527,7 @@ _install_ram_disk:
 	trap #1
 	addq.l #4,SP	
 	moveq #2,D0              // drive C
-	cmp.l ram_disk_drive,D0
+	cmp.l _ram_disk_drive,D0
 	bne.s .no_set_drive
 	move.w D0,_bootdev
 	move.w D0,-(SP)
@@ -2204,7 +3542,7 @@ _install_ram_disk:
 	trap #1                  // Cconws
 	addq.l #6,SP
 	moveq #0x41,D0           // A
-	add.l ram_disk_drive,D0
+	add.l _ram_disk_drive,D0
 	move.w D0,-(SP)
 	move.w #2,-(SP)
 	trap #1                  // Cconout
@@ -2215,7 +3553,7 @@ _install_ram_disk:
 	addq.l #6,SP
 	lea black(PC),A0
 	bsr text_color
-	move.l ram_disk_drive,D0 // OK
+	move.l _ram_disk_drive,D0 // OK
 	bra.s .end_ram_disk
 .error_fcreate:
 	pea error3(PC)
@@ -2244,7 +3582,7 @@ det_hdv_bpb:
 
  	moveq #0,D0
 	move.w 4(SP),D0          // drive
-	cmp.l ram_disk_drive,D0
+	cmp.l _ram_disk_drive,D0
 	beq.s .dhb1
 	move.l old_hdv_bpb,-(SP)
 	rts
@@ -2326,7 +3664,7 @@ det_hdv_rw:
 
  	moveq #0,D0
 	move.w 14(SP),D0         // drive
-	cmp.l ram_disk_drive,D0
+	cmp.l _ram_disk_drive,D0
 	beq.s .dhr1
 	move.l old_hdv_rw,-(SP)
 	rts
@@ -2430,7 +3768,7 @@ det_hdv_mediach:
 
  	moveq #0,D0
 	move.w 4(SP),D0          // drive
-	cmp.l ram_disk_drive,D0
+	cmp.l _ram_disk_drive,D0
 	beq.s .dhm1
 	move.l old_hdv_mediach,-(SP)
 	rts
@@ -2458,6 +3796,378 @@ _alert_tos:
 	lea 52(SP),SP
 	ext.l D0
 	rts
+	
+#ifdef SOUND_AC97
+#ifdef COLDFIRE
+#ifndef MCF5445X
+
+#define STEREO8  0 // 8 bits stereo
+#define STEREO16 1 // 16 bits stereo
+#define MONO8    2 // 8 bits mono
+#define MONO16   3 // 16 bits mono   
+
+_mcf548x_ac97_playback_resample:	
+
+	lea -32(SP),SP
+	movem.l D2-D7/A2-A3,(SP)
+	move.l 32+4(SP),D1       // source frequency
+	move.l 32+8(SP),D0       // mode
+	move.l 32+12(SP),D4      // target number of samples
+	move.l 32+16(SP),A0      // source
+	move.l 32+20(SP),A2      // target AC97 slots
+	swap D1                  // source frequency * 65536
+	.chip 68060
+	divu #48000,D1           // / target frequency
+	.chip 5200
+	swap D1                  // * 65536 => step
+	clr.w D1
+	moveq #0,D2
+	moveq #0,D3
+	cmp.l #MONO16,D0
+	beq.s .pr9
+	cmp.l #MONO8,D0
+	beq.s .pr7
+	move.l D4,A3
+	cmp.l #STEREO16,D0
+	beq .pr5
+	cmp.l #STEREO8,D0
+	beq .pr3
+	move.l A0,A1
+	bra .pr1
+.pr9:
+		move.l A0,A1 // source
+		add.l D3,A1
+		add.l D3,A1
+		move.w (A1)+,D6 // 16 bits mono sample x(n)
+		move.l D2,D0
+		clr.w D0
+		swap D0
+		lsr.l #1,D0 // 1-32767
+		beq.s .pr8
+		move.w (A1),D7 // 16 bits mono sample x(n+1)
+		muls D0,D7
+		neg.l D0
+		bclr #15,D0 // 1-32767
+		muls D0,D6
+		add.l D7,D6
+		add.l D6,D6
+		swap D6
+.pr8:
+	  	moveq #16,D0
+		asl.l D0,D6
+		move.l D6,(A2)
+		move.l D6,4(A2)
+		moveq #0,D0
+		add.l D1,D2 // step
+		addx.l D0,D3
+		lea 52(A2),A2
+	subq.l #1,D4
+	bgt.s .pr9
+	bra .pr1
+.pr7:
+		move.l A0,A1 // source
+		add.l D3,A1
+		move.b (A1)+,D6 // 8 bits mono sample x(n)
+		move.l D2,D0
+		clr.w D0
+		swap D0
+		lsr.l #1,D0 // 1-32767
+		beq.s .pr6
+		move.b (A1),D7 // 8 its mono sample x(n+1)
+		ext.w D7
+		muls D0,D7
+		neg.l D0
+		bclr #15,D0 // 1-32767
+		ext.w D6
+		muls D0,D6
+		add.l D7,D6
+		add.l D6,D6
+		swap D6
+.pr6:
+		moveq #24,D0
+		asl.l D0,D6
+		move.l D6,(A2)
+		move.l D6,4(A2)
+		moveq #0,D0
+		add.l D1,D2 // step
+		addx.l D0,D3
+		lea 52(A2),A2
+	subq.l #1,D4
+	bgt.s .pr7
+	bra .pr1
+.pr5:
+		move.l A0,A1 // source
+		add.l D3,A1
+		add.l D3,A1
+		add.l D3,A1
+		add.l D3,A1
+		move.w (A1)+,D4 // 16 bits left sample x(n)
+		move.w (A1)+,D6 // 16 bits right sample x(n)
+		move.l D2,D0
+		clr.w D0
+		swap D0
+		lsr.l #1,D0 // 1-32767
+		beq.s .pr4
+		move.w (A1),D5 // 16 bits left sample x(n+1)
+		move.w 2(A1),D7 // 16 bits right sample x(n+1)
+		muls D0,D5
+		muls D0,D7
+		neg.l D0
+ 		bclr #15,D0 // 1-32767
+		muls D0,D4
+		muls D0,D6
+		add.l D5,D4
+		add.l D7,D6
+		add.l D4,D4
+		add.l D6,D6
+		swap D4
+		swap D6
+.pr4:
+	  	moveq #16,D0
+		asl.l D0,D4
+		asl.l D0,D6
+		move.l D4,(A2)
+		move.l D6,4(A2)
+		moveq #0,D0
+		add.l D1,D2 // step
+		addx.l D0,D3
+		lea 52(A2),A2
+	subq.l #1,A3
+	move.l A3,D0
+	bgt.s .pr5
+	bra.s .pr1
+.pr3:
+		move.l A0,A1 // source
+		add.l D3,A1
+		add.l D3,A1
+		move.b (A1)+,D4 // 8 bits left sample x(n)
+		move.b (A1)+,D6 // 8 bits right sample x(n)
+		move.l D2,D0
+		clr.w D0
+		swap D0
+		lsr.l #1,D0 // 1-32767
+		beq.s .pr2
+		move.b (A1),D5 // 8 bits left sample x(n+1)
+		move.b 1(A1),D7 // 8 bits right sample x(n+1)
+		ext.w D5
+		ext.w D7
+		muls D0,D5
+		muls D0,D7
+		neg.l D0
+ 		bclr #15,D0 // 1-32767
+ 		ext.w D4
+ 		ext.w D6
+		muls D0,D4
+		muls D0,D6
+		add.l D5,D4
+		add.l D7,D6
+		add.l D4,D4
+		add.l D6,D6
+		swap D4
+		swap D6
+.pr2:
+	  	moveq #24,D0
+		asl.l D0,D4
+		asl.l D0,D6
+		move.l D4,(A2)
+		move.l D6,4(A2)
+		moveq #0,D0
+		add.l D1,D2 // step
+		addx.l D0,D3
+		lea 52(A2),A2
+	subq.l #1,A3
+	move.l A3,D0
+	bgt.s .pr3
+.pr1:
+	move.l A1,D0
+	movem.l (SP),D2-D7/A2-A3
+	lea 32(SP),SP
+	rts
+
+#define RECORD_STEREO16 0x0000 // 16-bit stereo capture
+#define RECORD_STEREO8  0x0100 // 8-bit stereo capture
+#define RECORD_MONO8    0x0200 // 8-bit mono capture
+#define RECORD_MONO16   0x0300 // 16-bit mono capture
+
+_mcf548x_ac97_record_resample:	
+
+	lea -40(SP),SP
+	movem.l D2-D7/A2-A5,(SP)
+	move.l 40+4(SP),D2       // target frequency
+	move.l 40+8(SP),D0       // mode
+	move.l 40+12(SP),D4      // source number of samples
+	move.l 40+16(SP),A2      // target
+	move.l 40+20(SP),A0      // source AC97 slots
+	move.l #48000*65536,D1   // source frequency * 65536
+	.chip 68060
+	divu.l D2,D1             // / target frequency
+	.chip 5200
+	move.l D1,D2
+	swap D2
+	clr.w D2                 // * 65536
+	move.l D2,A5             // step.low
+	clr.w D1
+	swap D1                  // step.high
+	moveq #0,D2
+	moveq #0,D3
+	move.l D4,A4
+	move.l D4,A3
+	subq.l #1,A3             // source number of samples - 1
+	cmp.l #RECORD_MONO16,D0
+	beq.s .rr9
+	cmp.l #RECORD_MONO8,D0
+	beq.s .rr7
+	cmp.l #RECORD_STEREO16,D0
+	beq .rr5
+	cmp.l #RECORD_STEREO8,D0
+	beq .rr3
+	bra .rr1
+.rr9:
+		moveq #52,D0
+		.chip 68060
+		mulu.l D3,D0
+		.chip 5200
+		lea (A0,D0.l),A1
+		move.w (A1),D6 // 16 bits mono sample x(n)
+		move.l D2,D0
+		clr.w D0
+		swap D0
+		lsr.l #1,D0 // 1-32767
+		beq.s .rr8
+		cmp.l A3,D3
+		bcc .rr1
+		move.w 52(A1),D7 // 16 bits mono sample x(n+1)
+		muls D0,D7
+		neg.l D0
+		bclr #15,D0 // 1-32767
+		muls D0,D6
+		add.l D7,D6
+		add.l D6,D6
+		swap D6
+.rr8:
+		move.w D6,(A2)+
+		add.l A5,D2
+		addx.l D1,D3 // step
+	cmp.l D4,D3
+	bcs.s .rr9
+	bra .rr1
+.rr7:
+		moveq #52,D0
+		.chip 68060
+		mulu.l D3,D0
+		.chip 5200
+		lea (A0,D0.l),A1
+		move.b (A1),D6 // 8 bits mono sample x(n)
+		move.l D2,D0
+		clr.w D0
+		swap D0
+		lsr.l #1,D0 // 1-32767
+		beq.s .rr6
+		cmp.l A3,D3
+		bcc .rr1
+		move.b 52(A1),D7 // 8 bits mono sample x(n+1)
+		ext.w D7
+		muls D0,D7
+		neg.l D0
+		bclr #15,D0 // 1-32767
+		ext.w D6
+		muls D0,D6
+		add.l D7,D6
+		add.l D6,D6
+		swap D6
+.rr6:
+		move.b D6,(A2)+
+		add.l A5,D2
+		addx.l D1,D3 // step
+	cmp.l D4,D3
+	bcs.s .rr7
+	bra .rr1
+.rr5:
+		moveq #52,D0
+		.chip 68060
+		mulu.l D3,D0
+		.chip 5200
+		lea (A0,D0.l),A1
+		move.w (A1),D6 // 16 bits left sample x(n)
+		move.w 4(A1),D4 // 16 bits right sample x(n)
+		move.l D2,D0
+		clr.w D0
+		swap D0
+		lsr.l #1,D0 // 1-32767
+		beq.s .rr4
+		cmp.l A3,D3
+		bcc .rr1
+		move.w 52(A1),D7 // 16 bits left sample x(n+1)
+		move.w 56(A1),D5 // 16 bits right sample x(n+1)
+		muls D0,D7
+		muls D0,D5
+		neg.l D0
+		bclr #15,D0 // 1-32767
+		muls D0,D6
+		muls D0,D4
+		add.l D7,D6
+		add.l D5,D4
+		add.l D6,D6
+		add.l D4,D4
+		swap D6
+		swap D4
+.rr4:
+		move.w D6,(A2)+
+		move.w D4,(A2)+
+		add.l A5,D2
+		addx.l D1,D3 // step
+	cmp.l A4,D3
+	bcs.s .rr5
+	bra.s .rr1
+.rr3:
+		moveq #52,D0
+		.chip 68060
+		mulu.l D3,D0
+		.chip 5200
+		lea (A0,D0.l),A1
+		move.b (A1),D6 // 8 bits left sample x(n)
+		move.b 4(A1),D4 // 8 bits right sample x(n)
+		move.l D2,D0
+		clr.w D0
+		swap D0
+		lsr.l #1,D0 // 1-32767
+		beq.s .rr2
+		cmp.l A3,D3
+		bcc.s .rr1
+		move.b 52(A1),D7 // 8 bits left sample x(n+1)
+		move.b 56(A1),D5 // 8 bits right sample x(n+1)
+		ext.w D7
+		ext.w D5
+		muls D0,D7
+		muls D0,D5
+		neg.l D0
+		bclr #15,D0 // 1-32767
+		ext.w D6
+		ext.w D4
+		muls D0,D6
+		muls D0,D4
+		add.l D7,D6
+		add.l D5,D4
+		add.l D6,D6
+		add.l D4,D4
+		swap D6
+		swap D4
+.rr2:
+		move.b D6,(A2)+
+		move.b D4,(A2)+
+		add.l A5,D2
+		addx.l D1,D3 // step
+	cmp.l A4,D3
+	bcs.s .rr3
+.rr1:
+	move.l A2,D0
+	movem.l (SP),D2-D7/A2-A5
+	lea 40(SP),SP
+	rts
+	
+#endif/* MCF5445X */	
+#endif /* COLDFIRE */
+#endif /* SOUND_AC97 */
 	
 #endif /* NETWORK */
 	
@@ -2689,13 +4399,15 @@ _get_sr:
 	rts
 	
 message:	.asciz "Ram-disk installed in "
-#if defined(CONFIG_USB_UHCI) || defined(CONFIG_USB_OHCI) || defined(CONFIG_USB_EHCI)
-#ifdef CONFIG_USB_STORAGE
+#if ((defined(CONFIG_USB_UHCI) || defined(CONFIG_USB_OHCI) || defined(CONFIG_USB_EHCI)) && defined(CONFIG_USB_STORAGE)) || defined(MCF547X)
 message1:	.ascii "TOS4.04 "
 message2:	.asciz "USB  "
-message2b:	.asciz ", disk installed in "
-#endif
-#endif
+message3:	.asciz "SD   "
+message4:	.asciz ", partition installed in "
+message5:	.asciz ", type "
+message6:	.asciz ", "
+message7:	.ascii " MB"
+#endif /* ((defined(CONFIG_USB_UHCI) || defined(CONFIG_USB_OHCI) || defined(CONFIG_USB_EHCI)) && defined(CONFIG_USB_STORAGE)) || defined(MCF547X) */
 crlf:	.byte 13,10,0
 error:	.asciz "No ram-disk installed, "
 error1:	.ascii "no enough memory"
@@ -2715,14 +4427,22 @@ black:	.byte 0x1B,0x62,0x3F,0
 	.lcomm _size_ram_disk,4
 	.lcomm _change_ram_disk,4
 	.lcomm _ext_write_protect_ram_disk,4
-	.lcomm ram_disk_drive,4
+	.lcomm _ram_disk_drive,4
 	.lcomm old_hdv_bpb,4
 	.lcomm old_hdv_rw,4
 	.lcomm old_hdv_mediach,4
-#if defined(CONFIG_USB_UHCI) || defined(CONFIG_USB_OHCI) || defined(CONFIG_USB_EHCI)
-#ifdef CONFIG_USB_STORAGE
+#ifdef MCF547X
+	.lcomm name_sd_card,8
+#endif
+#if ((defined(CONFIG_USB_UHCI) || defined(CONFIG_USB_OHCI) || defined(CONFIG_USB_EHCI)) && defined(CONFIG_USB_STORAGE)) || defined(MCF547X)
 #ifndef COLDFIRE
 	.lcomm pun_ptr_usb,4
+#endif
+#ifdef MCF547X
+#ifdef SD_CARD_VERIFY
+	.lcomm sd_buffer_verify,512
+#endif
+	.lcomm _sd_disk_drive,4
 #endif
 	.lcomm _usb_1st_disk_drive,4
 	.lcomm old_hdv_bpb_usb,4
@@ -2730,6 +4450,5 @@ black:	.byte 0x1B,0x62,0x3F,0
 	.lcomm old_hdv_mediach_usb,4
 	.lcomm old_xhdi,4
 	.lcomm old_xhdi_version,4
-	.lcomm product_name,4*(PUN_DEV+1)
-#endif /* CONFIG_USB_STORAGE */
-#endif /* CONFIG_USB_UHCI || CONFIG_USB_OHCI || CONFIG_USB_EHCI */
+	.lcomm product_name,4*(PUN_USB+PUN_DEV+1)
+#endif /* ((defined(CONFIG_USB_UHCI) || defined(CONFIG_USB_OHCI) || defined(CONFIG_USB_EHCI)) && defined(CONFIG_USB_STORAGE)) || defined(MCF547X) */

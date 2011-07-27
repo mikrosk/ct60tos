@@ -277,7 +277,7 @@ static int sendbytes(struct i2c_adapter *i2c_adap, struct i2c_msg *msg)
 {
 	struct i2c_algo_bit_data *adap = i2c_adap->algo_data;
 	char c;
-	const char *temp = msg->buf;
+	const char *temp = (const char *)msg->buf;
 	int count = msg->len;
 	unsigned short nak_ok = msg->flags & I2C_M_IGNORE_NAK; 
 	int retval;
@@ -307,7 +307,7 @@ static inline int readbytes(struct i2c_adapter *i2c_adap, struct i2c_msg *msg)
 	int inval;
 	int rdcount=0;   	/* counts bytes read */
 	struct i2c_algo_bit_data *adap = i2c_adap->algo_data;
-	char *temp = msg->buf;
+	char *temp = (char *)msg->buf;
 	int count = msg->len;
 	while(count > 0)
 	{

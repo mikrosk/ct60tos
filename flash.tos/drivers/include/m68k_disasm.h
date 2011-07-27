@@ -152,6 +152,9 @@ typedef unsigned short m68k_word;  /* pointer to 16-bit instruction word */
 #define RTS_MASK  0xffff
 #define STOP_MASK 0xffff
 #define TRAPV_MASK  0xffff
+
+#define HALT_INST ENCW(0,1,0,0, 1,0,1,0, 1,1,0,0, 1,0,0,0)
+#define PULSE_INST  ENCW(0,1,0,0, 1,0,1,0, 1,1,0,0, 1,1,0,0)
 #define BGND_INST ENCW(0,1,0,0, 1,0,1,0, 1,1,1,1, 1,0,1,0)
 #define ILLEGAL_INST  ENCW(0,1,0,0, 1,0,1,0, 1,1,1,1, 1,1,0,0)
 #define MOVEFRC_INST  ENCW(0,1,0,0, 1,1,1,0, 0,1,1,1, 1,0,1,0)
@@ -181,6 +184,7 @@ typedef unsigned short m68k_word;  /* pointer to 16-bit instruction word */
 #define EXTBW_INST  ENCW(0,1,0,0, 1,0,0,0, 1,0,0,0, 0,0,0,0)
 #define EXTWL_INST  ENCW(0,1,0,0, 1,0,0,0, 1,1,0,0, 0,0,0,0)
 #define EXTBL_INST  ENCW(0,1,0,0, 1,0,0,1, 1,1,0,0, 0,0,0,0)
+#define SATS_INST ENCW(0,1,0,0, 1,1,0,0, 1,0,0,0, 0,0,0,0)
 #define LINKW_INST  ENCW(0,1,0,0, 1,1,1,0, 0,1,0,1, 0,0,0,0)
 #define LINKL_INST  ENCW(0,1,0,0, 1,0,0,0, 0,0,0,0, 1,0,0,0)
 #define MOVETOUSP_INST  ENCW(0,1,0,0, 1,1,1,0, 0,1,1,0, 0,0,0,0)
@@ -269,11 +273,13 @@ typedef unsigned short m68k_word;  /* pointer to 16-bit instruction word */
  */
 #define DBcc_MASK ENCW(1,1,1,1, 0,0,0,0, 1,1,1,1, 1,0,0,0)
 #define TRAPcc_MASK ENCW(1,1,1,1, 0,0,0,0, 1,1,1,1, 1,0,0,0)
+#define TPF_MASK ENCW(1,1,1,1, 1,1,1,1, 1,1,1,1, 1,0,0,0)
 #define Scc_MASK  ENCW(1,1,1,1, 0,0,0,0, 1,1,0,0, 0,0,0,0)
 #define ADDQ_MASK ENCW(1,1,1,1, 0,0,0,1, 0,0,0,0, 0,0,0,0)
 #define SUBQ_MASK ENCW(1,1,1,1, 0,0,0,1, 0,0,0,0, 0,0,0,0)
 #define DBcc_INST ENCW(0,1,0,1, 0,0,0,0, 1,1,0,0, 1,0,0,0)
 #define TRAPcc_INST ENCW(0,1,0,1, 0,0,0,0, 1,1,1,1, 1,0,0,0)
+#define TPF_INST ENCW(0,1,0,1, 0,0,0,1, 1,1,1,1, 1,0,0,0)
 #define Scc_INST  ENCW(0,1,0,1, 0,0,0,0, 1,1,0,0, 0,0,0,0)
 #define ADDQ_INST ENCW(0,1,0,1, 0,0,0,0, 0,0,0,0, 0,0,0,0)
 #define SUBQ_INST ENCW(0,1,0,1, 0,0,0,1, 0,0,0,0, 0,0,0,0)
@@ -323,7 +329,6 @@ typedef unsigned short m68k_word;  /* pointer to 16-bit instruction word */
 /*
  * Group SBCD/DIVx/OR (1000)
  */
-
 #define PACKA_MASK  ENCW(1,1,1,1, 0,0,0,1, 1,1,1,1, 1,0,0,0)
 #define PACKD_MASK  ENCW(1,1,1,1, 0,0,0,1, 1,1,1,1, 1,0,0,0)
 #define PACKA_INST  ENCW(1,0,0,0, 0,0,0,1, 0,1,0,0, 1,0,0,0)
@@ -344,6 +349,45 @@ typedef unsigned short m68k_word;  /* pointer to 16-bit instruction word */
 
 #define OR_MASK   ENCW(1,1,1,1, 0,0,0,0, 0,0,0,0, 0,0,0,0)
 #define OR_INST   ENCW(1,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0)
+
+
+/*
+ * Group MAC (1010) - CF V4
+ */
+#define MAC_MASK  ENCW(1,1,1,1, 0,0,0,1, 0,0,0,0, 0,0,0,0)
+#define MAC_INST  ENCW(1,0,1,0, 0,0,0,0, 0,0,0,0, 0,0,0,0)
+#define MOVE_ACC_to_ACC_MASK  ENCW(1,1,1,1, 1,0,0,1, 1,1,1,1, 1,1,0,0)
+#define MOVE_ACC_to_ACC_INST  ENCW(1,0,1,0, 0,0,0,1, 0,0,0,1, 0,0,0,0)
+#define MOVE_from_MACSR_to_CCR_MASK  ENCW(1,1,1,1, 1,1,1,1, 1,1,1,1, 1,1,1,1)
+#define MOVE_from_MACSR_to_CCR_INST  ENCW(1,0,1,0, 1,0,0,1, 1,1,0,0, 0,0,0,0)
+
+#define MOVCLR_MASK  ENCW(1,1,1,1, 1,0,0,1, 1,1,1,1, 0,0,0,0)
+#define MOVCLR_INST  ENCW(1,0,1,0, 0,0,0,1, 1,1,0,0, 0,0,0,0)
+#define MOVE_from_ACC_MASK  ENCW(1,1,1,1, 1,0,0,1, 1,1,1,1, 0,0,0,0)
+#define MOVE_from_ACC_INST  ENCW(1,0,1,0, 0,0,0,1, 1,0,0,0, 0,0,0,0)
+#define MOVE_from_MACSR_MASK  ENCW(1,1,1,1, 1,1,1,1, 1,1,1,1, 0,0,0,0)
+#define MOVE_from_MACSR_INST  ENCW(1,0,1,0, 1,0,0,1, 1,0,0,0, 0,0,0,0)
+#define MOVE_from_ACCext01_MASK  ENCW(1,1,1,1, 1,1,1,1, 1,1,1,1, 0,0,0,0)
+#define MOVE_from_ACCext01_INST  ENCW(1,0,1,0, 1,0,1,1, 1,0,0,0, 0,0,0,0)
+#define MOVE_from_MASK_MASK  ENCW(1,1,1,1, 1,1,1,1, 1,1,1,1, 0,0,0,0)
+#define MOVE_from_MASK_INST  ENCW(1,0,1,0, 1,1,0,1, 1,0,0,0, 0,0,0,0)
+#define MOVE_from_ACCext23_MASK  ENCW(1,1,1,1, 1,1,1,1, 1,1,1,1, 0,0,0,0)
+#define MOVE_from_ACCext23_INST  ENCW(1,0,1,0, 1,1,1,1, 1,0,0,0, 0,0,0,0)
+
+#define MOVE_to_ACC_MASK  ENCW(1,1,1,1, 1,0,0,1, 1,1,0,0, 0,0,0,0)
+#define MOVE_to_ACC_INST  ENCW(1,0,1,0, 0,0,0,1, 0,0,0,0, 0,0,0,0)
+#define MOVE_to_MACSR_MASK  ENCW(1,1,1,1, 1,1,1,1, 1,1,0,0, 0,0,0,0)
+#define MOVE_to_MACSR_INST  ENCW(1,0,1,0, 1,0,0,1, 0,0,0,0, 0,0,0,0)
+#define MOVE_to_ACCext01_MASK  ENCW(1,1,1,1, 1,1,1,1, 1,1,0,0, 0,0,0,0)
+#define MOVE_to_ACCext01_INST  ENCW(1,0,1,0, 1,0,1,1, 0,0,0,0, 0,0,0,0)
+#define MOVE_to_MASK_MASK  ENCW(1,1,1,1, 1,1,1,1, 1,1,0,0, 0,0,0,0)
+#define MOVE_to_MASK_INST  ENCW(1,0,1,0, 1,1,0,1, 0,0,0,0, 0,0,0,0)
+#define MOVE_to_ACCext23_MASK  ENCW(1,1,1,1, 1,1,1,1, 1,1,0,0, 0,0,0,0)
+#define MOVE_to_ACCext23_INST  ENCW(1,0,1,0, 1,1,1,1, 0,0,0,0, 0,0,0,0)
+
+#define MOV3Q_MASK  ENCW(1,1,1,1, 0,0,0,1, 1,1,0,0, 0,0,0,0)
+#define MOV3Q_INST  ENCW(1,0,1,0, 0,0,0,1, 0,1,0,0, 0,0,0,0)
+
 
 /*
  * Group AND/MUL/ABCD/EXG (1100)
@@ -453,8 +497,8 @@ struct DisasmPara_68k {
 
 struct dis_buffer {
   struct DisasmPara_68k *dp;  /* link to DisasmPara */
-  short *val;   /* (real) pointer to memory. */
-  short *sval;  /* simulated memory pointer for address calculations (phx) */
+  unsigned short *val;   /* (real) pointer to memory. */
+  unsigned short *sval;  /* simulated memory pointer for address calculations (phx) */
   char *dasm;   /* actual dasm. */
   char *casm;   /* current position in dasm. */
   char *info;   /* extra info. */
@@ -497,6 +541,7 @@ typedef const char *db_sym_t;  /*@@@*/
 
 /* m68k_disasm.o prototypes */
 #ifndef M68K_DISASM_C
+extern int M68k_InstrLen(u_short *val);
 extern m68k_word *M68k_Disassemble(struct DisasmPara_68k *);
 
 #if 0

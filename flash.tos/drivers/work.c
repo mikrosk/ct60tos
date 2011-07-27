@@ -42,107 +42,6 @@
 
 #define scrtsiz 666 /* for accomodate the 16x32 system font */
 
-/* var VDI */
-#define CUR_FONT ((FONT_HEAD *)(*(long *)&adr_var_vdi[-906]))
-#define M_POS_HX (*(short *)&adr_var_vdi[-856])
-#define M_POS_HY (*(short *)&adr_var_vdi[-854])
-#define M_PLANES (*(short *)&adr_var_vdi[-852])
-#define M_CDB_BG (*(short *)&adr_var_vdi[-850])
-#define M_CDB_FG (*(short *)&adr_var_vdi[-848])
-#define MASKFORM ((short *)&adr_var_vdi[-846])
-#define INQ_TAB ((short *)&adr_var_vdi[-782])
-#define DEV_TAB ((short *)&adr_var_vdi[-692])
-#define G_CURX (*(short *)&adr_var_vdi[-602])
-#define G_CURY (*(short *)&adr_var_vdi[-600])
-#define M_HID_CT (*(short *)&adr_var_vdi[-598])
-#define MOUSE_BT (*(short *)&adr_var_vdi[-596])
-#define REQ_COL48 ((short *)&adr_var_vdi[-594]) /* 16 colors RVB */
-#define SIZ_TAB15 ((short *)&adr_var_vdi[-498])
-#define TERM_CH (*(short *)&adr_var_vdi[-468])
-#define CHC_MODE (*(short *)&adr_var_vdi[-466])
-#define CUR_WORK ((ATTRIBUTE *)(*(long *)&adr_var_vdi[-464]))
-#define DEF_FONT ((FONT_HEAD *)(*(long *)&adr_var_vdi[-460]))
-#define FONT_RING ((FONT_HEAD **)&adr_var_vdi[-456]) /* 4 pointers to sysfonts, last NULL */
-#define FONT_COUNT (*(short *)&adr_var_vdi[-440])
-#define LINE_CW  (*(short *)&adr_var_vdi[-438])
-#define LOC_MODE (*(short *)&adr_var_vdi[-436])
-#define STR_MODE (*(short *)&adr_var_vdi[-352])
-#define VAL_MODE (*(short *)&adr_var_vdi[-350])
-#define CUR_MS_STAT (*(char *)&adr_var_vdi[-348])
-#define V_HID_CNT (*(short *)&adr_var_vdi[-346])
-#define CUR_X (*(short *)&adr_var_vdi[-344])
-#define CUR_Y (*(short *)&adr_var_vdi[-342])
-#define CUR_FLAG (*(short *)&adr_var_vdi[-340])
-#define MOUSE_FLAG (*char *)&adr_var_vdi[339])
-#define V_SAV_X (*(short *)&adr_var_vdi[-334])
-#define V_SAV_Y (*(short *)&adr_var_vdi[-332])
-#define SAVE_LEN (*(short *)&adr_var_vdi[-330])
-#define SAVE_ADR ((void *)(*(long *)&adr_var_vdi[-328]))
-#define SAVE_STAT (*(short *)&adr_var_vdi[-324])
-#define SAVE_AREA ((short *)&adr_var_vdi[-322])
-#define USER_TIM ((void *)(*(long *)&adr_var_vdi[-66]))
-#define NEXT_TIM ((void *)(*(long *)&adr_var_vdi[-62]))
-#define USER_BUT ((void *)(*(long *)&adr_var_vdi[-58]))
-#define USER_CUR ((void *)(*(long *)&adr_var_vdi[-54]))
-#define USER_MOT ((void *)(*(long *)&adr_var_vdi[-50]))
-#define V_CEL_HT (*(short *)&adr_var_vdi[-46])
-#define V_CEL_MX (*(short *)&adr_var_vdi[-44])
-#define V_CEL_MY (*(short *)&adr_var_vdi[-42])
-#define V_CEL_WR (*(short *)&adr_var_vdi[-40])
-#define V_COL_BG (*(short *)&adr_var_vdi[-38])
-#define V_COL_FG (*(short *)&adr_var_vdi[-36])
-#define V_CUR_AD ((void *)(*(long *)&adr_var_vdi[-34]))
-#define V_CUR_OFF (*(short *)&adr_var_vdi[-30])
-#define V_CUR_X (*(short *)&adr_var_vdi[-28])
-#define V_CUR_Y (*(short *)&adr_var_vdi[-26])
-#define V_PERIOD (*(char *)&adr_var_vdi[-24])
-#define V_CUR_CT (*(char *)&adr_var_vdi[-23])
-#define V_FNT_AD ((void *)(*(long *)&adr_var_vdi[-22]))
-#define V_FNT_ND (*(short *)&adr_var_vdi[-18])
-#define V_FNT_ST (*(short *)&adr_var_vdi[-16])
-#define V_FNT_WD (*(short *)&adr_var_vdi[-14])
-#define V_REZ_HZ (*(short *)&adr_var_vdi[-12])
-#define V_OFF_AD ((void *)(*(long *)&adr_var_vdi[-10]))
-#define V_STAT_0 (*(char *)&adr_var_vdi[-6])
-#define V_DELAY (*(char *)&adr_var_vdi[-5])
-#define V_REZ_VT (*(short *)&adr_var_vdi[-4])
-#define BYTES_LN (*(short *)&adr_var_vdi[-2])
-#define V_PLANES (*(short *)&adr_var_vdi[0])
-#define V_LIN_WR (*(short *)&adr_var_vdi[2])
-#define _WRT_MODE (*(short *)&adr_var_vdi[36])
-#define _X1 (*(short *)&adr_var_vdi[38])
-#define _Y1 (*(short *)&adr_var_vdi[40])
-#define _X2 (*(short *)&adr_var_vdi[42])
-#define _Y2 (*(short *)&adr_var_vdi[44])
-#define _PATPTR ((void *)(*(long *)&adr_var_vdi[46]))
-#define _PATMSK (*(short *)&adr_var_vdi[50])
-#define _MULTIFILL (*(short *)&adr_var_vdi[52])
-#define _CLIP (*(short *)&adr_var_vdi[54])
-#define _XMN_CLIP (*(short *)&adr_var_vdi[56])
-#define _YMN_CLIP (*(short *)&adr_var_vdi[58])
-#define _XMX_CLIP (*(short *)&adr_var_vdi[60])
-#define _YMX_CLIP (*(short *)&adr_var_vdi[62])
-#define _DDA_INC (*(short *)&adr_var_vdi[66])
-#define _T_SCLSTS (*(short *)&adr_var_vdi[68
-#define _MONO_STATUS (*(short *)&adr_var_vdi[70
-#define _SOURCE_X (*(short *)&adr_var_vdi[72])
-#define _SOURCE_Y (*(short *)&adr_var_vdi[74])
-#define _DESTX (*(short *)&adr_var_vdi[76]]
-#define _DESTY (*(short *)&adr_var_vdi[78])
-#define _DELX (*(short *)&adr_var_vdi[80])
-#define _DELY (*(short *)&adr_var_vdi[82])
-#define _FBASE ((short *)(*(long *)&adr_var_vdi[84]))
-#define _FWIDTH (*(short *)&adr_var_vdi[88])
-#define _STYLE (*(short *)&adr_var_vdi[90])
-#define _SCALE (*(short *)&adr_var_vdi[102])
-#define _CHUP (*(short *)&adr_var_vdi[104])
-#define REQ_COL48E ((short *)&adr_var_vdi[174]) // 240 colors RVB TOS 4.XX FALCON
-#define BYT_PER_PIX (*(short *)&adr_var_vdi[2822])
-#define FORM_ID (*(short *)&adr_var_vdi[2824]]   // scrn form 2 ST, 1 stndrd, 3 pix
-#define VL_COL_BG (*(long *)&adr_var_vdi[2826])
-#define VL_COL_FG (*(long *)&adr_var_vdi[2830])
-#define PAL_MAP ((long *)&adr_var_vdi[2834])
-
 /* fh_flags   */
 #define	DEFAULT 1	/* this is the default font (face and size) */
 #define	HORZ_OFF  2	/* there are left and right offset tables */
@@ -233,6 +132,116 @@ typedef struct attribute
 	short ymx_clip;	/* High y point of clipping rectangle */
 	Virtual *fvdi_virtual;
 } ATTRIBUTE __attribute__ ((__packed__));
+
+/* var VDI */
+#define CUR_FONT ((FONT_HEAD *)(*(long *)&adr_var_vdi[-906]))
+#if (__GNUC__ > 3)
+#define P_CUR_FONT ((FONT_HEAD **)&adr_var_vdi[-906])
+#endif
+#define M_POS_HX (*(short *)&adr_var_vdi[-856])
+#define M_POS_HY (*(short *)&adr_var_vdi[-854])
+#define M_PLANES (*(short *)&adr_var_vdi[-852])
+#define M_CDB_BG (*(short *)&adr_var_vdi[-850])
+#define M_CDB_FG (*(short *)&adr_var_vdi[-848])
+#define MASKFORM ((short *)&adr_var_vdi[-846])
+#define INQ_TAB ((short *)&adr_var_vdi[-782])
+#define DEV_TAB ((short *)&adr_var_vdi[-692])
+#define G_CURX (*(short *)&adr_var_vdi[-602])
+#define G_CURY (*(short *)&adr_var_vdi[-600])
+#define M_HID_CT (*(short *)&adr_var_vdi[-598])
+#define MOUSE_BT (*(short *)&adr_var_vdi[-596])
+#define REQ_COL48 ((short *)&adr_var_vdi[-594]) /* 16 colors RVB */
+#define SIZ_TAB15 ((short *)&adr_var_vdi[-498])
+#define TERM_CH (*(short *)&adr_var_vdi[-468])
+#define CHC_MODE (*(short *)&adr_var_vdi[-466])
+#define CUR_WORK ((ATTRIBUTE *)(*(long *)&adr_var_vdi[-464]))
+#if (__GNUC__ > 3)
+#define P_CUR_WORK ((ATTRIBUTE **)&adr_var_vdi[-464])
+#endif
+#define DEF_FONT ((FONT_HEAD *)(*(long *)&adr_var_vdi[-460]))
+#if (__GNUC__ > 3)
+#define P_DEF_FONT ((FONT_HEAD **)&adr_var_vdi[-460])
+#endif
+#define FONT_RING ((FONT_HEAD **)&adr_var_vdi[-456]) /* 4 pointers to sysfonts, last NULL */
+#define FONT_COUNT (*(short *)&adr_var_vdi[-440])
+#define LINE_CW  (*(short *)&adr_var_vdi[-438])
+#define LOC_MODE (*(short *)&adr_var_vdi[-436])
+#define STR_MODE (*(short *)&adr_var_vdi[-352])
+#define VAL_MODE (*(short *)&adr_var_vdi[-350])
+#define CUR_MS_STAT (*(char *)&adr_var_vdi[-348])
+#define V_HID_CNT (*(short *)&adr_var_vdi[-346])
+#define CUR_X (*(short *)&adr_var_vdi[-344])
+#define CUR_Y (*(short *)&adr_var_vdi[-342])
+#define CUR_FLAG (*(short *)&adr_var_vdi[-340])
+#define MOUSE_FLAG (*char *)&adr_var_vdi[339])
+#define V_SAV_X (*(short *)&adr_var_vdi[-334])
+#define V_SAV_Y (*(short *)&adr_var_vdi[-332])
+#define SAVE_LEN (*(short *)&adr_var_vdi[-330])
+#define SAVE_ADR ((void *)(*(long *)&adr_var_vdi[-328]))
+#define SAVE_STAT (*(short *)&adr_var_vdi[-324])
+#define SAVE_AREA ((short *)&adr_var_vdi[-322])
+#define USER_TIM (*(long *)&adr_var_vdi[-66])
+#define NEXT_TIM (*(long *)&adr_var_vdi[-62])
+#define USER_BUT (*(long *)&adr_var_vdi[-58])
+#define USER_CUR (*(long *)&adr_var_vdi[-54])
+#define USER_MOT (*(long *)&adr_var_vdi[-50])
+#define V_CEL_HT (*(short *)&adr_var_vdi[-46])
+#define V_CEL_MX (*(short *)&adr_var_vdi[-44])
+#define V_CEL_MY (*(short *)&adr_var_vdi[-42])
+#define V_CEL_WR (*(short *)&adr_var_vdi[-40])
+#define V_COL_BG (*(short *)&adr_var_vdi[-38])
+#define V_COL_FG (*(short *)&adr_var_vdi[-36])
+#define V_CUR_AD ((void *)(*(long *)&adr_var_vdi[-34]))
+#define V_CUR_OFF (*(short *)&adr_var_vdi[-30])
+#define V_CUR_X (*(short *)&adr_var_vdi[-28])
+#define V_CUR_Y (*(short *)&adr_var_vdi[-26])
+#define V_PERIOD (*(char *)&adr_var_vdi[-24])
+#define V_CUR_CT (*(char *)&adr_var_vdi[-23])
+#define V_FNT_AD ((void *)(*(long *)&adr_var_vdi[-22]))
+#define V_FNT_ND (*(short *)&adr_var_vdi[-18])
+#define V_FNT_ST (*(short *)&adr_var_vdi[-16])
+#define V_FNT_WD (*(short *)&adr_var_vdi[-14])
+#define V_REZ_HZ (*(short *)&adr_var_vdi[-12])
+#define V_OFF_AD ((void *)(*(long *)&adr_var_vdi[-10]))
+#define V_STAT_0 (*(char *)&adr_var_vdi[-6])
+#define V_DELAY (*(char *)&adr_var_vdi[-5])
+#define V_REZ_VT (*(short *)&adr_var_vdi[-4])
+#define BYTES_LN (*(short *)&adr_var_vdi[-2])
+#define V_PLANES (*(short *)&adr_var_vdi[0])
+#define V_LIN_WR (*(short *)&adr_var_vdi[2])
+#define _WRT_MODE (*(short *)&adr_var_vdi[36])
+#define _X1 (*(short *)&adr_var_vdi[38])
+#define _Y1 (*(short *)&adr_var_vdi[40])
+#define _X2 (*(short *)&adr_var_vdi[42])
+#define _Y2 (*(short *)&adr_var_vdi[44])
+#define _PATPTR ((void *)(*(long *)&adr_var_vdi[46]))
+#define _PATMSK (*(short *)&adr_var_vdi[50])
+#define _MULTIFILL (*(short *)&adr_var_vdi[52])
+#define _CLIP (*(short *)&adr_var_vdi[54])
+#define _XMN_CLIP (*(short *)&adr_var_vdi[56])
+#define _YMN_CLIP (*(short *)&adr_var_vdi[58])
+#define _XMX_CLIP (*(short *)&adr_var_vdi[60])
+#define _YMX_CLIP (*(short *)&adr_var_vdi[62])
+#define _DDA_INC (*(short *)&adr_var_vdi[66])
+#define _T_SCLSTS (*(short *)&adr_var_vdi[68
+#define _MONO_STATUS (*(short *)&adr_var_vdi[70
+#define _SOURCE_X (*(short *)&adr_var_vdi[72])
+#define _SOURCE_Y (*(short *)&adr_var_vdi[74])
+#define _DESTX (*(short *)&adr_var_vdi[76]]
+#define _DESTY (*(short *)&adr_var_vdi[78])
+#define _DELX (*(short *)&adr_var_vdi[80])
+#define _DELY (*(short *)&adr_var_vdi[82])
+#define _FBASE ((short *)(*(long *)&adr_var_vdi[84]))
+#define _FWIDTH (*(short *)&adr_var_vdi[88])
+#define _STYLE (*(short *)&adr_var_vdi[90])
+#define _SCALE (*(short *)&adr_var_vdi[102])
+#define _CHUP (*(short *)&adr_var_vdi[104])
+#define REQ_COL48E ((short *)&adr_var_vdi[174]) // 240 colors RVB TOS 4.XX FALCON
+#define BYT_PER_PIX (*(short *)&adr_var_vdi[2822])
+#define FORM_ID (*(short *)&adr_var_vdi[2824]]   // scrn form 2 ST, 1 stndrd, 3 pix
+#define VL_COL_BG (*(long *)&adr_var_vdi[2826])
+#define VL_COL_FG (*(long *)&adr_var_vdi[2830])
+#define PAL_MAP ((long *)&adr_var_vdi[2834])
 
 FONT_HEAD	first, ram8x16, ram8x8, ram16x32;
 ATTRIBUTE virt_work;
@@ -338,11 +347,11 @@ short V_OPNWK(char *adr_var_vdi, short *INTIN, short *INTOUT, short *PTSOUT)
 		case SETMODEFLAG:
 			modecode = Vsetmode(-1); /* get current video mode    */
 			if(modecode != PTSOUT[0]) /* see if cur mode != desired  */
-				Vsetscreen(0, 0, 3, PTSOUT[0]); /* set the video to new mode */
+				(void)Vsetscreen(0, 0, 3, PTSOUT[0]); /* set the video to new mode */
 			break;
 		default:
 			if(INTIN[0] < SETMODEFLAG)
-				Vsetscreen(-1, -1, INTIN[0] - 2, -1); /* ST modes */
+				(void)Vsetscreen(-1, -1, INTIN[0] - 2, -1); /* ST modes */
 			else
 				return(0); /* erreur */
 			break;
@@ -366,7 +375,11 @@ short V_OPNWK(char *adr_var_vdi, short *INTIN, short *INTOUT, short *PTSOUT)
 	INQ_TAB[4] = V_PLANES; /* number of planes */
 	INQ_TAB[5] = 0; /* video lookup table  */
 	virt_work.handle = 1;
+#if (__GNUC__ > 3)
+	*P_CUR_WORK = &virt_work;
+#else
 	CUR_WORK = &virt_work;
+#endif
 	virt_work.fvdi_virtual = &virt_work_fvdi;
 	virt_work.next_work = NULL;
 	LINE_CW = -1;	/* invalidate curr line width */
@@ -387,7 +400,11 @@ short V_OPNWK(char *adr_var_vdi, short *INTIN, short *INTOUT, short *PTSOUT)
 		do
 		{
 			if(fnt_ptr->flags & DEFAULT) /* If default save pointer */
+#if (__GNUC__ > 3)
+				*P_DEF_FONT = fnt_ptr;
+#else
 				DEF_FONT = fnt_ptr;
+#endif
 			if(fnt_ptr->font_id != id_save)	/* If new font count */
 			{
 				j++;
@@ -410,7 +427,11 @@ short V_OPNWK(char *adr_var_vdi, short *INTIN, short *INTOUT, short *PTSOUT)
 	}
 	DEV_TAB[5] = i; /* number of sizes */
 	FONT_COUNT = DEV_TAB[10] = ++j;	/* number of faces */
+#if (__GNUC__ > 3)
+	*P_CUR_FONT = DEF_FONT;
+#else
 	CUR_FONT = DEF_FONT;
+#endif
 	init_wk(adr_var_vdi, INTIN, INTOUT, PTSOUT);
 	LOC_MODE = 0;
 	VAL_MODE = 0;
@@ -418,25 +439,29 @@ short V_OPNWK(char *adr_var_vdi, short *INTIN, short *INTOUT, short *PTSOUT)
 	STR_MODE = 0;
 	{
 #ifdef COLDFIRE
-		asm("move.l D0,-(SP)");
-		asm("move.w SR,D0");
-		asm("move.w D0,save_d0");
-		asm("or.l #0x700,D0");   /* disable interrupts */
-		asm("move.w D0,SR");
-		asm("move.l (SP)+,D0");
+		asm volatile (
+			" move.l D0,-(SP)\n\t"
+			" move.w SR,D0\n\t"
+			" move.w D0,save_d0\n\t"
+			" or.l #0x700,D0\n\t"   /* disable interrupts */
+			" move.w D0,SR\n\t"
+			" move.l (SP)+,D0" );
 #else
-		asm("move.w SR,save_d0");
-		asm("or.w #0x700,SR");   /* disable interrupts */
+		asm volatile (
+			" move.w SR,save_d0\n\t"
+			" or.w #0x700,SR" );   /* disable interrupts */
 #endif
-		USER_TIM = (void *)empty;
-		NEXT_TIM = (void *)Setexc(0x100, tick_int);
+		USER_TIM = (long)empty;
+		NEXT_TIM = (long)Setexc(0x100, tick_int);
 #ifdef COLDFIRE
-		asm("move.w D0,-(SP)");
-		asm("move.w save_d0,D0");
-		asm("move.w D0,SR");
-		asm("move.w (SP)+,D0");
+		asm volatile (
+			" move.w D0,-(SP)\n\t"
+			" move.w save_d0,D0\n\t"
+			" move.w D0,SR\n\t"
+			" move.w (SP)+,D0" );
 #else
-		asm("move.w save_d0,SR");
+		asm volatile (
+			" move.w save_d0,SR" );
 #endif
 	}
 	return(1);
@@ -447,15 +472,23 @@ void V_CLSWK(char *adr_var_vdi)
 	ATTRIBUTE	*next_work;
 	if(virt_work.next_work != NULL)
 	{	/* Are there VWs to close */
+#if (__GNUC__ > 3)
+		*P_CUR_WORK = virt_work.next_work;
+#else
 		CUR_WORK = virt_work.next_work;
+#endif
 		do
 		{
 	    next_work = CUR_WORK->next_work;
 	    Mfree(CUR_WORK);
 		}
+#if (__GNUC__ > 3)
+		while((*P_CUR_WORK = next_work));
+#else
 		while((CUR_WORK = next_work));
+#endif
 	}
-	Setexc(0x100, NEXT_TIM);  /* reset timer vector  */
+	(void)Setexc(0x100, NEXT_TIM);  /* reset timer vector  */
 }
 
 short V_OPNVWK(char *adr_var_vdi, short *INTIN, short *INTOUT, short *PTSOUT)
@@ -484,7 +517,11 @@ short V_OPNVWK(char *adr_var_vdi, short *INTIN, short *INTOUT, short *PTSOUT)
 		work_ptr = work_ptr->next_work;
 	}
 	/* slot found, Insert the workstation here */
+#if (__GNUC__ > 3)
+	*P_CUR_WORK = new_work;
+#else
 	CUR_WORK = new_work;
+#endif
 	new_work->next_work = work_ptr->next_work;
 	new_work->fvdi_virtual = new_work_fvdi;
 	work_ptr->next_work = new_work;
@@ -496,7 +533,7 @@ short V_OPNVWK(char *adr_var_vdi, short *INTIN, short *INTOUT, short *PTSOUT)
 void V_CLSVWK(char *adr_var_vdi)
 {
 	short handle;
-	ATTRIBUTE   *work_ptr;
+	ATTRIBUTE *work_ptr;
 	/* cur_work points to workstation to deallocate, find who points to me */
 	handle = CUR_WORK->handle;
 	if(handle == 1)		/* Can't close physical this way */
@@ -507,5 +544,4 @@ void V_CLSVWK(char *adr_var_vdi)
 		Mfree(CUR_WORK->fvdi_virtual);
 	Mfree(CUR_WORK);
 }
-
 

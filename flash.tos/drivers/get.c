@@ -1,145 +1,167 @@
 #include "config.h"
+#include <mint/osbind.h>
 #include <string.h>
+#include "ct60.h"
 #include "get.h"
+#include "../include/ramcf68k.h"
+
+#if defined(COLDFIRE) && defined(NETWORK) && defined(LWIP)
+extern void board_printf(const char *fmt, ...);
+#else
+#define board_printf
+#endif
+
+#define mac_addr *(unsigned long *)(mac_address)
+#define client_ip_addr *(unsigned long *)(ip_address)
+#define server_ip_addr *(unsigned long *)(server_ip_address)
 
 #ifdef NETWORK
-#if 1 // #ifndef MCF547X
 
 unsigned char *board_get_ethaddr(unsigned char *ethaddr)
 {
-	int i;
-	for(i = 0; i < 6; i++)
-		ethaddr[i] = ((PARAM *)PARAMS_ADDRESS)->ethaddr[i];
+	int i = 0;
+	if((mac_addr != 0xFFFFFFFF) && (mac_addr != 0))
+	{
+		ethaddr[0] = 0x00;
+		ethaddr[1] = 0xCF;
+		ethaddr[2] = 0x54;
+		ethaddr[3] = (unsigned char)((mac_addr >> 16) & 0xFF);
+		ethaddr[4] = (unsigned char)((mac_addr >> 8) & 0xFF);
+		ethaddr[5] = (unsigned char)(mac_addr & 0xFF);
+	}
+	else
+	{
+		for(i = 0; i < 6; i++)
+			ethaddr[i] = ((PARAM *)PARAMS_ADDRESS)->ethaddr[i];
+	}	
+	board_printf("ethaddr from %s", i ? "dBUG set" : "flash params");
+	for(i = 0; i < 6; board_printf(":%02X", ethaddr[i++]));
+	board_printf("\r\n");
 	return ethaddr;
 }
 
 unsigned char *board_get_client(unsigned char *client)
 {
-	int i;
+	int i = 0;
+	if((client_ip_addr != 0xFFFFFFFF) && (client_ip_addr & 0xFFFF0000))
+		memcpy(client, &client_ip_addr, 4);	
+	else
+	{
+		for(i = 0; i < 4; i++)
+			client[i] = ((PARAM *)PARAMS_ADDRESS)->client[i];
+	}
+	board_printf("board IP from %s: ", i ? "dBUG set" : "flash params");
 	for(i = 0; i < 4; i++)
-		client[i] = ((PARAM *)PARAMS_ADDRESS)->client[i];
+	{
+		board_printf("%d", client[i]);
+		if(i < 3)
+			board_printf(".");	
+	}
+	board_printf("\r\n");
 	return client;
 }
 
 unsigned char *board_get_server(unsigned char *server)
 {
-	int i;
+	int i = 0;
+	if((server_ip_addr != 0xFFFFFFFF) && (server_ip_addr & 0xFFFF0000))
+		memcpy(server, &server_ip_addr, 4);	
+	else
+	{
+		for(i = 0; i < 4; i++)
+			server[i] = ((PARAM *)PARAMS_ADDRESS)->server[i];
+	}
+	board_printf("host IP from %s: ", i ? "dBUG set" : "flash params");
 	for(i = 0; i < 4; i++)
-		server[i] = ((PARAM *)PARAMS_ADDRESS)->server[i];
+	{
+		board_printf("%d", server[i]);
+		if(i < 3)
+			board_printf(".");	
+	}
+	board_printf("\r\n");
 	return server;
 }
 
 unsigned char *board_get_gateway(unsigned char *gateway)
 {
-	int i;
-	for(i = 0; i < 4; i++)
-		gateway[i] = ((PARAM *)PARAMS_ADDRESS)->gateway[i];
+	if((client_ip_addr != 0xFFFFFFFF) && (client_ip_addr & 0xFFFF0000))
+		gateway[0] = gateway[1] = gateway[2] = gateway[3] = 0;
+	else
+	{
+		int i;
+		for(i = 0; i < 4; i++)
+			gateway[i] = ((PARAM *)PARAMS_ADDRESS)->gateway[i];
+	}
 	return gateway;
 }
 
 unsigned char *board_get_netmask(unsigned char *netmask)
 {
-	int i;
+	int i = 0;
+	if((client_ip_addr != 0xFFFFFFFF) && (client_ip_addr & 0xFFFF0000))
+	{
+		netmask[0] = 0xFF;
+		if(client_ip_addr <= 0x80000000)
+		{
+			if((client_ip_addr & 0xFF000000) == 0x0A000000)
+			{
+				netmask[1] = 0xFF;
+				netmask[2] = 0xFF;
+			}
+			else
+			{
+				netmask[1] = 0x00;
+				netmask[2] = 0x00;
+			}
+		}
+		else if(client_ip_addr <= 0xC0000000)
+		{
+			netmask[1] = 0xFF;
+			netmask[2] = 0x00;
+		}
+		else
+		{
+			netmask[1] = 0xFF;
+			netmask[2] = 0xFF;
+		}
+		netmask[3] = 0x00;
+	}
+	else
+	{
+		for(i = 0; i < 4; i++)
+			netmask[i] = ((PARAM *)PARAMS_ADDRESS)->netmask[i];
+	}
+	board_printf("netmask from %s: ", i ? "dBUG set" : "host IP");
 	for(i = 0; i < 4; i++)
-		netmask[i] = ((PARAM *)PARAMS_ADDRESS)->netmask[i];
+	{
+		board_printf("%d", netmask[i]);
+		if(i < 3)
+			board_printf(".");	
+	}
+	board_printf("\r\n");
 	return netmask;
 }
 
 char *board_get_filename(char *filename)
 {
-	int c, i = 0;
-	while(i < FILENAME_SIZE)
+	int i = 0;
+	char c;
+	if((client_ip_addr != 0xFFFFFFFF) && (client_ip_addr & 0xFFFF0000))
+	 	strcpy(filename, "/home/firetos.hex");
+	else
 	{
-		c = ((PARAM *)PARAMS_ADDRESS)->filename[i];
-		filename[i] = (char)c;
-		i++;
-		if(c == '\0')
-			i = FILENAME_SIZE;
+		while(i < FILENAME_SIZE)
+		{
+			c = ((PARAM *)PARAMS_ADDRESS)->filename[i];
+			filename[i++] = c;
+			if(c == '\0')
+				i = FILENAME_SIZE;
+		}
+		filename[i] = '\0';
 	}
-	filename[i] = '\0';
+	board_printf("filename from %s: %s\r\n", i ? "dBUG set" : "default", filename);
 	return filename;
 }
-
-int board_get_filetype(void)
-{
-	return((PARAM *)PARAMS_ADDRESS)->netcfg[2];
-}
-
-int board_get_autoboot(void)
-{
-	return((PARAM *)PARAMS_ADDRESS)->netcfg[0];
-}
-
-#else /* MCF547X */
-
-static PARAM eth = 
-{
-	.baud = 19200,
-	.client = { 192, 168, 1, 2 },
-	.server = { 192, 168, 1, 1 },
-	.gateway = { 0, 0, 0, 0 },
-	.netmask = { 255, 255, 255, 0 },
-	.netcfg = { 0, 0, 2, 0 },
-	.ethaddr = { 0x00, 0xcf, 0x54, 0x75, 0xcf, 0x01 },
-	.filename = "/home/firetos.hex",
-};
-
-unsigned char *board_get_ethaddr(unsigned char *ethaddr)
-{
-	memcpy(ethaddr, &eth.ethaddr[0], 6);
-	return ethaddr;
-}
-
-unsigned char *board_get_client(unsigned char *client)
-{
-	memcpy(client, &eth.client[0], 4);
-	return client;
-}
-
-unsigned char *board_get_server(unsigned char *server)
-{
-	memcpy(server, &eth.server[0], 4);
-	return server;
-}
-
-unsigned char *board_get_gateway(unsigned char *gateway)
-{
-	memcpy(gateway, &eth.gateway[0], 4);
-	return gateway;
-}
-
-unsigned char *board_get_netmask(unsigned char *netmask)
-{
-	memcpy(netmask, &eth.netmask[0], 4);
-	return netmask;
-}
-
-char *board_get_filename(char *filename)
-{
-	int c, i = 0;
-	while(i < FILENAME_SIZE)
-	{
-		c = (int)eth.filename[i];
-		filename[i] = (char)c;
-		i++;
-		if(c == '\0')
-			i = FILENAME_SIZE;
-	}
-	filename[i] = '\0';
-	return filename;
-}
-
-int board_get_filetype(void)
-{
-	return (int)eth.netcfg[2];
-}
-
-int board_get_autoboot(void)
-{
-	return (int)eth.netcfg[0];
-}
-
-#endif /* MCF547X */
 
 #endif /* NETWORK */
 

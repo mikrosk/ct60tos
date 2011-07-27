@@ -39,6 +39,9 @@ extern void board_printf(const char *fmt, ...);
 #define ACP_MODES_ONLY
 #endif
 
+#define MT_DFP 1
+#define MT_CRT 0
+
 #define TFP_ADDR 0x7A
 #define DCC_ADDR 0xA0
 #define TEMPO_US 5
@@ -52,7 +55,7 @@ extern void board_printf(const char *fmt, ...);
 #define SCREEN_POS_LOW (*(volatile unsigned char *)0xFFFF820D)
 #define OFF_NEXT_LINE (*(volatile unsigned short *)0xFFFF820E)
 #define VWRAP (*(volatile unsigned short *)0xFFFF8210)
-#define CLUT (*(volatile unsigned long *)0xFFFF8240)
+#define CLUT ((volatile unsigned short *)0xFFFF8240)
 #define SHIFT (*(volatile unsigned char *)0xFFFF8260)
 #define SPSHIFT (*(volatile unsigned short *)0xFFFF8266)
 #define HHC (*(volatile unsigned short *)0xFFFF8280) // Horizontal Hold Counter
@@ -73,7 +76,6 @@ extern void board_printf(const char *fmt, ...);
 #define VSS (*(volatile unsigned short *)0xFFFF82AC) // Vertical Sync Start
 #define VCO (*(volatile unsigned short *)0xFFFF82C0) // Video Control
 #define VCTRL (*(volatile unsigned short *)0xFFFF82C2) // Video Mode
-#define CLUT ((volatile unsigned short *)0xFFFF8240)
 #define VCLUT ((volatile unsigned long *)0xFFFF9800)
 
 #define TFP410_CTL1_MODE 0x08
@@ -106,7 +108,6 @@ struct videl_table {
 
 /* Videl native VGA modes */
 static struct videl_table table_rez[] = {
-#ifndef ACP_MODES_ONLY
 	{ 320, 200, 60, 25,  4, FLAGS_ST_MODES, 0x017, 0x012, 0x001, 0x20E, 0x00D, 0x011, 0x419, 0x3AF, 0x08F, 0x08F, 0x3AF, 0x415, 5, 0x186 }, // ST-LOW 25 MHz
 	{ 640, 200, 60, 25,  2, FLAGS_ST_MODES, 0x017, 0x012, 0x001, 0x20E, 0x00D, 0x011, 0x419, 0x3AF, 0x08F, 0x08F, 0x3AF, 0x415, 9, 0x186 }, // ST-MED 25 MHz
 	{ 640, 400, 60, 25,  1, FLAGS_ST_MODES, 0x0C6, 0x08D, 0x015, 0x273, 0x050, 0x096, 0x419, 0x3AF, 0x08F, 0x08F, 0x3AF, 0x415, 8, 0x186 }, // ST-HIG 25 MHz
@@ -117,9 +118,7 @@ static struct videl_table table_rez[] = {
 	{ 640, 240, 60, 25,  4, 0, 0x0C6, 0x08D, 0x015, 0x2A3, 0x07C, 0x096, 0x419, 0x3FF, 0x03F, 0x03F, 0x3FF, 0x415, 9, 0x186 }, // 25 MHz
 	{ 320, 240, 60, 25,  8, 0, 0x0C6, 0x08D, 0x015, 0x29A, 0x07B, 0x096, 0x419, 0x3FF, 0x03F, 0x03F, 0x3FF, 0x415, 5, 0x186 }, // 25 MHz
 	{ 640, 240, 60, 25,  8, 0, 0x0C6, 0x08D, 0x015, 0x2AB, 0x084, 0x096, 0x419, 0x3FF, 0x03F, 0x03F, 0x3FF, 0x415, 9, 0x186 }, // 25 MHz
-#endif
 	{ 320, 240, 60, 25, 16, 0, 0x0C6, 0x08D, 0x015, 0x2AC, 0x091, 0x096, 0x419, 0x3FF, 0x03F, 0x03F, 0x3FF, 0x415, 5, 0x186 }, // 25 MHz
-#ifndef ACP_MODES_ONLY
 	{ 640, 240, 60, 25, 16, 0, 0x0C6, 0x08D, 0x015, 0x2AC, 0x091, 0x096, 0x419, 0x3FF, 0x03F, 0x03F, 0x3FF, 0x415, 9, 0x186 }, // 25 MHz
 	{ 640, 480, 60, 25,  1, 0, 0x0C6, 0x08D, 0x015, 0x273, 0x050, 0x096, 0x419, 0x3FF, 0x03F, 0x03F, 0x3FF, 0x415, 8, 0x186 }, // 25 MHz
 	{ 320, 480, 60, 25,  2, 0, 0x017, 0x012, 0x001, 0x20A, 0x009, 0x011, 0x419, 0x3FF, 0x03F, 0x03F, 0x3FF, 0x415, 4, 0x186 }, // 25 MHz
@@ -129,7 +128,6 @@ static struct videl_table table_rez[] = {
 	{ 320, 480, 60, 25,  8, 0, 0x0C6, 0x08D, 0x015, 0x29A, 0x07B, 0x096, 0x419, 0x3FF, 0x03F, 0x03F, 0x3FF, 0x415, 4, 0x186 }, // 25 MHz
 	{ 640, 480, 60, 25,  8, 0, 0x0C6, 0x08D, 0x015, 0x2AB, 0x084, 0x096, 0x419, 0x3FF, 0x03F, 0x03F, 0x3FF, 0x415, 8, 0x186 }, // 25 MHz
 	{ 320, 480, 60, 25, 16, 0, 0x0C6, 0x08D, 0x015, 0x2AC, 0x091, 0x096, 0x419, 0x3FF, 0x03F, 0x03F, 0x3FF, 0x415, 4, 0x186 }, // 25 MHz
-#endif
 	{ 640, 480, 60, 25, 16, 0, 0x0C6, 0x08D, 0x015, 0x2AC, 0x091, 0x096, 0x419, 0x3FF, 0x03F, 0x03F, 0x3FF, 0x415, 8, 0x186 }, // 25 MHz
 //	{ 640, 480, 60, 50, 16, 0, 0x189, 0x126, 0x031, 0x000, 0x160, 0x135, 0x419, 0x3FF, 0x03F, 0x03F, 0x3FF, 0x415, 4, 0x182 }, // 50 MHz
 #if defined(COLDFIRE) && defined(MCF547X) /* FIREBEE */
@@ -143,6 +141,7 @@ static struct videl_table table_rez[] = {
 extern int acp_new_hardware(void);
 struct fb_videomode *videl_modedb;	/* mode database */
 unsigned long videl_modedb_len;		/* mode database length */
+int videl_monitor_type;
 
 /*
  * I2Cinit: I2C initilazation as master
@@ -349,9 +348,8 @@ static struct fb_videomode *find_mode(long width, long height, long clock, long 
 			{
 				if(((long)db->xres != width) || ((long)db->yres != height))
 					continue;
-				if((db->vmode & (FB_VMODE_DOUBLE | FB_VMODE_INTERLACED))
-				/* || ((db->sync & (FB_SYNC_VERT_HIGH_ACT | FB_SYNC_HOR_HIGH_ACT)) != (FB_SYNC_VERT_HIGH_ACT | FB_SYNC_HOR_HIGH_ACT)) */ )
-				 	continue;			
+				if(db->vmode & (FB_VMODE_DOUBLE | FB_VMODE_INTERLACED))
+				 	continue; 
 				if((long)db->refresh == refresh)
 					return(db);
 				else
@@ -400,8 +398,7 @@ static struct fb_videomode *find_mode(long width, long height, long clock, long 
 				{
 					if(((long)db->xres != width) || ((long)db->yres != height))
 						continue;
-					if((db->vmode & (FB_VMODE_DOUBLE | FB_VMODE_INTERLACED))
-					/* || ((db->sync & (FB_SYNC_VERT_HIGH_ACT | FB_SYNC_HOR_HIGH_ACT)) != (FB_SYNC_VERT_HIGH_ACT | FB_SYNC_HOR_HIGH_ACT)) */ )
+					if(db->vmode & (FB_VMODE_DOUBLE | FB_VMODE_INTERLACED))
 					 	continue;
 #if defined(NETWORK) && defined(LWIP) && defined(DEBUG)
 //					board_printf(" %dx%d@%d %dMHz i:%d j:%d k:%d\r\n", db->xres, db->yres, db->refresh, (int)(PICOS2KHZ(db->pixclock)/1000), i, j, k);
@@ -613,36 +610,20 @@ static void calcul_acp_mode(struct videl_table *new_rez, struct fb_videomode *db
 	new_rez->hht = (short)htotal;
 	new_rez->hde = (short)(db->left_margin + db->xres);
 	new_rez->hbe = (short)db->left_margin;
-	if(0) // new_rez->hbe & 1)
-	{
-		new_rez->hdb = new_rez->hbe + 1;
-		new_rez->hbb = new_rez->hde + 1;
-	}
-	else
-	{
-		new_rez->hdb = new_rez->hbe;
-		new_rez->hbb = new_rez->hde;
-		new_rez->hbe -= 1;
-		new_rez->hde -= 1; 
-	}									
-	new_rez->hss = (short)(htotal - db->right_margin);
+	new_rez->hdb = new_rez->hbe;
+	new_rez->hbb = new_rez->hde;
+	new_rez->hbe -= 1;
+	new_rez->hde -= 1;					
+	new_rez->hss = (short)(htotal - db->hsync_len);
 	/* calcul vertical registers */
 	new_rez->vft = (short)vtotal;
 	new_rez->vde = (short)(db->upper_margin + db->yres);
 	new_rez->vbe = (short)db->upper_margin;
-	if(0) // if(new_rez->vbe & 1)
-	{
-		new_rez->vdb = new_rez->vbe + 1;
-		new_rez->vbb = new_rez->vde + 1;
-	}
-	else
-	{
-		new_rez->vdb = new_rez->vbe;
-		new_rez->vbb = new_rez->vde;
-		new_rez->vbe -= 1;
-		new_rez->vde -= 1;
-	}
-	new_rez->vss = (short)(vtotal - db->lower_margin);
+	new_rez->vdb = new_rez->vbe;
+	new_rez->vbb = new_rez->vde;
+	new_rez->vbe -= 1;
+	new_rez->vde -= 1;
+	new_rez->vss = (short)(vtotal - db->vsync_len);
 #if 0
 #if 0
 	I2CsendByte((unsigned char)db->left_margin, TFP410_DE_DLY, TFP_ADDR);
@@ -669,6 +650,111 @@ static void calcul_acp_mode(struct videl_table *new_rez, struct fb_videomode *db
 }
 
 #endif /* defined(COLDFIRE) && defined(MCF547X) */
+
+long get_videl_base(void) /* return 0 for an ACP mode */
+{
+	long ret = 0;
+#if !defined(COLDFIRE) || defined(MCF547X)
+#if defined(COLDFIRE) && defined(MCF547X)
+	ret = (unsigned long)SCREEN_POS_ACP;
+	ret <<= 8;
+#endif
+	ret |= (unsigned long)SCREEN_POS_HIGH;
+	ret <<= 8;
+	ret |= (unsigned long)SCREEN_POS_MID;
+	ret <<= 8;
+	ret |= (unsigned long)SCREEN_POS_LOW;
+#if defined(COLDFIRE) && defined(MCF547X)
+	if(*(volatile unsigned long *)ACP_VIDEO_CONTROL & (ACP_COLOR_8 | ACP_COLOR_16 | ACP_COLOR_24 | ACP_VIDEO_ON))
+		ret = 0;
+  if(!(*(volatile unsigned long *)ACP_VIDEO_CONTROL & (ACP_ST_SHIFT_MODE | ACP_FALCON_SHIFT)))
+		ret = 0;
+#endif
+  if(ret >= 0xE00000)
+  	ret = 0;
+#endif
+	return(ret);
+}
+
+long get_videl_bpp(void)
+{
+	unsigned long bpp = 1;
+#if !defined(COLDFIRE) || defined(MCF547X)
+	unsigned short spshift = SPSHIFT;
+	if(spshift & 0x400)
+		bpp = 1;
+	else if(spshift & 0x10)
+		bpp = 8;
+	else if(spshift & 0x100)
+		bpp = 16;
+	else
+	{
+		switch(SHIFT)
+		{
+			case 0: bpp = 4; break;
+			case 1: bpp = 2; break;
+			default: bpp = 1; break;
+		}
+	}
+#endif
+	return(bpp);
+}
+
+long get_videl_width()
+{
+#if !defined(COLDFIRE) || defined(MCF547X)
+  return(((long)VWRAP * 16)/ get_videl_bpp());
+#else
+	return(0);
+#endif
+}
+
+long get_videl_height(void)
+{
+#if !defined(COLDFIRE) || defined(MCF547X)
+	return((long)(VDE - VDB) / 2);
+#else
+	return(0);
+#endif
+}
+
+long get_videl_size(void)
+{
+#if !defined(COLDFIRE) || defined(MCF547X)
+	return(get_videl_height() * (long)VWRAP * 2);
+#else
+	return(0);
+#endif
+}
+
+void *get_videl_palette(void)
+{
+#if !defined(COLDFIRE) || defined(MCF547X)
+	long bpp = get_videl_bpp();
+	switch(bpp)
+	{
+		case 1:
+		case 2:
+		case 4: return((void *)CLUT);
+		case 8: return((void *)VCLUT); /* to fix acp palette */
+		default: return(NULL);
+	}
+#else
+	return(NULL);
+#endif
+}
+
+void videl_blank(long blank)
+{
+#if defined(COLDFIRE) && defined(MCF547X)
+	if(blank)
+		*(volatile unsigned long *)ACP_VIDEO_CONTROL &= ~ACP_VIDEO_DAC_ON;
+	else
+		*(volatile unsigned long *)ACP_VIDEO_CONTROL |= ACP_VIDEO_DAC_ON;
+#else
+	if(blank);
+#endif
+}
 
 void init_videl_i2c(void)
 {
@@ -698,6 +784,10 @@ void init_videl_i2c(void)
 		fb_edid_to_monspecs(edid, &specs);
 		videl_modedb = specs.modedb;
 		videl_modedb_len = specs.modedb_len;
+		if(edid[0x14] & 0x80)
+			videl_monitor_type = MT_DFP;
+		else
+			videl_monitor_type = MT_CRT;
 	}
 #if defined(NETWORK) && defined(LWIP) && defined(DEBUG)
 	else
@@ -743,13 +833,22 @@ long init_videl(long width, long height, long bpp, long refresh, long extended)
 	if(!width || !height || !bpp || !refresh)
 		return(0);		
 #if defined(COLDFIRE) && defined(MCF547X)
+	if(extended >= 0xD00000)
+	{
+		addr = extended;
+		extended = 0;
+	}		
 //	init_videl_i2c();
 #else
 	if((width > 640) || (height > 480) || (bpp > 16))
 		return(0);
 #endif
 #if defined(NETWORK) && defined(LWIP) && defined(DEBUG)
+#if defined(COLDFIRE) && defined(MCF547X) /* FIREBEE */
+	board_printf("init_videl search in videl list %dx%dx%d@%dHz on %s\r\n", (int)width, (int)height, (int)bpp, (int)refresh, (videl_monitor_type == MT_DFP) ? "DFP" : "CRT");
+#else
 	board_printf("init_videl search in videl list %dx%dx%d@%dHz\r\n", (int)width, (int)height, (int)bpp, (int)refresh);
+#endif
 #endif
 #if defined(COLDFIRE) && defined(MCF547X)
 	if(acp_new_hardware())
@@ -758,7 +857,7 @@ long init_videl(long width, long height, long bpp, long refresh, long extended)
 	 board_printf("init_videl PLL%s detected\r\n", acp_has_pll ? "" : " not");
 #endif
 	if(!extended)
-#endif
+#endif /* defined(COLDFIRE) && defined(MCF547X) */
 	for(x = 0; x < (sizeof(table_rez) / sizeof(struct videl_table)); x++)
 	{
 		if(((long)table_rez[x].width == width) && ((long)table_rez[x].height == height) && ((long)table_rez[x].bpp == bpp))
@@ -840,11 +939,17 @@ long init_videl(long width, long height, long bpp, long refresh, long extended)
 					calcul_videl_mode(&new_rez, db, htotal, vtotal, width, bpp);
 #endif /* ACP_MODES_ONLY */
 				new_rez.vco = 0x182;
+#if !(defined(COLDFIRE) && defined(MCF547X)) /* not works, no signal on monitor */
 				if(db->sync & FB_SYNC_HOR_HIGH_ACT)
 					new_rez.vco |= 0x40;
+#endif
 				if(db->sync & FB_SYNC_VERT_HIGH_ACT)
 					new_rez.vco |= 0x20;
-				acp_video_control |= ACP_CLK_PLL;
+#if 0 // #if defined(COLDFIRE) && defined(MCF547X) /* sync inverted for DVI outputs ??? */
+				if(videl_monitor_type == MT_DFP)
+					new_rez.vco ^= 0x60;
+#endif
+				acp_video_control |= (ACP_CLK_PLL | ACP_SYNC);
 #if 0
 				wait_pll();
 				*(volatile unsigned short *)(ACP_VIDEO_PLL_CONFIG+0x48) = 27; // loopfilter r
@@ -966,6 +1071,7 @@ long init_videl(long width, long height, long bpp, long refresh, long extended)
 #define NUM_BLOCKS_RAM (MIN_VIDEO_RAM/BLOCK_STEP_RAM)
 		long *tab = (long *)Mxalloc(NUM_BLOCKS_RAM * sizeof(long), 2);
 		int i = -1, j;
+		(void)Screalloc(BLOCK_STEP_RAM/2);
 		/* try to get a screen above MIN_VIDEO_RAM */
 		if(tab != NULL)
 		{
@@ -1002,9 +1108,15 @@ long init_videl(long width, long height, long bpp, long refresh, long extended)
 	}
 #if defined(COLDFIRE) && defined(MCF547X)
 	else if(acp_mode)
-	{
 		addr = ACP_VIDEO_CFG; // ACP_VIDEO_RAM;
-//		memset((void *)ACP_VIDEO_CFG, 0, 0xD00000);
+	else if(!acp_mode)
+	{
+		volatile unsigned long *p = (unsigned long *)ACP_ST_MODES;
+		/* 25 MHz */
+ 		p[0] = 0x032002ba; /* hor 640x480 */
+		p[1] = 0x020c020a; /* vert 640x480 */
+		p[2] = 0x0190015d; /* hor 320x240 */
+		p[3] = 0x020C020A; /* vert 320x240 */
 	}
 #endif
 	*((char **)_v_bas_ad) = (char *)addr;
@@ -1050,6 +1162,7 @@ long init_videl(long width, long height, long bpp, long refresh, long extended)
 		VCO = videl_rez->vco; // clock and monitor
 		SPSHIFT = 0;
 #if defined(COLDFIRE) && defined(MCF547X)
+		*(volatile unsigned long *)ACP_VIDEO_CONTROL = (acp_video_control &= ~ACP_VIDEO_ON); 
 	}
 	else
 	{
@@ -1083,7 +1196,7 @@ long init_videl(long width, long height, long bpp, long refresh, long extended)
 				SPSHIFT = 0x10; // FALCON palette
 #if defined(COLDFIRE) && defined(MCF547X)
 			else/* FIREBEE palette */
-				*(volatile unsigned long *)ACP_VIDEO_CONTROL = acp_video_control | ACP_COLOR_8;
+				*(volatile unsigned long *)ACP_VIDEO_CONTROL = (acp_video_control |= ACP_COLOR_8);
 #endif
 			break;
 		case 16: /* 65536 colors => no palette */
@@ -1091,17 +1204,20 @@ long init_videl(long width, long height, long bpp, long refresh, long extended)
 			*VCLUT = 0; // black border
 #if defined(COLDFIRE) && defined(MCF547X)
 			if(acp_mode)
-				*(volatile unsigned long *)ACP_VIDEO_CONTROL = acp_video_control | ACP_COLOR_16;
+				*(volatile unsigned long *)ACP_VIDEO_CONTROL = (acp_video_control |= ACP_COLOR_16);
 #endif
 			break;
 		case 32: /* 16M colors => no palette */
 #if defined(COLDFIRE) && defined(MCF547X)
 			if(acp_mode)
-				*(volatile unsigned long *)ACP_VIDEO_CONTROL = acp_video_control | ACP_COLOR_24;
+				*(volatile unsigned long *)ACP_VIDEO_CONTROL = (acp_video_control |= ACP_COLOR_24);
 #endif
 			break;
 	}
 	asm_set_ipl(level); // restore interrupts
+#if defined(NETWORK) && defined(LWIP) && defined(DEBUG) && defined(COLDFIRE) && defined(MCF547X)
+	board_printf(" ACP_VIDEO_CONTROL:%08X (%08X)\r\n", *(volatile unsigned long *)ACP_VIDEO_CONTROL, acp_video_control);
+#endif
 #endif /* defined(COLDFIRE) && defined(MCF547X) */
 	return(addr);
 }

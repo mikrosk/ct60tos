@@ -7,7 +7,7 @@ struct in_addr {
   unsigned long s_addr;
 };
 
-#define INADDR_NONE         ((u32_t)0xffffffff)  /* 255.255.255.255 */
+#define INADDR_NONE         ((unsigned long)0xffffffff)  /* 255.255.255.255 */
 #define INADDR_LOOPBACK     ((unsigned long)0x7f000001)  /* 127.0.0.1 */
 
 /* Definitions of the bits in an Internet address integer.
@@ -255,7 +255,7 @@ typedef struct socket_cookie
 	int (*select)(int maxfdp1, fd_set *readset, fd_set *writeset, fd_set *exceptset, struct timeval *timeout);
 	int (*ioctlsocket)(int s, long cmd, void *argp);
 	void *(*gethostbyname)(const char *name);
-	int *(*geterrno)(void);
+	int (*geterrno)(void);
 } SOCKET_COOKIE;
 
 #define init_socket() \
@@ -275,13 +275,14 @@ do { \
 		jar++; \
 	} \
 } while(0)	
+
 #define socket(domain, type, protocol) ((psc->socket)(domain, type, protocol))
 #define bind(s, name, namelen) ((psc->bind)(s, name, namelen))
 #define listen(s, backlog) ((psc->listen)(s, backlog))
 #define accept(s, addr, addrlen) ((psc->accept)(s, addr, addrlen))
 #define connect(s, name, namelen) ((psc->connect)(s, name, namelen))
 #define swrite(s, dataptr, size) ((psc->write)(s, dataptr, size))
-#define send(s, dataptr, size, flags) ((psc->send(s, dataptr, size, flags))
+#define send(s, dataptr, size, flags) ((psc->send)(s, dataptr, size, flags))
 #define sendto(s, dataptr, size, flags, to, tolen) ((psc->sendto)(s, dataptr, size, flags, to, tolen))
 #define sread(s, mem, len) ((psc->read)(s, mem, len))
 #define recv(s, mem, len, flags) ((psc->recv)(s, mem, len, flags))
@@ -291,7 +292,7 @@ do { \
 #define getsockname(s, name, namelen) ((psc->getsockname)(s, name, namelen))
 #define getpeername(s, name, namelen) ((psc->getpeername)(s, name, namelen))
 #define getsockopt(s, level, optname, optval, optlen) ((psc->getsockopt)(s, level, optname, optval, optlen))
-#define setsockopt(d, level, optname, optval, optlen) ((psc->setsockopt)(s, level, optname, optval, optlen))
+#define setsockopt(s, level, optname, optval, optlen) ((psc->setsockopt)(s, level, optname, optval, optlen))
 #define select(maxfdp1, readset, writeset, exceptset, timeout) ((psc->select)(maxfdp1, readset, writeset, exceptset, timeout))
 #define sioctl(s, cmd, argp) ((psc->ioctlsocket)(s, cmd, argp))
 #define gethostbyname(name) ((psc->gethostbyname)(name))

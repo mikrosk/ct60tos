@@ -173,7 +173,7 @@ sys_assert( const char *msg )
     board_printf("%s\r\n");
 //    vPortEnterCritical(  );
 //    while(1)
-//      asm(" nop");
+//      asm volatile(" nop\n\t");
 }
 
 typedef struct
@@ -267,7 +267,7 @@ sys_arch_thread_new( void ( *thread ) ( void *arg ), void *arg, int prio, size_t
 //        ( void )snprintf( thread_name, configMAX_TASK_NAME_LEN, "lwIP%d", i );
 
         /* Now q points to a free element in the list. */
-        if( xTaskCreate( thread, thread_name, ssize, arg, prio, &p->pid ) == pdPASS )
+        if( xTaskCreate( thread, (void *)thread_name, ssize, arg, prio, &p->pid ) == pdPASS )
             thread_hdl = p;
         else
             vPortFree( p );

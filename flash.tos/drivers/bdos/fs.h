@@ -146,7 +146,7 @@ OFD
     long  o_bytnum;     /* byte pointer within file             */
     CLNO  o_curcl;      /* not used                             */
     RECNO o_currec;     /* not used                             */
-    short   o_curbyt;     /* not used                             */
+    unsigned short   o_curbyt;     /* not used                             */
     short   o_usecnt;     /* use count for inherited files        */
     OFD   *o_thread;    /* mulitple open thread list            */
     short   o_mod;        /* mode file opened in (r, w, r/w)      */
@@ -242,8 +242,8 @@ DMD /* drive media block */
     short    m_drvnum;    /*  drive number for this media         */
     RECNO  m_fsiz;      /*  fat size in records M01.01.03       */
     RECNO  m_clsiz;     /*  cluster size in records M01.01.03   */
-    short    m_clsizb;    /*  cluster size in bytes               */
-    short    m_recsiz;    /*  record size in bytes                */
+    unsigned short    m_clsizb;    /*  cluster size in bytes               */
+    unsigned short    m_recsiz;    /*  record size in bytes                */
 
     CLNO   m_numcl;     /*  total number of clusters in data    */
     short    m_clrlog;    /* clsiz in rec, log2 is shift          */
@@ -417,7 +417,7 @@ char *packit(register char *s, register char *d);
 
 RECNO cl2rec(CLNO cl, DMD *dm);
 void clfix(CLNO cl, CLNO link, DMD *dm);
-CLNO getcl(short cl, DMD *dm);
+CLNO getcl(CLNO cl, DMD *dm);
 short nextcl(OFD *p, short wrtflg);
 long xgetfree(long *buf, short drv);
 

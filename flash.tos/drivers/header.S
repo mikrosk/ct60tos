@@ -23,6 +23,7 @@
 	.global	_clear_screen,_move_screen,_print_screen
 	.global	_dbug,_event_aes,_disassemble_pc
 	.global	_init_rtos,_set_video
+	.global	_VERSION,_DATE
 
 	.text
 
@@ -61,5 +62,7 @@ Start:
 	nop
 	nop
 		                        // 100
+_VERSION:
 	.short	VERSION                 // 2 bytes
+_DATE:
 	.short	DATE                    // 10 bytes

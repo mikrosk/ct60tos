@@ -669,7 +669,7 @@ en ROM est un 4.02).
 !item La cr‚ation du buffer fastram et de son cookie '_FRB'.
 !item La cr‚ation du buffer fastram ‚tendu et de son cookie 'XFRB'.
 !item L'affichage complet des informations sur la barette SDRAM.
-!item Le patch pour l'ordre de boot des disques IDE et SCSI (4 choix).
+!item Le patch pour l'ordre de boot des disques IDE et SCSI (8 choix).
 !item Possibilit‚s suppl‚mentaires du boot :
 !begin_itemize
 !item Proc‚dure d'identification du p‚riph‚rique pour les lecteurs SCSI 
@@ -1482,7 +1482,8 @@ ce le cas ou CT60TOS.BIN n'est pas utilis‚.
 
 La deuxiŠme tache est de mettre … jour la partie hard de la CT60 avec les 
 fichiers jedec (.JED) pour les composants ABE60, SDR60 et CTPCI (XILINX 
-XC95144XL / XC95288XL CPLD). 
+XC95144XL / XC95288XL CPLD).
+Cette mise … jour V2.01 permet de programmer l'ETHERNAT (XC9572XL). 
 
 !begin_itemize
 
@@ -1591,7 +1592,9 @@ volatile et les paramŠtres en flash.
 !item i : Bouton pour afficher des informations (auteurs et SDRAM).
 !end_itemize
 
-Pour surveiller la temp‚rature et remonter les courbes, le CPX :
+Pour surveiller la temp‚rature, remonter les courbes, mesurer la charge 
+CPU moyenne, arrˆter la machine, ou mettre en veille le moniteur 
+(sous Radeon/CTPCI), le CPX :
 
 !begin_itemize
 !item Sous TOS cr‚e l'accessoire CT60TEMP.ACC et demande de rebooter.
@@ -1646,7 +1649,15 @@ Sur cette page vous pouvez changer :
 double-cliquant sur ce seuil (offset TLV). 
 !end_itemize
 
-Remarque: Sur CT63, le niveau de temp‚rature reste … 0 (pont‚ par Rodolphe).
+Remarques:
+
+!begin_itemize
+!item Sur CT63, le niveau de temp‚rature reste … 0 (pont‚ par Rodolphe).
+!item Le seuil est sauv‚ dans le CPX avec le bouton 'Sauve' (et pas en NVRAM 
+ou dans les paramŠtres en flash). La gestion est faite par CT60TEMP.ACC/APP.
+!item Le d‚calage est ‚crit en NVRAM ou dans un paramŠtre en flash via 
+le bouton 'OK'.
+!end_itemize
 
 
 !subnode M‚moire / uP
@@ -1795,6 +1806,9 @@ d'un programme ou supprimer la boite d'alerte copyback.
 !item Avec une CTPCI inverser les deux ports IDE (CTPCI et FALCON).
 !end_itemize
 
+Remarque: Tous ces r‚glages sont ‚crits en NVRAM ou dans les paramŠtres en 
+flash via le bouton 'OK'.
+
 
 !subsubnode S‚lection TOS en RAM (obsolŠte)
 
@@ -1818,7 +1832,7 @@ n'existe pas quand cette option est supprim‚e.
 !end_itemize 
 
 
-!subnode Arrˆt
+!subnode Arrˆt/Divers
 
 !image cpx5.img
 !begin_verbatim
@@ -1833,6 +1847,25 @@ shutdown.
 !item Entrer l'heure d'arrˆt si le mode d'arrˆt est activ‚.
 !item Activer le bip d'alame de la phase d'arrˆt.
 !end_itemize
+
+!image cpx5_pci.img
+!begin_verbatim
+
+!end_verbatim
+
+Si l'affichage se fait via les Radeon/CTPCI vous pouvez :
+
+!begin_itemize
+!item S‚l‚ctionner le mode d'extinction programm‚e aprŠs une proc‚dure 
+shutdown.
+!item Entrer l'heure d'arrˆt si le mode d'arrˆt est activ‚.
+!item Activer le bip d'alame de la phase d'arrˆt.
+!item Mettre le moniteur en veille aprŠs un certain temps (inhib‚ si 0).
+!end_itemize
+
+Remarque: Tous ces r‚glages sont sauv‚s dans le CPX avec le bouton 'Sauve' 
+(et pas en NVRAM ou dans les paramŠtres en flash). La gestion est faite 
+par CT60TEMP.ACC/APP.
 
 
 !subnode Langage
@@ -1851,6 +1884,8 @@ Sur cette page vous pouvez :
 !item S‚lectionner au d‚marrage le format de l'heure 12 ou 24 heures.
 !item Choisir au d‚marrage le s‚parateur de date.
 !end_itemize
+
+Remarque: Tous ces r‚glages sont ‚crits en NVRAM via le bouton 'OK'.
 
 
 !subnode Vid‚o (boot)
@@ -1874,6 +1909,8 @@ Sur cette page vous pouvez :
 utiliser l'horloge IKBD au lieu du RTC. Cette possibilit‚ est la pour 
 corriger les problŠmes occasionn‚s par la pile us‚e.
 !end_itemize
+
+Remarque: Tous ces r‚glages sont ‚crits en NVRAM via le bouton 'OK'.
 
 !image cpx7_pci.img
 !begin_verbatim
@@ -1902,13 +1939,15 @@ utiliser l'horloge IKBD au lieu du RTC. Cette possibilit‚ est la pour
 corriger les problŠmes occasionn‚s par la pile us‚e.
 !end_itemize
 
-Remarque: Le mode pour les Radeon/CTPCI n'‚crase pas le mode Videl.
+Remarque: Le mode pour les Radeon/CTPCI n'‚crase pas le mode Videl, le mode 
+est ‚crit dans un paramŠtre en flash avec le bouton 'OK'.
 
 
 !subnode CT60TEMP.APP
 
-Ce programme est cr‚‚ par le CPX. Pour surveiller la temp‚rature et 
-remonter les courbes, le CPX : 
+Ce programme est cr‚‚ par le CPX. Pour surveiller la temp‚rature, remonter 
+les courbes, mesurer la charge CPU moyenne, arrˆter la machine, ou mettre en 
+veille le moniteur (sous Radeon/CTPCI), le CPX :
 
 !begin_itemize
 !item Sous TOS cr‚e l'accessoire CT60TEMP.ACC et demande de rebooter.
@@ -2244,8 +2283,14 @@ CTPCI        !! Les cartes PCI   !! Attendre une mise … jour hard de Rodolphe.
              !! USB/Ethernet ne  !!
              !! fonctionnent pas !!
 !hline
-Radeon       !! Ne fonctionne    !! Utiliser une Radeon pour PC. Le TOS utilise
-pour MAC     !! pas              !! un ‚mulateur X86 poour initialiser la carte.
+Radeon       !! Ne fonctionne    !! Utiliser une Radeon pour PC. 
+pour MAC     !! pas              !! Le TOS utilise un ‚mulateur X86 pour
+             !!                  !! initialiser la carte.
+!hline
+Radeon 7000  !! DVI ne fonctionne!! Il y a des problŠmes de temp‚rature si
+(RV100)      !! pas              !! l'horloge vid‚o d‚passe 135 MHz sur RV100.
+             !!                  !! Maintenant les modes les plus hauts sont
+             !!                  !! rejet‚s (drivers V1.01).
 !hline
 !end_table
 

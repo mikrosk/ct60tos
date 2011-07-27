@@ -4,7 +4,7 @@
 !title   Documentation of the
 !programimage ..\img\ct60.img
 !program CT60
-!version Version 2.00
+!version Version 2.01
 !date    (!today)
 !author  Didier MEQUIGNON
 !street  25, rue de l'Ascenseur
@@ -651,7 +651,7 @@ displayed.
 !item The fastram buffer created and his cookie '_FRB'.
 !item The extended fastram buffer created and his cookie 'XFRB'.
 !item Lot of infos displayed about the SDRAM module.
-!item The patch for the boot order of the drives IDE and SCSI (4 choices).
+!item The patch for the boot order of the drives IDE and SCSI (8 choices).
 !item Extra boot features :
 !begin_itemize
 !item Add identify device procedure for SCSI and IDE drives, the boot wait
@@ -1455,6 +1455,7 @@ case of CT60TOS.BIN isn't used.
 
 The second task is to update the CT60 hardware with two jedec files (.JED) 
 for ABE60, SDR60 and CTPCI chips (XILINX XC95144XL / XC95288XL CPLD). 
+The update V2.01 allows to program the ETHERNAT (XC9572XL). 
 
 !begin_itemize
 
@@ -1561,7 +1562,8 @@ ram and the flash parameters.
 !item i : Button for display informations (authors and SDRAM).
 !end_itemize
 
-For check the temperature and use curves, the CPX :
+For check the temperature, use curves, get a CPU average load, stop the 
+computer, or blank the screen (Radeon/CTPCI), the CPX :
 
 !begin_itemize
 !item Under TOS create a desk-accessory CT60TEMP.ACC and ask to reboot.
@@ -1569,7 +1571,7 @@ For check the temperature and use curves, the CPX :
 !item Under MagiC start a thread.
 !end_itemize
 
-Note: On the CT63, the temperature level is to 0 (hardware wired by Rodolphe).
+Note : On the CT63, the temperature level is to 0 (hardware wired by Rodolphe).
 
 
 !subnode Average load
@@ -1615,6 +1617,16 @@ At this page you can change :
 !item The trigger level for the temperature alarm.
 !item If necessary the offset of the analog converter on the CT60 with a 
 double-click on the level (offset TLV).
+!end_itemize
+
+Notes :
+
+!begin_itemize
+!item On the CT63, the temperature level is always at 0 (modification of 
+Rodolphe).
+!item The level is saved inside the CPX with the 'Save' button (and not 
+in NVRAM or flash parameters). It's CT60TEMP.ACC/APP feature.
+!item The offset is writed inside a flash parameter with the 'OK' button.
 !end_itemize
 
 
@@ -1746,7 +1758,7 @@ At this page you can :
 !item Select at boot the operating system by default.
 !item Select at boot the SCSI arbitration.
 !item Select at boot the SCSI identificator (0 to 7).
-!item Set the delay at boot in secondes (you need lot of time if you want test the 
+!item Set the delay at boot in seconds (you need lot of time if you want test the 
 ST-RAM and the SDRAM).
 !item Change the speed of the blitter.
 !item Set the transfer of TOS 4.0x in RAM with using of the PMMU (obsolete).
@@ -1757,6 +1769,9 @@ started or remove the copyback alert box.
 !image ..\img\cpx4_pci.img
 !item With a CTPCI swap the two IDE ports (CTPCI and FALCON).
 !end_itemize
+
+Note : Theses settings are writed inside the NVRAM or flash parameters with 
+the 'OK' button.
 
 
 !subsubnode Selection TOS in RAM (obsolete)
@@ -1778,7 +1793,8 @@ this option is removed.
 
 !end_itemize 
 
-!subnode Stop
+
+!subnode Stop/Misc
 
 !image ..\img\cpx5.img
 !begin_verbatim
@@ -1792,6 +1808,23 @@ At this page you can :
 !item Enter the time if the mode of stop is actived.
 !item Enable the alarm beep for the stop procedure.
 !end_itemize
+
+!image ..\img\cpx5_pci.img
+!begin_verbatim
+
+!end_verbatim
+
+If the video display use the Radeon/CTPCI you can :
+
+!begin_itemize
+!item Select the mode of the stop programmed after a shutdown procedure.
+!item Enter the time if the mode of stop is actived.
+!item Enable the alarm beep for the stop procedure.
+!item Set a delay for blank monitor (disabled if set to 0).
+!end_itemize
+
+Note : Theses settings are saved inside the CPX with the 'Save' button 
+(and not in NVRAM or flash parameters). It's CT60TEMP.ACC/APP features.
 
 
 !subnode Langage
@@ -1810,6 +1843,8 @@ At this page you can :
 !item Select at boot the time format 12 or 24 hours.
 !item Select at boot the date separator.
 !end_itemize
+
+Note : Theses settings are writed inside the NVRAM with the 'OK' button.
 
 
 !subnode Video
@@ -1833,12 +1868,14 @@ IKBD clock instead of the RTC. This feature is for fix NVM problems caused
 by a battery failure.
 !end_itemize
 
+Note : Theses settings are writed inside the NVRAM with the 'OK' button.
+
 !image ..\img\cpx7_pci.img
 !begin_verbatim
 
 !end_verbatim
 
-If the vid‚o display use the Radeon/CTPCI you can :
+If the video display use the Radeon/CTPCI you can :
 
 !begin_itemize
 !item Select at boot the screen resolution, if the prefered video mode is 
@@ -1860,13 +1897,14 @@ IKBD clock instead of the RTC. This feature is for fix NVM problems caused
 by a battery failure.
 !end_itemize
 
-Note that the Radeon/CTPCI mode not overwrite tthe Videl mode.
+Note : The Radeon/CTPCI mode not overwrite the Videl mode, the mode is 
+writed inside a flash parameter with the 'OK' button.
 
 
 !subnode CT60TEMP.APP
 
-This program is created by the CPX. For check the temperature and use 
-curves, the CPX : 
+This program is created by the CPX. For check the temperature, use curves, get a CPU average load, stop the 
+computer, or blank the screen (Radeon/CTPCI), the CPX :
 
 !begin_itemize
 !item Under TOS create a desk-accessory CT60TEMP.ACC and ask to reboot.
@@ -1981,7 +2019,7 @@ the new data.
 The 68060 has also an instruction cache, witch the direct link with the 
 data cache is only the memory. The result is than it's possible to obtain 
 incoherency between the data cache and the instruction cache. The example 
-is the exceution of a relocated program, without precaution and without 
+is the excecution of a relocated program, without precaution and without 
 system call this is a crash.
 
 The 68060 has the ability to watch or snoop the external bus during 
@@ -2194,8 +2232,12 @@ CTPCI        !! USB / Network   !! Wait an hardware update from Rodolphe.
              !! PCI boards not  !!
              !! works           !!
 !hline
-Radeon       !! Not works        !! Use a Radeon for PC. TOS use an X86 emulator
-for MAC      !!                  !! for initialize the board.
+Radeon       !! Not works       !! Use a Radeon for PC. TOS use an X86 emulator
+for MAC      !!                 !! for initialize the board.
+!hline
+Radeon 7000  !! DVI not work    !! Clocks over 135 MHz have heat isues with DVI
+(RV100)      !!                 !! on RV100.
+             !!                 !! Now high modes are rejected (drivers V1.01).
 !hline
 !end_table
 
@@ -3393,18 +3435,18 @@ Pin Card !! Signal !! Comment
 !subnode TOS Keyboard shortcuts
 
 !begin_verbatim
-CTRL:          If pressed before the Atari logo, jump the initialization
-               of the clock generator (CTCM) et le bios PCI (CTPCI).
+CTRL:          If pressed before the Atari logo, jump the init
+               of the clock generator (CTCM) and the bios PCI (CTPCI).
                Boot without AUTO folder and ACC.
-ALT:           If pressed before the Atari logo, jump the initialization
-               of the clock generator (CTCM) et le bios PCI (CTPCI).
+ALT:           If pressed before the Atari logo, jump the init
+               of the clock generator (CTCM) and the bios PCI (CTPCI).
                Remove cache if pressed before the SDRAM init.
                Boot without disk if pressed after.
 SHIFTL-SHIFTR: Boot without SDRAM if pressed before the Atari logo.
 SHIFTL:        Displays infos about the SDRAM module.
-CTRL-ALT-UNDO: NVM and Flash Parameters init if pressed during the memory 
-               test until the Reset. You need to set the delay at boot to 
-               60 seconds with the configuration CPX. 
+CTRL-ALT-UNDO: NVM and Flash Parameters init if pressed during the 
+               memory test until the Reset. You need to set the delay 
+               at boot to 60 seconds with the configuration CPX. 
 CTRL-ALT-
 SHIFTL-SHIFTR: Start the Atari Diagnostics if pressed before the Atari 
                logo (if not overwrited by drivers.hex).  

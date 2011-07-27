@@ -74,7 +74,7 @@ void CDECL c_set_colours_16(Virtual *vwk, long start, long entries, unsigned sho
 	int i;
 	if((long)requested & 1)
 	{			/* New entries? */
-		requested = (short *)((long)requested & 0xfffffffeL);
+		requested = (unsigned short *)((long)requested & 0xfffffffeL);
 		for(i = 0; i < entries; i++)
 		{
 			requested++;				/* First word is reserved */

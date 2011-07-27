@@ -374,7 +374,7 @@ resolv_query(char *name, void (*found)(char *name, struct ip_addr *addr))
 {
   static u8_t i;
   static u8_t lseq, lseqi;
-  register DNS_TABLE_ENTRY *pEntry;
+  register DNS_TABLE_ENTRY *pEntry = NULL;
 
   lseq = lseqi = 0;
 

@@ -269,7 +269,7 @@ long    ni(void)
 void    osinit(void)
 {
     /* take over the handling of TRAP #1 */
-    Setexc(0x21, (long)enter);
+    (void)Setexc(0x21, (long)enter);
     /* intercept TRAP #2 only for xterm(), keeping the old value
      * so that our trap handler can call the old one
      */

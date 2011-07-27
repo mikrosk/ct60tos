@@ -219,7 +219,7 @@ struct fb_bitfield {
 #define FB_CHANGE_CMAP_VBL     32	/* change colormap on vbl	*/
 #define FB_ACTIVATE_ALL	       64	/* change all VCs on this fb	*/
 #define FB_ACTIVATE_FORCE     128	/* force apply even when no change*/
-#define FB_ACTIVATE_INV_MODE  256       /* invalidate videomode */
+#define FB_ACTIVATE_INV_MODE  256 /* invalidate videomode */
 
 #define FB_ACCELF_TEXT		1	/* (OBSOLETE) see fb_info.flags and vc_mode */
 
@@ -448,6 +448,7 @@ struct fb_ops {
 	void (*HideCursor)(struct fb_info *info);
 	void (*ShowCursor)(struct fb_info *info);
 	long (*CursorInit)(struct fb_info *info);
+	void (*WaitVbl)(struct fb_info *info);
 };
 
 struct fb_info {

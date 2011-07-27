@@ -278,10 +278,10 @@ long    log_(BPB *b, short drv)
 
 static short log2(short n)
 {
-    short i;
+    unsigned short i, nn = (unsigned short)n;
 
-    for (i = 0; n ; i++) {
-        (unsigned short)n >>= 1;
+    for (i = 0; nn ; i++) {
+        nn >>= 1;
     }
 
     return(i-1);
