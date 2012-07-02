@@ -11,7 +11,6 @@
 #include "console.h"
 #include "gemerror.h"
 
-#ifdef NETWORK
 #ifdef LWIP
 
 extern void xSemaphoreTakeBDOS(void);
@@ -555,4 +554,3 @@ void Fdatime(short *timeptr, long handle, long wflag)
 }
 
 #endif /* LWIP */
-#endif /* NETWORK */

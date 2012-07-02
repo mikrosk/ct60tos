@@ -67,7 +67,7 @@
 #endif
 
 extern void udelay(long usec);
-extern long install_usb_stor(int dev_num, unsigned long part_type, unsigned long part_offset, unsigned long part_size, char *vendor, char *revision, char *product);
+extern long install_usb_stor(int dev_num, unsigned long part_type, unsigned long part_offset, unsigned long part_size, char *vendor, char *revision, char *product, unsigned long number_of_blocks, unsigned long block_size);
 extern void uninstall_usb_stor(int dev_num);
 
 /* direction table -- this indicates the direction of the data
@@ -469,7 +469,8 @@ int usb_stor_scan(void)
 			usb_stor_register(dev);
 		} /* for */
 	} /* for */
-	board_printf("%d Storage Device(s) found\r\n", usb_max_devs);
+	if(usb_max_devs)
+		board_printf("%d Storage Device(s) found\r\n\n", usb_max_devs);
 	if(usb_max_devs > 0)
 		return 0;
 	return -1;
@@ -519,12 +520,33 @@ int usb_stor_register(struct usb_device *dev)
 			{
 				int part_num = 1;
 				unsigned long part_type, part_offset, part_size;
+				long drive;
+#if (defined(COLDFIRE) && defined(LWIP)) || defined(FREERTOS)
+				extern unsigned long pxCurrentTCB, tid_TOS;
+				char msg[256];
+				int first = 1;
+				sprintD(msg, "\rUSB MASS STORAGE %s %s detection, disk(s) ", dev->mf /* stor_dev->vendor */, dev->prod /* stor_dev->product */);
+#endif /* (defined(COLDFIRE) && defined(LWIP)) || defined(FREERTOS) */
 				while(!fat_register_device(stor_dev, part_num, &part_type, &part_offset, &part_size))
 			  {
 					USB_STOR_PRINTF("USB STORAGE install partition dev: %d\r\n", usb_max_devs);
-					install_usb_stor(usb_max_devs, part_type, part_offset, part_size, stor_dev->vendor, stor_dev->revision, stor_dev->product);
+					drive = install_usb_stor(usb_max_devs, part_type, part_offset, part_size, dev->mf /* stor_dev->vendor */, stor_dev->revision, dev->prod /* stor_dev->product */, (unsigned long)stor_dev->lba, stor_dev->blksz);
+#if (defined(COLDFIRE) && defined(LWIP)) || defined(FREERTOS)
+					if(drive)
+					{
+						if(first)
+							first = 0;
+						else
+							strcat(msg, ", ");
+						sprintD(&msg[strlen(msg)], "%c (type %02X, %d MB)", (char)drive + 'A', part_type, (part_size + 1023) >> 11);
+					}
+#endif /* (defined(COLDFIRE) && defined(LWIP)) || defined(FREERTOS) */
 					part_num++;
 				}		
+#if (defined(COLDFIRE) && defined(LWIP)) || defined(FREERTOS)
+				if(pxCurrentTCB != tid_TOS)
+					usb_error_msg(msg);
+#endif /* (defined(COLDFIRE) && defined(LWIP)) || defined(FREERTOS) */
 			}
 			usb_max_devs++;			
 			dev->deregister = usb_stor_deregister;
@@ -1328,6 +1350,40 @@ long usb_stor_read(int device, unsigned long blknr, unsigned long blkcnt, void *
 		usb_disable_asynch(0); /* asynch transfer allowed */
 		return -2;
 	}
+#if 0 // #ifndef COLDFIRE
+	if(buf_addr < 0x1000000) /* ST-RAM */
+	{
+		USB_STOR_PRINTF("usb_read: dev %d startblk %lx, blccnt %lx buffer %lx\r\n", device, start, blks, buf_addr);	
+		do
+		{
+			/* XXX need some comment here */
+			retry = 2;
+			if(blks > USB_MAX_READ_BLK)
+				smallblks = USB_MAX_READ_BLK;
+			else
+				smallblks = (unsigned short)blks;
+retry_it_bis:
+			srb->datalen = usb_dev_desc[device].blksz * smallblks;
+			srb->pdata = (unsigned char *)buf_addr;
+			if(usb_read_10(srb, (struct us_data *)dev->privptr, start, smallblks))
+			{
+				USB_STOR_PRINTF("Read ERROR\r\n");
+				usb_request_sense(srb, (struct us_data *)dev->privptr);
+				if(retry--)
+					goto retry_it_bis;
+				blkcnt -= blks;
+				break;
+			}
+			start += smallblks;
+			blks -= smallblks;
+			buf_addr += srb->datalen;
+		}
+		while(blks != 0);
+		USB_STOR_PRINTF("usb_read: end startblk %lx, blccnt %x buffer %lx\r\n", start, smallblks, buf_addr);
+		usb_disable_asynch(0); /* asynch transfer allowed */
+		return blkcnt;
+	}
+#endif /* COLDFIRE */
 	tmp_buf = (unsigned char *)usb_malloc(USB_MAX_READ_BLK * usb_dev_desc[device].blksz);
 	if(tmp_buf == NULL)
 	{
@@ -1409,6 +1465,40 @@ long usb_stor_write(int device, unsigned long blknr, unsigned long blkcnt, const
 		usb_disable_asynch(0); /* asynch transfer allowed */
 		return -2;
 	}
+#if 0 // #ifndef COLDFIRE
+	if(buf_addr < 0x1000000) /* ST-RAM */
+	{
+		USB_STOR_PRINTF("usb_write: dev %d startblk %lx, blccnt %lx buffer %lx\r\n", device, start, blks, buf_addr);
+		do
+		{
+			/* XXX need some comment here */
+			retry = 2;
+			if(blks > USB_MAX_READ_BLK)
+				smallblks = USB_MAX_READ_BLK;
+			else
+				smallblks = (unsigned short)blks;
+retry_it_bis:
+			srb->datalen = usb_dev_desc[device].blksz * smallblks;
+			srb->pdata = (unsigned char *)buf_addr;
+			if(usb_write_10(srb, (struct us_data *)dev->privptr, start, smallblks))
+			{
+				USB_STOR_PRINTF("Write ERROR\r\n");
+				usb_request_sense(srb, (struct us_data *)dev->privptr);
+				if(retry--)
+					goto retry_it_bis;
+				blkcnt -= blks;
+				break;
+			}
+			start += smallblks;
+			blks -= smallblks;
+			buf_addr += srb->datalen;
+		}
+		while(blks != 0);
+		USB_STOR_PRINTF("usb_write: end startblk %lx, blccnt %x buffer %lx\r\n", start, smallblks, buf_addr);
+		usb_disable_asynch(0); /* asynch transfer allowed */
+		return blkcnt;
+	}
+#endif /* COLDFIRE */
 	tmp_buf = (unsigned char *)usb_malloc(USB_MAX_READ_BLK * usb_dev_desc[device].blksz);
 	if(tmp_buf == NULL)
 	{

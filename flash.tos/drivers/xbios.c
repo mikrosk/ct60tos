@@ -1,6 +1,6 @@
 /* TOS 4.04 Xbios calls for the CT60/CTPCI & Coldfire boards
  * Coldfire Xbios AC97 Sound 
- * Didier Mequignon 2005-2011, e-mail: aniplay@wanadoo.fr
+ * Didier Mequignon 2005-2012, e-mail: aniplay@wanadoo.fr
  *
  * This file is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -26,11 +26,9 @@
 #include "radeon/radeonfb.h"
 #include "lynx/smi.h"
 #include "ct60.h"
-#ifdef NETWORK
 #ifdef COLDFIRE
 #ifndef MCF5445X
 #include "ac97/mcf548x_ac97.h"
-#endif
 #endif
 #endif
 
@@ -40,7 +38,7 @@ extern long call_enumfunc(long (*enumfunc)(SCREENINFO *inf, long flag), SCREENIN
 extern long init_videl(long width, long height, long bpp, long freq, long extended);
 extern void setrgb_videl(long index, long rgb, long type);
 #endif
-#if defined(COLDFIRE) && defined(NETWORK) && defined(LWIP)
+#if defined(COLDFIRE) && defined(LWIP)
 extern void board_printf(const char *fmt, ...);
 #else
 #define board_printf kprint
@@ -82,6 +80,9 @@ extern const struct fb_videomode modedb[];
 extern const struct fb_videomode vesa_modes[];
 extern long total_modedb;
 extern short video_found, video_log, os_magic, memory_ok, drive_ok;
+#ifdef USE_RADEON_MEMORY
+extern short lock_video;
+#endif
 long fix_modecode, second_screen, second_screen_aligned, log_addr;
 
 static short modecode_magic;
@@ -90,7 +91,7 @@ static long bios_colors[256];
 /* some XBIOS functions for the video driver */
 
 #ifdef RADEON_RENDER
-int display_composite_texture(long op, char *src_tex, long src_x, long src_y, long w_tex, long h_tex, long dst_x, long dst_y, long width, long height)
+int display_composite_texture(long op, unsigned char *src_tex, long src_x, long src_y, long w_tex, long h_tex, long dst_x, long dst_y, long width, long height)
 {
 	struct fb_info *info = info_fvdi;
 	unsigned long dstFormat;
@@ -442,7 +443,7 @@ void display_atari_logo(void)
 #ifdef RADEON_RENDER
 	if(video_found && (info->screen_mono == NULL) && (bpp >= 16) && (info->fbops->SetupForCPUToScreenTexture != NULL))
 	{
-		buf_tex = (char *)Malloc(HEIGHT_LOGO * WIDTH_LOGO * 4);
+		buf_tex = (unsigned char *)Malloc(HEIGHT_LOGO * WIDTH_LOGO * 4);
 		if(buf_tex != NULL)
 		{
 			incr = WIDTH_LOGO * 4;
@@ -780,6 +781,8 @@ void init_screen_info(SCREENINFO *si, long modecode)
 	char buf[16];
 	long flags = 0;
 	struct fb_info *info = info_fvdi;
+	if(si->size < sizeof(SCREENINFO) - 8)
+		return;
 	switch(modecode & NUMCOLS)
 	{
 #ifndef COLDFIRE
@@ -956,7 +959,7 @@ void init_screen_info(SCREENINFO *si, long modecode)
 	si->max_y = 8192; /* max. possible heigth/width ??? */
 	si->maxmem = si->max_x * si->max_y * (si->scrPlanes / 8);
 	si->pagemem = vgetsize(modecode);
-	if(!si->devID)
+	if(!si->devID && si->size && (si->size >= sizeof(SCREENINFO)))
 	{
 		if(info->var.refresh)
 			si->refresh = info->var.refresh;
@@ -1280,6 +1283,10 @@ long vsetscreen(long logaddr, long physaddr, long rez, long modecode, long init_
 					modecode = physaddr;
 					rez = 3;
 					logaddr = physaddr = 0;
+#ifdef USE_RADEON_MEMORY
+					if(lock_video)
+						return(0);
+#endif
 					switch(modecode & NUMCOLS)
 					{
 #ifndef COLDFIRE
@@ -1483,6 +1490,10 @@ long vsetscreen(long logaddr, long physaddr, long rez, long modecode, long init_
 				case CMD_TESTMODE:
 					if(milan_mode)
 						return(0);
+#ifdef USE_RADEON_MEMORY
+					if(lock_video)
+						return(0);
+#endif
 					modecode = physaddr;
 					logaddr = physaddr = 0;
 					rez = 3;
@@ -1573,7 +1584,7 @@ long vsetscreen(long logaddr, long physaddr, long rez, long modecode, long init_
 					{
 						SCRTEXTUREMEMBLK *blk = (SCRTEXTUREMEMBLK *)physaddr;
 #ifdef RADEON_RENDER
-						if(display_composite_texture(blk->blk_op, (char *)blk->blk_src_tex, blk->blk_src_x, blk->blk_src_y, blk->blk_w_tex, blk->blk_h_tex, blk->blk_dst_x, blk->blk_dst_y, blk->blk_w, blk->blk_h))
+						if(display_composite_texture(blk->blk_op, (unsigned char *)blk->blk_src_tex, blk->blk_src_x, blk->blk_src_y, blk->blk_w_tex, blk->blk_h_tex, blk->blk_dst_x, blk->blk_dst_y, blk->blk_w, blk->blk_h))
 							blk->blk_status = BLK_OK;
 						else
 #endif
@@ -1677,6 +1688,10 @@ long vsetscreen(long logaddr, long physaddr, long rez, long modecode, long init_
 		case 2: /* ST-HIG */
 			if(os_magic == 1)
 				return(Mode);
+#ifdef USE_RADEON_MEMORY
+			if(lock_video)
+				return(Mode);
+#endif
 			resolution.width = 640;
 			resolution.height = 400;
 			resolution.bpp = 1;
@@ -1687,6 +1702,17 @@ long vsetscreen(long logaddr, long physaddr, long rez, long modecode, long init_
 			break;
 #endif
 		case 3:
+#ifdef USE_RADEON_MEMORY
+			if(lock_video)
+			{
+				if(init_vdi)
+				{
+					init_var_linea((long)video_found);
+					init_screen();
+				}
+				return(0);
+			}
+#endif
 			switch(modecode & NUMCOLS)
 			{
 #ifndef COLDFIRE
@@ -1728,7 +1754,7 @@ long vsetscreen(long logaddr, long physaddr, long rez, long modecode, long init_
 	if(((!logaddr && !physaddr) || ((logaddr == -1) && (physaddr == -1))) && (rez >= 0))
 	{
 		resolution.used = 1;
-#if defined(DEBUG) && defined(COLDFIRE) && defined(NETWORK) && defined(LWIP)
+#if defined(DEBUG) && defined(COLDFIRE) && defined(LWIP)
 		if(init_vdi)
 			board_printf("Setscreen mode 0x%04X %dx%d-%d@%d\r\n", Mode, resolution.width, resolution.height, resolution.bpp, resolution.freq);
 #endif
@@ -1769,7 +1795,7 @@ long vsetscreen(long logaddr, long physaddr, long rez, long modecode, long init_
 			else if(!test) /* error */
 			{
 				long addr;
-#if defined(DEBUG) && defined(COLDFIRE) && defined(NETWORK) && defined(LWIP)
+#if defined(DEBUG) && defined(COLDFIRE) && defined(LWIP)
 				board_printf("Setscreen init_videl error mode 0x%04X %dx%d-%d@%d, try to use default 640x480\r\n", Mode, resolution.width, resolution.height, resolution.bpp, resolution.freq);
 #endif
 				resolution.width = 640;
@@ -2323,7 +2349,6 @@ long InitVideo(void) /* test for Video input */
 	return(0);
 }
 
-#ifdef NETWORK
 #ifdef COLDFIRE
 #ifndef MCF5445X
 
@@ -3281,33 +3306,37 @@ long buffptr(SndBufPtr *ptr)
 
 long InitSound(long type_gsxb)
 {
-	if(!mcf548x_ac97_install(AC97_DEVICE))
+	int i;
+	for(i = 0; i < 2; i++)
 	{
-		COOKIE mcsn;
-		COOKIE gsxb;
-		COOKIE *p = get_cookie('_SND');
-		if(p != 0)
+		if(!mcf548x_ac97_install(AC97_DEVICE))
 		{
-			p->v.l &= 0x9;  /* preserve PSG & DSP bits */
+			COOKIE mcsn;
+			COOKIE gsxb;
+			COOKIE *p = get_cookie('_SND');
+			if(p != 0)
+			{
+				p->v.l &= 0x9;  /* preserve PSG & DSP bits */
 #ifdef MCF547X
-			p->v.l |= 0x27; /* bit 5: extended mode, bit 2: 16 bits DMA, bit 1: 8 bits DMA, bit 0: YM2149 */
+				p->v.l |= 0x27; /* bit 5: extended mode, bit 2: 16 bits DMA, bit 1: 8 bits DMA, bit 0: YM2149 */
 #else
-			p->v.l |= 0x26; /* bit 5: extended mode, bit 2: 16 bits DMA, bit 1: 8 bits DMA */
+				p->v.l |= 0x26; /* bit 5: extended mode, bit 2: 16 bits DMA, bit 1: 8 bits DMA */
 #endif
+			}
+			mcsn.ident = 'McSn';
+			mcsn.v.l = (long)&cookie_mac_sound;
+			add_cookie(&mcsn);
+			if(type_gsxb)
+			{
+				gsxb.ident = 'GSXB';
+				gsxb.v.l = 0;
+				add_cookie(&gsxb);
+			}
+			flag_snd_init = 1;
+			flag_gsxb = type_gsxb;
+			sndstatus(SND_RESET);
+			return(0); // OK
 		}
-		mcsn.ident = 'McSn';
-		mcsn.v.l = (long)&cookie_mac_sound;
-		add_cookie(&mcsn);
-		if(type_gsxb)
-		{
-			gsxb.ident = 'GSXB';
-			gsxb.v.l = 0;
-			add_cookie(&gsxb);
-		}
-		flag_snd_init = 1;
-		flag_gsxb = type_gsxb;
-		sndstatus(SND_RESET);
-		return(0); // OK
 	}
 	flag_snd_init = 0;
 	return(-1); // error
@@ -3324,5 +3353,4 @@ long InitSound(long gsxb)
 
 #endif /* MCF5445X */
 #endif /* COLDFIRE */
-#endif /* NETWORK */
 

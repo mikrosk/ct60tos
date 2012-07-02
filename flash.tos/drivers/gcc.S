@@ -4,6 +4,7 @@
 #define EQUAL   0
 
 /* TOS 4.04 calls */
+#define _form_alert_tos 0xE22A68
 #define _form_center_tos 0xE491BE
 #define _form_dial_tos 0xE49180
 #define _form_do_tos 0xE49164
@@ -20,7 +21,7 @@
 #define _gr_slidebox 0xE2574E
 #define _copy16 0xE49216
 
-	.global _form_center,_form_dial,_form_do
+	.global _form_alert,_form_center,_form_dial,_form_do
 	.global _objc_draw,_objc_offset
 	.global _menu_icheck,_menu_popup
 	.global _wind_get,_wind_update
@@ -265,6 +266,16 @@ ___isnanf:
 
 #endif /* MCF5445X */
 #endif /* COLDFIRE */
+
+// short form_alert(short fo_adefbttn, char *fo_astring)
+_form_alert:
+	move.l 4(SP),D0
+	move.l 8(SP),A0
+	pea (A0)
+	mov.w D0,-(SP)
+	jsr _form_alert_tos
+	addq.l #6,SP
+	rts
 
 // short form_center(OBJECT *fo_ctree, short *fo_cx, short *fo_cy, short *fo_cw, short *fo_ch)
 _form_center:

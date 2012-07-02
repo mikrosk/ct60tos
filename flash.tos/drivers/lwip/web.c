@@ -58,7 +58,6 @@
 #define Tgetdate() *(unsigned short *)0x1176
 #define Tgettime() *(unsigned short *)0x1178
 
-#ifdef NETWORK
 #ifdef LWIP
 
 #ifdef MCF5445X /* MCF5445X has no FPU */
@@ -4404,4 +4403,3 @@ void vBasicWEBServer(void *pvParameters)
 }
 
 #endif /* LWIP */
-#endif /* NETWORK */

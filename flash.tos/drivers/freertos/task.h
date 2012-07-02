@@ -965,6 +965,16 @@ void vTaskMissedYield( void );
 portBASE_TYPE xTaskGetSchedulerState( void );
 
 /*
+ * Return the handle from the task name.
+ */ 
+xTaskHandle xTaskGetTaskHandleFromName( const signed portCHAR * const pcName ); 
+
+/*
+ * Return the task name from the TCB number. 
+ */
+signed portCHAR * pTaskGetTraceName( unsigned portBASE_TYPE uxTCBNumber );
+
+/*
  * Return if the task runs in Supervisor
  */
 signed portBASE_TYPE xTaskIsSuper( void );

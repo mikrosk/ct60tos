@@ -17,7 +17,6 @@
 
 #include "mem.h"
 
-#ifdef NETWORK
 #ifdef LWIP
 
 /* ------------------------ Static variables ------------------------------ */
@@ -259,4 +258,3 @@ nbuf_t *nbuf_tx_free(uint8 ch)
 }
 
 #endif /* LWIP */
-#endif /* NETWORK */

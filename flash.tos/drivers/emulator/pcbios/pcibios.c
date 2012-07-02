@@ -1,22 +1,22 @@
-#include <config.h>
-#include <osbind.h>
+#include "../../radeon/radeonfb.h"
+#include <mint/osbind.h>
 #include <pcixbios.h>
 #include <x86emu/x86emu.h>
-#include "../../radeon/radeonfb.h"
+#include "../../include/pci_bios.h" /* for PCI_MAX_FUNCTION */
 #include "pcibios.h"
 
 extern unsigned short offset_port;
 
 #ifdef COLDFIRE
 #ifndef PCI_XBIOS
-#define PCI_XBIOS // else sometimes system is locked ???
+//#define PCI_XBIOS // else sometimes system is locked ???
 #endif
 #endif
 
 int pcibios_handler()
 {
 	int ret = 0;
-	static long dev;
+	unsigned long dev =  (((unsigned long)X86_BH << 16) * PCI_MAX_FUNCTION) + ((unsigned long)X86_BL >> 3);
 
 	switch (X86_AX) {
 	case PCI_BIOS_PRESENT:
@@ -47,7 +47,7 @@ int pcibios_handler()
 #ifdef DEBUG_X86EMU_PCI
 			DPRINT(" ... OK\r\n");		
 #endif
-			X86_BH = 0; // dev->bus->secondary;
+			X86_BH = (char)((dev >> 16) / PCI_MAX_FUNCTION); // dev->bus->secondary;
 			X86_BL = (char)dev; // dev->path.u.pci.devfn;
 			X86_AH = SUCCESSFUL;
 			X86_EFLAGS &= ~FB_CF;	/* clear carry flag */
@@ -75,7 +75,7 @@ int pcibios_handler()
 #ifdef DEBUG_X86EMU_PCI
 			DPRINT(" ... OK\r\n");		
 #endif
-			X86_BH = 0; // dev->bus->secondary;
+			X86_BH = (char)((dev >> 16) / PCI_MAX_FUNCTION); // dev->bus->secondary;
 			X86_BL = (char)dev; // dev->path.u.pci.devfn;
 			X86_AH = SUCCESSFUL;
 			X86_EFLAGS &= ~FB_CF;	/* clear carry flag */
@@ -92,13 +92,14 @@ int pcibios_handler()
 	case READ_CONFIG_BYTE:
 		// bus, devfn
 #ifdef DEBUG_X86EMU_PCI
-		DPRINTVAL("READ_CONFIG_BYTE devfn ", X86_BL);
+		DPRINTVAL("READ_CONFIG_BYTE bus ", X86_BH);
+		DPRINTVAL(" devfn ", X86_BL);
 		DPRINTVALHEX(" reg ", X86_DI);
 #endif
 #ifdef PCI_XBIOS
-		X86_CL = fast_read_config_byte((long)X86_BL, X86_DI);
+		X86_CL = fast_read_config_byte(dev, X86_DI);
 #else
-		X86_CL = Fast_read_config_byte((long)X86_BL, X86_DI);
+		X86_CL = Fast_read_config_byte(dev, X86_DI);
 #endif
 #ifdef DEBUG_X86EMU_PCI
 		DPRINTVALHEX(" value ", X86_CL);
@@ -111,16 +112,17 @@ int pcibios_handler()
 	case READ_CONFIG_WORD:
 		// bus, devfn
 #ifdef DEBUG_X86EMU_PCI
-		DPRINTVAL("READ_CONFIG_WORD devfn ", X86_BL);
+		DPRINTVAL("READ_CONFIG_WORD bus ", X86_BH);
+		DPRINTVAL(" devfn ", X86_BL);
 		DPRINTVALHEX(" reg ", X86_DI);
 #endif
 		if(X86_DI == PCIBAR1)
 			X86_CX = offset_port+1;
 		else
 #ifdef PCI_XBIOS
-			X86_CX = fast_read_config_word((long)X86_BL, X86_DI);
+			X86_CX = fast_read_config_word(dev, X86_DI);
 #else
-			X86_CX = Fast_read_config_word((long)X86_BL, X86_DI);
+			X86_CX = Fast_read_config_word(dev, X86_DI);
 #endif
 #ifdef DEBUG_X86EMU_PCI
 		DPRINTVALHEX(" value ", X86_CX);
@@ -133,16 +135,17 @@ int pcibios_handler()
 	case READ_CONFIG_DWORD:
 		// bus, devfn
 #ifdef DEBUG_X86EMU_PCI
-		DPRINTVAL("READ_CONFIG_DWORD devfn ", X86_BL);
+		DPRINTVAL("READ_CONFIG_DWORD bus ", X86_BH);
+		DPRINTVAL(" devfn ", X86_BL);
 		DPRINTVALHEX(" reg ", X86_DI);
 #endif
 		if(X86_DI == PCIBAR1)
 			X86_CX = (unsigned long)offset_port+1;
 		else
 #ifdef PCI_XBIOS
-			X86_ECX = fast_read_config_longword((long)X86_BL, X86_DI);
+			X86_ECX = fast_read_config_longword(dev, X86_DI);
 #else
-			X86_ECX = Fast_read_config_longword((long)X86_BL, X86_DI);
+			X86_ECX = Fast_read_config_longword(dev, X86_DI);
 #endif
 #ifdef DEBUG_X86EMU_PCI
 		DPRINTVALHEX(" value ", X86_ECX);
@@ -155,14 +158,15 @@ int pcibios_handler()
 	case WRITE_CONFIG_BYTE:
 		// bus, devfn
 #ifdef DEBUG_X86EMU_PCI
-		DPRINTVAL("READ_CONFIG_BYTE devfn ", X86_BL);
+		DPRINTVAL("READ_CONFIG_BYTE bus ", X86_BH);
+		DPRINTVAL(" devfn ", X86_BL);
 		DPRINTVALHEX(" reg ", X86_DI);
 		DPRINTVALHEX(" value ", X86_CL);
 #endif
 #ifdef PCI_XBIOS
-		if((ret=write_config_byte((long)X86_BL, X86_DI, X86_CL)) == 0) {
+		if((ret=write_config_byte(dev, X86_DI, X86_CL)) == 0) {
 #else
-		if((ret=Write_config_byte((long)X86_BL, X86_DI, X86_CL)) == 0) {
+		if((ret=Write_config_byte(dev, X86_DI, X86_CL)) == 0) {
 #endif
 #ifdef DEBUG_X86EMU_PCI
 			DPRINT(" ... OK\r\n");
@@ -183,7 +187,8 @@ int pcibios_handler()
 	case WRITE_CONFIG_WORD:
 		// bus, devfn
 #ifdef DEBUG_X86EMU_PCI
-		DPRINTVAL("WRITE_CONFIG_WORD devfn ", X86_BL);
+		DPRINTVAL("WRITE_CONFIG_WORD bus ", X86_BH);
+		DPRINTVAL(" devfn ", X86_BL);
 		DPRINTVALHEX(" reg ", X86_DI);
 		DPRINTVALHEX(" value ", X86_CX);
 #endif
@@ -198,9 +203,9 @@ int pcibios_handler()
 			break;
 		}
 #ifdef PCI_XBIOS
-		if((ret=write_config_word((long)X86_BL, X86_DI, X86_CX)) == 0) {
+		if((ret=write_config_word(dev, X86_DI, X86_CX)) == 0) {
 #else
-		if((ret=Write_config_word((long)X86_BL, X86_DI, X86_CX)) == 0) {
+		if((ret=Write_config_word(dev, X86_DI, X86_CX)) == 0) {
 #endif
 #ifdef DEBUG_X86EMU_PCI
 			DPRINT(" ... OK\r\n");
@@ -221,7 +226,8 @@ int pcibios_handler()
 	case WRITE_CONFIG_DWORD:
 		// bus, devfn
 #ifdef DEBUG_X86EMU_PCI
-		DPRINTVAL("WRITE_CONFIG_DWORD devfn ", X86_BL);
+		DPRINTVAL("WRITE_CONFIG_DWORD bus ", X86_BH);
+		DPRINTVAL(" devfn ", X86_BL);
 		DPRINTVALHEX(" reg ", X86_DI);
 		DPRINTVALHEX(" value ", X86_ECX);
 #endif
@@ -236,9 +242,9 @@ int pcibios_handler()
 			break;
 		}
 #ifdef PCI_XBIOS
-		if((ret=write_config_longword((long)X86_BL, X86_DI, X86_ECX)) == 0) {
+		if((ret=write_config_longword(dev, X86_DI, X86_ECX)) == 0) {
 #else
-		if((ret=Write_config_longword((long)X86_BL, X86_DI, X86_ECX)) == 0) {
+		if((ret=Write_config_longword(dev, X86_DI, X86_ECX)) == 0) {
 #endif
 #ifdef DEBUG_X86EMU_PCI
 			DPRINT(" ... OK\r\n");		

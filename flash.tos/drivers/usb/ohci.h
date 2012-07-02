@@ -432,6 +432,7 @@ typedef struct ohci {
 	ed_t *ed_controltail;	 /* last endpoint of control list */
 	int intrstatus;
 	__u32 hc_control;		/* copy of the hc control reg */
+	__u32 ndp;          /* copy NDP from roothub_a */
 	struct virt_root_hub rh;
 
 	const char *slot_name;

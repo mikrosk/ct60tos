@@ -6,7 +6,6 @@
 #include "usb.h"
 
 #ifdef USB_DEVICE
-#ifdef NETWORK
 #ifdef LWIP
 
 /* Global Endpoint Status Structures */
@@ -1940,5 +1939,4 @@ void usb_sendZLP(uint32 epnum)
 }
 
 #endif /* LWIP */
-#endif /* NETWORK */
 #endif /* USB_DEVICE */

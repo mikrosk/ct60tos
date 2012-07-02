@@ -1,3 +1,5 @@
+#undef mc68000
+
 //  ifb	stack
 	.global	stack_address
 	.global	vdi_stack

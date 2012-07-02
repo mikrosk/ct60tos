@@ -34,7 +34,6 @@
 #include "gs_mem.h"
 #include "gs_stik.h"
 
-#ifdef NETWORK
 #ifdef LWIP
 
 extern int errno;
@@ -111,7 +110,7 @@ static long gs_read_socket (int fd, void *buf, int size)
 	int ret, n, len, avail, bytes = 0;
 	GS *gs = gs_get (fd);
 
-	if (gs->flags & GS_NOSOCKET)
+	if (!gs || (gs->flags & GS_NOSOCKET))
 	{
 		PRINT_DEBUG (("read_socket: bad handle"));
 		return E_BADHANDLE;
@@ -240,7 +239,7 @@ int gs_accept (int fd)
 	PRINT_DEBUG (("gs_accept(%i)", fd));
 	
 	if (!gs
-		|| gs->flags & GS_NOSOCKET
+		|| (gs->flags & GS_NOSOCKET)
 		|| !(gs->flags & GS_LISTENING))
 	{
 		PRINT_DEBUG (("gs_accept: bad handle"));
@@ -317,7 +316,7 @@ int gs_establish (int fd)
 	
 	PRINT_DEBUG (("gs_establish(%i)", fd));
 	
-	if (!gs || gs->flags & GS_NOSOCKET || !(gs->flags & GS_PEND_OPEN))
+	if (!gs || (gs->flags & GS_NOSOCKET) || !(gs->flags & GS_PEND_OPEN))
 	{
 		PRINT_DEBUG (("gs_establish: bad handle"));
 		return E_BADHANDLE;
@@ -612,7 +611,7 @@ long gs_canread (int fd)
 	
 	PRINT_DEBUG (("gs_canread(%i)", fd));
 	
-	if (gs->flags & GS_NOSOCKET)
+	if (!gs || (gs->flags & GS_NOSOCKET))
 	{
 		PRINT_DEBUG (("gs_canread: bad handle"));
 		return E_BADHANDLE;
@@ -720,7 +719,7 @@ NDB *gs_readndb (int fd)
 	
 	PRINT_DEBUG (("gs_readndb(%i)", fd));
 	
-	if (gs->flags & GS_NOSOCKET)
+	if (!gs || (gs->flags & GS_NOSOCKET))
 	{
 		PRINT_DEBUG (("gs_readndb: bad handle"));
 		return NULL;
@@ -793,7 +792,7 @@ long gs_write (int fd, char *buf, long buflen)
 
 	PRINT_DEBUG (("gs_write(%i, %p, %li)", fd, (void *) buf, buflen));
 	
-	if (gs->flags & GS_NOSOCKET)
+	if (!gs || (gs->flags & GS_NOSOCKET))
 	{
 		PRINT_DEBUG (("gs_write: bad handle"));
 		return E_BADHANDLE;
@@ -873,7 +872,7 @@ long gs_read (int fd, char *buf, long buflen)
 	
 //	PRINT_DEBUG (("gs_read(%i, %p, %li)", fd, (void *) buf, buflen));
 	
-	if (gs->flags & GS_NOSOCKET)
+	if (!gs || (gs->flags & GS_NOSOCKET))
 	{
 		PRINT_DEBUG (("gs_read: bad handle"));
 		
@@ -1028,5 +1027,4 @@ out:
 }
 
 #endif /* LWIP */
-#endif /* NETWORK */
 

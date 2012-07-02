@@ -1950,6 +1950,9 @@ static void radeon_identify_vram(struct radeonfb_info *rinfo)
 
 int radeonfb_pci_register(long handle, const struct pci_device_id *ent)
 {
+#ifdef DRIVER_IN_ROM
+	extern short os_magic;
+#endif
 	struct fb_info *info;
 	struct radeonfb_info *rinfo;
 	PCI_RSC_DESC *pci_rsc_desc;
@@ -2017,18 +2020,24 @@ int radeonfb_pci_register(long handle, const struct pci_device_id *ent)
 				else if((pci_rsc_desc->length >= RADEON_REGSIZE)
 				 && (pci_rsc_desc->length < 0x100000))
 				{
-					if(rinfo->bios_seg == NULL)
+					if(pci_rsc_desc->flags & FLG_ROM)
 					{
-						rinfo->bios_seg_phys = pci_rsc_desc->start;
-						if(BIOS_IN16(0) == 0xaa55)
-							rinfo->bios_seg = (void *)(pci_rsc_desc->offset + pci_rsc_desc->start);
-						else
-							rinfo->bios_seg_phys = 0;
+						if(rinfo->bios_seg == NULL)
+						{
+							rinfo->bios_seg_phys = pci_rsc_desc->start;
+							if(BIOS_IN16(0) == 0xaa55)
+								rinfo->bios_seg = (void *)(pci_rsc_desc->offset + pci_rsc_desc->start);
+							else
+								rinfo->bios_seg_phys = 0;
+						}
 					}
-					if(rinfo->mmio_base_phys == 0xFFFFFFFF)
-					{		
-						rinfo->mmio_base = (void *)(pci_rsc_desc->offset + pci_rsc_desc->start);
-						rinfo->mmio_base_phys = pci_rsc_desc->start;
+					else
+					{
+						if(rinfo->mmio_base_phys == 0xFFFFFFFF)
+						{		
+							rinfo->mmio_base = (void *)(pci_rsc_desc->offset + pci_rsc_desc->start);
+							rinfo->mmio_base_phys = pci_rsc_desc->start;
+						}
 					}
 				}
 			}
@@ -2093,13 +2102,20 @@ int radeonfb_pci_register(long handle, const struct pci_device_id *ent)
 
 #ifdef DRIVER_IN_ROM
 	/* Run VGA BIOS */
-	if(rinfo->bios_seg != NULL)
+	if((rinfo->bios_seg != NULL) && !os_magic)
 	{
 		Cconws("Run VGA BIOS, please wait...\r\n");
 		DPRINT("radeonfb: radeonfb_pci_register: run VGA BIOS\r\n");
 		run_bios(rinfo);
 	}
+#if defined(COLDFIRE) && defined(LWIP)
+	else /* abnormal */
+	{
+		extern void uif_cmd_reset(void);
+		uif_cmd_reset();
+	}
 #endif
+#endif /* DRIVER_IN_ROM */
 
 #if 1
 	DPRINT("radeonfb: radeonfb_pci_register: fixup display base address\r\n");
@@ -2128,7 +2144,7 @@ int radeonfb_pci_register(long handle, const struct pci_device_id *ent)
 		framebuffer_release(info);
 		return(-EIO);
 	}
-
+	
 	/* Get informations about the board's PLL */
 	DPRINT("radeonfb: radeonfb_pci_register: get informations about the board's PLL\r\n");
 	radeon_get_pllinfo(rinfo);
@@ -2146,7 +2162,7 @@ int radeonfb_pci_register(long handle, const struct pci_device_id *ent)
 	/* set offscreen memory descriptor */
 	DPRINT("radeonfb: radeonfb_pci_register: set offscreen memory descriptor\r\n");
 	offscreen_init(info);
-	
+
 	/* Probe screen types */
 	DPRINT("radeonfb: radeonfb_pci_register: probe screen types, monitor_layout: ");
 	DPRINT(monitor_layout);

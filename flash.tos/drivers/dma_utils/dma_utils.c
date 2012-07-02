@@ -52,7 +52,7 @@ extern void critical_error(int error);
 
 #ifdef COLDFIRE
 
-#ifdef NETWORK
+#ifdef LWIP
 
 #ifdef MCF5445X
 #include "mcf5445x.h"
@@ -82,10 +82,37 @@ static int Channel;
 #endif
 
 #ifdef MCF5445X
+
 static char used_reqs[16];
+
 #else /* MCF548X */
+
 static char used_reqs[32];
-#endif
+
+typedef struct dma_cookie
+{
+	long version; /* 0x0101 for example */
+	long magic; /* 'DMAC' */
+	int (*dma_set_initiator)(int initiator);
+	unsigned long (*dma_get_initiator)(int requestor);
+	void (*dma_free_initiator)(int requestor);
+	int (*dma_set_channel)(int requestor, void (*handler)(void));
+	int (*dma_get_channel)(int requestor);
+	void (*dma_free_channel)(int requestor);
+	void (*dma_clear_channel)(int channel);	
+	int (*MCD_startDma)(int channel, s8 *srcAddr, s16 srcIncr, s8 *destAddr, s16 destIncr, u32 dmaSize, u32 xferSize, u32 initiator, int priority, u32 flags, u32 funcDesc);
+	int (*MCD_dmaStatus)(int channel);
+	int (*MCD_XferProgrQuery)(int channel, MCD_XferProg *progRep);
+	int (*MCD_killDma)(int channel);
+	int (*MCD_continDma)(int channel);
+	int (*MCD_pauseDma)(int channel);
+	int (*MCD_resumeDma)(int channel);
+	int (*MCD_csumQuery)(int channel, u32 *csum);
+	void *(*dma_malloc)(long amount);
+	int (*dma_free)(void *addr);
+} DMACF_COOKIE;
+
+#endif /* MCF5445X */
 
 typedef struct
 {
@@ -588,35 +615,6 @@ void dma_interrupt_handler(void)
   }
 }
 
-void init_dma(void)
-{
-#ifdef MCF5445X
-  int i;
-#endif
-#ifndef LWIP
-  (void)dmainterrupt;
-#endif
-#ifdef CHAINED_DMA
-	Descriptors = 0;
-  Channel = -1;
-#endif
-  dma_init_tables();
-	memset(dma_block_int, 0, sizeof(dma_block_int));
-#ifdef MCF5445X
-  /* Configure Interrupt vectors */
-  for(i=0; i<NCHANNELS; i++)
-    Setexc(64+INT0_LO_EDMA_00, dma_interrupt);
-#else /* MCF548X */
-  /* Initialize the Multi-channel DMA */
-	memset((void *)__MCDAPI_START, 0, 0x8000);
-  MCD_initDma((dmaRegs*)(__MBAR+0x8000), (void *)__MCDAPI_START, MCD_COMM_PREFETCH_EN | MCD_RELOC_TASKS);
-  /* Configure Interrupt vector */
-  Setexc(V_DMA, dma_interrupt);
-#endif
-  /* Enable interrupts in DMA and INTC */
-  dma_irq_enable(DMA_INTC_LVL, DMA_INTC_PRI);
-}
-
 void dma_irq_enable(uint8 lvl, uint8 pri)
 {
 #ifdef MCF5445X
@@ -989,7 +987,83 @@ void dma_clear_channel(int channel)
   }
 }
 
-#endif /* NETWORK */
+#ifndef MCF5445X
+
+#if defined(CONFIG_USB_UHCI) || defined(CONFIG_USB_OHCI) || defined(CONFIG_USB_EHCI)
+
+extern void *usb_malloc(long amount);
+extern int usb_free(void *addr);
+
+#else
+
+static void *usb_malloc(long amount)
+{
+	if(amount);
+	return(NULL);
+}
+
+int usb_free(void *addr)
+{
+	return(-1);
+}
+	
+#endif /* defined(CONFIG_USB_UHCI) || defined(CONFIG_USB_OHCI) || defined(CONFIG_USB_EHCI) */
+
+DMACF_COOKIE dma_cf_cookie = 
+{
+	0x0101, /* verson */
+	'DMAC', /* magic */
+	dma_set_initiator,
+	dma_get_initiator,
+	dma_free_initiator,
+	dma_set_channel,
+	dma_get_channel,
+	dma_free_channel,
+	dma_clear_channel,
+	MCD_startDma,
+	MCD_dmaStatus,
+	MCD_XferProgrQuery,
+	MCD_killDma,
+	MCD_continDma,
+	MCD_pauseDma,
+	MCD_resumeDma,
+	MCD_csumQuery,
+	usb_malloc,
+	usb_free
+};
+
+#endif /* !MCF5445X */
+
+void init_dma(void)
+{
+#ifdef MCF5445X
+  int i;
+#endif
+#ifndef LWIP
+  (void)dmainterrupt;
+#endif
+#ifdef CHAINED_DMA
+	Descriptors = 0;
+  Channel = -1;
+#endif
+  dma_init_tables();
+	memset(dma_block_int, 0, sizeof(dma_block_int));
+#ifdef MCF5445X
+  /* Configure Interrupt vectors */
+  for(i=0; i<NCHANNELS; i++)
+    Setexc(64+INT0_LO_EDMA_00, dma_interrupt);
+#else /* MCF548X */
+  /* Initialize the Multi-channel DMA */
+	memset((void *)__MCDAPI_START, 0, 0x8000);
+  MCD_initDma((dmaRegs*)(__MBAR+0x8000), (void *)__MCDAPI_START, MCD_COMM_PREFETCH_EN | MCD_RELOC_TASKS);
+  /* Configure Interrupt vector */
+  Setexc(V_DMA, dma_interrupt);
+#endif
+  /* Enable interrupts in DMA and INTC */
+  dma_irq_enable(DMA_INTC_LVL, DMA_INTC_PRI);
+}
+
+#endif /* LWIP */
 
 #else /* !COLDFIRE => CT60 / CTPCI / PLX via XBIOS or PCI BIOS */
 
@@ -1001,7 +1075,7 @@ void dma_clear_channel(int channel)
 #define DMASCR0  0x128   /* DMA Channel 0 Command/Status        */
 
 #undef DMA_XBIOS
-#undef DMA_MALLOC
+#define DMA_MALLOC
 
 #ifdef DMA_MALLOC
 static unsigned long Descriptors;
@@ -1227,15 +1301,16 @@ void wait_dma(void)
 	if(use_dma)
 	{
 		unsigned long start_timer = *(volatile unsigned long *)_hz_200;
-//		extern void display_string(char *s);
-//		display_string("Wait DMA\r\n");
 		while(dma_status() > 0)
 		{
 			if((*(volatile unsigned long *)_hz_200 - start_timer) >= 200) /* 1S timeout */
 			{
-
-//				display_string("DMA timeout\r\n");
-				critical_error(-1);
+#ifdef DMA_XBIOS
+				dma_buffoper(0);
+#else
+				Write_config_byte(0, DMASCR0, 4); /* abort */
+#endif
+//				critical_error(-1);
 				use_dma = 0;
 				break;			
 			}

@@ -28,7 +28,6 @@
         .global _cputc          // print a character for bios.c
         .global _bconout5       // raw console output
         .global _blink
-        .global _blink
         .global normal_ascii    // default output type for linea.s
 
 #ifdef COLDFIRE
@@ -177,13 +176,22 @@ _cputc:
  * printed regardless of the sign of char.
  */
 _bconout5:
-        move.l  #0,d1
+#ifndef COLDFIRE
+        move.l  phystop,a0
+        move.l  hardware_type(a0),d1
+        and.l   #SUPERVIDEL,d1
+        bne.s   bconout5_tos
+#endif /* COLDFIRE */
+        moveq.l #0,d1
         move.b  7(sp),d1
         movem.l d2-d7/a2-a6,-(sp)
         bsr     ascii_out
         movem.l (sp)+,d2-d7/a2-a6
         rts
-
+#ifndef COLDFIRE
+bconout5_tos:
+        jmp     0xE08D40        // default TOS routine for the Supervidel
+#endif
         
 cputc:          
         move.w  4(sp), d1       // Get just character from stack
@@ -205,13 +213,27 @@ gsx_conout:                     // Gsx enters here
         movea.l con_state,a0    // based on our state goto the correct
         jmp     (a0)            // stub routine
 
+#ifndef COLDFIRE        
+normal_ascii_tos:
+        jmp     0xE08D62        // default TOS routine for the Supervidel
+#endif
+
 normal_ascii:
 
+#ifndef COLDFIRE
+        move.l  phystop,a0
+        move.l  hardware_type(a0),d0
+        and.l   #SUPERVIDEL,d0
+        bne.s   normal_ascii_tos
+#endif
         cmp.w   #0x20,d1        // If the character is printable ascii
         bge     ascii_out       // go print it.
 #ifdef COLDFIRE
+        cmp.w   #16,_v_planes
+        bcc.s   no_serial
         cmp.l   #0x01000000,_v_bas_ad
         bcs     wait_uart       // no graphic card
+no_serial:
 #endif
 
 // We handle the following control characters as special.
@@ -805,7 +827,12 @@ _blink:
 #ifdef COLDFIRE
                 cmp.l   #0x01000000,_v_bas_ad
                 bcs.s   bl_out          // no graphic card
-#endif
+#else
+                move.l  phystop,a0
+                move.l  hardware_type(a0),d0
+                and.l   #SUPERVIDEL,d0
+                bne.s   blink_tos
+#endif /* COLDFIRE */
                 lea     _v_stat_0,a0    // (need fix?)
                 btst    #F_CVIS,(a0)    // test visibility/semaphore bit.
                 beq.s   bl_out          // if invisible or blocked, return.
@@ -818,8 +845,10 @@ _blink:
                 bchg    #F_CSTATE, (a0) // toggle cursor state.
                 bsr     comp_cr1        // complement cursor.
 bl_out:         rts
-
-
+#ifndef COLDFIRE
+blink_tos:
+                jmp     0xE090F2        // default TOS routine for the Supervidel
+#endif
 
 /*
  * alpha_cell - retrieve the address of the source cell
@@ -872,8 +901,10 @@ out_of_bounds:
  */
 ascii_out:
 #ifdef COLDFIRE
+        cmp.w   #16,_v_planes
+        bcc.s   graphic_card
         cmp.l   #0x01000000,_v_bas_ad
-        bcc     graphic_card   // graphic card
+        bcc.s   graphic_card   // graphic card
 wait_uart:
         move.b  MCF_UART_USR0,d0
         and.b   #MCF_UART_USR_TXRDY,d0
@@ -1325,7 +1356,7 @@ _tc:                                    // 16M colors
         move.l  a0,-(sp)
         move.l  d0,-(sp)
         bsr     test_accel
-        beq.s   .no_clear_screen_ntc
+        beq.s   .no_clear_screen_tc
         move.l  d2,d0
         swap    d0                      // delta y
         addq.l  #1,d0

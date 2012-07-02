@@ -16,6 +16,7 @@
 *  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 */
 
+#include "main.h"
 #include "ct60.h"	
 #include "vars.h"
 #ifdef COLDFIRE
@@ -299,7 +300,7 @@ x20_inq:
 xi_exit:
 	rte
 
-#ifdef DEBUG
+#if 1 // #ifdef DEBUG
 
 debug1:	.asciz "GEMDOS #0x"
 	
@@ -408,9 +409,15 @@ flush_cache_pexec:
 	move.w #rw_parameter,-(SP)
 	trap #14
 	lea 12(SP),SP
+	cmp.l #-1,D0
+	beq.s .normal
 	btst #0,D0
 	beq.s .normal
+#ifdef COLDFIRE
+	jsr caches_disable
+#else
 	jsr 0xE0085A                                        // caches off
+#endif
 	move.l phystop,A0
 	clr.l save_hz_200(A0)
 	move.l #0x12345678,D0
@@ -565,10 +572,7 @@ det_vbl:
  	movem.l D0/A0,-(SP)
 	tst.b _frclock+3
 	bne.s .no_test_vectors
-	lea _init_emulation_vectors,A0
-	add.l #0xE80000,A0
-	sub.l #_ct60tos_half_flash,A0
-	jsr (A0)
+	jsr _init_emulation_vectors
 #endif
 .no_test_vectors:	
 #ifdef COLDFIRE
@@ -630,7 +634,11 @@ det_vbl:
 	cmp.l #DELAY_CACHE,D0                               // delay
 	bcs.s .vb3	
 	clr.l flag_cache(A0)
+#ifdef COLDFIRE
+	jsr caches_enable
+#else
 	jsr 0xE250C8                                        // caches on
+#endif
 .vb3:
 #ifdef COLDFIRE
  	move.l (SP)+,A0
@@ -719,6 +727,8 @@ end_fread:
 	move.w #rw_parameter,-(SP)
 	trap #14
 	lea 12(SP),SP
+	cmp.l #-1,D0
+	beq .ef2
 	btst #1,D0
 	beq .ef2                                            // no Fread test
  	move.l etv_critic,A0                                // AES valid ?
@@ -780,7 +790,11 @@ end_fread:
 	cmp.w #1,D0                                         // delay
 #endif
 	bne.s .ef5
+#ifdef COLDFIRE
+	jsr caches_disable
+#else
 	jsr 0xE0085A                                        // caches off
+#endif
 	move.l phystop,A0
 	clr.l save_hz_200(A0)
 #ifdef COLDFIRE

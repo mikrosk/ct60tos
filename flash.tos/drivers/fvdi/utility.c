@@ -294,7 +294,7 @@ static void *fmalloc(long size, long type)
 
 static long free(void *addr)
 {
-	if((os_magic == 1) && !memory_ok)
+	if(os_magic && !memory_ok)
 		return(0);
 	return(Mfree(addr));
 }

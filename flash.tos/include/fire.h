@@ -340,6 +340,8 @@
 #define FLASH_UNLOCK1 (0xAAA)
 #define FLASH_UNLOCK2 (0x554)
 
+/* Device Errata 26 - Flexbus hang up in 4:1 clock ratio
+  => if MCF_XARB_CFG_PLDIS = 0, enable at least 2 cycle of Flexbus address hold MCF_FBCS_CSCR_RDAH(1) */
 /* FALCON I/O 1MB */
 #define FPGA_CS1_BASE  0xFFF00000
 #define FPGA_CS1_SIZE  0x00100000
@@ -355,7 +357,7 @@
 /* VIDEO RAM 128MB */ 
 #define FPGA_CS4_BASE  0x40000000
 #define FPGA_CS4_SIZE  0x40000000
-#define FPGA_CS4_ACCESS (MCF_FBCS_CSCR_BSTW + MCF_FBCS_CSCR_BSTR + MCF_FBCS_CSCR_PS_32)
+#define FPGA_CS4_ACCESS ( + MCF_FBCS_CSCR_RDAH(1) + MCF_FBCS_CSCR_BSTW + MCF_FBCS_CSCR_BSTR + MCF_FBCS_CSCR_PS_32)
 
 #define ACP_VIDEO_RAM          (FPGA_CS4_BASE)
 #define ACP_VIDEO_CFG          (FPGA_CS4_BASE + 0x20000000)

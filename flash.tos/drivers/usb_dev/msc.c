@@ -7,7 +7,6 @@
 #include "msc.h"
 
 #ifdef USB_DEVICE
-#ifdef NETWORK
 #ifdef LWIP
 
 #undef DEBUG
@@ -873,5 +872,4 @@ void usb_fifo_event(uint32 epnum, uint8 event)
 }
 
 #endif /* LWIP */
-#endif /* NETWORK */
 #endif /* USB_DEVICE */

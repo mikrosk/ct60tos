@@ -1,5 +1,5 @@
 /* CT60, HEX part
-*  Didier Mequignon 2007 April, e-mail: aniplay@wanadoo.fr
+*  Didier Mequignon 2010, e-mail: aniplay@wanadoo.fr
 *
 *  This program is free software; you can redistribute it and/or modify
 *  it under the terms of the GNU General Public License as published by
@@ -98,7 +98,7 @@ void getbytes(char *line,long addr_bytes)
 	p=(unsigned char *)buffer_flash;
 	p+=(offset-FLASH_ADR);
 	if((offset >= FLASH_ADR)
-	 && ((offset+count) < (FLASH_ADR2+FLASH_SIZE2)))
+	 && ((offset+count) < (FLASH_ADR+FLASH_SIZE-PARAM_SIZE)))
 		memcpy(p, &asciiByte[j], count);
 }
 

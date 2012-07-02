@@ -147,7 +147,7 @@
 
 #undef DEBUG
 
-#if defined(NETWORK) && defined(LWIP)
+#ifdef LWIP
         .global _xSemaphoreTakeBDOS,_xSemaphoreGiveBDOS
 #endif
 
@@ -479,7 +479,7 @@ _oscall:
 //==== fix_trap - make 68010 exception stack frame look like a 68000 frame ===
 
 fix_trap:
-#if defined(NETWORK) && defined(LWIP)
+#ifdef LWIP
         lea     -24(sp),sp
         movem.l d0-d2/a0-a2,(sp)
         jsr     _xSemaphoreTakeBDOS
@@ -511,7 +511,7 @@ fix_rte:
         move.w  6(sp),4(sp)     // lsw of return address of TRAP
         clr.w   6(sp)           // store a bogus exception frame type
 fr_exit:
-#if defined(NETWORK) && defined(LWIP)
+#ifdef LWIP
         lea     -24(sp),sp
         movem.l d0-d2/a0-a2,(sp)
         jsr     _xSemaphoreGiveBDOS
@@ -572,7 +572,7 @@ _rwabs:
         move.w  d2,-(sp) // count
         move.l  d1,-(sp) // buf
         move.w  d0,-(sp) // mode
-#if defined(NETWORK) && defined(LWIP)
+#ifdef LWIP
         move.l  _pxCurrentTCB,d0
         cmp.l   _tid_TOS,d0
         beq.s   use_trap
@@ -685,7 +685,7 @@ _flush_cache_pexec:
 	cmp.l #0x2043,D0                                    // ' C'
 	bne .test_cacr
 .fix_code_purec:
-#if defined(NETWORK) && defined(LWIP)
+#if defined(LWIP)
 	pea purec_found
 	jsr _conws_debug
 	addq.l #4,SP
@@ -810,6 +810,8 @@ _flush_cache_pexec:
 		cmp.l #0x6100,D2                       // bsr
 		beq.s .ok_subroutine
 		cmp.l #0x4EB9,D2                       // jsr
+		beq.s .ok_subroutine
+		cmp.l #0x2F0A,D2                       // move.l A2,-(SP)
 		beq.s .ok_subroutine
 		cmp.l #0x2F03,D2                       // move.l D3,-(SP)
 		beq.s .ok_subroutine
@@ -1080,7 +1082,7 @@ _flush_cache_pexec:
 
 disassemble_byte_on_stack: // A0: address, D0: new instruction (0xA9XX - not used by CF: 0xA910-0xA91F 0xA938-0xA93F)
 
-#if defined(NETWORK) && defined(LWIP)
+#if defined(LWIP)
 	link A6,#-10
 	lea -24(SP),SP
 	movem.l D0-D2/A0-A2,(SP)

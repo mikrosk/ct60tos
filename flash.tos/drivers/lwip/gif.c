@@ -32,7 +32,6 @@
 #include "net.h"
 #include "gif.h"
 
-#ifdef NETWORK
 #ifdef LWIP
 
 /*
@@ -590,5 +589,4 @@ void write_gif(char **file, Gif *gif)
 }
 
 #endif /* LWIP */
-#endif /* NETWORK */
 

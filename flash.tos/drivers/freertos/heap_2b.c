@@ -45,8 +45,7 @@
 #include "FreeRTOS.h"
 #include "task.h"
 
-#ifdef NETWORK
-#ifdef LWIP
+#if defined(LWIP) || defined(FREERTOS)
 
 extern unsigned char __LWIP_BASE[];
 extern unsigned char __LWIP_SIZE[];
@@ -234,5 +233,4 @@ xBlockLink *pxLink;
 }
 /*-----------------------------------------------------------*/
 
-#endif /* LWIP */
-#endif /* NETWORK */
+#endif /* defined(LWIP) || defined(FREERTOS) */

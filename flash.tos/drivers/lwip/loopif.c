@@ -45,7 +45,6 @@
 #include "tcp.h"
 #include "ip.h"
 
-#ifdef NETWORK
 #ifdef LWIP
 
 #undef DEBUG
@@ -164,5 +163,4 @@ loopif_init(struct netif *netif)
 #endif /* LWIP_HAVE_LOOPIF */
 
 #endif /* LWIP */
-#endif /* NETWORK */
 

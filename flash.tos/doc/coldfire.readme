@@ -319,6 +319,29 @@ typedef struct socket_cookie
 
 'STiK' cookie is also implemented with GlueSTiK.
 
+DMACF V4e cookie 'DMAC' (for external drivers using DMA like Ethernet):
+-----------------------------------------------------------------------
+typedef struct dma_cookie
+{
+  long version; /* 0x0101 for example */
+  long magic; /* 'DMAC' */
+  int (*dma_set_initiator)(int initiator);
+  unsigned long (*dma_get_initiator)(int requestor);
+  void (*dma_free_initiator)(int requestor);
+  int (*dma_set_channel)(int requestor, void (*handler)(void));
+  int (*dma_get_channel)(int requestor);
+  void (*dma_free_channel)(int requestor);
+  void (*dma_clear_channel)(int channel);	
+  int (*MCD_startDma)(int channel, s8 *srcAddr, s16 srcIncr, s8 *destAddr, s16 destIncr, u32 dmaSize, u32 xferSize, u32 initiator, int priority, u32 flags, u32 funcDesc);
+  int (*MCD_dmaStatus)(int channel);
+  int (*MCD_XferProgrQuery)(int channel, MCD_XferProg *progRep);
+  int (*MCD_killDma)(int channel);
+  int (*MCD_continDma)(int channel);
+  int (*MCD_pauseDma)(int channel);
+  int (*MCD_resumeDma)(int channel);
+  int (*MCD_csumQuery)(int channel, u32 *csum);
+} DMACF_COOKIE;
+
 
 XBIOS notes
 ===========
@@ -424,9 +447,9 @@ FIREBEE Notes (M5484LITE/M5485EVB comparison)
   * B7: (1) SW6 DOWN, (0) SW6 UP
   * B6: (1) SW5 DOWN, (0) SW5 UP
   * B0: (1) rescue TOS started from 0xE0000000 (replace BAS or dBUG)
- SW6 up is the normal usage
- SW6 down allows to TOS to start FTP (build option), HTTP, TFTP servers and create a Ram-Disk 
-     actually in B (this feature is also possible with dBUG at 0xE0000000).
+ SW6 up is the normal usage (without Ethernet features and USB)
+ SW6 down allows the TOS to start FTP (build option), HTTP, TFTP servers and create a Ram-Disk 
+     actually in B (this feature is also possible with dBUG at 0xE0000000) install USB drivers.
  SW5 up is the normal usage for start the TOS at 0xE0400000 (same usage inside BAS or dBUG at 
      0xE0000000) and a boot menu has 2 choices TOS or EMUTOS (TOS by default).
  SW5 down is the rescue mode, TOS at 0xE0000000 continue to run and a boot menu displays 3 choices:
@@ -608,7 +631,7 @@ Coldfire notes
  FFFFE000 - FFFFFFFF : SRAM 8192 bytes for fix bus errors with emulated instructions remapped with MMU from 80007000
 
 - FIREBEE MMU Mapping:
- 00000000 - 00CF0000 : STRAM 13 MB (cache in writethrough)
+ 00000000 - 00CFFFFF : STRAM 13 MB (cache in writethrough)
  00D00000 - 00DFFFFF : Mirror FPGA 1MB VIDEO RAM (cache in writethrough)
  00E00000 - 00EFFFFF : TOS404 1 MB (write protected)
  00F00000 - 00F01FFF : Mirror FPGA - ATARI IDE (8K)

@@ -60,7 +60,6 @@
 #  include "dhcp.h"
 #endif /* LWIP_DHCP */
 
-#ifdef NETWORK
 #ifdef LWIP
 
 /**
@@ -515,7 +514,6 @@ ip_debug_print(struct pbuf *p)
 #endif /* IP_DEBUG */
 
 #endif /* LWIP */
-#endif /* NETWORK */
 
 
 

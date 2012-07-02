@@ -36,7 +36,7 @@
 #define LINE_NUM *(volatile char *)0xFFFF8A3C // Line Number Register
 #define SKEW *(volatile char *)0xFFFF8A3D // SKEW Register
 
-#if defined(COLDFIRE) && defined(MCF547X) /* FIREBEE */
+#if 0 // #if defined(COLDFIRE) && defined(MCF547X) /* FIREBEE */
 
 void blitter_copy(unsigned char *src_addr, int src_line_add, unsigned char *dst_addr, int dst_line_add, int w, int h, int bpp, int op, int backward)
 {

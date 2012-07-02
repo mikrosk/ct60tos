@@ -28,7 +28,7 @@
 
 #define measure_frame 0x3EC
 #define measure_line  0x3F0
-#define measure_clock 0x3F4
+#define measure_freq  0x3F4
 #define vbl_count     0x3F8
 #define count_measure 0x3FA
 #define modecode      0x184C
@@ -40,6 +40,7 @@
 #define LOGO_MOT_WIDTH    4 // words
 #define LOGO_MOT_HEIGHT  56 // lines
 
+
 picture_boot:
 
 #ifdef COLDFIRE
@@ -49,18 +50,19 @@ picture_boot:
 	bsr debug_display_string
 	move.l (SP)+,A0
 #endif
-#else
-	move.l #0x8000,D0                         // instruction cache
-	movec.l D0,CACR
 #endif
+#ifndef COLDFIRE
 	move.w #0x2300,SR                         // enable interrupts
+#else
+	move.w #0x2000,SR                         // enable interrupts (for PCI part)
+#endif
 	bsr fix_modecode
 #ifndef COLDFIRE
 	bsr screen_ntc_boot
 #endif
 	moveq #0,D0
 	rts
-	
+
 fix_modecode:
 
 	move.l D1,-(SP)
@@ -578,7 +580,7 @@ measure_clock_videl:                 // return value in MHz
 	movem.l D1-A6,-(SP)
 	clr.l measure_frame     // nS
 	clr.l measure_line      // nS * 100
-	clr.l measure_clock     // nS * 100
+	clr.l measure_freq      // nS * 100
 	clr.w vbl_count
 	move.w SR,-(SP)
 	or.w #0x700,SR          // no IRQ
@@ -600,7 +602,7 @@ measure_clock_videl:                 // return value in MHz
 		sub.l D2,D0
 		cmp.l #100,D0           // time-out
 		bge.s .timeout_measure
-	move.l measure_clock,D1
+	move.l measure_freq,D1
 	beq.s .wait_measure
 .timeout_measure:
 	move.l A4,0x70
@@ -672,7 +674,7 @@ irq_vbl_measure:
 .no_rest:
 	swap D0
 .no_measure:
-	move.w D0,measure_clock+2
+	move.w D0,measure_freq+2
 	lea 0xFFFFFA01,A0       // MFP
 	bclr #0,0x12(A0)        // IMRA
 	bclr #0,6(A0)           // IERA

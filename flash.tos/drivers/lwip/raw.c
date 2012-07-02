@@ -55,7 +55,6 @@
 #include "perf.h"
 #include "snmp.h"
 
-#ifdef NETWORK
 #ifdef LWIP
 
 #if LWIP_RAW
@@ -333,5 +332,4 @@ raw_new(u16_t proto) {
 #endif /* LWIP_RAW */
 
 #endif /* LWIP */
-#endif /* NETWORK */
 

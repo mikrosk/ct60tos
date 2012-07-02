@@ -43,7 +43,6 @@
 
 #undef DEBUG
 
-#ifdef NETWORK
 #ifdef LWIP
 #ifdef FTP_SERVER
 
@@ -2617,4 +2616,3 @@ sint_t ftpd_start(char *username, char *password)
 
 #endif /* FTP_SERVER */
 #endif /* LWIP */
-#endif /* NETWORK */

@@ -1,5 +1,5 @@
 /* TOS 4.04 Videl debug output for the CT60/CTPCI boards
- * Didier Mequignon 2010, e-mail: aniplay@wanadoo.fr
+ * Didier Mequignon 2010-2012, e-mail: aniplay@wanadoo.fr
  *
  * This file is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -21,7 +21,7 @@
 
 #ifdef DEBUG
  
-	.global _debug_traps,_trace_tos,vdu
+	.global _debug_traps,_trace_tos,_video_found,_vdu,vdu
 	
 	.data
 	
@@ -153,6 +153,15 @@ clear_line:
 	movem.l (SP)+,D0-A3
              rts
 #endif
+
+_vdu:
+
+	tst.w _video_found
+	beq.s .no_vdu
+	move.l 4(SP),D0
+	bsr.s vdu
+.no_vdu:
+	rts	
              
 hex:
 

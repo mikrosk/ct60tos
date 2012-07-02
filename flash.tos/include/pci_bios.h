@@ -3,7 +3,7 @@
 
 #define LITTLE_ENDIAN_LANE_SWAPPED
 #define CHECK_PARITY
-#undef SAME_CPU_PCI_MEM_ADDR // for fix DMA problems with some drivers
+#define SAME_CPU_PCI_MEM_ADDR // for fix DMA problems with some drivers
 
 #ifdef COLDFIRE
 #include "fire.h"
@@ -13,6 +13,8 @@
 #define PCI_MINGNT 1
 #define PCI_MAXLAT 42
 #else
+#define PCI_CACHE_LINE 8
+#define PCI_MINGNT 1
 #define PCI_MAXLAT 32
 #endif
 
@@ -22,13 +24,11 @@
 #undef PCI_DYNAMIC_MAPPING
 #define PCI_LOCAL_CONFIG  MCF_PCI_PCIIDR
 #ifdef MCF5445X
-#define PCI_IRQ_BASE_VECTOR    (64+INT1_HI_PCI_SCR+64+OFFSET_INT_CF68KLIB)
 #define PCI_MEMORY_OFFSET   0xA0000000
 #define PCI_MEMORY_SIZE     0x10000000   /* 256 MB */ 
 #define PCI_IO_OFFSET       0xB0000000
 #define PCI_IO_SIZE         0x10000000   /* 256 MB */
 #else /* MCF548X */
-#define PCI_IRQ_BASE_VECTOR    (64+41+OFFSET_INT_CF68KLIB)
 #define PCI_MEMORY_OFFSET   0x80000000
 #define PCI_MEMORY_SIZE     0x40000000   /* 1024 MB */ 
 #define PCI_IO_OFFSET       0xD0000000
@@ -78,23 +78,21 @@
 
 #define PCI_NOBODYHOME          0xFFFF
 
-#define PCI_MAX_FUNCTION             4  /* 4 functions per PCI slot */
-
 #ifdef COLDFIRE
 
 #ifdef MCF547X                         /* FIREBEE */
-#define PCI_MAX_HANDLE           (7+1) /* 7 slots on the Firebee + host bridge MCF547X */
+#define PCI_MAX_SLOT             (7+1) /* 7 slots on the Firebee + host bridge MCF547X */
 #else /* MCF548X - MCF5445X */   
-#define PCI_MAX_HANDLE           (4+1) /* 4 slots on the M5484LITE/M5485EVB/M54455EVB + host bridge MCF548X/MCF5445X */
+#define PCI_MAX_SLOT             (4+1) /* 4 slots on the M5484LITE/M5485EVB/M54455EVB + host bridge MCF548X/MCF5445X */
 #endif /* MCF547X */
 
-#define LAST_LOCAL_REGISTER  0x40
+#define LAST_LOCAL_REGISTER  0x100
 
 #define LOCAL_REGISTERS_BIG // local registers are in Big Endian on the Coldfire
 
 #else /* PLX9054 */
 
-#define PCI_MAX_HANDLE              5  /* 4 slots on the CTPCI + host bridge PLX9054 */
+#define PCI_MAX_SLOT             (4+1) /* 4 slots on the CTPCI + host bridge PLX9054 */
 
 /* PLX9054 ID */
 #define PLX9054            0x905410B5
@@ -185,6 +183,14 @@
 
 #endif /* COLDFIRE */
 
+#define PCI_MAX_BUS                  4
+#define PCI_MAX_FUNCTION             4  /* 4 functions per PCI slot */
+#define PCI_MAX_DEVICE               PCI_MAX_SLOT /* was 32 */
+
+#if (PCI_MAX_DEVICE < PCI_MAX_SLOT)
+#error PCI_MAX_DEVICE < PCI_MAX_SLOT
+#endif
+
 /* PCI configuration registers */
 #define PCIIDR                0x00   /* PCI Configuration ID Register       */
 #define PCICSR                0x04   /* PCI Command/Status Register         */
@@ -230,6 +236,24 @@
                                         Capability Pointer                  */
 #define PVPDAD                0x4E   /* PCI Vital Product Data Address      */
 #define PVPDATA               0x50   /* PCI VPD Data                        */
+
+/* Header type 1 (PCI-to-PCI bridges) */
+#define PCI_PRIMARY_BUS        0x18  /* Primary bus number */
+#define PCI_SECONDARY_BUS      0x19  /* Secondary bus number */
+#define PCI_SUBORDINATE_BUS    0x1A  /* Highest bus number behind the bridge */
+#define PCI_SEC_LATENCY_TIMER  0x1B  /* Latency timer for secondary interface */
+#define PCI_IO_BASE            0x1C  /* I/O range behind the bridge */
+#define PCI_IO_LIMIT           0x1D
+#define PCI_SEC_STATUS         0x1E  /* Secondary status register */
+#define PCI_MEMORY_BASE        0x20  /* Memory range behind */
+#define PCI_MEMORY_LIMIT       0x22
+#define PCI_PREF_MEMORY_BASE   0x24  /* Prefetchable memory range behind */
+#define PCI_PREF_MEMORY_LIMIT  0x26
+#define PCI_PREF_BASE_UPPER32  0x28  /* Upper half of prefetchable memory range */
+#define PCI_PREF_LIMIT_UPPER32 0x2C
+#define PCI_IO_BASE_UPPER16    0x30  /* Upper half of I/O addresses */
+#define PCI_IO_LIMIT_UPPER16   0x32
+#define PCI_BRIDGE_CONTROL     0x3E  /* Bridge Control */
 
 /* Command register bit definitions */
 #define PCI_CMDREG_IOSP          1   /* Enable IO space accesses            */
@@ -290,6 +314,8 @@
 #define PCI_CLASS_SATELLITE     15   /* Satellite Communication class       */
 #define PCI_CLASS_CRYPT         16   /* Encrytion/Decryption class          */
 #define PCI_CLASS_SIGNAL        17   /* Signal Processing class             */
+
+#define PCI_CLASS_BRIDGE_PCI    0x0604
 
 /* PCI Sub-class codes - base class 0 (no new devices should use this code) */
 #define PCI_NONE_NOTVGA          0   /* All devices except VGA compatible   */
@@ -470,10 +496,10 @@
 #define PCI_COOKIE_ROUTINE       8   /* offset PCI BIOS routines            */
 #define PCI_COOKIE_MAX_ROUTINES 45   /* maximum of routines                 */
 #define PCI_COOKIE_SIZE          ((4*PCI_COOKIE_MAX_ROUTINES)+PCI_COOKIE_ROUTINE)
-#define PCI_RSC_HANDLESTOTALSIZE (PCI_RSC_DESC_TOTALSIZE*PCI_MAX_HANDLE*PCI_MAX_FUNCTION)
-#define PCI_DEV_HANDLESTOTALSIZE (PCI_DEV_DES_SIZE*PCI_MAX_HANDLE*PCI_MAX_FUNCTION)
-#define PCI_INT_HANDLESTOTALSIZE (PCI_MAX_HANDLE*PCI_MAX_FUNCTION)
-#define PCI_COOKIE_TOTALSIZE     (PCI_COOKIE_SIZE+PCI_RSC_HANDLESTOTALSIZE+PCI_DEV_HANDLESTOTALSIZE+PCI_INT_HANDLESTOTALSIZE)
+#define PCI_RSC_HANDLESTOTALSIZE (PCI_RSC_DESC_TOTALSIZE*PCI_MAX_BUS*PCI_MAX_DEVICE*PCI_MAX_FUNCTION)
+#define PCI_DEV_HANDLESTOTALSIZE (PCI_DEV_DES_SIZE*PCI_MAX_BUS*PCI_MAX_DEVICE*PCI_MAX_FUNCTION)
+#define PCI_INT_HANDLESTOTALSIZE (PCI_MAX_BUS*PCI_MAX_DEVICE*PCI_MAX_FUNCTION)
+#define PCI_COOKIE_TOTALSIZE     (PCI_COOKIE_SIZE+PCI_RSC_HANDLESTOTALSIZE+PCI_DEV_HANDLESTOTALSIZE+PCI_INT_HANDLESTOTALSIZE*2)
 
 /* Error codes */
 #define PCI_SUCCESSFUL           0   /* everything's fine         */

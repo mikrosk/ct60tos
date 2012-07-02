@@ -6,6 +6,9 @@
 
 /* ------------------------ Platform includes ----------------------------- */
 #include "config.h"
+#include "m68k_disasm.h"
+#include "../../include/vars.h"
+#ifdef COLDFIRE
 #include "net.h"
 #ifdef MCF5445X
 #include "mcf5445x.h"
@@ -13,11 +16,9 @@
 #define MCF_UART_USR_TXRDY UART_USR_TXRDY
 #else
 #include "mcf548x.h"
-#endif
+#endif /* MCF5445X */
 #include "get.h"
-#include "m68k_disasm.h"
 #include "../../include/ramcf68k.h"
-#include "../../include/vars.h"
 #ifndef MCF5445X
 #ifdef SOUND_AC97
 #include "../ac97/mcf548x_ac97.h"
@@ -27,7 +28,13 @@
 #else /* MCF548X */
 #define AC97_DEVICE 3 /* M5484LITE */
 #endif /* MCF547X */
-#endif
+#endif /* MCF5445X */
+#else /* ! COLDFIRE */
+#include <mint/osbind.h>
+#include "ct60.h"
+#include "../../include/pci_bios.h"
+#define cookie 0x5A0
+#endif /* COLDFIRE */
 
 /* ------------------------ FreeRTOS includes ----------------------------- */
 #include "../freertos/FreeRTOS.h"
@@ -58,10 +65,9 @@
 
 /* ------------------------ BDOS includes ----------------------------------*/
 /* cannot use TOS trap out of CF68KLIB !!! */
+#ifdef COLDFIRE
 #include "../bdos/bdos.h"
-
-#ifdef NETWORK
-#ifdef LWIP
+#endif
 
 /* ------------------------ Defines --------------------------------------- */
 #undef KILL_TOS_ON_FAULT /* for debug */
@@ -70,13 +76,31 @@
 #define TOS_TASK_PRIORITY           ( 5 )
 #define RTC_TASK_PRIORITY           ( 6 )
 #define VBL_TASK_PRIORITY           ( 25 )
-#define ROOT_TASK_PRIORITY          ( 10 )
 #define WEB_TASK_PRIORITY           ( 10 )
 #define FTP_TASK_PRIORITY           ( 10 )
 #define TFTP_TASK_PRIORITY          ( 10 )
 #define TELNET_TASK_PRIORITY        ( 15 )
 #define DEBUG_TASK_PRIORITY         ( 20 )
+#ifdef COLDFIRE
+#define ROOT_TASK_PRIORITY          ( 10 )
 #define STACK_DEFAULT               ( 4096 )
+#else /* !COLDFIRE */
+#define ROOT_TASK_PRIORITY          ( 31 )
+#define STACK_DEFAULT               ( 2048 )
+#endif /* COLDFIRE */
+
+typedef struct
+{
+  long ident;
+  union
+  {
+    long l;
+    short i[2];
+    char c[4];
+  } v;
+} COOKIE;
+
+#ifdef LWIP 
 
 #define FTP_USERNAME "coldfire"
 #define FTP_PASSWORD "atari"
@@ -101,33 +125,23 @@
 #define CTRL_R  0x12      /* last command repeat */
 
 /* ------------------------ PCI ------------------------------------------- */
-typedef struct
-{
-  long ident;
-  union
-  {
-    long l;
-    short i[2];
-    char c[4];
-  } v;
-} COOKIE;
-
-#ifdef MCF547X /* for start Emutos and recreate PCI cookie */ 
+#if defined(COLDFIRE) && defined(MCF547X) /* for start Emutos and recreate PCI cookie */ 
 #ifndef PCI_COOKIE_TOTALSIZE /* #include ../../include/pci_bios.h create problems */
-#define PCI_MAX_HANDLE           (7+1) /* Firebee specific ! */
+#define PCI_MAX_BUS              4
 #define PCI_MAX_FUNCTION         4  /* 4 functions per PCI slot */
+#define PCI_MAX_DEVICE          32
 #define PCI_DEV_DES_SIZE        20 
 #define PCI_RSC_DESC_SIZE       24
 #define PCI_RSC_DESC_TOTALSIZE  (PCI_RSC_DESC_SIZE*6)
 #define PCI_COOKIE_ROUTINE       8   /* offset PCI BIOS routines            */
 #define PCI_COOKIE_MAX_ROUTINES 45   /* maximum of routines                 */
 #define PCI_COOKIE_SIZE          ((4*PCI_COOKIE_MAX_ROUTINES)+PCI_COOKIE_ROUTINE)
-#define PCI_RSC_HANDLESTOTALSIZE (PCI_RSC_DESC_TOTALSIZE*PCI_MAX_HANDLE*PCI_MAX_FUNCTION)
-#define PCI_DEV_HANDLESTOTALSIZE (PCI_DEV_DES_SIZE*PCI_MAX_HANDLE*PCI_MAX_FUNCTION)
-#define PCI_INT_HANDLESTOTALSIZE (PCI_MAX_HANDLE*PCI_MAX_FUNCTION)
-#define PCI_COOKIE_TOTALSIZE     (PCI_COOKIE_SIZE+PCI_RSC_HANDLESTOTALSIZE+PCI_DEV_HANDLESTOTALSIZE+PCI_INT_HANDLESTOTALSIZE)
+#define PCI_RSC_HANDLESTOTALSIZE (PCI_RSC_DESC_TOTALSIZE*PCI_MAX_BUS*PCI_MAX_DEVICE*PCI_MAX_FUNCTION)
+#define PCI_DEV_HANDLESTOTALSIZE (PCI_DEV_DES_SIZE*PCI_MAX_BUS*PCI_MAX_DEVICE*PCI_MAX_FUNCTION)
+#define PCI_INT_HANDLESTOTALSIZE (PCI_MAX_BUS*PCI_MAX_DEVICE*PCI_MAX_FUNCTION)
+#define PCI_COOKIE_TOTALSIZE     (PCI_COOKIE_SIZE+PCI_RSC_HANDLESTOTALSIZE+PCI_DEV_HANDLESTOTALSIZE+PCI_INT_HANDLESTOTALSIZE*2)
 #endif
-#endif
+#endif /* defined(COLDFIRE) && defined(MCF547X) */
 
 /* ------------------------ TFTP ------------------------------------------ */
 #define TimeOut       2   /* seconds */
@@ -217,7 +231,11 @@ struct tftphdr
 #define TERM_CONSOLE 1
 #define TERM_VT100   2
 
+#ifdef COLDFIRE
 #define TELNET_BUF_SIZE 4096
+#else
+#define TELNET_BUF_SIZE 2048
+#endif
 
 struct term
 {
@@ -251,10 +269,12 @@ extern unsigned long size_ram_disk, ext_write_protect_ram_disk;
 extern xTaskHandle pxCurrentTCB, tid_TOS;
 xTaskHandle tid_TELNET, tid_DEBUG, tid_HTTPd;
 
+#ifdef COLDFIRE
+
 #ifdef MCF547X
 xTaskHandle tid_ETOS;
 unsigned long pseudo_dma_vec;
-extern short boot_os;
+extern short boot_os, drive_ok;
 #if defined(CONFIG_USB_UHCI) || defined(CONFIG_USB_OHCI) || defined(CONFIG_USB_EHCI)
 void *pci_data;
 #endif
@@ -273,6 +293,18 @@ extern unsigned long save_imrl0, save_imrl0_tos, save_imrh0, save_imrh0_tos, sav
 extern unsigned long save_imrl, save_imrl_tos, save_imrh, save_imrh_tos;
 #endif
 static int restart_debug, get_serial_vector, get_ikbd_vector, tos_suspend;
+
+void *start_run;
+
+xSemaphoreHandle xSemaphoreBDOS;
+xQueueHandle xQueueAlert;
+
+#else /* !COLDFIRE */
+
+unsigned long ip_addr_client;
+
+#endif /* COLDFIRE */
+
 struct termstate *ts;
 
 static const char PROMPT[] = "> ";
@@ -293,13 +325,12 @@ static int md_last_size;
 static unsigned long disasm_last_address;
 
 typedef char HISTENT[UIF_MAX_LINE];
+#ifdef COLDFIRE
 static HISTENT history[MAX_HISTORY];
-extern int errno;
-int lwip_ok;
-void *start_run;
+#endif
 
+int lwip_ok;
 int errno;
-xSemaphoreHandle xSemaphoreBDOS;
 
 typedef struct socket_cookie
 {
@@ -355,27 +386,35 @@ typedef struct
 #define DEST_STRING     (2)
 
 /* ------------------------ Prototypes ------------------------------------ */
+extern int add_cookie(COOKIE *cook);
+extern COOKIE *get_cookie(long id);
+extern char *disassemble_pc(unsigned long pc);
 static void uif_cmd_help(int argc, char **argv);
 static int make_argv(char *cmdline, char *argv[]);
+extern int printk(PRINTK_INFO *info, const char *fmt, va_list ap);
+extern int sprintD(char *s, const char *fmt, ...);
+#ifdef COLDFIRE
 extern err_t mcf_fec0_init(struct netif *netif);
 extern err_t mcf_fec1_init(struct netif *netif);
 extern int ftpd_start(char *username, char *password);
-extern COOKIE *get_cookie(long id);
-extern int add_cookie(COOKIE *cook);
-extern int printk(PRINTK_INFO *info, const char *fmt, va_list ap);
-extern int printD(const char *fmt, ...);
-extern int sprintD(char *s, const char *fmt, ...);
 extern void flush_caches(void);
 extern void enable_caches(void);
 extern void disable_caches(void);
-extern char *disassemble_pc(unsigned long pc);
+#if defined(CONFIG_USB_UHCI) || defined(CONFIG_USB_OHCI) || defined(CONFIG_USB_EHCI)
 extern void uif_cmd_usb(int argc, char **argv);
-extern void usb_enable_interrupt(void);
+#endif
+#else /* !COLDFIRE */
+#define conout_debug vdu 
+extern void vdu(char c); /* Videl if not used */
+extern void kprint(const char *fmt, ...);
+extern err_t rtl8139if_init(struct netif *netif);
+#endif /* COLDFIRE */
 
 /* ------------------------ Implementation -------------------------------- */
 
-// static 
-int auxistat(void)
+#ifdef COLDFIRE
+
+static int auxistat(void)
 {
   register int ret __asm__("d0");
 #ifdef MCF547X
@@ -481,6 +520,8 @@ static int rs232get(void)
   return(ret);
 }
 
+#ifndef MCF547X
+
 static void install_inters_cf68klib(void)
 {
   int tos_run = (int)(*(unsigned short *)_timer_ms);
@@ -540,7 +581,7 @@ static void install_inters_cf68klib(void)
   }
 }
 
-static void deinstall_inters_cf68klib(void)
+static void uninstall_inters_cf68klib(void)
 {
   int tos_run = (int)(*(unsigned short *)_timer_ms);
   if(tos_run && get_serial_vector)
@@ -594,6 +635,8 @@ static void deinstall_inters_cf68klib(void)
     vPortSetIPL(level);
   }
 }
+
+#endif /* MCF547X */
 
 static int conin_debug(void)
 {
@@ -653,11 +696,27 @@ void conout_debug(int c)
   }
 }
 
+#endif /* COLDFIRE */
+
 void conws_debug(char *buf)
 {
   int i = 0;
   while(buf[i])
     conout_debug(buf[i++]);
+}
+
+void printf_debug(const char *fmt, ...)
+{
+  static char buf[TELNET_BUF_SIZE]; // minimize stack usage
+  va_list ap;
+  PRINTK_INFO info;
+  info.dest = DEST_STRING;
+  va_start(ap, fmt);
+  info.loc = buf;
+  printk(&info, fmt, ap);
+  *info.loc = '\0';
+  va_end(ap);
+  conws_debug(buf);
 }
 
 #ifdef DBUG
@@ -723,7 +782,18 @@ void board_printf(const char *fmt, ...)
     printk(&info, fmt, ap);
     *info.loc = '\0';
     va_end(ap);
-    conws_debug(buf_tos);
+#ifdef COLDFIRE
+    conws_debug(buf_tos); /* serial */
+#else /* !COLDFIRE */
+    {
+      long stack=0;
+      if(Super(1L) >= 0)
+        stack = Super(0L);
+       kprint(buf_tos); /* video */
+       if(stack)
+       Super((void *)stack);
+    }
+#endif /* COLDFIRE */
   }
   else
   {
@@ -740,7 +810,7 @@ void board_printf(const char *fmt, ...)
           telnet_write_socket(buf, strlen(buf), 1);
       }
       else
-        conws_debug(buf);
+        conws_debug(buf); /* serial on CF else videl if not used */
       vPortFree(buf);    
     }
   }
@@ -748,9 +818,13 @@ void board_printf(const char *fmt, ...)
 
 static char board_getchar(void)
 {
+#ifdef COLDFIRE
   if(pxCurrentTCB == tid_TELNET)
+#endif
     return(CTRL_C); 
+#ifdef COLDFIRE
   return((char)conin_debug());
+#endif
 }
 
 void board_putchar(char c)
@@ -760,13 +834,17 @@ void board_putchar(char c)
     if(ts->sock > 0)
       telnet_write_socket(&c, 1, (c == '\n') ? 1 : 0);  
   }
+#ifdef COLDFIRE
   else
     conout_debug(c);
+#endif
 }
 
 static void board_putchar_flush(void)
 {
 }
+
+#ifdef COLDFIRE
 
 static void history_init(void)
 {
@@ -896,6 +974,8 @@ static char *get_history_line(char *userline)
   strcpy(userline,line);
   return userline;
 }
+
+#endif /* COLDFIRE */
 
 static char *get_line(char *line)
 {
@@ -1029,26 +1109,27 @@ static void dump_mem(unsigned long begin, unsigned long end, int size)
       switch(size)
       {
         case SIZE_8:
-        board_printf("%02X ", (int)data);
-        *(uint8 *)lcur = (uint8)data;
-        curr++;
-        lcur++;
-        i++;
-        break;
-      case SIZE_16:
-        board_printf("%04X ", (int)data);
-        *(uint16 *)lcur = (uint16)data;
-        curr += 2;
-        lcur += 2;
-        i += 2;
-        break;
-      case SIZE_32:
-        board_printf("%08X ", (int)data);
-        *(unsigned long *)lcur = data;
-        curr += 4;
-        lcur += 4;
-        i += 4;
-        break;
+          board_printf("%02X ", (int)data);
+          *(uint8 *)lcur = (uint8)data;
+          curr++;
+          lcur++;
+          i++;
+          break;
+        case SIZE_16:
+        default:
+          board_printf("%04X ", (int)data);
+          *(uint16 *)lcur = (uint16)data;
+          curr += 2;
+          lcur += 2;
+          i += 2;
+          break;
+        case SIZE_32:
+          board_printf("%08X ", (int)data);
+          *(unsigned long *)lcur = data;
+          curr += 4;
+          lcur += 4;
+          i += 4;
+          break;
       }
     }
     for(i = 0; i < 16; i++)
@@ -1063,6 +1144,8 @@ static void dump_mem(unsigned long begin, unsigned long end, int size)
   }
   while(curr < end);
 }
+
+#ifdef COLDFIRE
 
 #define BKPT_NONE   (0)
 #define BKPT_PERM   (1)
@@ -1215,7 +1298,7 @@ static void breakpoint_add(unsigned long address, int type)
   /* Test for valid breakpoint address */
   if(address & 1) /* 16-bit boudary */
   {
-    board_printf("Error:  Invalid breakpoint address!\r\n");
+    board_printf("Error: Invalid breakpoint address!\r\n");
     return;
   }
 //  unprotect_code();
@@ -1223,7 +1306,7 @@ static void breakpoint_add(unsigned long address, int type)
   brktab[i].instruction = *(unsigned short *)address;
   *(unsigned short *)address = (unsigned short)ILLEGAL;
   if(*(volatile unsigned short *)address != (unsigned short)ILLEGAL)
-    board_printf("Error:  Address is read-only!\n");
+    board_printf("Error: Address is read-only!\n");
   else
   {
     *(unsigned short *)address = brktab[i].instruction;
@@ -1414,7 +1497,7 @@ static void uif_cmd_cb(int argc, char **argv)
     {
       if((index >= UIF_MAX_BRKPTS) || (brktab[index].valid != BKPT_PERM))
       {
-        board_printf("Error:  Bad index!\r\n");
+        board_printf("Error: Bad index!\r\n");
         return;
       }
       breakpoint_remove(brktab[index].address);
@@ -1449,7 +1532,7 @@ static void uif_cmd_db(int argc, char **argv)
       brkpnt = get_value(argv[i],&success,16);
       if(success == 0)
       {
-        board_printf("Error:  Bad Value:  %s\r\n",argv[i]);
+        board_printf("Error: Bad Value: %s\r\n",argv[i]);
         return;
       }
       /* add breakpoint, if not already there */
@@ -1536,7 +1619,7 @@ static void uif_cmd_db(int argc, char **argv)
           *(unsigned char *)(trap_breakpoint) = 1; /* for trap #1 mshrink */
           break;
         default:
-          board_printf("Error:  Invalid option:  %s\r\n",argv[1]);
+          board_printf("Error: Invalid option: %s\r\n",argv[1]);
           break;
       }
       i++;
@@ -1706,13 +1789,13 @@ void inter_vbl(void)
 
 #define MMUSR_HITN         0x02
 
-static void mmu_map(long virt_addr, long phys_addr, long flag_itlb, long flags_mmutr, long flags_mmudr)
+static void mmu_map(long virt_addr, long phys_addr, long flag_itlb, long flags_mmudr)
 {
   extern unsigned char __MBAR[];
   unsigned long MMU_BASE = (unsigned long)__MBAR + 0x40000;
 	MMUAR = virt_addr + 1;
 	MMUOR = MMUOR_STLB + MMUOR_ADR + flag_itlb;
-	MMUTR = virt_addr + flags_mmutr + MMUTR_V;
+	MMUTR = virt_addr + MMUTR_SG + MMUTR_V;
 	MMUDR = phys_addr + flags_mmudr;
 	MMUOR = MMUOR_ACC + MMUOR_UAA + flag_itlb;
 }
@@ -1724,12 +1807,16 @@ static portTASK_FUNCTION(vVBL, pvParmeters)
   extern long get_videl_size(void);
   extern void get_mouseikbdvec(void);
 #if defined(CONFIG_USB_UHCI) || defined(CONFIG_USB_OHCI) || defined(CONFIG_USB_EHCI) /* for usb_malloc */
+#if 0 // #ifdef CONFIG_USB_STORAGE
+  extern short usb_found;
+  extern int usb_stor_scan(void);
+#endif /* CONFIG_USB_STORAGE */
 #ifdef SOUND_AC97
   extern void det_xbios(void);
   extern long sndstatus(long reset);
   extern long old_vector_xbios;
   extern long flag_snd_init, flag_gsxb;
-  int sound_err;
+  int sound_err, i;
 #endif /* SOUND_AC97 */
 #endif /* defined(CONFIG_USB_UHCI) || defined(CONFIG_USB_OHCI) || defined(CONFIG_USB_EHCI) */
   volatile unsigned char *rtc_reg = (volatile unsigned char *)0xFFFF8961; /* PFGA emulation */
@@ -1743,7 +1830,12 @@ static portTASK_FUNCTION(vVBL, pvParmeters)
   old_vector_xbios = *(long *)0xB4; /* XBIOS */
 #if defined(CONFIG_USB_UHCI) || defined(CONFIG_USB_OHCI) || defined(CONFIG_USB_EHCI)
 #ifdef SOUND_AC97
-  sound_err = mcf548x_ac97_install(2);
+	for(i = 0; i < 2; i++)
+	{
+		sound_err = mcf548x_ac97_install(2);
+		if(!sound_err)
+			break;
+	}
 #endif
 #endif
   while(1)
@@ -1787,6 +1879,10 @@ static portTASK_FUNCTION(vVBL, pvParmeters)
         p++;
       }
     }
+#if 0 // #ifdef CONFIG_USB_STORAGE
+    if(usb_found)
+      usb_stor_scan();
+#endif /* CONFIG_USB_STORAGE */	
 #endif /* defined(CONFIG_USB_UHCI) || defined(CONFIG_USB_OHCI) || defined(CONFIG_USB_EHCI) */
     while((*(unsigned long *)_hz_200 - start_timer) < 200UL)
     {
@@ -1804,13 +1900,13 @@ static portTASK_FUNCTION(vVBL, pvParmeters)
           int level = asm_set_ipl(7); /* disable interrupts */
           flush_caches();
           memcpy((void *)(new_physbase + 0x60000000), (void *)new_physbase, 0x100000);
-          mmu_map(new_physbase,(new_physbase + 0x60000000),MMUOR_ITLB,MMUTR_SG,MMUDR_SZ1M+MMUDR_WRITETHROUGH+MMUDR_X+MMUDR_LK);
-          mmu_map(new_physbase,(new_physbase + 0x60000000),0,MMUTR_SG,MMUDR_SZ1M+MMUDR_WRITETHROUGH+MMUDR_R+MMUDR_W);
+          mmu_map(new_physbase,(new_physbase + 0x60000000),MMUOR_ITLB,MMUDR_SZ1M+MMUDR_WRITETHROUGH+MMUDR_X+MMUDR_LK);
+          mmu_map(new_physbase,(new_physbase + 0x60000000),0,MMUDR_SZ1M+MMUDR_WRITETHROUGH+MMUDR_R+MMUDR_W);
 				  if((end_physbase != new_physbase) && (end_physbase < 0xd00000)) /* 2nd page */
           {
             memcpy((void *)(end_physbase + 0x60000000), (void *)new_physbase, 0x100000);
-            mmu_map(end_physbase,(end_physbase + 0x60000000),MMUOR_ITLB,MMUTR_SG,MMUDR_SZ1M+MMUDR_WRITETHROUGH+MMUDR_X+MMUDR_LK);
-            mmu_map(end_physbase,(end_physbase + 0x60000000),0,MMUTR_SG,MMUDR_SZ1M+MMUDR_WRITETHROUGH+MMUDR_R+MMUDR_W);
+            mmu_map(end_physbase,(end_physbase + 0x60000000),MMUOR_ITLB,MMUDR_SZ1M+MMUDR_WRITETHROUGH+MMUDR_X+MMUDR_LK);
+            mmu_map(end_physbase,(end_physbase + 0x60000000),0,MMUDR_SZ1M+MMUDR_WRITETHROUGH+MMUDR_R+MMUDR_W);
           }
           asm_set_ipl(level);
 //          board_printf("new videl screen at 0x%lX\r\n", physbase); 
@@ -1904,59 +2000,57 @@ static void go_emutos(unsigned long source)
 #endif
   unsigned long top = (unsigned long)__LWIP_BASE - 0x100000; /* - 1MB */
   int i;
-	mcf548x_ac97_uninstall(2, 0);
-	vTaskDelay(1);
-	deinstall_inters_cf68klib();
+  mcf548x_ac97_uninstall(2, 0);
+  vTaskDelay(1);
+//  uninstall_inters_cf68klib();
   vTaskDelete(tid_TOS);
-	end_vdi(); /* for screen WEB server and mousexy() */
+  end_vdi(); /* for screen WEB server and mousexy() */
   if(source != 0xE0600000)
   {
     void (*fp)(void) = (void(*)(void))source;
     asm_set_ipl(7); /* disable interrupts */
     (*fp)();
   }
-#if (defined(CONFIG_USB_UHCI) || defined(CONFIG_USB_OHCI) || defined(CONFIG_USB_EHCI)) && defined(CONFIG_USB_MEM_NO_CACHE)
+#if defined(CONFIG_USB_UHCI) || defined(CONFIG_USB_OHCI) || defined(CONFIG_USB_EHCI)
   pci_data = NULL;
   while(pci_cookie != NULL)
   {
     if(pci_cookie->ident == '_PCI')
     {
-  	  pci_data = usb_malloc(PCI_COOKIE_TOTALSIZE);
-  	  if(pci_data != NULL)
-			  memcpy(pci_data, (void *)pci_cookie->v.l, PCI_COOKIE_TOTALSIZE);
-		  break;
+      pci_data = usb_malloc(PCI_COOKIE_TOTALSIZE);
+      if(pci_data != NULL)
+        memcpy(pci_data, (void *)pci_cookie->v.l, PCI_COOKIE_TOTALSIZE);
+      break;
     }
     if(!pci_cookie->ident)
-    {
-			pci_cookie = NULL;
-			break;
-    }
-    pci_cookie++;
+      pci_cookie = NULL;
+    else
+      pci_cookie++;
   }
-#endif /* (defined(CONFIG_USB_UHCI) || defined(CONFIG_USB_OHCI) || defined(CONFIG_USB_EHCI)) && defined(CONFIG_USB_MEM_NO_CACHE) */
+#endif /* defined(CONFIG_USB_UHCI) || defined(CONFIG_USB_OHCI) || defined(CONFIG_USB_EHCI) */
 #if 1
   init_videl(640, 480, 4, 60, 0xD00000);
-	memset((void *)0xD00000, 0, (640 * 480 * 4) /sizeof(short));
+  memset((void *)0xD00000, 0, (640 * 480 * 4) /sizeof(short));
 #else
   init_videl(640, 480, 16, 60, 0xD00000);
-	memset((void *)0xD00000, -1, 640 * 480 * sizeof(short));
+  memset((void *)0xD00000, -1, 640 * 480 * sizeof(short));
 #endif
-	info_fvdi = NULL;
+  info_fvdi = NULL;
   asm_set_ipl(7); /* disable interrupts */
-	for(i = 1; i < 16; *(unsigned long *)(((32+i) * 4) + coldfire_vector_base) = (unsigned long)new_trap, i++);
+  for(i = 1; i < 16; *(unsigned long *)(((32+i) * 4) + coldfire_vector_base) = (unsigned long)new_trap, i++);
   *(unsigned long *)((5 * 4) + coldfire_vector_base) = (unsigned long)new_zero_divide; /* Zero Divide */
   *(unsigned long *)((10 * 4) + coldfire_vector_base) = (unsigned long)new_trap; /* LineA */
   *(unsigned long *)((15 * 4) + coldfire_vector_base) = (unsigned long)new_trap; /* LineF */
   *(unsigned long *)(((64+6) * 4) + coldfire_vector_base) = (unsigned long)new_mfp;  /* IRQ6 EPORT */
   pseudo_dma_vec = *(unsigned long *)0x13C;
-	MCF_EPORT_EPIER |= MCF_EPORT_EPIER_EPIE6;
+  MCF_EPORT_EPIER |= MCF_EPORT_EPIER_EPIE6;
   if(save_imrl_tos & MCF_INTC_IMRL_INT_MASK5)
-	  MCF_INTC_IMRL &= ~(MCF_INTC_IMRL_INT_MASK6 + MCF_INTC_IMRL_MASKALL);
-	else /* PCI used */
-	{
-	  /* move PCI CF68KLIB interrupt vector to native coldfire vector */
+    MCF_INTC_IMRL &= ~(MCF_INTC_IMRL_INT_MASK6 + MCF_INTC_IMRL_MASKALL);
+  else /* PCI used */
+  {
+    /* move PCI CF68KLIB interrupt vector to native coldfire vector */
     *(unsigned long *)(((64+5) * 4) + coldfire_vector_base) = *(unsigned long *)((64+5+OFFSET_INT_CF68KLIB) * 4); /* IRQ5 EPORT */
-	  MCF_INTC_IMRL &= ~(MCF_INTC_IMRL_INT_MASK6 + MCF_INTC_IMRL_INT_MASK5 + MCF_INTC_IMRL_MASKALL);  
+    MCF_INTC_IMRL &= ~(MCF_INTC_IMRL_INT_MASK6 + MCF_INTC_IMRL_INT_MASK5 + MCF_INTC_IMRL_MASKALL);  
   }
   top &= 0xFFF00000;
   disable_caches();
@@ -1967,7 +2061,7 @@ static void go_emutos(unsigned long source)
   asm volatile (
         " moveq #0,D0\n\t"
         " movec.l D0,ACR0\n\t" );
-  mmu_map(top,top,0,MMUTR_SG,MMUDR_SZ1M+MMUDR_NOCACHE+MMUDR_LK);
+  mmu_map(top,top,0,MMUDR_SZ1M+MMUDR_NOCACHE+MMUDR_LK);
   *(unsigned long *)ramtop = top;
   enable_caches();
   xTaskCreate(vETOS, (void *)"ETOS", STACK_DEFAULT, NULL, TOS_TASK_PRIORITY, &tid_ETOS);
@@ -1990,7 +2084,7 @@ static void uif_cmd_go(int argc, char **argv)
 #ifdef MCF547X
     if(((unsigned long)fp == 0xE0600000) || ((unsigned long)fp == 0xE0400000))
     {
-    	go_emutos((unsigned long)fp);
+     go_emutos((unsigned long)fp);
       return;
     }
 #endif
@@ -2042,11 +2136,12 @@ static void uif_cmd_st(int argc, char **argv)
     }
   }
   if(!found)
-    board_printf("Error:  No task supended by a breakpoint to trace\r\n");
+    board_printf("Error: No task supended by a breakpoint to trace\r\n");
 }
 
-#ifndef MCF5445X
-#ifdef SOUND_AC97
+#endif /* COLDFIRE */
+
+#if defined(COLDFIRE) && !defined(MCF5445X) && defined(SOUND_AC97)
 
 static void uif_cmd_ac97_pr(int argc, char **argv)
 {
@@ -2112,8 +2207,7 @@ same_addr:
     board_printf(SYNTAX,argv[0]);  
 }
 
-#endif /* MCF5445X */
-#endif /* SOUND_AC97 */
+#endif /*  defined(COLDFIRE) && !defined(MCF5445X) && defined(SOUND_AC97) */
 
 static void uif_cmd_md(int argc, char **argv)
 {
@@ -2129,7 +2223,7 @@ static void uif_cmd_md(int argc, char **argv)
       if(success)
       {
         contents = cpu_read_data(begin,SIZE_32);
-        board_printf("%08X contains %08X\n", (int)begin, (int)contents);
+        board_printf("%08X contains %08X\r\n", (int)begin, (int)contents);
         begin = contents;
         end = contents+(DEFAULT_MD_LINES*16);
         goto show_mem;
@@ -2167,7 +2261,8 @@ static void uif_cmd_md(int argc, char **argv)
   else
   {
     begin = md_last_address;
-    size = md_last_size;
+    if(md_last_size)
+      size = md_last_size;
     end = begin + (DEFAULT_MD_LINES * 16);
   }
 show_mem:
@@ -2208,12 +2303,12 @@ static void uif_cmd_pm(int argc, char **argv)
     while(!done)
     {
       datar = cpu_read_data(address, size);
-      board_printf("%08X:  ", (int)address);
+      board_printf("%08X: ", (int)address);
       switch(size)
       {
-        case SIZE_8: board_printf("[%02X]  ", (int)datar); break;
-        case SIZE_16: board_printf("[%04X]  ", (int)datar); break;
-        case SIZE_32: board_printf("[%08X]  ", (int)datar); break;
+        case SIZE_8: board_printf("[%02X] ", (int)datar); break;
+        case SIZE_16: board_printf("[%04X] ", (int)datar); break;
+        case SIZE_32: board_printf("[%08X] ", (int)datar); break;
       }
       get_line(string);
       if(make_argv(string, NULL) == 0)
@@ -2341,25 +2436,35 @@ static void uif_cmd_dis(int argc, char **argv)
 
 static void uif_cmd_dr(int argc, char **argv)
 {
+#ifdef COLDFIRE
   unsigned long reg[40];
+  int vector;
+#endif
   portSTACK_TYPE p[64];
   portSTACK_TYPE *p1; 
   portSTACK_TYPE pc;
   portSTACK_TYPE frame_format; 
-  int i, j, vector;
+  int i, j;
   if(argv);
   if(argc);
   vTaskSuspendAll();
+#ifdef COLDFIRE
   memcpy(reg, (void *)(library_data_area), 40 * sizeof(unsigned long));
-#ifdef MCF547X
+#endif
+#if defined(COLDFIRE) && defined(MCF547X)
   memcpy(p, (tid_ETOS != NULL) ? tid_ETOS  : tid_TOS, 64 * sizeof(portSTACK_TYPE));
 #else
   memcpy(p, tid_TOS, 64 * sizeof(portSTACK_TYPE));
-#endif
+#endif /* defined(COLDFIRE) && defined(MCF547X) */
   p1 = (portSTACK_TYPE *)p[0];
   frame_format = p1[0];
+#ifdef COLDFIRE
   pc = p1[1];
+#else
+  pc = (frame_format << 16) | ((p1[1] >> 16) & 0xFFFF);
+#endif /* COLDFIRE */
   xTaskResumeAll();
+#ifdef COLDFIRE
 #ifdef MCF547X
   if(tid_ETOS == NULL)
 #endif
@@ -2406,34 +2511,110 @@ static void uif_cmd_dr(int argc, char **argv)
     if(reg[16] < (unsigned long)__SDRAM_SIZE)
       board_printf("%s\r\n", disassemble_pc(reg[16]));
   }
+#endif /* COLDFIRE */
   board_printf("TOS task context saving:\r\n");
+#ifdef COLDFIRE
   board_printf("Status Register (SR): %04X\r\n", (int)(frame_format & 0xFFFF));
+#else
+  board_printf("Status Register (SR): %04X\r\n", (int)((frame_format >> 16) & 0xFFFF));
+#endif
   board_printf("Program Counter (PC): %08X\r\n", (int)pc);
   board_printf("Supervisor Stack (SSP): %08X\r\n", (int)p[0]);
   board_printf("User Stack (USP): %08X\r\n", (int)p[16]);
   for(i = j = 0; i < 8; i++, j += 2)
   {
+#ifdef COLDFIRE
     board_printf("D%d: %08X  A%d: %08X  FP%d: %08X%08X\r\n",
-     i, (int)p[i+1], i, (int)p[i+9],
-     i, (int)p[j+22], (int)p[j+23]);
+     i, (int)p[i+1], i, (int)p[i+9], i, (int)p[j+22], (int)p[j+23]);
+#else
+    board_printf("D%d: %08X  A%d: %08X\r\n", i, (int)p[i+1], i, (int)p[i+9]);
+#endif /* COLDFIRE */
   }
+#ifdef COLDFIRE
   if(pc < (portSTACK_TYPE)__SDRAM_SIZE)
+#else
+	if(pc < *(unsigned long *)ramtop)
+#endif /* COLDFIRE */
     board_printf("%s\r\n", disassemble_pc(pc));
 }
 
-static void uif_cmd_qt(int argc, char **argv)
+void uif_cmd_qt(int argc, char **argv)
 {
   if(argc);
   if(argv);
-  static char buf[80*50];
+  char *buf;
 #if( HAVE_USP == 1 )
   board_printf("Name\t\tTID\tPrio\tStatus\tSys/User Stack\t#\r\n");
 #else
   board_printf("Name\t\tTID\tPrio\tStatus\tStack\t\t#\r\n");
 #endif
   board_printf("------------------------------------------------------------");
-  vTaskList((void *)buf);
-  board_printf(buf);
+  if((buf = (char *)pvPortMalloc(80*uxTaskGetNumberOfTasks())) != NULL)
+  {
+    vTaskList((void *)buf);
+    board_printf(buf);
+    vPortFree(buf);
+  }
+}
+
+static void uif_cmd_kill(int argc, char **argv)
+{
+  xTaskHandle tid;
+  if(argc);
+  if((tid = xTaskGetTaskHandleFromName((const signed portCHAR *)argv[1])) == 0)
+    board_printf("Unknow task name\r\n");
+  else
+    vTaskDelete(tid);
+}
+
+static void uif_cmd_setpri(int argc, char **argv)
+{
+  xTaskHandle tid;
+  int success;
+  uint32 prio;
+  if(argc);
+  if((tid = xTaskGetTaskHandleFromName((const signed portCHAR *)argv[1])) == 0)
+    board_printf("Unknow task name\r\n");
+  else
+  {
+    prio = get_value(argv[2], &success, 10);
+    if((prio > 0)  && (prio < configMAX_PRIORITIES))
+      vTaskPrioritySet(tid, (unsigned portBASE_TYPE)prio);
+    else
+      board_printf("Invalid priority value\r\n");
+  }
+}
+
+static void uif_cmd_resume(int argc, char **argv)
+{
+  xTaskHandle tid;
+  if(argc);
+  if((tid = xTaskGetTaskHandleFromName((const signed portCHAR *)argv[1])) == 0)
+    board_printf("Unknow task name\r\n");
+  else
+  {
+    vTaskResume(tid);
+#ifndef COLDFIRE
+    if(strcmp(argv[1], "TOS") == 0)
+       *(unsigned short *)vblsem = 1;
+#endif
+  }
+}
+
+static void uif_cmd_suspend(int argc, char **argv)
+{
+  xTaskHandle tid;
+  if(argc);
+  if((tid = xTaskGetTaskHandleFromName((const signed portCHAR *)argv[1])) == 0)
+    board_printf("Unknow task name\r\n");
+  else
+  {
+#ifndef COLDFIRE
+    if(strcmp(argv[1], "TOS") == 0)
+       *(unsigned short *)vblsem = 0;
+#endif
+    vTaskSuspend(tid);
+  }
 }
 
 #if 0
@@ -2447,7 +2628,7 @@ static void uif_cmd_trace(int argc, char **argv)
   long file_w;
   int success;
   unsigned long val;
-  if(strcmp(argv[1],"on") == 0)
+  if(strcmp(argv[1], "on") == 0)
   {
     if(buffer_trace != NULL)
     {
@@ -2480,7 +2661,7 @@ static void uif_cmd_trace(int argc, char **argv)
     }
     vTaskStartTrace(buffer_trace, size_trace);
   }
-  else if(strcmp(argv[1],"off") == 0)
+  else if(strcmp(argv[1], "off") == 0)
   {
     if(buffer_trace == NULL)
     {
@@ -2500,9 +2681,11 @@ static void uif_cmd_trace(int argc, char **argv)
     buffer_trace = NULL;
   }
   else
-    board_printf("Usage : trace on/off <file> <size>\r\n");
+    board_printf("Usage: trace on/off <file> <size>\r\n");
 }  
 #endif
+
+#ifdef COLDFIRE /* BDOS */
 
 static void uif_cmd_cat(int argc, char **argv)
 {
@@ -2800,6 +2983,8 @@ static void uif_cmd_rmdir(int argc, char **argv)
     board_printf("Cannot remove directory %s (error: %d)\r\n", argv[1], err);
 }
 
+#endif /* COLDFIRE */
+
 /*---------------------------------------------------------------------*/
 /* Fonction arp                                                        */
 /*---------------------------------------------------------------------*/
@@ -2860,6 +3045,8 @@ static void uif_cmd_arp(int argc, char **argv)
     }  
   }
 }
+
+#endif /* DBUG */
 
 /*---------------------------------------------------------------------*/
 /* Fonction ifconfig                                                   */
@@ -2954,7 +3141,7 @@ static void usage_ifconfig(void)
   board_printf("  [dstaddr <address>]  [netmask <address>]  [gateway <address>]  [up|down]\r\n\n");
 }
 
-static void uif_cmd_ifconfig(int argc, char **argv)
+void uif_cmd_ifconfig(int argc, char **argv)
 {
 #define IFNAMSIZ 4
   char ifr_name[IFNAMSIZ];
@@ -3055,6 +3242,8 @@ static void uif_cmd_ifconfig(int argc, char **argv)
   }
 }
 
+#ifdef DBUG
+
 /*---------------------------------------------------------------------*/
 /* Fonction ping                                                       */
 /*---------------------------------------------------------------------*/
@@ -3148,7 +3337,9 @@ static int max, min, moyenne, envoye, perte;
 static void uif_cmd_ping(int argc, char **argv)
 {
 // Définition des différentes variables
+#ifdef COLDFIRE
   unsigned long IP;
+#endif
   struct ip_addr xIpAddr;
   int sock;
   struct sockaddr_in sin, from;
@@ -3169,7 +3360,7 @@ static void uif_cmd_ping(int argc, char **argv)
   // Accès à l'aide
   if(argc < 2 || strcmp(argv[1],"--help") == 0)
   {
-    board_printf("Usage : ping <-n echos> <-w delay> host\r\n");
+    board_printf("Usage: ping <-n echos> <-w delay> host\r\n");
     return;
   }
   // Identification des différentes options
@@ -3191,8 +3382,12 @@ static void uif_cmd_ping(int argc, char **argv)
   taille = sizeof(IpHeader) + sizeof(IcmpHeader);
   strcpy(ascii_IP, inet_ntoa(sin.sin_addr));
   board_printf("Envoi d'une requete 'ping' sur %s avec %d octets de donnees :\r\n\r\n", ascii_IP, taille);
+#ifdef COLDFIRE
   board_get_client((unsigned char *)&IP);
   xIpAddr.addr = htonl(IP);
+#else
+  xIpAddr.addr = htonl(ip_addr_client);
+#endif /* COLDFIRE */
   if(sin.sin_addr.s_addr == xIpAddr.addr)
     sin.sin_addr.s_addr = INADDR_LOOPBACK;
   // Initialisation du nombre de ping à faire
@@ -3319,8 +3514,10 @@ static void uif_cmd_ping(int argc, char **argv)
         }
         memset(recvbuf,0,MAX_PACKET);
       }
+#ifdef COLDFIRE
       if(auxistat() && ((rs232get() & 0xFF) == CTRL_C))
          Nbping = envoye;
+#endif
     }
     while(findelai == 0);
     // Latence d'une seconde entre chaque ping
@@ -3361,6 +3558,8 @@ static unsigned short checksum(unsigned short *buffer, int size)
   return (unsigned short)(~cksum);
 }
 
+#ifdef COLDFIRE
+
 static void uif_cmd_stats(int argc, char **argv)
 {
   if(argc);
@@ -3381,7 +3580,7 @@ static void uif_cmd_cache(int argc, char **argv)
     board_printf("CACR: 0x%08X\r\n", cacr);  
   }
   else
-    board_printf("Usage : cache <on/off>\r\n");
+    board_printf("Usage: cache <on/off>\r\n");
 }
 
 static void uif_cmd_debug(int argc, char **argv)
@@ -3411,15 +3610,17 @@ static void uif_cmd_debug(int argc, char **argv)
        *(unsigned char *)(debug_cf68klib) = *(unsigned char *)(debug_cf68klib_count) = 0;
   }
   else
-    board_printf("Usage : debug on/off\r\n");
+    board_printf("Usage: debug on/off\r\n");
 }
 
 static void uif_cmd_inter(int argc, char **argv)
 {
+#ifndef MCF547X
   if((argc == 2) && strcmp(argv[1],"on") == 0)
     install_inters_cf68klib();
   else if((argc == 2) && strcmp(argv[1],"off") == 0)
-    deinstall_inters_cf68klib();
+    uninstall_inters_cf68klib();
+#endif
 #ifdef MCF5445X
   else if((argc == 2) && strcmp(argv[1],"abort") == 0)
   {
@@ -3433,8 +3634,9 @@ static void uif_cmd_inter(int argc, char **argv)
     vPortSetIPL(level);
   }
   else
-    board_printf("Usage : inter on/off/abort\r\n");
+    board_printf("Usage: inter on/off/abort\r\n");
 #else /* MCF548X */
+#ifndef MCF547X
   else if((argc == 2) && strcmp(argv[1],"abort") == 0)
   {
     int level = vPortSetIPL(portIPL_MAX);
@@ -3447,6 +3649,7 @@ static void uif_cmd_inter(int argc, char **argv)
     vPortSetIPL(level);
   }
   else if(argc < 2)
+#endif /* MCF547X */
   {
     static char *names_int[] = {
      "",            /* 64 */
@@ -3464,6 +3667,25 @@ static void uif_cmd_inter(int argc, char **argv)
      "",            /* 76 */
      "",            /* 77 */
      "",            /* 78 */
+#ifdef MCF547X /* interrupts not used on FIREBEE */
+     "",            /* 79 */
+     "",            /* 80 */
+     "",            /* 81 */
+     "",            /* 82 */
+     "",            /* 83 */
+     "",            /* 84 */
+     "",            /* 85 */
+     "",            /* 86 */
+     "",            /* 87 */
+     "",            /* 88 */
+     "",            /* 89 */
+     "",            /* 90 */
+     "",            /* 91 */
+     "",            /* 92 */
+     "",            /* 93 */
+     "",            /* 94 */
+     "",            /* 95 */
+#else
      "USB 2.0",     /* 79 */
      "USB 2.0",     /* 80 */
      "USB 2.0",     /* 81 */
@@ -3481,13 +3703,19 @@ static void uif_cmd_inter(int argc, char **argv)
      "DSPI",        /* 93 */
      "DSPI",        /* 94 */  
      "DSPI",        /* 95 */
+#endif
      "PSC3",        /* 96 */
      "PSC2",        /* 97 */
      "PSC1",        /* 98 */
      "PSC0",        /* 99 */
      "Comm Timer",  /* 100 */
+#ifdef MCF547X /* not used on FIREBEE */
+     "",            /* 101 */
+     "",            /* 102 */
+#else
      "SEC",         /* 101 */
      "FEC1",        /* 102 */
+#endif
      "FEC0",        /* 103 */
      "I2C",         /* 104 */
      "PCIARB",      /* 105 */
@@ -3532,27 +3760,36 @@ static void uif_cmd_inter(int argc, char **argv)
     {
       if(strlen(names_int[i]))
       {
+        unsigned long imr, imr_tos;
+        int j;
         if(i < 32) 
-          board_printf("%s\t\t%s\t\t%d\t%d\t%s Int(%d)\r\n",
-           !(save_imrl & (1 << i)) ? "ON" : "OFF",
-           !(save_imrl_tos & (1 << i)) ? "ON" : "OFF",
-           (MCF_INTC_ICRn(i) >> 3) & 7, MCF_INTC_ICRn(i) & 7, 
-           names_int[i], i + 64);
+        {
+          imr = save_imrl;
+          imr_tos = save_imrl_tos;
+          j = i;
+        }
         else
-          board_printf("%s\t\t%s\t\t%d\t%d\t%s Int(%d)\r\n",
-           !(save_imrh & (1 << (i - 32))) ? "ON" : "OFF",
-           !(save_imrh_tos & (1 << (i - 32))) ? "ON" : "OFF",
-           (MCF_INTC_ICRn(i) >> 3) & 7, MCF_INTC_ICRn(i) & 7, 
-           names_int[i], i + 64);
+        {
+          imr = save_imrh;
+          imr_tos = save_imrh_tos;
+          j = i - 32;
+        }
+        board_printf("%s\t\t%s\t\t%d\t%d\t%s Int(%d)\r\n",
+         !(imr & (1 << j)) ? "ON" : "OFF",
+         !(imr_tos & (1 << j)) ? "ON" : "OFF",
+         (MCF_INTC_ICRn(i) >> 3) & 7, MCF_INTC_ICRn(i) & 7, 
+         names_int[i], i + 64);
       }
     }
   }
+#ifndef MCF547X
   else
-    board_printf("Usage : inter <on/off>\r\n");
+    board_printf("Usage: inter <on/off/abort>\r\n");
+#endif
 #endif /* MCF5445X */
 }
 
-static void uif_cmd_reset(int argc, char **argv)
+void uif_cmd_reset(int argc, char **argv)
 {
   if(argc);
   if(argv);
@@ -3572,7 +3809,8 @@ static void uif_cmd_reset(int argc, char **argv)
 #endif /* MCF5445X */
   while(1)
   {
-		asm volatile(" nop\n\t");  
+		asm volatile(" nop\n\t");
+    MCF_UART_UTB(0) = '.';
   }
 }
 
@@ -3603,8 +3841,10 @@ static void uif_cmd_trap(int argc, char **argv)
        *(unsigned char *)(debug_trap) = *(unsigned char *)(debug_trap_count) = 0;
   }
   else
-    board_printf("Usage : trap on/off\r\n");
+    board_printf("Usage: trap on/off\r\n");
 }
+
+#endif /* COLDFIRE */
 
 static UIF_CMD UIF_CMDTAB[] =
 {
@@ -3616,26 +3856,37 @@ static UIF_CMD UIF_CMDTAB[] =
   /* <6> actual function to call          */
   /* <7> brief description of command     */
   /* <8> syntax of command                */
-#ifndef MCF5445X
-#ifdef SOUND_AC97
+#if defined(COLDFIRE) && !defined(MCF5445X) && defined(SOUND_AC97)
   {"acpr",4,1,2,0,uif_cmd_ac97_pr,"AC97 Patch Register","addr <data>"},
 #endif
-#endif
-#if defined(CONFIG_USB_UHCI) || defined(CONFIG_USB_OHCI) || defined(CONFIG_USB_EHCI)
+#if defined(COLDFIRE) && (defined(CONFIG_USB_UHCI) || defined(CONFIG_USB_OHCI) || defined(CONFIG_USB_EHCI))
   {"usb",3,0,4,0,uif_cmd_usb,"USB sub-system","<cmd ...>"},
 #endif
+#ifdef COLDFIRE
   {"cb",2,0,1,0,uif_cmd_cb,"Clear Breakpoint","<index>"},
   {"db",2,0,UIF_MAX_ARGS-1,0,uif_cmd_db,"Define Breakpoint","<addr> <-c|t value> <-r addr..> <-i> <-m>"},
+#endif /* COLDFIRE */
   {"dm",2,0,2,UIF_CMD_FLAG_REPEAT,uif_cmd_md,"Display Memory","begin <end>"},
   {"md",2,0,2,UIF_CMD_FLAG_REPEAT|UIF_CMD_FLAG_HIDDEN,uif_cmd_md,"Memory Display","begin <end>"},
   {"dis",2,0,1,UIF_CMD_FLAG_REPEAT,uif_cmd_dis,"Disassemble","<addr>"},
+#ifdef COLDFIRE
   {"dr",2,0,0,0,uif_cmd_dr,"Display Registers CF68KLIB",""},
   {"go",1,0,1,0,uif_cmd_go,"Execute, Insert Breakpt",""},
   {"lb",2,0,0,0,uif_cmd_lb,"List Breakpoints",""},
+#else /* !COLDFIRE */
+  {"dr",2,0,0,0,uif_cmd_dr,"Display Registers (context)",""},
+#endif /* COLDFIRE */
   {"pm",2,1,2,0,uif_cmd_pm,"Patch Memory","addr <data>"},
   {"qt",2,0,0,UIF_CMD_FLAG_REPEAT,uif_cmd_qt,"Query Tasks",""},
+#ifdef COLDFIRE
   {"st",2,0,1,UIF_CMD_FLAG_REPEAT,uif_cmd_st,"Single Step (after db)","<count>"},
+#endif
+  {"kill",4,1,1,0,uif_cmd_kill,"Kill Task","task_name"},
+  {"setpri",6,2,2,0,uif_cmd_setpri,"Set Priority Task","task_name priority"},
+  {"resume",6,1,1,0,uif_cmd_resume,"Resume Task","task_name"},
+  {"suspend",7,1,1,0,uif_cmd_suspend,"Suspend Task","task_name"},
 //  {"trace",2,1,3,0,uif_cmd_trace,"Task Trace","on/off <file> <size>"},
+#ifdef COLDFIRE
   {"cat",2,1,UIF_MAX_ARGS-1,0,uif_cmd_cat,"Concatenate File(s)","file(s)"},
   {"cd",2,1,1,UIF_CMD_FLAG_HIDDEN,uif_cmd_chdir,"Change Directory","dir"},
   {"chdir",2,1,1,0,uif_cmd_chdir,"Change Directory","dir"},
@@ -3651,16 +3902,23 @@ static UIF_CMD UIF_CMDTAB[] =
   {"rm",2,1,1,0,uif_cmd_rm,"Remove File","file"},
   {"rmdir",2,1,1,0,uif_cmd_rmdir,"Remove Directory","dir"},
   {"type",4,1,UIF_MAX_ARGS-1,UIF_CMD_FLAG_HIDDEN,uif_cmd_cat,"Concatenate File(s)","file(s)"},
+#endif /* COLDFIRE */
   {"arp",2,0,2,0,uif_cmd_arp,"Address Resol. Protocol","<-a> <host>"},
   {"ifconfig",2,0,UIF_MAX_ARGS-1,0,uif_cmd_ifconfig,"Interface Configuration","<-a> <interface> ..."},
   {"ping",2,1,5,0,uif_cmd_ping,"Ping","<-n echos> <-w delay> host"},
+#ifdef COLDFIRE
   {"netstat",2,0,0,0,uif_cmd_stats,"Network Stats",""},
   {"cache",2,0,1,0,uif_cmd_cache,"Cache","<on/off>"},
   {"debug",2,1,2,0,uif_cmd_debug,"Debug CF68KLIB","on/off <count (0:infinite)>"},
+#ifdef MCF547X
+  {"inter",1,0,1,0,uif_cmd_inter,"Interrupts CF68KLIB",""},
+#else
   {"inter",2,0,1,0,uif_cmd_inter,"Interrupts CF68KLIB","<on/off/abort>"},
+#endif
   {"reset",5,0,0,0,uif_cmd_reset,"System Reset",""},
   {"shutdown",8,0,0,UIF_CMD_FLAG_HIDDEN,uif_cmd_reset,"System Reset",""},
   {"trap",4,1,2,0,uif_cmd_trap,"Traps CF68KLIB","on/off <count (0:infinite)>"},
+#endif /* COLDFIRE */
   {"help",2,0,1,0,uif_cmd_help,"Help","<cmd>"},
 };
 static const int UIF_NUM_CMD = UIF_CMDTAB_SIZE;
@@ -3762,6 +4020,8 @@ static int make_argv(char *cmdline, char *argv[])
     argv[argc] = NULL;
   return argc;
 }
+
+#ifdef COLDFIRE
 
 static int run_cmd(void)
 {
@@ -4102,13 +4362,17 @@ tftp_close:
   }
 }
 
+#endif /* COLDFIRE */
+
 /*---------------------------------------------------------------------*/
 /* Telnet Server                                                       */
 /*---------------------------------------------------------------------*/
 
 static void sendopt(struct termstate *ts, int code, int option)
 {
+  static char *codename[4] = {"WILL", "WONT", "DO", "DONT"};
   unsigned char buf[3];
+  printf_debug("TELNETd: sendopt %s %d\r\n", codename[code - 251], option);
   buf[0] = TELNET_IAC;
   buf[1] = (unsigned char) code;
   buf[2] = (unsigned char) option;
@@ -4117,6 +4381,8 @@ static void sendopt(struct termstate *ts, int code, int option)
 
 static void parseopt(struct termstate *ts, int code, int option)
 {
+  static char *codename[4] = {"WILL", "WONT", "DO", "DONT"};
+  printf_debug("TELNETd: parseopt %s %d\r\n", codename[code - 251], option);
   switch(option)
   {
     case TELOPT_ECHO:
@@ -4143,6 +4409,7 @@ static void parseopt(struct termstate *ts, int code, int option)
 
 static void parseoptdat(struct termstate *ts, int option, unsigned char *data, int len)
 {
+  printf_debug("TELNETd: OPTION %d data (%d bytes)\r\n", option, len);
   switch(option)
   {
     case TELOPT_NAWS:
@@ -4226,6 +4493,7 @@ static void parse(struct termstate *ts)
 
 static portTASK_FUNCTION(vTELNETd, pvParameters)
 {
+  char ascii_IP[16];
   struct sockaddr_in sin;
   fd_set fdsr;
   struct timeval tv_timeout;
@@ -4238,13 +4506,14 @@ static portTASK_FUNCTION(vTELNETd, pvParameters)
   ts = (struct termstate *)pvPortMalloc(sizeof(struct termstate));
   if(ts == NULL)
   {
-    printD("TELNETd: malloc error\r\n");
+    printf_debug("TELNETd: malloc error\r\n");
     vTaskDelete(0);
   }
   sock = socket(AF_INET, SOCK_STREAM, 0);
   if(sock < 0)
   {
-    printD("TELNETd: error %d in socket\r\n", errno);
+    printf_debug("TELNETd: error %d in socket\r\n", errno);
+    vPortFree(ts);
     vTaskDelete(0);
   }
   sin.sin_family = AF_INET;
@@ -4253,28 +4522,34 @@ static portTASK_FUNCTION(vTELNETd, pvParameters)
   rc = bind(sock, (struct sockaddr *) &sin, sizeof sin);
   if(rc < 0)
   {
-    printD("TELNETd: error %d in bind\r\n", errno);
+    printf_debug("TELNETd: error %d in bind\r\n", errno);
+    vPortFree(ts);
     vTaskDelete(0);
   }
   rc = listen(sock, 5);
   if(rc < 0)
   {
-    printD("TELNETd: error %d in listen\r\n", errno);
+    printf_debug("TELNETd: error %d in listen\r\n", errno);
     close(sock);
+    vPortFree(ts);
     vTaskDelete(0);
   }
   while(1)
   {
     int off = 0;
+    int timeout = 0;
     struct sockaddr_in sin;
     int len = sizeof(sin);
     s = accept(sock, (struct sockaddr *)&sin, &len);
     if(s < 0)
     {
-      printD("TELNETd: error %d in accept\r\n", errno);
+      printf_debug("TELNETd: error %d in accept\r\n", errno);
       close(sock);
+      vPortFree(ts);
       vTaskDelete(0);
     }
+    strcpy(ascii_IP, inet_ntoa(sin.sin_addr));
+		printf_debug("TELNETd: accept %s\r\n", ascii_IP);
     setsockopt(s, IPPROTO_TCP, TCP_NODELAY, (char *)&off, sizeof(off));
     /* Initialize terminal state */
     memset(ts, 0, sizeof(struct termstate));
@@ -4285,6 +4560,9 @@ static portTASK_FUNCTION(vTELNETd, pvParameters)
     ts->term.lines = 25;
     /* Send initial options */
     sendopt(ts, TELNET_WILL, TELOPT_ECHO);
+    sendopt(ts, TELNET_WILL, TELOPT_SUPPRESS_GO_AHEAD);
+    sendopt(ts, TELNET_WONT, TELOPT_LINEMODE);
+    sendopt(ts, TELNET_DO, TELOPT_NAWS);    
     ts->bo.start = ts->bo.data;
     board_putchar_flush();
     board_printf(PROMPT);
@@ -4297,14 +4575,26 @@ static portTASK_FUNCTION(vTELNETd, pvParameters)
       tv_timeout.tv_usec = 0;
       if((i = select(FD_SETSIZE, &fdsr, NULL, NULL, &tv_timeout)) == -1)
       {
-        printD("TELNETd: error %d in select\r\n", errno);
+        printf_debug("TELNETd: error %d in select\r\n", errno);
 done:
         close(ts->sock);
         ts->sock = -1;
         break;
       }
+      if(!i)
+      {
+        timeout++;
+        if(timeout > 60)
+        {
+          printf_debug("TELNETd: timeout\r\n");
+          close(ts->sock);
+          ts->sock = -1;
+          break;
+        }
+      }     
       if((i > 0) && FD_ISSET(ts->sock, &fdsr))
       {
+        timeout = 0;
         if(ts->bi.start == ts->bi.end)
         {
           /* Read data from user */
@@ -4332,9 +4622,7 @@ done:
                   if(pos > 0)
                   {
                     pos -= 1;
-//                    board_putchar(0x08);    /* backspace */
-//                    board_putchar(' ');
-//                    board_putchar(0x08);    /* backspace */
+                    board_printf("%c", (char)ch);
                   }
                   break;
                 default:
@@ -4344,14 +4632,17 @@ done:
                     if((ch > 0x1f) && (ch < 0x80))
                     {
                       cmdline1[pos++] = (char)ch;
-//                      board_putchar((char)ch);
+                      board_printf("%c", (char)ch);
                     }
                   }
                   break;
               }
+              board_putchar_flush();
             }
             else
             {
+              if(((j + 1) < n) && (ch == '\r') && (ts->bi.start[j + 1] == '\n'))
+              	j++;
               cmdline1[pos] = '\0';
               board_putchar('\r');
               board_putchar('\n');
@@ -4420,6 +4711,8 @@ next_cmd:
     }
   }
 }
+
+#ifdef COLDFIRE
 
 static void *test_debug_fault(unsigned long address, unsigned long vector, unsigned char *RegList)
 {
@@ -4491,8 +4784,8 @@ static void *test_debug_fault(unsigned long address, unsigned long vector, unsig
 #endif
   else if(pxCurrentTCB == tid_DEBUG)
     restart_debug = 1;
-  vTaskDelete(0);
-  while(1);
+  vTaskDelete(0); /* no return */
+  return(NULL);
 }
 
 static portTASK_FUNCTION(vDEBUG, pvParameters)
@@ -4500,12 +4793,6 @@ static portTASK_FUNCTION(vDEBUG, pvParameters)
   /* The parameters are not used in this function */
   (void)pvParameters;
   *(unsigned long *)(handler_fault) = (unsigned long)test_debug_fault;
-  BASE = 16;
-  md_last_address = 0;
-  md_last_size = 0;
-  disasm_last_address = 0;
-  cmdline1[0] = cmdline2[0] = '\0';  
-  history_init();
   while(1)
   {
     board_putchar_flush();
@@ -4515,12 +4802,22 @@ static portTASK_FUNCTION(vDEBUG, pvParameters)
   }
 }
 
+#endif /* COLDFIRE */
+
 static void start_debug(vid)
 {
+  BASE = 16;
+  md_last_address = 0;
+  md_last_size = 0;
+  disasm_last_address = 0;
+  cmdline1[0] = cmdline2[0] = '\0';  
+#ifdef COLDFIRE
+  history_init();
   xTaskCreate(vDEBUG, (void *)"DBUG", STACK_DEFAULT, NULL, DEBUG_TASK_PRIORITY, &tid_DEBUG);
+#endif /* COLDFIRE */
 } 
 
-#endif
+#endif /* DBUG */
 
 static int geterrno(void)
 {
@@ -4554,13 +4851,15 @@ static SOCKET_COOKIE sc =
   geterrno
 };
 
+#ifdef COLDFIRE
+
 void start_servers(void)
 {
 #ifdef DBUG
   xTaskCreate(vTELNETd, (void *)"TELNETd", STACK_DEFAULT, NULL, TELNET_TASK_PRIORITY, &tid_TELNET);
 #endif
 #ifdef FTP_SERVER
-	xTaskCreate(vFTPd, (void *)"FTPd", STACK_DEFAULT, NULL, FTP_TASK_PRIORITY, NULL);
+  xTaskCreate(vFTPd, (void *)"FTPd", STACK_DEFAULT, NULL, FTP_TASK_PRIORITY, NULL);
 #endif
   xTaskCreate(vTFTPd, (void *)"TFTPd", STACK_DEFAULT, NULL, TFTP_TASK_PRIORITY, NULL);
   /* Start the webserver */
@@ -4568,13 +4867,22 @@ void start_servers(void)
 }
 
 void init_lwip(void)
+#else /* !COLDFIRE */
+void init_lwip(unsigned long ip_addr, unsigned long mask_addr, unsigned long gateway_addr)
+#endif /* COLDFIRE */
 {
-  unsigned long IP;
   struct ip_addr xIpAddr, xNetMast, xGateway;
-  static struct netif loop_if, fec54xx0_if;
+  static struct netif loop_if;
+#ifdef COLDFIRE
+  unsigned long IP;
+  static struct netif fec54xx0_if;
 #ifndef MCF547X
   static struct netif fec54xx1_if;
 #endif
+#else /* !COLDFIRE */
+  static struct netif rtl8139_if;
+  ip_addr_client = ip_addr;
+#endif /* COLDFIRE */
   errno = 0;
   /* Initialize lwIP and its interface layer */
   sys_init();
@@ -4585,9 +4893,11 @@ void init_lwip(void)
   ip_init();
   tcpip_init(NULL, NULL);
   socket_init();
+#ifdef COLDFIRE
   board_get_server((unsigned char *)&IP);
   xIpAddr.addr = htonl(IP); // not used actually
   // => DNS_SERVER_ADDRESS in dns.c
+#endif
   /* Initialize the loopback interface structure */
   xIpAddr.addr = INADDR_LOOPBACK;
   xGateway.addr = 0;
@@ -4599,6 +4909,7 @@ void init_lwip(void)
     /* bring it up */
     netif_set_up(&loop_if);
   }    
+#ifdef COLDFIRE
   else
   {
     board_printf("Loopback init error\r\n");
@@ -4648,7 +4959,7 @@ void init_lwip(void)
     while(1)
       vTaskDelay(1);
   }
-#endif
+#endif /* MCF547X */
 #endif
   enable_caches();
 #ifdef DBUG
@@ -4656,12 +4967,27 @@ void init_lwip(void)
 #endif
 #ifdef MCF547X
   if(MCF_GPIO_PPDSDR_PSC3PSC2 & MCF_GPIO_PPDSDR_PSC3PSC2_PPDSDR_PSC3PSC27)
-#endif
+#endif /* MCF547X */
   {
     start_servers();
   }
+#else /* !COLDFIRE */
+  /* Initialize the network interface structure */
+  xIpAddr.addr = ip_addr;
+  xGateway.addr = gateway_addr;
+  xNetMast.addr = mask_addr;
+  if(netif_add(&rtl8139_if, &xIpAddr, &xNetMast, &xGateway, NULL, rtl8139if_init, tcpip_input) != NULL)
+  {
+    /* make it the default interface */
+    netif_set_default(&rtl8139_if);
+    /* bring it up */
+    netif_set_up(&rtl8139_if);
+  }
+#endif /* COLDFIRE */
   lwip_ok = 1;
 }
+
+#ifdef COLDFIRE
 
 static portTASK_FUNCTION(vTOS, pvParameters)
 {
@@ -4673,6 +4999,10 @@ static portTASK_FUNCTION(vTOS, pvParameters)
 
 static portTASK_FUNCTION(vROOT, pvParameters)
 {
+#ifdef MCF547X
+  extern short swi;
+  int shutdown_ethernet = 0;
+#endif
 #ifdef USB_DEVICE
 #ifndef MCF5445X
 #ifndef MCF547X
@@ -4685,12 +5015,12 @@ static portTASK_FUNCTION(vROOT, pvParameters)
   extern void hbl_int(void);
   extern unsigned long get_timer(void);
   int tick_count = 0;
-	unsigned long start_timer = get_timer();
+  unsigned long start_timer = get_timer();
   int level = vPortSetIPL(portIPL_MAX);
   old_hbl = *(unsigned long *)((64+2)*4 + coldfire_vector_base);
   *(unsigned long *)((64+2)*4 + coldfire_vector_base) = (unsigned long)hbl_int;
   MCF_EPORT_EPIER |= MCF_EPORT_EPIER_EPIE2;
-	MCF_EPORT_EPFR |= MCF_EPORT_EPFR_EPF2; /* clear interrupt	*/
+  MCF_EPORT_EPFR |= MCF_EPORT_EPFR_EPF2; /* clear interrupt */
   MCF_INTC_IMRL &= ~MCF_INTC_IMRL_INT_MASK2; /* enable interrupt */
   asm_set_ipl(level);
 #endif /* MCF547X */
@@ -4702,6 +5032,8 @@ static portTASK_FUNCTION(vROOT, pvParameters)
 #endif
 #endif
 #endif
+  vSemaphoreCreateBinary(xSemaphoreBDOS);
+  xQueueAlert = xQueueCreate(2, 256);
   restart_debug = 0;
   init_lwip();
   xTaskCreate(vTOS, (void *)"TOS", STACK_DEFAULT, pvParameters, TOS_TASK_PRIORITY, &tid_TOS);
@@ -4765,11 +5097,19 @@ static portTASK_FUNCTION(vROOT, pvParameters)
 #endif /* CONFIG_USB_INTERRUPT_POLLING */
     }
 #endif /* CONFIG_USB_UHCI || CONFIG_USB_OHCI || CONFIG_USB_EHCI */
+#ifndef MCF5445X
+    /* enable XLB PCI for all tasks */
+    if((save_imrh & (1 << 11)) && !(save_imrh_tos & (1 << 11)))
+    {
+      int level = asm_set_ipl(7); /* disable interrupts */
+      MCF_INTC_IMRH &= ~MCF_INTC_IMRH_INT_MASK43; /* enable interrupt */     
+      asm_set_ipl(level);
+    }
+#endif /* MCF5445X */
 #ifdef MCF547X
    if(boot_os)
    {
       unsigned long start_addr = 0;
-      extern short swi;
       switch(boot_os)
       {      
         case 1:
@@ -4784,26 +5124,60 @@ static portTASK_FUNCTION(vROOT, pvParameters)
           else if(tid_HTTPd == NULL)
 #endif
             start_servers();
-        	break;
+          break;
       }
       if(start_addr)
-		  {
-		    if(*(short *)start_addr == 0x602E)
+      {
+        if(*(short *)start_addr == 0x602E)
           go_emutos(start_addr);
         boot_os = 0;
       }
     }
-#endif
+    else if(!shutdown_ethernet && lwip_ok && drive_ok
+     && (!(swi & 0x40) || !(swi & 1)) /* !SW5 (UP) */
+     && !(swi & 0x80)) /* !SW6 (UP) */
+    { /* TOS for MiNT */
+      COOKIE *mint_cookie = *(COOKIE **)cookie;
+      while(mint_cookie != NULL)
+      {
+        if(mint_cookie->ident == 'MiNT')
+        {
+          COOKIE *eth_cookie = *(COOKIE **)cookie;
+          extern void fec_eth_stop(uint8 ch);
+          board_printf("Shutdown FEC...\r\n");
+          fec_eth_stop(0);
+          while(eth_cookie != NULL)
+          {
+            if((eth_cookie->ident == 'SOCK') || (eth_cookie->ident == 'STiK'))
+            {
+              eth_cookie->ident = 'NULL';
+              eth_cookie->v.l = 0;
+            }
+            if(!eth_cookie->ident)
+              eth_cookie = NULL;
+            else
+              eth_cookie++;
+          }
+          shutdown_ethernet = 1;
+          break;
+        }
+        if(!mint_cookie->ident)
+          mint_cookie = NULL;
+        else
+          mint_cookie++;
+      }
+    }
+#endif /* MCF547X */
 #if 0 // #ifdef MCF547X
     tick_count++;
     if(tick_count > configTICK_RATE_HZ*10)
     {
-    	unsigned long time = get_timer();
-			board_printf("VBL interval %d uS (%d %d)\r\n", (int)((time - start_timer)/(hbl_count * SYSTEM_CLOCK)), hbl_count, (time - start_timer)/SYSTEM_CLOCK);
+      unsigned long time = get_timer();
+      board_printf("VBL interval %d uS (%d %d)\r\n", (int)((time - start_timer)/(hbl_count * SYSTEM_CLOCK)), hbl_count, (time - start_timer)/SYSTEM_CLOCK);
       level = vPortSetIPL(portIPL_MAX);
-			start_timer =  get_timer();
+      start_timer =  get_timer();
       tick_count = 0;
-			hbl_count = 0;		
+      hbl_count = 0;		
       asm_set_ipl(level);
     }
 #endif
@@ -4869,12 +5243,20 @@ int usb_load_files(void)
 #endif /* USB_DEVICE */
 }
 
+#endif /* COLDFIRE */
+
 int init_network(void)
 {
   extern DRV_LIST stik_driver;
   extern int gs_init_stik_if(void);
   extern int gs_init_mem(void);
   COOKIE pck;
+#if defined(COLDFIRE) && !defined(MCF5445X)
+  extern char dma_cf_cookie[];
+  pck.ident = 'DMAC';
+  pck.v.l = (long)&dma_cf_cookie;
+  add_cookie(&pck);
+#endif /* defined(COLDFIRE) && !defined(MCF5445X) */
   if(!lwip_ok)
     return(FALSE);
   pck.ident = 'SOCK';
@@ -4887,6 +5269,8 @@ int init_network(void)
   add_cookie(&pck);
   return(TRUE);
 }
+
+#ifdef COLDFIRE
 
 int init_rtos(void *params)
 {
@@ -4901,16 +5285,232 @@ int init_rtos(void *params)
 #ifdef MCF547X
   tid_ETOS = NULL;
   boot_os = 0;
+  drive_ok = 0;
 #endif
   start_run = NULL;
   lwip_ok = get_serial_vector = get_ikbd_vector = tos_suspend = 0;
   *(unsigned short *)_timer_ms = 0;
-  vSemaphoreCreateBinary(xSemaphoreBDOS);
   init_dma();
-  xTaskCreate(vROOT, (void *)"ROOT", STACK_DEFAULT, params, ROOT_TASK_PRIORITY, NULL);
-  vTaskStartScheduler();
+  if(xTaskCreate(vROOT, (void *)"ROOT", STACK_DEFAULT, params, ROOT_TASK_PRIORITY, NULL) == pdPASS)
+    vTaskStartScheduler();
   return 0;
 }
 
+#endif /* COLDFIRE */
+
 #endif /* LWIP */
-#endif /* NETWORK */
+
+#if !defined(COLDFIRE) && defined(FREERTOS)
+
+extern short ethernet_found, drive_ok, os_magic;
+xTaskHandle pxCurrentTCB, tid_TOS;
+xQueueHandle xQueueAlert;
+portBASE_TYPE xNeedSwitchPCI; /* drivers must use this variable */
+unsigned long __FREERTOS_BASE[configTOTAL_HEAP_SIZE>>2]; /* heap_2.c */
+short OldBoot;
+static unsigned long pcibios_callback[4], old_vector[4]; 
+
+void pci_int(portBASE_TYPE num)
+{
+  xNeedSwitchPCI = pdFALSE;
+  if((num >= 0) && (num <= 3))
+  {
+    void (*f)(long num) = (void (*)(long))pcibios_callback[num];
+    if(f != NULL)
+      f(num + 1);
+  }
+}
+
+static void pci_inta_int(void)
+{
+  asm volatile(" move.w #0x2700,SR\n\t");
+#if _GCC_USES_FP == 1
+  asm volatile(" unlk fp\n\t" );
+#endif
+  portSAVE_CONTEXT();
+  {
+    asm volatile(
+                 " clr.l -(SP)\n\t"
+                 " jsr _pci_int\n\t"
+                 " addq.l #4,SP\n\t" );
+    if(xNeedSwitchPCI)
+      vTaskSwitchContext();
+  }
+  portRESTORE_CONTEXT();
+}
+
+static void pci_intb_int(void)
+{
+  asm volatile(" move.w #0x2700,SR\n\t");
+#if _GCC_USES_FP == 1
+  asm volatile(" unlk fp\n\t");
+#endif
+  portSAVE_CONTEXT();
+  {
+    asm volatile(
+                 " pea 1\n\t"
+                 " jsr _pci_int\n\t"
+                 " addq.l #4,SP\n\t" );
+    if(xNeedSwitchPCI)
+      vTaskSwitchContext();
+  }
+  portRESTORE_CONTEXT();
+}
+
+static void pci_intc_int(void)
+{
+  asm volatile(" move.w #0x2700,SR\n\t");
+#if _GCC_USES_FP == 1
+  asm volatile(" unlk fp\n\t");
+#endif
+  portSAVE_CONTEXT();
+  {
+    asm volatile(
+                 " pea 2\n\t"
+                 " jsr _pci_int\n\t"
+                 " addq.l #4,SP\n\t" );
+    if(xNeedSwitchPCI)
+      vTaskSwitchContext();
+  }
+  portRESTORE_CONTEXT();
+}
+
+static void pci_intd_int(void)
+{
+  asm volatile(" move.w #0x2700,SR\n\t");
+#if _GCC_USES_FP == 1
+  asm volatile(" unlk fp\n\t");
+#endif
+  portSAVE_CONTEXT();
+  {
+    asm volatile(
+                 " pea 3\n\t"
+                 " jsr _pci_int\n\t"
+                 " addq.l #4,SP\n\t" );
+    if(xNeedSwitchPCI)
+      vTaskSwitchContext();
+  }
+  portRESTORE_CONTEXT();
+}
+
+static portTASK_FUNCTION(vTOS, pvParameters)
+{
+  /* The parameters are not used in this function */
+  (void)pvParameters;
+  asm volatile(" jmp _goto_tos");
+}
+
+static portTASK_FUNCTION(vROOT, pvParameters)
+{
+  int shutdown_ethernet = 0, count = 0, vectors_ok = 0;
+  int i, level;
+  if(pvParameters);
+  xQueueAlert = xQueueCreate(2, 256);
+  xTaskCreate(vTOS, (void *)"TOS", STACK_DEFAULT, NULL, TOS_TASK_PRIORITY, &tid_TOS);
+#ifdef DBUG
+  start_debug();
+#endif
+  while(1)
+  {
+    if(ethernet_found && drive_ok && !vectors_ok)
+    {
+      level = portSET_IPL(portIPL_MAX);
+      for(i = 0; i < 4; i++)
+      {
+        unsigned long *vector = (unsigned long *)*(unsigned long *)((PCI_IRQ_BASE_VECTOR + i + 1) * 4);
+        if((vector[-2] == '_PCI') && (vector[-3] == 'XBRA') && (vector[-5] == '_PCI')) /* extra code for FreeRTOS subroutine */
+        {
+          OldBoot = 0;
+          pcibios_callback[i] = vector[-4];
+          old_vector[i] = *(unsigned long *)((PCI_IRQ_BASE_VECTOR + i + 1) * 4);
+          if(ethernet_found)
+          {
+            switch(i)
+            {
+              case 0: *(unsigned long *)((PCI_IRQ_BASE_VECTOR + 1) * 4) = (unsigned long)pci_inta_int; break;
+              case 1: *(unsigned long *)((PCI_IRQ_BASE_VECTOR + 2) * 4) = (unsigned long)pci_intb_int; break;
+              case 2: *(unsigned long *)((PCI_IRQ_BASE_VECTOR + 3) * 4) = (unsigned long)pci_intc_int; break;
+              case 3: *(unsigned long *)((PCI_IRQ_BASE_VECTOR + 4) * 4) = (unsigned long)pci_intd_int; break;
+            }
+          }
+        }
+      }
+      portSET_IPL(level);
+#ifdef DBUG
+      xTaskCreate(vTELNETd, (void *)"TELNETd", STACK_DEFAULT, NULL, TELNET_TASK_PRIORITY, &tid_TELNET);
+#endif
+      vectors_ok = 1;
+    }
+    if(!shutdown_ethernet)
+    {
+      COOKIE *mint_cookie = *(COOKIE **)cookie;
+      while(mint_cookie != NULL)
+      {
+        if(mint_cookie->ident == 'MiNT')
+        {
+          extern void rtl8139_eth_stop(uint8 ch);
+          COOKIE *eth_cookie = *(COOKIE **)cookie;
+					if(ethernet_found)
+            rtl8139_eth_stop(0);
+          while(eth_cookie != NULL)
+          {
+            if((eth_cookie->ident == 'SOCK') || (eth_cookie->ident == 'STiK'))
+            {
+              eth_cookie->ident = 'NULL';
+              eth_cookie->v.l = 0;
+            }
+            if(!eth_cookie->ident)
+              eth_cookie = NULL;
+            else
+              eth_cookie++;
+          }
+          /* restore boot PCI BIOS vectors */          
+          {
+            int i, level = portSET_IPL(portIPL_MAX);
+            for(i = 0; i < 4; i++)
+            {
+              if(old_vector[i])
+              {
+                *(unsigned long *)((PCI_IRQ_BASE_VECTOR + i + 1) * 4) = old_vector[i];
+                old_vector[i] = 0;
+              }
+            }
+            portSET_IPL(level);
+          }
+          shutdown_ethernet = 1;
+          ethernet_found = 0;
+          break;
+        }
+        if(!mint_cookie->ident)
+          mint_cookie = NULL;
+        else
+          mint_cookie++;
+      }
+    }
+#if 0
+    if(ethernet_found)
+    {
+      extern void led_floppy(long state);
+      if(!count)
+        led_floppy(1);
+      else if(count == configTICK_RATE_HZ)
+        led_floppy(0);
+    }
+#endif
+    count++;
+    if(count >= configTICK_RATE_HZ*2)
+      count = 0;
+    vTaskDelay(1);
+  }
+} 
+
+int init_rtos(void) /* CT60 / CTPCI */
+{
+  pxCurrentTCB = tid_TELNET = tid_TOS = NULL;
+  OldBoot = 1;
+  if(xTaskCreate(vROOT, (void *)"ROOT", STACK_DEFAULT, NULL, ROOT_TASK_PRIORITY, NULL) == pdPASS)
+    vTaskStartScheduler();
+  return(0);
+}
+
+#endif /* !defined(COLDFIRE) && defined(FREERTOS) */

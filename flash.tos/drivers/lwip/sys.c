@@ -36,7 +36,6 @@
 #include "def.h"
 #include "memp.h"
 
-#ifdef NETWORK
 #ifdef LWIP
 
 #if (NO_SYS == 0)
@@ -297,5 +296,4 @@ sys_msleep(u32_t ms)
 
 #endif /* NO_SYS */
 #endif /* LWIP */
-#endif /* NETWORK */
 

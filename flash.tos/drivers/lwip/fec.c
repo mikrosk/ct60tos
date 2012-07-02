@@ -70,7 +70,6 @@
 #endif
 #define TASK_PRIORITY           (30)
 
-#ifdef NETWORK
 #ifdef LWIP
 
 /* ------------------------ Type definitions ------------------------------ */
@@ -82,7 +81,8 @@ typedef struct
   xSemaphoreHandle tx_sem;    /* Control access to transmitter */
   xSemaphoreHandle rx_sem;    /* Semaphore to signal receive thread */  
 //  sys_sem_t tx_sem;           /* Control access to transmitter */
-//  sys_sem_t rx_sem;           /* Semaphore to signal receive thread */  
+//  sys_sem_t rx_sem;           /* Semaphore to signal receive thread */
+  sys_thread_t task;          /* FEC task */
 } fec_if_t;
 
 /* ------------------------ Static variables ------------------------------ */
@@ -243,7 +243,7 @@ void dma_interrupt(void)
  * destination MAC address. The ARP module will later call our low level
  * output function fec_output_raw.
  */
-static err_t fec_output(struct netif * netif, struct pbuf * p, struct ip_addr * ipaddr )
+static err_t fec_output(struct netif *netif, struct pbuf *p, struct ip_addr *ipaddr)
 {
   err_t res;
 //  fec_if_t *fecif = netif->state;
@@ -1283,6 +1283,7 @@ err_t fec_eth_start(uint8 ch, uint8 trcvr, uint8 speed, uint8 duplex, struct net
     fecif->self = (struct eth_addr *)&netif->hwaddr[0];
     fecif->netif = netif;
     fecif->ch = ch;
+    fecif->task = NULL;
 //    if((fecif->tx_sem = sys_sem_new(1)) == NULL)
 //      res = ERR_MEM;
 //    else if((fecif->rx_sem = sys_sem_new(0)) == NULL)
@@ -1293,7 +1294,7 @@ err_t fec_eth_start(uint8 ch, uint8 trcvr, uint8 speed, uint8 duplex, struct net
       xSemaphoreAltTake(fecif->rx_sem, 1);
     if((fecif->tx_sem == NULL) || (fecif->rx_sem == NULL))
       res = ERR_MEM;
-    else if(sys_thread_new(fec_rx_task, fecif, TASK_PRIORITY) == NULL)
+    else if((fecif->task = sys_thread_new(fec_rx_task, fecif, TASK_PRIORITY)) == NULL)
       res = ERR_MEM;
     else
     {
@@ -1343,15 +1344,18 @@ err_t fec_eth_start(uint8 ch, uint8 trcvr, uint8 speed, uint8 duplex, struct net
         }
       }
     }
-    if(res != ERR_OK)
+    if((res != ERR_OK) && (fecif != NULL))
     {
-      mem_free(fecif);
+      if(fecif->task != NULL)
+      	sys_arch_thread_remove(fecif->task);
       if(fecif->tx_sem != NULL)
-      	vQueueDelete((xQueueHandle)fecif->tx_sem);
+        vQueueDelete((xQueueHandle)fecif->tx_sem);
 //        sys_sem_free(fecif->tx_sem);
       if(fecif->rx_sem != NULL)
-      	vQueueDelete((xQueueHandle)fecif->rx_sem);
+        vQueueDelete((xQueueHandle)fecif->rx_sem);
 //        sys_sem_free(fecif->rx_sem);
+      mem_free(fecif);
+      fecif_g[ch] = NULL;
     }
   }
   else
@@ -1368,6 +1372,7 @@ err_t fec_eth_start(uint8 ch, uint8 trcvr, uint8 speed, uint8 duplex, struct net
  */
 void fec_eth_stop(uint8 ch)
 {
+  fec_if_t *fecif;
   int level;
   /* Disable interrupts */
   level = asm_set_ipl(7);
@@ -1382,6 +1387,22 @@ void fec_eth_stop(uint8 ch)
   nbuf_flush(ch);
   /* Restore interrupt level */
   asm_set_ipl(level);
+  /* Remove task / semaphores */
+  fecif = fecif_g[ch];
+  if(fecif != NULL)
+  {
+    fecif->netif->flags &= ~NETIF_FLAG_LINK_UP;
+    if(fecif->task != NULL)
+      sys_arch_thread_remove(fecif->task);
+    if(fecif->tx_sem != NULL)
+      vQueueDelete((xQueueHandle)fecif->tx_sem);
+//      sys_sem_free(fecif->tx_sem);
+    if(fecif->rx_sem != NULL)
+      vQueueDelete((xQueueHandle)fecif->rx_sem);
+//      sys_sem_free(fecif->rx_sem);
+     mem_free(fecif);
+     fecif_g[ch] = NULL;
+   }
 }
 
 err_t mcf_fec0_init(struct netif *netif)
@@ -1403,4 +1424,3 @@ err_t mcf_fec1_init(struct netif *netif)
 }
 
 #endif /* LWIP */
-#endif /* NETWORK */

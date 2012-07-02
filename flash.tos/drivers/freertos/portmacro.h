@@ -44,13 +44,17 @@
 #define portBASE_TYPE   int
 #define tskSTACK_FILL_TYPE  ( 0xa5a5a5a5 )
 
+#ifdef COLDFIRE
 #define HAVE_USP 1
-
 #ifdef MCF5445X
 #define SAVE_FPU 0
 #else
 #define SAVE_FPU 1
 #endif
+#else /* !COLDFIRE */
+#define HAVE_USP 0
+#define SAVE_FPU 0
+#endif /* COLDFIRE */
 
 #if( USE_16_BIT_TICKS == 1 )
     typedef unsigned portSHORT portTickType;
@@ -78,6 +82,8 @@
  * the stack for the CPU registers and other task dependent values (e.g
  * ulCriticalNesting) and updates the top of the stack in the TCB.
  */
+#ifdef COLDFIRE
+
 #if (__GNUC__ <= 3) 
 
 #if( HAVE_USP == 1 )
@@ -506,6 +512,106 @@
 
 #endif /* __GNUC >= 3 */
 
+#else /* !COLDFIRE */
+
+#if( SAVE_FPU == 1 )
+#define portSAVE_CONTEXT()                                                   \
+    asm volatile (                                                           \
+                   " .chip    68060\n\t"                                     \
+                   " move.l   a0, -(sp)\n\t"                                 \
+                   " move.l   a1, -(sp)\n\t"                                 \
+                   " move.l   _pxCurrentTCB, a0\n\t"                         \
+                   " lea.l    8(sp), a1\n\t"                                 \
+                   " move.l   a1, (a0)+\n\t"                                 \
+                   " move.l   usp, a1\n\t"                                   \
+                   " move.l   a1, 60(a0)\n\t"                                \
+                   " lea.l    64(a0), a1\n\t"                                \
+                   " fmove.l  fpcr, (a1)+\n\t"                               \
+                   " fmove.l  fpsr, (a1)+\n\t"                               \
+                   " fmove.l  fpiar, (a1)+\n\t"                              \
+                   " fmovem.x fp0-fp7, (a1)\n\t"                             \
+                   " lea.l    64(a1), a1\n\t"                                \
+                   " move.l   _ulCriticalNesting, (a1)\n\t"                  \
+                   " move.l   (sp)+, a1\n\t"                                 \
+                   " movem.l  d0-d7, (a0)\n\t"                               \
+                   " movem.l  a1-a6, 36(a0)\n\t"                             \
+                   " move.l   (sp)+, 32(a0)");
+#else
+#define portSAVE_CONTEXT()                                                   \
+    asm volatile (                                                           \
+                   " .chip    68060\n\t"                                     \
+                   " move.l   a0, -(sp)\n\t"                                 \
+                   " move.l   a1, -(sp)\n\t"                                 \
+                   " move.l   _pxCurrentTCB, a0\n\t"                         \
+                   " lea.l    8(sp), a1\n\t"                                 \
+                   " move.l   a1, (a0)+\n\t"                                 \
+                   " move.l   usp, a1\n\t"                                   \
+                   " move.l   a1, 60(a0)\n\t"                                \
+                   " lea.l    64(a0), a1\n\t"                                \
+                   " move.l   _ulCriticalNesting, (a1)\n\t"                  \
+                   " move.l   (sp)+, a1\n\t"                                 \
+                   " movem.l  d0-d7, (a0)\n\t"                               \
+                   " movem.l  a1-a6, 36(a0)\n\t"                             \
+                   " move.l   (sp)+, 32(a0)");
+#endif
+
+/*.
+ * This function restores the current active and continues its execution.
+ * It loads the current TCB and restores the processor registers, the
+ * task dependent values (e.g ulCriticalNesting). Finally execution
+ * is continued by executing an rte instruction.
+ */
+#if( SAVE_FPU == 1 )
+#define portRESTORE_CONTEXT()                                                \
+    asm volatile ( " move.l   _pxCurrentTCB, a0\n\t"                         \
+                   " move.l   (a0)+, sp\n\t"                                 \
+                   " move.l   60(a0), a1\n\t"                                \
+                   " move.l   a1, usp\n\t"                                   \
+                   " lea.l    64(a0), a1\n\t"                                \
+                   " fmove.l  (a1)+, fpcr\n\t"                               \
+                   " fmove.l  (a1)+, fpsr\n\t"                               \
+                   " fmove.l  (a1)+, fpiar\n\t"                              \
+                   " fmovem.x (a1), fp0-fp7\n\t"                             \
+                   " lea.l    64(a1), a1\n\t"                                \
+                   " move.l   (a1), _ulCriticalNesting\n\t"                  \
+                   " movem.l  (a0), d0-d7/a0-a6\n\t"                         \
+                   " rte\n\t" );
+#else
+#define portRESTORE_CONTEXT()                                                \
+    asm volatile ( " move.l   _pxCurrentTCB, a0\n\t"                         \
+                   " move.l   (a0)+, sp\n\t"                                 \
+                   " move.l   60(a0), a1\n\t"                                \
+                   " move.l   a1, usp\n\t"                                   \
+                   " lea.l    64(a0), a1\n\t"                                \
+                   " move.l   (a1), _ulCriticalNesting\n\t"                  \
+                   " movem.l  (a0), d0-d7/a0-a6\n\t"                         \
+                   " rte\n\t" );
+#endif          
+
+#if( SAVE_FPU == 1 )
+#define portRESTORE_FAST_CONTEXT()                                           \
+    asm volatile ( " move.l   _pxCurrentTCB, a0\n\t"                         \
+                   " move.l   (a0)+, sp\n\t"                                 \
+                   " lea.l    140(a0), a1\n\t"                               \
+                   " move.l   (a1), _ulCriticalNesting\n\t"                  \
+                   " movem.l  (a0), d0-d1\n\t"                               \
+                   " lea.l    32(a0),a0\n\t"                                 \
+                   " movem.l  (a0), a0-a1\n\t"                               \
+                   " rte\n\t" );
+#else
+#define portRESTORE_FAST_CONTEXT()                                           \
+    asm volatile ( " move.l   _pxCurrentTCB, a0\n\t"                         \
+                   " move.l   (a0)+, sp\n\t"                                 \
+                   " lea.l    64(a0), a1\n\t"                                \
+                   " move.l   (a1), _ulCriticalNesting\n\t"                  \
+                   " movem.l  (a0), d0-d1\n\t"                               \
+                   " lea.l    32(a0),a0\n\t"                                 \
+                   " movem.l  (a0), a0-a1\n\t"                               \
+                   " rte\n\t" );
+#endif
+
+#endif /* COLDFIRE */
+
 #define portENTER_CRITICAL()                                                 \
     vPortEnterCritical();
 
@@ -528,14 +634,14 @@
 
 #if _GCC_USES_FP == 1
 #define portENTER_SWITCHING_ISR()                                            \
-    asm volatile ( " move.w  #0x2700, sr\n\t"                                \
+    asm volatile ( " move.w #0x2700, sr\n\t"                                \
                    " unlk fp\n\t" );                                         \
     /* Save the context of the interrupted task. */                          \
     portSAVE_CONTEXT(  );                                                    \
     {
 #else
 #define portENTER_SWITCHING_ISR()                                            \
-    asm volatile (" move.w  #0x2700, sr\n\t");                                   \
+    asm volatile (" move.w #0x2700, sr\n\t");                                   \
     /* Save the context of the interrupted task. */                          \
     portSAVE_CONTEXT(  );                                                    \
     {

@@ -18,7 +18,6 @@
 
 	.global _det_linea,_old_vector_linea,_oldmouse
 	.global show_c,hide_c
-	.global _os_magic
 	.global adr_var_vdi,adr_linea_fonts,adr_linea_atab
 
 #define _sysbase   0x4F2

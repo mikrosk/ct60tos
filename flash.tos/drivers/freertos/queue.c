@@ -83,8 +83,7 @@ Changes from V4.1.3:
 #include "task.h"
 #include "croutine.h"
 
-#ifdef NETWORK
-#ifdef LWIP
+#if defined(LWIP) || defined(FREERTOS)
 
 #define MAGIC_KEY 0x16101964
 
@@ -1171,5 +1170,4 @@ signed portBASE_TYPE xReturn;
 #endif
 /*-----------------------------------------------------------*/
 
-#endif /* LWIP */
-#endif /* NETWORK */
+#endif /* defined(LWIP) || defined(FREERTOS) */

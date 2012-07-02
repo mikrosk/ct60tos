@@ -76,11 +76,22 @@
 #include "sys.h"
 #include "perf.h"
 
-#ifdef NETWORK
+#define USE_MALLOC
+
+#ifdef COLDFIRE
+#define pvPortMalloc pvPortMalloc2
+#else
+#include <mint/osbind.h>
+#define pvPortMalloc(a) Mxalloc(a, 3) 
+#endif
+
 #ifdef LWIP
 
+#ifdef USE_MALLOC
 static u8_t *pbuf_pool_memory;
-//static u8_t pbuf_pool_memory[MEM_ALIGNMENT - 1 + PBUF_POOL_SIZE * MEM_ALIGN_SIZE(PBUF_POOL_BUFSIZE + sizeof(struct pbuf))];
+#else
+static u8_t pbuf_pool_memory[MEM_ALIGNMENT - 1 + PBUF_POOL_SIZE * MEM_ALIGN_SIZE(PBUF_POOL_BUFSIZE + sizeof(struct pbuf))];
+#endif /* USE_MALLOC */
 
 #if !SYS_LIGHTWEIGHT_PROT
 static volatile u8_t pbuf_pool_free_lock, pbuf_pool_alloc_lock;
@@ -107,8 +118,10 @@ pbuf_init(void)
   struct pbuf *p, *q = NULL;
   u32_t i;
 
-  pbuf_pool_memory = (u8_t *)pvPortMalloc2(MEM_ALIGNMENT - 1 + PBUF_POOL_SIZE * MEM_ALIGN_SIZE(PBUF_POOL_BUFSIZE + sizeof(struct pbuf)));
+#ifdef USE_MALLOC
+  pbuf_pool_memory = (u8_t *)pvPortMalloc(MEM_ALIGNMENT - 1 + PBUF_POOL_SIZE * MEM_ALIGN_SIZE(PBUF_POOL_BUFSIZE + sizeof(struct pbuf)));
 	LWIP_ASSERT("pbuf_init: pbuf_pool_memory != NULL", pbuf_pool_memory != NULL);
+#endif
   pbuf_pool = (struct pbuf *)MEM_ALIGN(pbuf_pool_memory);
 
 #if PBUF_STATS
@@ -1062,6 +1075,5 @@ pbuf_copy(struct pbuf *p_to, struct pbuf *p_from)
 }
 
 #endif /* LWIP */
-#endif /* NETWORK */
 
 

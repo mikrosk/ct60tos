@@ -311,7 +311,7 @@ detected ??? (boot2.S)
 
 2011-07-17 2.01
 ---------------
-- Try to fix CT60 flash boot problems by reading until 4 x times the TOS in 
+- Try to fix CT60 flash boot problems by reading until 4 times the TOS in 
 flash if the CRC is bad before apply the patches in SDRAM (boot2.S).
 - If the Supervidel is found, the TOS use the default Bconout routine 
 who use the blitter (conout.S).
@@ -323,7 +323,7 @@ in STRAM and mutiple retry/verifications until 5 times (ide_scsi.S).
 - On the Fireebee target, rewrited some parts of the TOS in native 
 code like the PSG sound VBL interrupt routine and IKBD interrupt 
 routine.
-- On the Fireebee target, enabled Bconmap (xbios.S) with device 6 is MFP, 
+- On the Firebee target, enabled Bconmap (xbios.S) with device 6 is MFP, 
 7 is PSC0  who replace the SCC (default like a FALCON), this is the 
 baud table for Rsconf (MFP and PSC0):  
 Index    0    1   2     3    4    5    6    7   8   9     10     11    12    13     14    15
@@ -358,4 +358,43 @@ programs (cf68klib.S):
   * fabs/fadd/fcmp/fdiv/fint/fintrz/fmove/fmul/fneg/fsqrt/fsub/ftst #.
   * cinva/cpushl/cpusha.
 
+2012-06-23 2.02
+---------------
+- On M5484LITE/FIREBEE enabled XLB PCI interrupt (boot.S).
+- Inside the CF68KLIB, removed fix_predecrement/fix_postincrement when 
+address error arrives with MOVE.B/W/L (An)+,<ea> and  MOVE.B/W/L 
+-(An),<ea> with invalid addessing modes (cf68klib.S).
+- On the Firebee target (boot.S), added SCSI/IDE device unselection using 
+CT60_BOOT_ORDER parameter unused bits (B27-B24 for IDE and B23-B16 for 
+SCSI).
+- On the Firebee target added fix for Device Errata 26, now USB MASS 
+STORAGE works fine (PCI <=> Flexbus).
+- Added bus support inside the PCI BIOS (pci_bios.S), limits now are:
+ * 4 bus.
+ * 32 devices by bus.
+ * 4 functions by devices.
+- Fixed invalid IDE call possible (wrong device) inside boot routine 
+(boot2.S) after SCSI drives detection (for example with ALT key I got 
+crash). This bug is very old, but since the CTPCI, the IDE routine is 
+ready for a 2nd port and this 2nd port is not implemented in the 
+current hardware so t's possible to get a crash (invalid access to a 
+2nd CTPCI IDE port).
+- On all targets, added ATAPI devices to SCSIDRV (ide_scsi.S). 
+FIREBEE and FALCON with CT60/CTPCI has IDE and IDE2 (IDE not 
+compatible). SCSI cookie added before hard disk driver boot.
+- Added LZMA decoder for a better compression of PCI drivers 
+(LzmaDecode.c).
+- On CTPCI fixed PEND register bits test inverted, and finnally 
+revoved this test who can caused loop inside interrupt.
+- Added boot order entry for CTPCI IDE (boot.S).
+- Try to fix CT60 flash boot problems by reading until 16 times the TOS in 
+flash if the CRC is bad before apply the patches in SDRAM (boot2.S).
+- Changed boot order for 4 IDE devices with a CTPCI (boot2.S).
+- Rewrited conout routines in C for Videl or graphic card (planes or 
+without planes, with or without accel routines from drivers part. 
+TOS404 VT52 routines table at 0xE13268 used, theses routines use the A4 
+register as Line A pointer (bios.S, bios2.S, and conout.c). Not used 
+on Coldfire targets, there are a crash when screen changed.
+- Added 5 retry loops to boot keyboard test, sometimes Eiffel 
+characters are lost on the FIREBEE (boot2.S).
 

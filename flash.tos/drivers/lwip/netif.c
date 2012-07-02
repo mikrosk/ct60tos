@@ -45,7 +45,6 @@
 #include "tcp.h"
 #include "snmp.h"
 
-#ifdef NETWORK
 #ifdef LWIP
 
 struct netif *netif_list;
@@ -328,4 +327,3 @@ netif_init(void)
 }
 
 #endif /* LWIP */
-#endif /* NETWORK */

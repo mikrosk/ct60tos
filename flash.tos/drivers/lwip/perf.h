@@ -50,6 +50,8 @@ struct perf {
 
 extern struct perf lwip_perfs[PERFS_MAX];
 
+#ifdef COLDFIRE
+
 #define PERF_START do { \
   int i = 0; \
   SYS_ARCH_DECL_PROTECT(level); \
@@ -136,5 +138,13 @@ extern struct perf lwip_perfs[PERFS_MAX];
 } while(0)
 
 #endif /* MCF548X */
+
+#else /* !COLDFIRE */
+
+#define PERF_START
+#define PERF_STOP(x)
+#define PERF_STOP_INT(x)
+
+#endif /* COLDFIRE */
 
 #endif /* __PERF_H__ */

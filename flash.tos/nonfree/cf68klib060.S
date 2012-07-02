@@ -392,7 +392,7 @@ address_error_exception_handler:
 	move.l   %a0,%d0                               | Is this a real address error (%PC odd)?
 	andi.l   #1,%d0
 	bne      real_68K_address_error              | Yes
-	
+
 	| The CF5307 chip has a 'feature' which we need to cope with. For the two instructions..
 	|
 	|       MOVE.B/W/L  (An)+,<ea>
@@ -410,11 +410,20 @@ address_error_exception_handler:
 	beq.s    fix_predecrement            | Yes
 	cmpi.l   #0x18,%d0                    | Is <ea> postincrement?
 	bne      illegal_instruction_common  | No,just normal
-	
+
+#if 1
+fix_predecrement:
+
+//	move.l d0,-(sp)
+//	move.l reg_pc(a6),D0
+//	bsr debug_display_disassemble_pc     /****************************************************/
+//	move.l (sp)+,d0
+
+#else
 fix_postincrement:
 	move.w   (%a0),%d0
 	move.w   %d0,%d1
-	
+
 	lea      width_conv_tab,%a1           | Get %D1 = 1,2 or 4 for byte
 	lsr.l    #8,%d1
 	lsr.l    #4,%d1
@@ -444,6 +453,7 @@ fix_predecrement:
 	bsr      compute_reg_a7
 fix_An:
 	add.l    %d1,(reg_a0,%a6,%d0.l*4)       | Undo the predecrement
+#endif
 	bra      illegal_instruction_common
 	
 	
@@ -1235,6 +1245,11 @@ exception_frame_sizes:
 |###################################################
 	.align	2
 handle_stop:
+#if 1
+	addq.l   #4,%a0                       | jump STOP instruction
+	moveq.l  #0x0,%d6
+	jmp      exception_handled
+#else        // TO FIX problem with 680x0 interrupt (stack ???)
 	| The STOP instruction is particularly difficult to handle. We need to drop the
 	| interrupt fence, so must assume that our private data is invalid once we've executed STOP.
 	| In addition, there's no STOP D0 instruction - in order to stop the processor we
@@ -1244,7 +1259,7 @@ handle_stop:
 	move.l   %a0,(return_address,%a6)
 	move.w   #0x4e75,%d0                  | append an RTS
 	move.w   %d0,(stop_area+4,%a6)
-	
+
 	bsr      cpushl_dc
 	bsr      cpushl_ic
 	
@@ -1270,6 +1285,7 @@ handle_stop_handled:
 	move.l   (return_address,%a6),%d0
 	move.l   (%a7)+,%a6
 	move.l   %d0,4(%a7)
+#endif
 handle_stop_nasty:
 	move     %sr,%d0                       | This instruction may cause a privilege violation trap! If so
 	| we'll come back to handle_stop_got_exception
@@ -1277,7 +1293,7 @@ handle_stop_done:
 	and.l    #0x871f,%d0                  | Keep only T and IRQ bits plus %CCR bits
 	move     %d0,%sr                       | Back into user mode please!
 	move.l   (%a7)+,%d0
-	rts      
+	rts                                    | return address
 	
 handle_stop_got_exception:
 	bsr      compute_reg_a7              | Came here because we trapped.
@@ -13656,7 +13672,14 @@ popm_long:
 	move.w   2(%a0),%d1
 	addq.l   #2,%a0
 	jsr      compute_reg_a7
+#if 1        // fix stack on odd address
+	moveq    #1,%d0
+	add.l   reg_a7(%a6),%d0
+	bclr     #0,%d0
+	move.l   %d0,%a2
+#else
 	move.l   reg_a7(%a6),%a2
+#endif
 	addq.l   #2,%a0
 	and.l    #0xffff,%d1
 	lea      reg_d0(%a6),%a4

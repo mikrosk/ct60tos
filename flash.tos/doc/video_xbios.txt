@@ -383,6 +383,8 @@ typedef struct screeninfo
   long pagemem;     /* needed memory for one page */
   long max_x;       /* max. possible width        */
   long max_y;       /* max. possible heigth       */
+  long refresh;     /* refresh in Hz              */
+  long pixclock;    /* pixel clock in pS          */
 } SCREENINFO;
 
 #define BLK_ERR      0

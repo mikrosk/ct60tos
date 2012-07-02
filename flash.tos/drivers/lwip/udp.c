@@ -58,7 +58,6 @@
 #include "perf.h"
 #include "snmp.h"
 
-#ifdef NETWORK
 #ifdef LWIP
 
 /* The list of UDP PCBs */
@@ -663,5 +662,4 @@ udp_debug_print(struct udp_hdr *udphdr)
 #endif /* LWIP_UDP */
 
 #endif /* LWIP */
-#endif /* NETWORK */
 

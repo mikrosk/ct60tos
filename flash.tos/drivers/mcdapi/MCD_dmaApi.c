@@ -44,7 +44,7 @@
 #include "MCD_tasksInit.h"
 #include "MCD_progCheck.h"
 
-#ifdef NETWORK
+#ifdef LWIP
 
 /********************************************************************/
 /*
@@ -979,4 +979,4 @@ static void MCD_memcpy (int *dest, int *src, u32 size)
 }
 /********************************************************************/
 
-#endif /* NETWORK */
+#endif /* LWIP */

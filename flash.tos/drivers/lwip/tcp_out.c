@@ -54,7 +54,6 @@
 #include "stats.h"
 #include "snmp.h"
 
-#ifdef NETWORK
 #ifdef LWIP
 
 #if LWIP_TCP
@@ -724,7 +723,6 @@ tcp_keepalive(struct tcp_pcb *pcb)
 #endif /* LWIP_TCP */
 
 #endif /* LWIP */
-#endif /* NETWORK */
 
 
 

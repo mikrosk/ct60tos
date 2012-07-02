@@ -52,7 +52,6 @@
 #include "stats.h"
 #include "snmp.h"
 
-#ifdef NETWORK
 #ifdef LWIP
 
 /* ARP needs to inform DHCP of any ARP replies? */
@@ -913,6 +912,5 @@ err_t etharp_request(struct netif *netif, struct ip_addr *ipaddr)
   return result;
 }
 
-#endif
-#endif
+#endif /* LWIP */
 

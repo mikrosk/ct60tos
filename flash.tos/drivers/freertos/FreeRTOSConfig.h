@@ -1,6 +1,6 @@
 /*
     FreeRTOS V4.1.0 - Copyright (C) 2003-2006 Richard Barry.
-    MCF5485 Port - (c) 2008 Didier Mequignon.
+    MCF5485 Port - (c) 2008-2012 Didier Mequignon.
 
     This file is part of the FreeRTOS distribution.
 
@@ -47,6 +47,7 @@
 #define configUSE_PREEMPTION        1
 #define configUSE_IDLE_HOOK         0
 #define configUSE_TICK_HOOK         0
+#ifdef COLDFIRE
 #ifdef MCF5445X
 #define configCPU_CLOCK_HZ          ( ( unsigned portLONG ) 266000000 )
 #else
@@ -56,14 +57,20 @@
 #define configCPU_CLOCK_HZ          ( ( unsigned portLONG ) 200000000 )
 #endif /* MCF547X */
 #endif /* MCF5445X */
+#endif /* COLDFIRE */
 #define configTICK_RATE_HZ          ( ( portTickType ) 200 )
 #define configMAX_PRIORITIES        ( ( unsigned portBASE_TYPE ) 32 )
+#ifdef COLDFIRE
 #define configMINIMAL_STACK_SIZE    ( ( unsigned portSHORT ) 4096 )
+#else
+#define configMINIMAL_STACK_SIZE    ( ( unsigned portSHORT ) 2048 )
+#endif
 #define configMAX_TASK_NAME_LEN     ( 16 )
 #define configUSE_TRACE_FACILITY    1
 #define configUSE_16_BIT_TICKS      0
 #define configIDLE_SHOULD_YIELD     1
 #define configUSE_ALTERNATIVE_API   1
+#define configTOTAL_HEAP_SIZE       0x20000
 
 /* Co-routine definitions. */
 #define configUSE_CO_ROUTINES       0 

@@ -34,7 +34,6 @@
 #define VER_MAJOR "0"
 #define VER_MINOR "30"
 
-#ifdef NETWORK
 #ifdef LWIP
 
 /* STIK global configuration structure.
@@ -466,5 +465,4 @@ void gs_cleanup_stik_if (void)
 }
 
 #endif /* LWIP */
-#endif /* NETWORK */
 

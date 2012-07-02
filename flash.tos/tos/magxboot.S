@@ -1,6 +1,6 @@
 /*  MagXBoot for the CT60
  * 
- * Didier Mequignon 2004-2005, e-mail: aniplay@wanadoo.fr
+ * Didier Mequignon 2004-2010, e-mail: aniplay@wanadoo.fr
  *
  *  This library is free software; you can redistribute it and/or
  *  modify it under the terms of the GNU Lesser General Public
@@ -32,21 +32,26 @@
 magxboot:
 
 	movem.l D0-A6,-(SP)
-	tst.l D0
+	move.l D4,D5             // boot on IDE slave
+	tst.l D0                 // _FPU cookie
 	sne.b D4
 	ext.w D4
-	swap D4                  // flag _FPU cookie
+	tst.l D3                 // _PCI cookie
+	sne.b D4                 // flag CTPCI
+	swap D4                  // flags _FPU cookie / CTPCI
 	clr.w D4
 	tst.l D1                 // _FRQ cookie, internal clock
 	beq.s mb2
 	cmp.l #32,D1
-	bls mb2
+	bls.s mb2
 	tst.l D2                 // _FRE cookie, external clock
 	beq.s mb2
 	cmp.l #32,D2
 	seq.b D4
 	ext.w D4                 // flag clock external patch
 mb2:
+	tst.l D5                 // boot on IDE slave
+	sne.b D4                 // flag boot on IDE slave               
 	lea mess(PC),A0
 	bsr printline
 	move.l _sysbase,A0       // header ROM
@@ -408,6 +413,41 @@ mb44:
 		addq.w #1,D2
 		bra mb43
 mb47:
+		btst #23,D4          // flag CTPCI
+		beq.s mb48
+		cmp.l #0x46FC2300,D0 // move #0x2300,SR
+		bne.s mb48
+		cmp.w #0x7001,4(A1)
+		bne.s mb48
+		move.w #0x4E40,4(A1) // trap #0 TOS
+		lea mess20(PC),A0
+		bsr printline
+		addq.w #1,D2
+		bra mb23
+mb48:
+		tst.b D4             // flag boot IDE slave
+		bpl.s mb52
+		cmp.l #0x70102078,D0 // moveq #$70,D0
+		bne.s mb52
+		cmp.w #0x04C6,4(A1)
+		bne.s mb52
+		move.w #0x7011,(A1)
+		lea mess21(PC),A0
+		bsr printline
+		addq.w #1,D2
+		moveq #49,D0
+		move.l A1,A0
+mb50:
+			addq.l #2,A0
+			cmp.l #0x78106100,(A0) // moveq #$70,D4
+		dbeq D0,mb50
+		bne mb23
+		move.w #0x7811,(A0)
+		lea mess21(PC),A0
+		bsr printline
+		addq.w #1,D2
+		bra mb23  
+mb52:
 		cmp.l #0x40C1007C,D0 // PSG imprimante
 		bne mb23
 		cmp.l #0x070043F8,4(A1)
@@ -461,10 +501,18 @@ mb23:
 	subq.l #1,D1
 	bgt mb22
 	moveq #19,D3
+	btst #23,D4     // flag CTPCI
+	beq.s mb49
+	addq.w #1,D3
+mb49:
 	tst.w D4        // flag external clock
 	bpl.s mb42
 	addq.w #3,D3
 mb42:
+	tst.b D4        // flag boot IDE slave
+	bpl.s mb51
+	addq.w #3,D3
+mb51:
 	cmp.w D3,D2
 	beq mb21
 	lea warning(PC),A0
@@ -544,7 +592,7 @@ printline:
 
 	movem.l D0-D2/A0-A2,-(SP)
 	move.l A0,-(SP)
-	move #9,-(SP) // Cconws
+	move.w #9,-(SP) // Cconws
 	trap #1       // Gemdos
 	addq.l #6,SP
 	movem.l (SP)+,D0-D2/A0-A2 
@@ -553,9 +601,9 @@ printline:
 display_char:
 
 	movem.l D0-D2/A0-A2,-(SP)
-	move D0,-(SP)
-	move #2,-(SP)
-	move #3,-(SP)
+	move.w D0,-(SP)
+	move.w #2,-(SP)
+	move.w #3,-(SP)
 	trap #13
 	addq.l #6,SP
 	movem.l (SP)+,D0-D2/A0-A2
@@ -693,6 +741,12 @@ mess18:
 mess19:
 	.byte	13,10
 	.asciz	"Patch PSG printer"
+mess20:
+	.byte	13,10
+	.asciz	"Patch CTPCI"
+mess21:
+	.byte	13,10
+	.asciz 	"Patch boot IDE slave"
 magx_name:
 	.byte	0x5C
 	.asciz	"magic.ram"

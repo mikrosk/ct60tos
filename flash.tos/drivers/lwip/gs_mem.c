@@ -39,7 +39,6 @@
 #define is_freed(H)		(((H)->size & 0xFF000000L) == FREED)
 #define chunksize(H)		((H)->size & 0x00FFFFFFL)
 
-#ifdef NETWORK
 #ifdef LWIP
 
 typedef struct chunk_header chunk_header;
@@ -338,5 +337,4 @@ gs_mem_realloc (void *mem, unsigned long newsize)
 }
 
 #endif /* LWIP */
-#endif /* NETWORK */
 

@@ -15,10 +15,8 @@
 #define  _MINT_OSTRUCT_H
 #include <osbind.h>
 #include "config.h"
-#ifdef NETWORK
 #ifdef LWIP
 #include "../../include/vars.h"
-#endif
 #endif
 #include "portab.h"
 #include "asm.h"
@@ -247,7 +245,6 @@ doio:   for (p = *(q = phdr); p->b_link; p = *(q = &p->b_link))
     }
     else
     {   /* use a buffer, but first validate media */
-#ifdef NETWORK
 #ifdef LWIP
         extern long pxCurrentTCB, tid_TOS;
         if(pxCurrentTCB != tid_TOS)
@@ -258,7 +255,6 @@ doio:   for (p = *(q = phdr); p->b_link; p = *(q = &p->b_link))
         }
         else      
 #endif
-#endif  
         err = Mediach(b->b_bufdrv);
         if (err != 0) {
             if (err == 1) {

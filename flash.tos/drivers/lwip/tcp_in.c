@@ -58,7 +58,6 @@
 #include "perf.h"
 #include "snmp.h"
 
-#ifdef NETWORK
 #ifdef LWIP
 
 #if LWIP_TCP
@@ -1226,5 +1225,4 @@ tcp_parseopt(struct tcp_pcb *pcb)
 #endif /* LWIP_TCP */
 
 #endif /* LWIP */
-#endif /* NETWORK */
 

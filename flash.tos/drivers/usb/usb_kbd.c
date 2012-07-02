@@ -41,17 +41,6 @@
 #define USB_KBD_PRINTF(fmt,args...)
 #endif
 
-typedef struct
-{
-	long ident;
-	union
-	{
-		long l;
-		short i[2];
-		char c[4];
-	} v;
-} COOKIE;
-
 extern void ltoa(char *buf, long n, unsigned long base);
 extern void call_ikbdvec(unsigned char code, _IOREC *iorec, void (**ikbdvec)());
 extern int asm_set_ipl(int level);
@@ -165,7 +154,7 @@ static unsigned char usb_kbd_to_atari_scancode[] =
 // RET   ESC   BACK  TAB  SPACE  -())  =     [(^)
 	0x1C, 0x01, 0x0E, 0x0F, 0x39, 0x0C, 0x0D, 0x1A,
 // ]($)  \(*) EUR1   ;(M)  '     `     ,(;)  .(:)
-	0x1B, 0x2B, 0x00, 0x27, 0x28, 0x5B, 0x33, 0x34,
+	0x1B, 0x2B, 0x2B, 0x27, 0x28, 0x5B, 0x33, 0x34,
 // /(!)  CAPS  F1    F2    F3    F4    F5    F6
 	0x35, 0x3A, 0x3B, 0x3C, 0x3D, 0x3E, 0x3F, 0x40,
 // F7    F8    F9    F10   F11   F12  PrtSc ScLoc
@@ -530,20 +519,6 @@ static unsigned char usb_kbd_to_atari_de_altgr[] =
 	0x00, 0x00, 0x00, 0xFF,	0x00, 0x00, 0x00, 0xFF
 };
 
-static COOKIE *get_cookie(long id)
-{
-	COOKIE *p= *(COOKIE **)0x5a0;
-	while(p)
-	{
-		if(p->ident == id)
-			return(p);
-		if(!p->ident)
-			return((COOKIE *)0);
-		p++;
-	}
-	return((COOKIE *)0);
-}
-
 static void *memscan(void *addr, int c, int size)
 {
 	unsigned char *p = (unsigned char *)addr;
@@ -670,7 +645,7 @@ static int usb_kbd_translate(unsigned char scancode, unsigned char modifier, int
 			unsigned char *altgr_table = NULL;
 			unsigned char *modifier_table = NULL;
 			unsigned long lang = USA;
-			COOKIE *p = get_cookie('_AKP');
+			USB_COOKIE *p = usb_get_cookie('_AKP');
 			if(p != NULL)
 				lang = (p->v.l >> 8) & 0xFF;
 #ifdef USE_COUNTRYCODE

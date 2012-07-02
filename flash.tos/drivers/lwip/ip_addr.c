@@ -35,7 +35,6 @@
 #include "inet.h"
 #include "netif.h"
 
-#ifdef NETWORK
 #ifdef LWIP
 
 #define IP_ADDR_ANY_VALUE 0x00000000UL
@@ -82,5 +81,4 @@ u8_t ip_addr_isbroadcast(struct ip_addr *addr, struct netif *netif)
 }
 
 #endif /* LWIP */
-#endif /* NETWORK */
 

@@ -1,7 +1,7 @@
 /* XBIOS CT60 board functions
 *  - Read on the CT60, the 68060 temperature on the TLV0831 DC from Texas I.
 *    2.8 deg celcius / step 
-*  - Parameters in flash
+*  - Parameters in Flash
 *  - Backup NVM stored in flash
 *  - Cache
 *  - PCI BIOS
@@ -12,7 +12,7 @@
 *  - Backup NVM (SRAM) stored in flash
 *  - IKBD from CAN on MCF548X (special version of Eiffel) and UART2 on MCF5445X (serial port, normal)
 *  - IKBD from UART2 on MCF5445X
-*  - IKBD from PSC3 on MCF547X 
+*  - IKBD from PSC1 and FPGA on MCF547X
 *  - Serial from PSC0/UART0 or serial mouse
 *  - MFP timers replaced by GPT timers on MCF547X-MCF548X and PIT timers on MCF5445X
 *  - VBL replaced by SLT0 timer on MCF547X-MCF548X and DTMR0 timer on MCF5445X
@@ -20,7 +20,7 @@
 *  - PCI BIOS
 *  - Eiffel keyboard XBIOS
 *
-*  Didier Mequignon 2001-2009, e-mail: aniplay@wanadoo.fr
+*  Didier Mequignon 2001-2012, e-mail: aniplay@wanadoo.fr
 *
 *  This library is free software; you can redistribute it and/or
 *  modify it under the terms of the GNU Lesser General Public
@@ -37,43 +37,15 @@
 *  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 */
 
-#ifdef COLDFIRE
-	.globl flush_caches_z
-	.globl flush_caches_x
-	.globl flush_caches
-	.globl flush_data_cache
-	.globl flush_instr_cache
-	.globl caches_disable
-	.globl caches_enable
-	.globl replace_mfp
-	.globl int_timer_c_mfp
-	.globl tempo_reset_ikbd
-	.globl gettime
-	.globl end_settime
-	.globl ikbdwc
-	.globl ikbdws
-	.globl auxistat
-	.globl auxin
-	.globl auxostat
-	.globl auxout
-	.globl _Setscreen
-#endif /* COLDFIRE */
-	.globl det_xbios
-	.globl nvm_access
-	.globl test_rtc
-	.globl fix_settime
-#ifndef COLDFIRE
-	.globl fix_gettime
-#endif
-	.globl new_ikbdvect
-	.globl new_statvec
-
 #include "main.h"
 #include "ct60.h"
 #include "command.h"
 #include "vars.h"
 
+#ifdef COLDFIRE
+#define USE_MFP /* FIREBEE FPGA emulation */
 #undef DEBUG
+#endif
 
 // #define DEBUG_GEMDOS
 // => move.b #0x01,0x5695 before the Gemdos call
@@ -199,35 +171,7 @@
 
 #define MOUSE_ACCEL 4
 
-#else // 68060
-
-#define MES_TEMP_0 197
-#define MES_TEMP_25 208
-#define MES_TEMP_50 218
-#define MES_TEMP_100 236
-#define MES_TEMP_ERROR 255
-
-#define _iera_mfp 0xfffffa07               // MFP registers
-#define _ipra_mfp 0xfffffa0b
-#define _isra_mfp 0xfffffa0f
-#define _imra_mfp 0xfffffa13
-#define _tbcr_mfp 0xfffffa1b
-#define _tbdr_mfp 0xfffffa21               // timer B
-#define _tcdr_mfp 0xfffffa23               // value changed at each 26 uS by system (timer C at 200 Hz)
-#define _texas_tlv0831_data     0xf1000000 // read from D0 (THDA)
-#define _texas_tlv0831_cs_low   0xf1400000 // CS at 0      (/THCS)
-#define _texas_tlv0831_cs_high  0xf1000000 // CS at 1      (THCS)
-#define _texas_tlv0831_clk_low  0xf1800000 // CLK at 0     (/THCK)
-#define _texas_tlv0831_clk_high 0xf1c00000 // CLK at 1     (THCK)
-
-#define FLASH_UNLOCK1 (FLASH_ADR+FLASH_SIZE-PARAM_SIZE+0xAAA)
-#define FLASH_UNLOCK2 (FLASH_ADR+FLASH_SIZE-PARAM_SIZE+0x554)
-
 #endif /* COLDFIRE */
-
-#define MAX_PARAM_FLASH 16
-#define NB_BLOCK_PARAM (PARAM_SIZE/(MAX_PARAM_FLASH*4))
-#define SIZE_BLOCK_PARAM (PARAM_SIZE/NB_BLOCK_PARAM) 
 
 #define read_core_temperature 0xc60a
 #define rw_parameter 0xc60b
@@ -240,25 +184,65 @@
 #define flush_cache_bis 0x0c6d
 #define vmalloc_bis 0xc6e
 
+#ifdef COLDFIRE
+	.globl flush_caches
+	.globl flush_data_cache
+	.globl flush_instr_cache
+	.globl caches_disable
+	.globl caches_enable
+	.globl replace_mfp
+	.globl disable_interrupts
+	.globl install_scsidrv
+#ifdef MCF547X
+	.globl rtc_init
+	.globl flopvbl
+	.globl setporta
+	.globl waitdma
+#endif
+	.globl delay_5mS
+	.globl delay_80us
+	.globl delay_10us
+	.globl int_timer_c_mfp
+	.globl tempo_reset_ikbd
+#ifndef MCF547X
+	.globl gettime
+	.globl end_settime
+#endif
+	.globl ikbdwc
+	.globl ikbdws
+	.globl auxistat
+	.globl auxin
+	.globl auxostat
+	.globl auxout
+	.globl _Setscreen
+#else /* !COLDFIRE */
+	.globl code_led
+#endif /* COLDFIRE */
+	.globl get_cookie
+	.globl det_xbios
+	.globl nvm_access
+	.globl test_rtc
+#if defined(COLDFIRE) && defined(MCF547X)
+	.globl end_settime_rtc
+#endif
+	.globl fix_settime
+#if !defined(COLDFIRE) || defined(MCF547X)
+	.globl fix_gettime
+#endif
+	.globl new_ikbdvect
+	.globl new_statvec
+#ifdef COLDFIRE
+	.globl fire_rw_param
+#else
+	.globl ct60_rw_param
+	.globl ct60_read_temp
+#endif
+
 	.text
-
-	.align 4
-
+	
 #ifdef COLDFIRE
 	.chip 5200
 	
-flush_caches_z:
-
-	move.l D0,-(SP)
-	move.w 0xA88,D0
-	or.l #0x10,D0
-	move.w D0,0xA88
-	move.l (SP)+,D0
-
-flush_caches_x:
-
-	add.l D2,16(SP)
-
 flush_caches:
 
 	.chip 68060
@@ -350,7 +334,38 @@ replace_mfp:
 	clr.w MCF_PIT_PCSR1
 	clr.w MCF_PIT_PCSR2
 	clr.w MCF_PIT_PCSR3
-#else /* MCF548X */
+#else /* MCF547X-MCF548X */
+#ifdef MCF547X /* FIREBEE */
+	lea 0xFFFF8800,A0        // PSG (FPGA emulation)
+	lea 2(A0),A1
+	move.b #7,(A0)
+	move.b #0xC0,(A1)        // ports A / B outputs
+	move.b #14,(A0)          // port A
+	move.b #7,(A1)           // unselect floppy
+	lea 0xFFFFFA01,A0        // MFP (FPGA emulation)
+	moveq #0,D0
+	moveq #23,D1
+.clear_mfp:
+		clr.b (A0,D0.l)
+		addq.l #2,D0
+	subq.l #1,D1
+	bpl.s .clear_mfp
+	moveq #0x04,D0
+	move.b D0,2(A0)          // AER
+	move.b #0x48,D0
+	move.b D0,22(A0)         // VR
+	clr.b stop_mfp_ikbd
+	lea int6_mfp(PC),A0
+	move.l A0,(64+6+OFFSET_INT_CF68KLIB)*4 // IRQ6 EPORT
+	clr.l ACP_INTERRUPT_CLEAR
+	move.l #ACP_INT_MFP_IRQ6 + ACP_INT_VSYNC_IRQ4 + ACP_INT_HSYNC_IRQ2,D0
+	or.l D0,ACP_INTERRUPT_ENABLE     
+	move.b MCF_EPORT_EPIER,D0
+	or.l #MCF_EPORT_EPIER_EPIE6,D0
+	move.b D0,MCF_EPORT_EPIER
+	move.l #~(MCF_INTC_IMRL_INT_MASK6 + MCF_INTC_IMRL_MASKALL),D0
+	and.l D0,MCF_INTC_IMRL
+#endif /* MCF5474X */
 	lea new_vbl(PC),A0       // for rtos
 	move.l A0,(64+4+OFFSET_INT_CF68KLIB)*4
 	tst.l tid_tos
@@ -383,21 +398,50 @@ replace_mfp:
 	moveq #0x50,D1           // / 64
 	move.w #192,D2
 	bsr settimer
+#ifndef MCF547X /* vector already used for MFP emulation on FIREBEE */
 	lea new_timer(PC),A0     // for rtos
 	move.l A0,(64+6+OFFSET_INT_CF68KLIB)*4
+#endif
 	lea 0xE03C50,A0          // timer C interrupt routine 
 	move.l A0,TIMER_C_VEC    // for rtos because it's impossible to use initint
 	tst.l tid_tos
 	bne.s .use_rtos_timer
-	moveq #5,D0
+	moveq #5,D0              // enable timer C
 	bsr initint
 .use_rtos_timer:
+#ifdef MCF547X
+	clr.w -(SP)              // SCR
+	move.w #1,-(SP)          // TSR, transmitter enable
+	move.w #1,-(SP)          // RSR, receiver enable
+	move.w #0x98,-(SP)       // UCR, no parity, 2 stops, 8 bits
+	clr.w -(SP)              // ctrl, no XON/XOFF, no CTS/RTS
+	move.w #1,-(SP)          // 9600 bauds
+	jsr 0xE02B06             // Rsconf MFP
+	lea 12(SP),SP
+	moveq #14,D1             // port A PSG
+	bsr Giaccess
+	move.l #0xE7,D2          // RTS & DTR
+	and.l D2,D0
+	bset #7,D1               // write port A
+	bsr Giaccess
+#else /* MCF548X */
 	moveq #3,D0              // timer D
 	moveq #1,D1              // 4
 	moveq #2,D2              // 9600 bauds
 	bsr settimer
+#endif /* MCF547X */
+	moveq #CT60_MODE_READ,D0 // mode
+	moveq #CT60_SERIAL_SPEED,D1 // type_param
+	moveq #0,D2              // value
+             jsr fire_rw_param
+	tst.l D0
+	bmi.s .default_speed
+	cmp.l #16,D0
+	bcs.s .speed_ok
+.default_speed:
 //	moveq #1,D0              // 9600 bauds
 	moveq #0,D0              // 19200 bauds
+.speed_ok:
 	moveq #0,D1              // no XON/XOFF, no CTS/RTS
 	moveq #0x18,D2           // no parity, 2 stops, 8 bits
 	bsr Rsconf
@@ -405,6 +449,17 @@ replace_mfp:
 	lea 0xE02776,A1
 	moveq #33,D0
 	bsr bytes_copy
+#ifdef MCF547X
+	lea 0x165A,A0            // iorec RS232
+	move.l A0,0x11D2
+	lea 0xE02776,A1
+	moveq #33,D0
+	bsr bytes_copy
+	lea 0x145A,A0
+	move.l A0,0x165A
+	lea 0x155A,A0
+	move.l A0,0x1668
+#endif /* MCF547X */
 	lea 0x10A4,A0
 	lea 0xE02768,A1
 	moveq #13,D0
@@ -413,7 +468,11 @@ replace_mfp:
 	move.w D0,0x115C
 	lea ikbdvect(PC),A0      // 0xE0340A
 	move.l A0,0x1132         // IKBD keyboard (code < 0xF6)
+#ifdef MCF547X
+	lea sysmidi(PC),A0
+#else
 	lea unimplemented(PC),A0 // 0xE03920
+#endif
 	move.l A0,0x1136         // midivec (unused because not called)
 	lea 0xE032EA,A0          // RTS
 	move.l A0,0x113A         // vkbderr, keyboard error (unused because not called)
@@ -444,6 +503,36 @@ replace_mfp:
 	lea 0xE0275A,A1
 	moveq #13,D0
 	bsr bytes_copy
+#ifdef MCF547X                        // Bconmap init 6:MFP, 7:PSC0 (default), FIREBEE has no SCC inside FPGA emulation
+	lea 0x11D6,A0
+	move.l A0,0x11C6
+	moveq #2,D0              // 2 tables MFP & PSC0
+	move.w D0,0x11CA
+	lea 0xE02BEA,A1
+	moveq #17,D0
+.init_bconmap:
+		move.l (A1)+,(A0)+
+	subq.l #1,D0
+	bpl.s .init_bconmap
+	moveq #7,D0              // PSC0 by default
+	move.w D0,0x11CC
+	lea 0x11EE,A0
+	lea auxistat(PC),A1
+	move.l A1,(A0)+
+	move.l A1,0x522          // bconstat(2)
+	lea auxin(PC),A1
+	move.l A1,(A0)+
+	move.l A1,0x542          // bconin(2)
+	lea auxostat(PC),A1
+	move.l A1,(A0)+
+	move.l A1,0x562          // bcostat(2)
+	lea auxout(PC),A1
+	move.l A1,(A0)+
+	move.l A1,0x582          // bconout(2)
+	lea rsconf(PC),A1
+	move.l A1,(A0)+
+	move.l A1,0x11CE
+#endif /* MCF547X */
 	link A6,#-4              // bioskeys, init IKBD tables 
 	clr.l -4(A6)
 	pea -1(A6)               // buffer
@@ -476,7 +565,29 @@ replace_mfp:
 	bsr ikbd_init            // uart 2 for IKBD
 #else
 #ifdef MCF547X 
-	bsr ikbd_init            // PSC 3 for IKBD
+	moveq #3,D0
+	move.b D0,0xFFFFFC04     // reset ACIA MIDI
+	move.b #0x95,D0
+	move.b D0,0xFFFFFC04     // / 16, 8 bits, 1 stop, no parity
+	bsr ikbd_init            // PSC1 / ACIA for IKBD
+//	bsr rtc_init             // PSC3 for RTC => moved before_init_cookie
+	bsr pseudo_dma_init
+	// MFP UART vectors
+	lea 0xE028E8,A0
+	moveq #12,D0             // MFP vector 12, enable RX full
+	bsr initint
+	lea 0xE029E4,A0
+	moveq #11,D0             // MFP vector 11, enable RX error
+	bsr initint
+	lea 0xE02982,A0
+	moveq #10,D0             // MFP vector 10, enable TX empty
+	bsr initint
+	lea 0xE02A04,A0
+	moveq #9,D0              // MFP vector 9, enable TX error
+	bsr initint
+	lea 0xE0299E,A0
+	moveq #2,D0              // MFP vector 2, enable CTS
+	bsr initint
 #else /* MCF548X */
 	bsr can_init             // used for IKBD
 #endif /* MCF547X */
@@ -513,6 +624,167 @@ replace_mfp:
 	move.b D0,MCF_UART_UIMR0 // enable TX/RX interrupts
 	move.w #0x400,D0
 	rts
+
+#ifdef MCF547X /* FIREBEE */
+	
+flopvbl:                              // TOS404 0xE0429A
+
+	moveq #-1,D0
+	move.b D0,0x1690         // flag motor on
+	tst.w flock
+	bne .fv1                 // floppy in action
+	move.l _frclock,d0
+	move.l D0,D1
+	and.l #7,D1
+	bne .fv1                 // <> 8th interrupt
+	move.w #0x80,D1          // select state register WD1772
+	move.w D1,0xFFFF8606     // FDC
+	lsr.l #3,D0
+	and.l #1,D0              // bit 4 used for drive number
+	lea 0x1680,A0            // write protect status table
+	add.l D0,A0
+	moveq #0,D1
+	move.w _nflops,D1
+	cmp.l D1,D0
+	bne.s .fv3
+	moveq #0,D0
+.fv3:
+	addq.l #1,D0             // select drive A / B (1/2)
+	add.l D0,D0              // shift face
+	eor.l #7,D0              // invert bits for hardware
+	bsr setporta             // drive select
+	bsr delay_80us
+	move.w 0xFFFF8604,D0     // FDC
+	btst #6,D0               // write protect bit
+	sne.b D0
+	move.b D0,(A0)
+	move.b D2,D0             // restore port A
+	bsr setporta
+	move.w 0x1680,D0         // write protect status table 
+	move.w 0x1682,D1         // write protect latch table
+	or.l D1,D0
+	move.w D0,0x1682         // write protect latch table
+	tst.w 0x1692             // unselect flag
+	bne.s .fv4               // floppy already unselected
+	move.l _hz_200,D0
+	cmp.l 0x168C,D0
+	bcc.s .fv2
+	bsr delay_80us
+	move.w 0xFFFF8604,D0     // FDC
+	btst #7,D0               // motor on
+	bne.s .fv1
+.fv2:
+	moveq #7,D0              // unselect all
+	bsr setporta
+	moveq #1,D0
+	move.w D0,0x1692         // unselect flag
+.fv4:
+	clr.w 0x1690             // motor on flag
+.fv1:
+	rts
+	
+setporta:
+
+	move.w SR,D1
+	move.w D1,-(SP)
+	or.l #0x700,D1           // mask interrupts
+	move.w D1,SR
+	moveq #14,D1             // port A
+	move.b D1,0xFFFF8800     // PSG
+#if 1
+	move.b psg_save_port_a,D1
+#else
+	move.b 0xFFFF8800,D1     // read outputs (seems not works on FPGA emulation)
+#endif
+	move.b D1,D2             // save state
+	and.l #0xF8,D1
+	and.l #7,D0              // new bits
+	or.l D1,D0
+	moveq #14,D1             // port A
+	move.b D1,0xFFFF8800     // PSG
+	move.b D0,0xFFFF8802     // write
+#if 1
+	move.b D0,psg_save_port_a
+#endif
+	move.w (SP)+,D1
+	move.w D1,SR             // restore interrupts
+	rts
+
+waitdma:
+
+#if 1
+	move.l A0,-(SP)
+	lea 0xFFFF860F,A0
+.waitdma:
+	btst #3,(A0)
+	bne.s .waitdma
+	move.l (SP)+,A0
+#else
+	bsr delay_80us
+.wait_dma:
+	tst.l ACP_DMA_COUNTER
+	bgt.s .wait_dma
+#endif
+	rts
+
+#endif /* MCF547X */
+
+delay_5mS:
+
+	move.l D2,-(SP)
+	move.l #5000,D2          // 5 mS
+	bra.s delay_us
+
+delay_80us:                           // 0xE045E8 TOS404
+
+	move.l D2,-(SP)
+	moveq #80,D2             // 80 uS
+	bra.s delay_us
+
+delay_10us:
+
+	move.l D2,-(SP)
+	moveq #10,D2             // 10 uS
+
+delay_us:
+
+#ifdef COLDFIRE
+	move.l D1,-(SP)
+	move.l D0,-(SP)
+#ifdef MCF5445X
+	move.l MCF_DTIM_DTCN1,D1
+.wait_us_loop:
+		move.l MCF_DTIM_DTCN1,D0
+		sub.l D1,D0
+	cmp.l D2,D0
+	bcs.s .wait_us_loop
+#else /* MCF547X-MCF548X */
+	MULU #SYSTEM_CLOCK,D2
+	move.l MCF_SLT_SCNT1,D1
+.wait_us_loop:
+		move.l D1,D0
+		sub.l MCF_SLT_SCNT1,D0
+	cmp.l D2,D0
+	bcs.s .wait_us_loop
+#endif /* MCF5445X */
+	move.l (SP)+,D0
+	move.l (SP)+,D1
+#else /* 68060 */
+	move.l D1,-(SP)
+	divu #26,D2
+	subq.w #1,D2
+	bmi.s .wait_end
+.wait_us_loop:
+		move.b 0xFFFFFA23,D1 // MFP TCDR
+.wait_timer_c:
+		cmp.b 0xFFFFFA23,D1
+		beq.s .wait_timer_c
+	dbf D2,.wait_us_loop
+.wait_end:
+	move.l (SP)+,D1
+#endif /* COLDFIRE */
+	move.l (SP)+,D2
+	rts
 	
 int_timer_c_mfp:
 
@@ -529,6 +801,9 @@ int_timer_c_mfp:
 	bne.s .not_timer_c_tos
 	lea -56(SP),SP
 	movem.l D1-D7/A0-A6,(SP)
+#ifdef MCF547X
+	bsr sndirq
+#endif
 	move.b conterm,D0
 	btst #1,D0               // key repeat flag
 	beq.s .no_repeat_key
@@ -559,6 +834,73 @@ int_timer_c_mfp:
 .not_timer_c_tos:
 	move.l (SP)+,D0
 	rte
+
+#ifdef MCF547X
+
+sndirq:
+
+	lea -12(SP),SP
+	movem.l D0-D1/A0,(SP)
+	move.l 0x11BC,D0
+	beq .sndirq_end          // no active sound
+	move.l D0,A0             // data pointer
+	moveq #0,D0
+	move.b 0x11C0,D0         // timer value
+	beq.s .sndirq1           // new sound ?
+	subq.l #1,D0
+	move.b D0,0x11C0
+	bra.s .sndirq_end
+.sndirq1:
+		moveq #0,D0
+		move.b (A0)+,D0
+		bmi.s .sndirq2  // command
+		move.b d0,0xFFFF8800 // PSG (FPGA emulation)
+		cmp.l #7,D0     // register 7
+		bne.s .sndirq3
+		move.b (A0)+,D1 // data for register 7
+		and.l #0x3F,D1
+		move.b 0xFFFF8800,D0 // PSG (FPGA emulation)
+		and.l #0xC0,D0
+		or.l D1,D0
+		move.b D0,0xFFFF8802 // PSG (FPGA emulation)
+		bra.s .sndirq1
+.sndirq3:
+		move.b (A0)+,0xFFFF8802 // PSG (FPGA emulation)
+		bra.s .sndirq1
+.sndirq2:
+		cmp.l #0xFF,D0 // command
+		beq.s .sndirq4
+		cmp.l #0x80,D0 // command
+		bne.s .sndirq6
+		move.b (A0)+,0x11C1
+	bra.s .sndirq1           // next sound
+.sndirq6:
+	cmp.l #0x81,D0           // command
+	bne.s .sndirq4
+	move.b (A0)+,0xFFFF8800  // PSG (FPGA emulation)
+	moveq #0,D1
+	move.b 0x11C1,D1
+	move.b (A0)+,D0
+	add.l D0,D1
+	move.b D1,0x11C1
+	move.b (A0)+,D0
+	move.b D1,0xFFFF8802     // PSG (FPGA emulation)
+	cmp.l D0,D1
+	beq.s .sndirq5           // end
+	subq.l #4,A0             // previous command
+	bra.s .sndirq5
+.sndirq4:
+	move.b (A0)+,0x11C0      // next value for wait timer
+	bne.s .sndirq5
+	lea 0,A0
+.sndirq5:
+	move.l A0,0x11BC         // data pointer
+.sndirq_end:
+	movem.l (SP),D0-D1/A0
+	lea 12(SP),SP
+	rts
+
+#endif /* MCF547X*/
 	
 tempo_reset_ikbd:
 
@@ -620,6 +962,22 @@ led:
 	move.l (SP)+,D0
 	rts
 #else /* MCF548X */
+#ifdef MCF547X
+	move.l D0,-(SP)
+	btst #0,D0
+	beq.s .led_off
+	move.b MCF_GPIO_PODR_FEC1L,D0
+	and.l #~MCF_GPIO_PODR_FEC1L_PODR_FEC1L4,D0
+	move.b D0,MCF_GPIO_PODR_FEC1L
+	move.l (SP)+,D0
+	rts
+.led_off:
+	move.b MCF_GPIO_PODR_FEC1L,D0
+	or.l #MCF_GPIO_PODR_FEC1L_PODR_FEC1L4,D0
+	move.b D0,MCF_GPIO_PODR_FEC1L
+	move.l (SP)+,D0
+	rts
+#else /* MCF548X */
 	move.l D0,-(SP)
 	btst #0,D0
 	beq.s .led_off
@@ -632,6 +990,7 @@ led:
 	and.l D0,MCF_GPT_GMS0    // TOUT0 to 0
 	move.l (SP)+,D0
 	rts
+#endif /* MCF547X */
 #endif /* M5445X */ 
 
 	dc.l 0x58425241          // XBRA
@@ -644,14 +1003,11 @@ unimplemented:
 
 new_vbl:
 
+//	move.w #0x2700,SR
 	move.l D0,-(SP)
 #ifdef MCF5445X
 	move.l MCF_DTIM_DTCN1,D0
 	move.l #1000000/38400,-(SP)
-#else /* MCF548X */
-	move.l MCF_SLT_SCNT1,D0
-	move.l #SYSTEM_CLOCK*1000000/38400,-(SP)
-#endif /* MCF5445X */
 	.chip 68060
 	divu.l (SP)+,D0
 	divu #192,D0
@@ -662,10 +1018,37 @@ new_vbl:
 	move.b D0,0xFFFFFA23     // TCDR MFP emulation
 	tst.l tid_tos
 	bne.s .use_rtos_vbl
-#ifdef MCF5445X
 	moveq #DTIM_DTER_REF,D0
 	move.b D0,MCF_DTIM_DTER0 // clear interrupt
 #else /* MCF548X */
+#if 0
+	tst.l tid_tos
+	beq.s .not_use_rtos_vbl
+	move.l MCF_INTC_INTFRCL,D0
+	and.l #MCF_INTC_INTFRCL_INTFRC4,D0
+	bne.s .not_use_rtos_vbl // forced VBL
+ 	// true VBL
+	move.l #ACP_INT_VSYNC_IRQ4,D0
+	move.l D0,ACP_INTERRUPT_CLEAR
+	moveq #4,D0
+	bset.b D0,MCF_EPORT_EPFR // clear interrupt	
+	bra.s .not_vbl_tos
+.not_use_rtos_vbl:
+#endif
+#if !(defined(MCF547X) && defined(USE_MFP)) /* <> FIREBEE FPGA emulation */
+	move.l MCF_SLT_SCNT1,D0
+	move.l #SYSTEM_CLOCK*1000000/38400,-(SP)
+	.chip 68060
+	divu.l (SP)+,D0
+	divu #192,D0
+	.chip 5200
+	clr.w D0
+	swap D0
+	addq.l #1,D0
+	move.b D0,0xFFFFFA23     // TCDR MFP emulation
+#endif /* !(defined(MCF547X) && defined(USE_MFP)) */
+	tst.l tid_tos
+	bne.s .use_rtos_vbl
 	move.l #MCF_SLT_SSR_ST,D0
 	or.l D0,MCF_SLT_SSR0     // clear interrupt
 #endif /* MCF5445X */
@@ -697,6 +1080,7 @@ new_vbl:
 	move.l VBL_VEC,-(SP)     // TOS404 0xE00CB0
 	rts
 
+#ifndef MCF547X
 new_timer:
 
 	move.l D0,-(SP)
@@ -710,6 +1094,7 @@ new_timer:
 	move.l (SP)+,D0
 	move.l TIMER_C_VEC,-(SP) // TOS404 0xE03C50
 	rts
+#endif /* MCF547X */
 	
 new_timer_a:
 
@@ -791,11 +1176,66 @@ settimer:
 	lea debug5(PC),A0
 	bsr debug_display_string
 #endif
+#if defined(MCF547X) && defined(USE_MFP) /* FIREBEE FPGA emulation */
+	lea 0xFFFFFA01,A0        // MFP (FPGA emulation)
+	tst.l D0                 // timer
+	beq.s .start_timer_a
+	cmp.l #1,D0
+	beq.s .start_timer_b    	
+	cmp.l #2,D0
+	beq.s .start_timer_c
+	cmp.l #3,D0
+	beq.s .start_timer_d   
+ 	bra.s .end_timer
+.start_timer_a:
+	clr.b 24(A0)             // TACR
+	move.b D2,30(A0)         // TADR
+	move.b D1,24(A0)         // TACR
+ 	bra.s .end_timer
+.start_timer_b:
+	clr.b 26(A0)             // TBCR
+	move.b D2,32(A0)         // TBDR
+	move.b D1,26(A0)         // TBCR
+ 	bra.s .end_timer
+.start_timer_c:
+	move.b 28(A0),D0         // TCDCR
+	and.l #0xF,D0
+	move.b D0,28(A0)         // TCDCR
+	and.l #0xF0,D1
+	or.l D0,D1               // control
+	move.b D2,34(A0)         // TCDR
+	move.b D1,28(A0)         // TCDCR
+ 	bra.s .end_timer
+.start_timer_d:
+	move.b 28(A0),D0         // TCDCR
+	and.l #0xF0,D0
+	move.b D0,28(A0)         // TCDCR
+	and.l #0xF,D1
+	or.l D0,D1               // control
+	move.b D2,36(A0)         // TCDR
+	move.b D1,28(A0)         // TCDCR
+#else /* <> FIREBEE FPGA emulation */
 	ext.l D0                 // timer
 	ext.l D1                 // control
 	ext.l D2                 // data
 	cmp.l #2,D0              // timer C
 	bne.s .not_timer_c
+#if defined(MCF547X) && !defined(USE_MFP) /* FIREBEE FPGA emulation */
+	move.l D0,-(SP)          // some programs read timer C for delay loop
+	move.l D1,-(SP)
+	lea 0xFFFFFA01,A0        // MFP (FPGA emulation)
+	moveq #0x50,D1           // / 64
+	move.w #192,D2
+	move.b 28(A0),D0         // TCDCR
+	and.l #0xF,D0
+	move.b D0,28(A0)         // TCDCR
+	and.l #0xF0,D1
+	or.l D0,D1               // control
+	move.b D2,34(A0)         // TCDR	
+	move.b D1,28(A0)         // TCDCR
+	move.l (SP)+,D1
+	move.l (SP)+,D0
+#endif /*  defined(MCF547X) && !defined(USE_MFP) */
 	lsr.l #4,D1
 .not_timer_c:
 	tst.l D1
@@ -804,7 +1244,7 @@ settimer:
 	bhi .end_timer
 	asl.l #2,D1
 	lea tab_prediv_mfp(PC),A0
-	move.l (A0,D1),D1
+	move.l (A0,D1.l),D1
 	mulu.l D2,D1             // * data
 	move.l #10000,D2
 	mulu.l D2,D1
@@ -980,6 +1420,7 @@ settimer:
 	clr.l MCF_GPT_GCIR3
 	move.l D1,MCF_GPT_GMS3
 #endif /* MCF5445X */
+#endif /* defined(MCF547X) && defined(USE_MFP) */
 .end_timer:
 	movem.l (SP),D0-D2/A0
 	lea 16(SP),SP
@@ -994,6 +1435,17 @@ initint:
 	move.l (SP)+,A0
 #endif
 	bsr Jdisint
+#if defined(MCF547X) && defined(USE_MFP)
+	move.l D1,-(SP)
+	move.l A1,-(SP)
+	move.l D0,D1             // MFP vector number
+	asl.l #2,D1              // * 4
+	add.l #0x100,D1          // MFP vectors base
+	move.l D1,A1
+	move.l A0,(A1)           // new vector
+	move.l (SP)+,A1
+	move.l (SP)+,D1
+#else /* !(defined(MCF547X) && defined(USE_MFP)) */
 	cmp.l #13,D0
 	beq.s .vect_timer_a
 	cmp.l #8,D0
@@ -1005,45 +1457,56 @@ initint:
 	bra.s .end_new_vector	
 .vect_timer_a:
 	move.l A0,TIMER_A_VEC
+#if !(defined(MCF547X) || defined(USE_MFP)) /* <> FIREBEE FPGA emulation */
 	lea new_timer_a(PC),A0
 #ifdef MCF5445X
 	move.l A0,(128+INT1_HI_PIT0_PIF+OFFSET_INT_CF68KLIB)*4
 #else /* MCF548X */
 	move.l A0,(64+62+OFFSET_INT_CF68KLIB)*4
 #endif
+#endif /* defined(MCF547X) && defined(USE_MFP) */
 	bra.s .end_new_vector
 .vect_timer_b:
 	move.l A0,TIMER_B_VEC
+#if !(defined(MCF547X) || defined(USE_MFP)) /* <> FIREBEE FPGA emulation */
 	lea new_timer_b(PC),A0
 #ifdef MCF5445X
 	move.l A0,(128+INT1_HI_PIT1_PIF+OFFSET_INT_CF68KLIB)*4
 #else /* MCF548X */
 	move.l A0,(64+61+OFFSET_INT_CF68KLIB)*4
 #endif
+#endif /* defined(MCF547X) && defined(USE_MFP) */
 	bra.s .end_new_vector
 .vect_timer_c:
 	move.l A0,TIMER_C_VEC
+#if !(defined(MCF547X) || defined(USE_MFP)) /* <> FIREBEE FPGA emulation */
 	lea new_timer_c(PC),A0
 #ifdef MCF5445X
 	move.l A0,(128+INT1_HI_PIT2_PIF+OFFSET_INT_CF68KLIB)*4
 #else /* MCF548X */
 	move.l A0,(64+60+OFFSET_INT_CF68KLIB)*4
 #endif
+#endif /* defined(MCF547X) && defined(USE_MFP) */
 	bra.s .end_new_vector
 .vect_timer_d:
 	move.l A0,TIMER_D_VEC
+#if !(defined(MCF547X) || defined(USE_MFP)) /* <> FIREBEE FPGA emulation */
 	lea new_timer_d(PC),A0
 #ifdef MCF5445X
 	move.l A0,(128+INT1_HI_PIT3_PIF+OFFSET_INT_CF68KLIB)*4
 #else /* MCF548X */
 	move.l A0,(64+59+OFFSET_INT_CF68KLIB)*4
 #endif
+#endif /* defined(MCF547X) && defined(USE_MFP) */
 .end_new_vector:
+#endif /* defined(MCF547X) && defined(USE_MFP) */
 	bsr Jenabint
 	rts	
 	
 tab_prediv_mfp:
 	dc.l 0,4,10,16,50,64,100,200
+
+#ifndef MCF547X
 
 gettime:
 
@@ -1097,15 +1560,17 @@ end_settime:
 .error_time:
 	unlk A6
 	rts
+
+#endif /* MCF547X */
 	
 jdosgettime:                          // IKBD to DOS format
 	
 	lea 0x116D,A0
 	bsr bcdbin
 	sub.l #80,D0             // 1980
-	bpl.s .year_before_2000_gettime
+	bpl.s .year_before_2000_gettime_ikbd
 	add.l #100,D0
-.year_before_2000_gettime:
+.year_before_2000_gettime_ikbd:
 	move.l D0,D2
 	asl.l #4,D2
 	bsr bcdbin
@@ -1276,23 +1741,37 @@ Ikbdws:	// D0.W: len-1, A0: buffer
 		beq.s .iw1               // full
 		move.b (A0)+,D0          // data inside the buffer
 		move.b D0,MCF_UART_UTB2  // data
-	subq.l #8,D2
-	bmi.s .iw1
+	subq.l #1,D2
+	bpl.s .iw1
 	moveq #0,D0              // OK
 	rts
 #else
 #ifdef MCF547X
+#if 0
+	move.l D2,-(SP)
+	move.l A0,-(SP)
 .iw1:
-		move.b MCF_UART_USR3,D1
+		move.b MCF_UART_USR1,D1
 		and.l #MCF_UART_USR_TXEMP,D1
 		beq.s .iw1               // full
 		move.b (A0)+,D0          // data inside the buffer
-		move.b D0,MCF_UART_UTB3  // data
-	subq.l #8,D2
-	bmi.s .iw1
+		move.b D0,MCF_UART_UTB1  // send data
+	subq.l #1,D2
+	bpl.s .iw1
+	move.l (SP)+,A0
+	move.l (SP)+,D2
+#endif
+.iw2:	// FIREBEE
+		move.b 0xFFFFFC00,D1     // ACIA IKBD
+		btst #1,D1               // ready
+		beq.s .iw2
+		move.b (A0)+,D0          // data inside the buffer
+		move.b D0,0xFFFFFC02     // send data
+	subq.l #1,D2
+	bpl.s .iw2
 	moveq #0,D0              // OK
 	rts
-#else /* MCF548X */
+#else /* MCF548X                         CAN1 */
 	addq.l #1,D2	
 .iw1:
 		move.l MCF_CAN_ERRSTAT1,D0
@@ -1335,10 +1814,10 @@ Ikbdws:	// D0.W: len-1, A0: buffer
 .iw5:
 	bsr debug_display_string
 #endif
-#endif /* MCF547X */
-#endif /* MCF5445X */
 	moveq #-1,D0             // error
 	rts
+#endif /* MCF547X */
+#endif /* MCF5445X */
 
 Jdisint:
 
@@ -1357,6 +1836,29 @@ Jdisint:
 #endif
 	move.l D1,-(SP)
 	ext.l D0
+#if defined(MCF547X) && defined(USE_MFP) /* FIREBEE FPGA emulation */
+	move.l A0,-(SP)
+	lea 0xFFFFFA01,A0        // MFP (FPGA emulation)
+	cmp.l #8,D0
+	bcc.s .clr_imra
+	bclr D0,20(A0)           // IMRB
+	bclr D0,8(A0)            // IERB
+	bclr D0,12(A0)           // IPRB
+	bclr D0,16(A0)           // ISRB
+	move.l (SP)+,A0
+	bra.s .end_clr_imr_timer
+.clr_imra:
+	cmp.l #16,D0
+	bcc.s .end_clr_imr_timer
+	move.l D0,-(SP)
+	subq.l #8,D0
+	bclr D0,18(A0)           // IMRA
+	bclr D0,6(A0)            // IERA
+	bclr D0,10(A0)           // IPRA
+	bclr D0,14(A0)           // ISRA
+	move.l (SP)+,D0
+	move.l (SP)+,A0
+#else /* <> FIREBEE FPGA emulation */
 	cmp.l #13,D0
 	beq.s .clr_imr_timer_a
 	cmp.l #8,D0
@@ -1388,12 +1890,13 @@ Jdisint:
 	bra.s .clr_imr_timer
 .clr_imr_timer_c:
 	move.l #MCF_INTC_IMRH_INT_MASK60,D1
-//	bra.s .clr_imr_timer
+	bra.s .clr_imr_timer
 .clr_imr_timer_d:
-//	move.l #MCF_INTC_IMRH_INT_MASK59,D1
+	move.l #MCF_INTC_IMRH_INT_MASK59,D1
 .clr_imr_timer:
 	or.l D1,MCF_INTC_IMRH
 #endif /* MCF5445X */
+#endif /* defined(MCF547X) && defined(USE_MFP) */
 .end_clr_imr_timer:
 	move.l (SP)+,D1
 	rts
@@ -1415,6 +1918,20 @@ Jenabint:
 #endif
 	move.l D1,-(SP)
 	ext.l D0
+#if defined(MCF547X) && defined(USE_MFP) /* FIREBEE FPGA emulation */
+	lea 0xFFFFFA01,A0        // MFP (FPGA emulation)
+	cmp.l #8,D0
+	bcc.s .set_imra
+	bset D0,8(A0)            // IERB
+	bset D0,20(A0)           // IMRB
+	bra.s .end_set_imr_timer
+.set_imra:
+	cmp.l #16,D0
+	bcc.s .end_set_imr_timer
+	subq.l #8,D0
+	bset D0,6(A0)            // IERA
+	bset D0,18(A0)           // IMRA
+#else /* <> FIREBEE FPGA emulation */
 	cmp.l #13,D0
 	beq.s .set_imr_timer_a
 	cmp.l #8,D0
@@ -1460,14 +1977,15 @@ Jenabint:
 	moveq #0x22,D1           // level 4, priority 2
 	move.b D1,MCF_INTC_ICR60
 	move.l #~MCF_INTC_IMRH_INT_MASK60,D1
-//	bra.s .set_imr_timer
+	bra.s .set_imr_timer
 .set_imr_timer_d:
-//	moveq #0x21,D1           // level 4, priority 1
-//	move.b D1,MCF_INTC_ICR59
-//	move.l #~MCF_INTC_IMRH_INT_MASK59,D1
+	moveq #0x21,D1           // level 4, priority 1
+	move.b D1,MCF_INTC_ICR59
+	move.l #~MCF_INTC_IMRH_INT_MASK59,D1
 .set_imr_timer:
 	and.l D1,MCF_INTC_IMRH
 #endif /* MCF5445X */
+#endif /* defined(MCF547X) && defined(USE_MFP) */
 .end_set_imr_timer:
 	move.l (SP)+,D1
 	rts
@@ -1478,7 +1996,7 @@ Xbtimer: // D0.W: timer, D1.W: control, D2.W: data, A0: vector
 	move.l A0,D0             // vector
 	bmi.s .vector_not_used
 	lea tab_num_int_timer(PC),A1
-	move.b (A1,D0.L),D0
+	move.b (A1,D0.l),D0
 	bsr initint              // new vector
 .vector_not_used:
 	rts
@@ -1524,9 +2042,9 @@ scale_mouse:
 
 get_serial_mouse:
 
+	link A6,#-10
 	lea -56(SP),SP
 	movem.l D0-A5,(SP)
-	link A6,#-10
 	and.l #0x7F,D0
 	tst.w id_serial_mouse
 	bne.s .gsm2              // ID found
@@ -1567,7 +2085,7 @@ get_serial_mouse:
 	lea data_serial_mouse,A0
 	move.w count_serial_mouse,D1
 	and.l #3,D1
-	move.b D0,(A0,D1.L)
+	move.b D0,(A0,D1.l)
 	addq.l #1,D1
 	move.w D1,count_serial_mouse
 	moveq #0,D3
@@ -1580,16 +2098,6 @@ get_serial_mouse:
 	cmp.l D2,D1              // end of frame ?
 	bcs .gsm1
 	clr.w count_serial_mouse
-#if 0
-	move.b (A0),D0
-	bsr _hex_byte
-	move.b 1(A0),D0
-	bsr _hex_byte
-	move.b 2(A0),D0
-	bsr _hex_byte
-	moveq #0x20,D0
-	bsr _display_char
-#endif	
 	lea -8(A6),A1
 	move.b (A0),D0
 	lsr.l #4,D0              // buttons
@@ -1623,16 +2131,20 @@ get_serial_mouse:
 	subq.l #1,D2
 	bgt.s .gsm3
 .gsm1:
-	unlk a6
 	movem.l (SP),D0-A5
 	lea 56(SP),SP
+	unlk A6
 	rts
 	
 auxistat:
 
 	tst.b serial_mouse
 	bne.s .ais2
+#ifdef MCF547X
+	lea 0x165A,A0            // iorec RS232
+#else
 	lea 0xF72,A0             // iorec RS232
+#endif
 	moveq #-1,D0             // OK
 	moveq #0,D1
 	moveq #0,D2
@@ -1662,7 +2174,11 @@ auxostat:
 
 	tst.b serial_mouse
 	bne.s .aos3
+#ifdef MCF547X
+	lea 0x165A,A0            // iorec RS232
+#else
 	lea 0xF72,A0             // iorec RS232
+#endif
 	moveq #-1,D0             // OK
 	moveq #0,D1
 	moveq #0,D2
@@ -1691,10 +2207,25 @@ auxout:
 	bcs.s auxout             // not send, try again
 .ao1:
 	rts
+
+#ifdef MCF547X
+
+rsconf:
+
+	move.w 4(SP),D0          // baud
+	move.w 6(SP),D1          // ctrl
+	move.w 8(SP),D2          // ucr
+	bra Rsconf
+
+#endif
 	
 rs232put:
 
+#ifdef MCF547X
+	lea 0x165A,A0            // iorec RS232
+#else
 	lea 0xF72,A0             // iorec RS232
+#endif
 	move.w SR,D2
 	move.l D2,-(SP)
 	or.l #0x700,D2           // mask interrupts
@@ -1729,7 +2260,7 @@ rs232put:
 	cmp.l D2,D1
 	beq.s .rp5               // buffer full
 	move.l 14(A0),A2         // buffer
-	move.b D0,(A2,D1.L)      // store data
+	move.b D0,(A2,D1.l)      // store data
 	move.w D1,22(A0)         // tail index
 	move.b psc_uimr,D0
 	or.l #MCF_UART_UIMR_TXRDY,D0
@@ -1764,7 +2295,11 @@ rs232put:
 	
 rs232get:
 
+#ifdef MCF547X
+	lea 0x165A,A0            // iorec RS232
+#else
 	lea 0xF72,A0             // iorec RS232
+#endif
 	move.w SR,D2
 	move.l D2,-(SP)
 	or.l #0x700,D2           // mask interrupts
@@ -1784,7 +2319,7 @@ rs232get:
 .rg2:
 	move.l (A0),A2           // buffer
 	moveq #0,D0
-	move.b (A2,D1.L),D0      // get data
+	move.b (A2,D1.l),D0      // get data
 	move.w D1,6(A0)          // head index
 	moveq #0,D1              // OK
 	bra.s .rg3
@@ -1823,7 +2358,11 @@ int_serial:
 
 	lea -28(SP),SP
 	movem.l D0-D3/A0-A2,(SP)
+#ifdef MCF547X
+	lea 0x165A,A0            // iorec RS232
+#else
 	lea 0xF72,A0             // iorec RS232
+#endif
 	move.b MCF_UART_UISR0,D3 // isr
 	// receive data
 	moveq #MCF_UART_UISR_RXRDY_FU,D0
@@ -1897,7 +2436,7 @@ int_serial:
 	cmp.l D2,D1
 	beq .is1
 	move.l (A0),A2           // buffer
-	move.b D0,(A2,D1.L)      // store data
+	move.b D0,(A2,D1.l)      // store data
 #if 0 //#ifdef DEBUG
 	bsr debug_display_char
 #endif
@@ -1958,7 +2497,7 @@ int_serial:
 	moveq #0,D1
 .is4:
 	move.l 14(A0),A2         // buffer
-	move.b (A2,D1.L),D0      // get data
+	move.b (A2,D1.l),D0      // get data
 	move.b D0,MCF_UART_UTB0  // data
 	move.w D1,20(A0)         // head index
 	bra.s .is2
@@ -1999,7 +2538,7 @@ int_serial:
 	moveq #0,D1
 .is12:
 	move.l 14(A0),A2         // buffer
-	move.b (A2,D1.L),D0      // get data
+	move.b (A2,D1.l),D0      // get data
 	move.b D0,MCF_UART_UTB0  // data
 	move.w D1,20(A0)         // head index
 .is14:
@@ -2029,7 +2568,11 @@ Rsconf: // D0.W: baud, D1.W: ctrl, D2.W: ucr
 	clr.b serial_mouse
 	move.l D4,-(SP)
 	move.l D3,-(SP)
+#ifdef MCF547X
+	lea 0x165A,A0            // iorec RS232
+#else
 	lea 0xF72,A0             // iorec RS232
+#endif
 	move.w SR,D3
 	move.l D3,-(SP)
 	or.l #0x700,D3           // mask interrupts
@@ -2103,12 +2646,16 @@ Rsconf: // D0.W: baud, D1.W: ctrl, D2.W: ucr
 	lea tab_baudrate(PC),A0
 	and.l #0xF,D0
 	asl.l #2,D0
-	move.l (A0,D0.L),D0
+	move.l (A0,D0.l),D0
 	move.l #SYSTEM_CLOCK*1000000,D2
-	asl.l #5,D0              // * 32, baud
+	asl.l #4,D0              // * 16, baud
 	.chip 68060
 	divu.l D0,D2             // ubgs
 	.chip 5200
+	lsr.l #1,D2              // 2
+	bcc.s .set_speed
+	addq.l #1,D2
+.set_speed:	
 	move.l D2,D0
 	lsr.l #8,D0
 	move.b D0,MCF_UART_UBG10
@@ -2128,8 +2675,9 @@ Rsconf: // D0.W: baud, D1.W: ctrl, D2.W: ucr
 	rts
 
 tab_baudrate:
-	dc.l 19200,9600,4800,3600,2400,2000,1800,1200,600,300,200,150
-	dc.l 57600,38400,115200,76800
+	dc.l 19200,9600,4800,3600,2400,2000,1800,1200,600,300
+	//      200,   150,  134,  110,    75,   50
+	dc.l 230400,115200,57600,38400,153600,76800
 
 ikbd_codes:	dc.b 1,2,3,3,3,3,4,5,6,7
 
@@ -2150,15 +2698,15 @@ arcvint:
 	rts
 .av1:
 	move.l 0x1136,-(SP)    // MIDI 
-	rts                    // (RTS by default)
+	rts                    // (sysmidi by default)
 .av2:
 	sub.l #0xF6,D0
 	and.l #0xFF,D0
 	lea ikbd_codes(PC),A3  // IKBD codes table
-	move.b (A3,D0.L),D1
+	move.b (A3,D0.l),D1
 	move.b D1,0x115A
 	lea ikbd_length(PC),A3 // IKBD length table
-	move.b (A3,D0.L),D1
+	move.b (A3,D0.l),D1
 	move.b D1,0x115B
 	add.l #0xF6,D0
 	cmp.l #0xF8,D0         // mouse position ?
@@ -2185,9 +2733,9 @@ arcvint:
 	add.l D1,D2
 	subq.l #1,D2
 	asl.l #2,D2
-	move.l (A2,D2.L),A0    // IKBD record pointer
-	move.l 4(A2,D2.L),A1   // index IKBD
-	move.l 8(A2,D2.L),A2   // interrupt routine
+	move.l (A2,D2.l),A0    // IKBD record pointer
+	move.l 4(A2,D2.l),A1   // index IKBD
+	move.l 8(A2,D2.l),A2   // interrupt routine
 	move.l (A2),A2         // interrupt vector
 	moveq #0,D2
 	move.b 0x115B,D2       // index IKBD
@@ -2337,12 +2885,12 @@ ikbdvect2:
 	move.l A0,-(SP)
 	moveq #0,D1
 	move.b D0,D1
-	move.l 0x1188,A0
+	move.l 0x1188,A0       // table unshift
 	and.l #0x7F,D0
 	move.b 0x1187,D2
 	btst #4,D2             // CAPS LOCK
 	beq.s .iv16
-	move.l 0x1190,A0
+	move.l 0x1190,A0       // table capslock
 .iv16:
 	btst #0,D2             // RIGHT SHIFT
 	bne.s .iv17
@@ -2357,9 +2905,9 @@ ikbdvect2:
 	moveq #0,D0
 	bra .iv20
 .iv19:
-	move.l 0x118C,A0
+	move.l 0x118C,A0       // table shift
 .iv18:
-	move.b (A0,D0.L),D0
+	move.b (A0,D0.l),D0
 	btst #2,D2             // CTRL
 	beq.s .iv22
 	cmp.l #0xD,D0
@@ -2554,12 +3102,15 @@ ikbdvect2:
 	clr.w D2
 	swap D2
 	cmp.l #0xC53,D2        // CTRL ALT DEL
-	bne.s .iv45
-	jmp 0xE00030           // reset
-.iv45:
+	beq.s .watchdog_reset
+//	bne.s .iv45
+//	jmp 0xE00030           // reset
+//.iv45:
 	cmp.l #0xD53,D2        // CTRL ALT LEFT-SHIFT DEL
 	bne.s .iv46
-	jmp 0xE0398C           // cold reset
+	clr.l memvalid
+//	jmp 0xE0398C           // cold reset
+	bra.s .watchdog_reset
 .iv46:
 	move.b conterm,D2
 	btst #3,D2
@@ -2571,6 +3122,32 @@ ikbdvect2:
 	move.w D1,8(A0)        // update tail index
 .iv21:
 	rts
+
+.watchdog_reset:
+
+	move.w #0x2700,SR
+	jsr disable_interrupts
+#ifdef MCF5445X
+  	move.w #SCM_CWCR_CWE + SCM_CWCR_CWRI(2) + SCM_CWCR_CWT(8),D0
+  	move.w D0,MCF_SCM_CWCR
+#else /* MCF548X */
+	clr.l MCF_GPT_GMS0 
+	move.w #SYSTEM_CLOCK,D0
+	swap D0
+#ifdef DEBUG
+	move.w #-1,D0 // 65535 uS
+#else
+	move.w #10,D0 // 10 uS
+#endif
+	move.l D0,MCF_GPT_GCIR0
+	move.l #MCF_GPT_GMS_TMS_GPIO + MCF_GPT_GMS_CE + MCF_GPT_GMS_WDEN,D0
+	move.l D0,MCF_GPT_GMS0 // reset watchdog
+#endif /* MCF5454X */
+.wait_reset_board:
+	nop
+	moveq #0x2E,D0
+	move.b D0,MCF_UART_UTB0
+	bra.s .wait_reset_board
 
 keymaus1:
 
@@ -2609,8 +3186,8 @@ keymaus:
 int_ikbd:
 
 	link A6,#-4
-	lea -16(SP),SP
-	movem.l D0-D2/A0,(SP)
+	lea -56(SP),SP
+	movem.l D0-A5,(SP)
 	moveq #MCF_UART_USR_RXRDY,D0
 	move.b MCF_UART_USR2,D2  // status
 	and.l D2,D0
@@ -2633,23 +3210,23 @@ int_ikbd:
 	lea 0xF96,A0             // iorec keyboard
 	lea -4(A6),A1            // data - 2 for arcvint
 	move.b D0,2(A1)          // data
-	lea -16(SP),SP
-	movem.l D2/A0-A2,(SP)
 	bsr arcvint              // 0xE032EC
-	movem.l (SP),D2/A0-A2
-	lea 16(SP),SP
-             bra.s .ik1
+	bra.s .ik1
 .ik2:
 	moveq #MCF_UART_UCR_RESET_ERROR,D0
 	move.b D0,MCF_UART_UCR2
 .ik1:
-	movem.l (SP),D0-D2/A0
-	lea 16(SP),SP
+	movem.l (SP),D0-A5
+	lea 56(SP),SP
 	unlk A6
 	rte
 
-ikbd_init:
+ikbd_init: /* MCF5445X */
 
+#ifdef DEBUG
+	lea debug48(PC),A0
+	bsr debug_display_string	
+#endif
 	moveq #MCF_UART_UCR_RESET_TX,D0
 	move.b D0,MCF_UART_UCR2  // Reset Transmitter
 	moveq #MCF_UART_UCR_RESET_RX,D0
@@ -2684,17 +3261,18 @@ ikbd_init:
 #else
 #ifdef MCF547X
 
-int_ikbd:
+#if 0
+int_ikbd:	// Eiffel
 
 	link A6,#-4
-	lea -16(SP),SP
-	movem.l D0-D2/A0,(SP)
+	lea -56(SP),SP
+	movem.l D0-A5,(SP)
 	moveq #MCF_UART_USR_RXRDY,D0
-	move.b MCF_UART_USR3,D2  // status
+	move.b MCF_UART_USR1,D2  // status
 	and.l D2,D0
 	beq.s .ik1
 	moveq #0,D0
-	move.b MCF_UART_URB3,D0  // data
+	move.b MCF_UART_URB1,D0  // data
 	moveq #0,D1
 	move.b #MCF_UART_USR_RB,D1 // receive break
 	and.l D2,D1
@@ -2711,23 +3289,313 @@ int_ikbd:
 	lea 0xF96,A0             // iorec keyboard
 	lea -4(A6),A1            // data - 2 for arcvint
 	move.b D0,2(A1)          // data
-	lea -16(SP),SP
-	movem.l D2/A0-A2,(SP)
 	bsr arcvint              // 0xE032EC
-	movem.l (SP),D2/A0-A2
-	lea 16(SP),SP
              bra.s .ik1
 .ik2:
 	moveq #MCF_UART_UCR_RESET_ERROR,D0
-	move.b D0,MCF_UART_UCR3
+	move.b D0,MCF_UART_UCR1
 .ik1:
-	movem.l (SP),D0-D2/A0
-	lea 16(SP),SP
+	movem.l (SP),D0-A5
+	lea 56(SP),SP
+	unlk A6
+	rte
+#endif
+
+int6_mfp:
+
+//	move.w #0x2700,SR
+	move.l TIMER_C_VEC,-(SP) // TOS404 0xE03C50
+	move.l D0,-(SP)
+	move.l MCF_INTC_INTFRCL,D0
+	and.l #MCF_INTC_INTFRCL_INTFRC6,D0
+	bne .int6_forced
+	// normal INT6
+	moveq #6,D0
+	bset.b D0,MCF_EPORT_EPFR // clear interrupt
+	move.l D1,-(SP)
+	moveq #0,D1
+	move.b 0xFFFFFA13,D1     // MFP IMRA (FPGA emulation)
+	asl.l #8,D1
+	move.b 0xFFFFFA15,D1     // MFP IMRB (FPGA emulation)
+	move.b 0xFFFFFA0B,D0     // MFP IPRA (FPGA emulation)
+	asl.l #8,D0
+	move.b 0xFFFFFA0D,D0     // MFP IPRB (FPGA emulation)
+#if 0
+	move.l D0,-(SP)
+#if 1
+	bsr debug_hex_word
+	moveq #0x20,D0
+	bsr debug_display_char
+	move.w D1,D0
+	bsr debug_hex_word
+	moveq #0x20,D0
+	bsr debug_display_char
+	move.l ACP_INTERRUPT_PENDING,D0
+	bsr debug_hex_long
+	moveq #0x20,D0
+	bsr debug_display_char
+	move.l ACP_INTERRUPT_ENABLE,D0
+	bsr debug_hex_long
+	moveq #13,D0
+	bsr debug_display_char
+	moveq #10,D0
+	bsr debug_display_char
+#else	
+	moveq #0x4D,D0
+	move.b D0,MCF_UART_UTB0
+	move.l (SP),D0
+	lsr.l #2,D0
+	and.l #0xF,D0
+	add.l #0x30,D0
+	move.b D0,MCF_UART_UTB0
+	moveq #0x20,D0
+	move.b D0,MCF_UART_UTB0
+#endif
+	move.l (SP)+,D0
+#endif
+	and.l D1,D0
+	move.l (SP)+,D1
+	tst.l D0
+	beq.s .is_not_mfp
+	move.l ACP_MFP_INTACK_VECTOR,D0 // (MFP vector base register + MFP int channel) * 4
+	and.l #0x3FC,D0
+	cmp.l #0x100,D0
+	bcs.s .is_not_mfp
+	cmp.l #PSEUDO_DMA_VEC,D0
+	bhi.s .is_not_mfp
+	cmp.l #IKBD_VEC,D0
+	bne.s .int_mfp_ok
+	tst.b stop_mfp_ikbd
+	beq.s .int_mfp_ok
+	move.l A0,-(SP)          // IKBD not connected, avoid null bytes
+	lea 0xFFFFFA01,A0        // MFP (FPGA emulation)
+	bclr #6,20(A0)           // IMRB I/O bit 4, stop interrupt
+	bclr #6,8(A0)            // IERB
+	bclr #6,12(A0)           // IPRB
+	bclr #6,16(A0)           // ISRB
+	move.l (SP)+,A0
+.is_not_mfp:
+	move.l (SP)+,D0
+	rts
+.int_mfp_ok:
+	move.l A0,-(SP)
+	move.l D0,A0
+#if 0
+	bsr debug_hex_long
+	moveq #0x20,D0
+	bsr debug_display_char
+	move.l (A0),D0
+	bsr debug_hex_long
+	moveq #13,D0
+	bsr debug_display_char
+	moveq #10,D0
+	bsr debug_display_char
+#endif
+	move.l (A0),8(SP)        // move vector content to return address
+	move.l (SP)+,A0
+	move.l (SP)+,D0
+	rts                      // jump to MFP vector
+.int6_forced:                         // forced by rtos
+	move.l #~MCF_INTC_INTFRCL_INTFRC6,D0
+	and.l D0,MCF_INTC_INTFRCL
+	move.l (SP)+,D0
+	rts                      // jump to original timer C interrupt
+
+int_pseudo_dma:
+
+	move.l A1,-(SP)
+	move.l A0,-(SP)
+	move.l D0,-(SP)
+.ipd1:
+		lea ACP_FIFO_PSEUDO_DMA,A0
+		move.l -12(A0),A1 // dma address
+   		move.l -8(A0),D0  // byte counter
+		ble.s .ipd5       // err
+		btst #0,-16(A0)   // write?
+		bne.s .ipd4       // write line
+		// read line
+.ipd3:
+			btst #7,-4(A0)
+			beq.s .ipd2
+			move.l (A0),(A1)+ // read 4 bytes	 
+			move.l (A0),(A1)+ // read 4 bytes	 
+			move.l (A0),(A1)+ // read 4 bytes	 
+			move.l (A0),(A1)+ // read 4 bytes
+		sub.l #16,D0
+		bgt.s .ipd3
+		bra.s .ipd2
+		// write line
+.ipd4:
+			btst #7,-4(A0)
+			beq.s .ipd2
+			move.l (A1)+,(A0) // write 4 bytes
+			move.l (A1)+,(A0) // write 4 bytes
+			move.l (A1)+,(A0) // write 4 bytes
+			move.l (A1)+,(A0) // write 4 bytes
+		sub.l #16,D0
+		bgt.s .ipd4
+.ipd2:
+		move.l A1,-12(A0) // dma address
+		move.l D0,-8(A0)  // byte counter
+		lea 0xFFFFFA01,A0 // MFP (FPGA emulation)
+	btst #7,(A0)                   // GPIP
+	beq .ipd1
+.ipd5:
+	bclr #7,14(A0)                 // ISRA clear interrupt
+	move.l (SP)+,D0
+	move.l (SP)+,A0
+	move.l (SP)+,A1
+	rte
+
+pseudo_dma_init: /* MCF547X */
+
+	lea int_pseudo_dma(PC),A0
+	move.l A0,PSEUDO_DMA_VEC // MFP I/O bit 7
+	lea 0xFFFFFA01,A0        // MFP (FPGA emulation)
+	bset #7,6(A0)            // IERA I/O bit 7
+	bset #7,18(A0)           // IMRA I/O bit 7 enable interrupt
+	rts
+
+int_mfp_ikbd:
+
+	link A6,#-4
+	lea -56(SP),SP
+	movem.l D0-A5,(SP)
+	move.b 0xFFFFFC00,D0     // ACIA IKBD
+	move.b D0,D2
+	btst #7,D0
+	beq.s .imk1              // not interrupt request
+	btst #0,D0
+	beq.s .imk2              // receiver empty
+	move.b 0xFFFFFC02,D0     // read data
+	lea 0xF96,A0             // iorec keyboard
+	lea -4(A6),A1            // data - 2 for arcvint
+	move.b D0,2(A1)          // data
+	move.l D2,-(SP)
+	bsr arcvint              // 0xE032EC
+	move.l (SP)+,D2
+.imk2:
+	btst #5,D2
+	beq.s .imk1              // no error
+	move.b 0xFFFFFC02,D0     // read data
+.imk1:
+	lea 0xFFFFFA01,A0        // MFP (FPGA emulation)		
+	bclr #6,16(A0)           // ISRB clear interrupt
+	movem.l (SP),D0-A5
+	lea 56(SP),SP
 	unlk A6
 	rte
 
-ikbd_init:
+ikbd_init: /* MCF547X */
 
+#ifdef DEBUG
+	lea debug48(PC),A0
+	bsr debug_display_string	
+#endif
+#if 0
+	/* PSC1 - Eiffel */
+	moveq #MCF_UART_UCR_RESET_TX,D0
+	move.b D0,MCF_UART_UCR1  // Reset Transmitter
+	moveq #MCF_UART_UCR_RESET_RX,D0
+	move.b D0,MCF_UART_UCR1  // Reset Receiver
+	moveq #MCF_UART_UCR_RESET_MR,D0
+	move.b D0,MCF_UART_UCR1  // Reset Mode Register
+	moveq #MCF_UART_UMR_PM_NONE + MCF_UART_UMR_BC_8,D0
+	move.b D0,MCF_UART_UMR1
+	moveq #MCF_UART_UMR_CM_NORMAL + MCF_UART_UMR_SB_STOP_BITS_1,D0
+	move.b D0,MCF_UART_UMR1
+	/* Set Rx and Tx baud by timer */
+	move.b #MCF_UART_UCSR_RCS_SYS_CLK + MCF_UART_UCSR_TCS_SYS_CLK,D0
+	move.b D0,MCF_UART_UCSR1
+	move.l #(SYSTEM_CLOCK*1000000)/250000,D1 // 7812.5 bauds * 32
+	move.l D1,D0	            // ubgs
+	lsr.l #8,D0
+	move.b D0,MCF_UART_UBG11
+	move.b D1,MCF_UART_UBG21
+	/* Enable receiver and transmitter */
+	moveq #MCF_UART_UCR_TX_ENABLED + MCF_UART_UCR_RX_ENABLED,D0
+	move.b D0,MCF_UART_UCR1
+	lea int_ikbd(PC),A0
+	move.l A0,(64+34+OFFSET_INT_CF68KLIB)*4 // PSC1
+	moveq #0x24,D0           // level 4, priority 4
+	move.b D0,MCF_INTC_ICR34
+	move.l #~MCF_INTC_IMRH_INT_MASK32,D0
+	and.l D0,MCF_INTC_IMRH
+	moveq #MCF_UART_UIMR_RXRDY_FU,D0
+	move.b D0,MCF_UART_UIMR1 // enable RX interrupts
+#endif
+	/* INT6 - MFP level 6 */
+	moveq #3,D0
+	move.b D0,0xFFFFFC00     // reset ACIA IKBD
+	move.b #0x96,D0
+	move.b D0,0xFFFFFC00     // / 64, 8 bits, 1 stop, no parity
+	lea int_mfp_ikbd(PC),A0
+	move.l A0,IKBD_VEC       // MFP I/O bit 4
+	lea 0xFFFFFA01,A0        // MFP (FPGA emulation)
+	bset #6,8(A0)            // IERB I/O bit 4
+	bset #6,20(A0)           // IMRB I/O bit 4 enable interrupt
+	rts
+
+int_rtc:
+
+	lea -24(SP),SP
+	movem.l D0-D2/A0-A2,(SP)
+	moveq #MCF_UART_USR_RXRDY,D0
+	move.b MCF_UART_USR3,D2  // status
+	and.l D2,D0
+	beq .ir1
+	moveq #0,D0
+	move.b MCF_UART_URB3,D0  // data
+	moveq #0,D1
+	move.b #MCF_UART_USR_RB,D1 // receive break
+	and.l D2,D1
+	bne.s .ir2
+	moveq #MCF_UART_USR_PE,D1 // parity error		
+	and.l D2,D1
+	bne.s .ir2
+	moveq #MCF_UART_USR_OE,D1 // overrun error
+	and.l D2,D1
+	bne.s .ir2
+	moveq #MCF_UART_USR_FE,D1 // framing error
+	and.l D2,D1
+	bne.s .ir2
+	cmp.l #2,D0              // need RTC data
+	bne.s .ir1
+.ir4:
+	move.b MCF_UART_USR3,D0
+	and.l #MCF_UART_USR_TXEMP,D0
+	beq.s .ir4               // full
+	move.b #0x82,D0          // header
+	move.b D0,MCF_UART_UTB3  // data	
+	moveq #0,D1
+	lea 0xFFFF8961,A1        // F030 RTC (offset 0) / NVM (offset 14) - FPGA emulation
+	lea 0xFFFF8963,A2
+.ir3:
+		move.b MCF_UART_USR3,D0
+		and.l #MCF_UART_USR_TXEMP,D0
+		beq.s .ir3     // full
+		move.b D1,(A1) // index
+		move.b (A2),D0 // data
+		move.b D0,MCF_UART_UTB3  // send data
+		addq.l #1,D1
+	cmp.l #64,D1
+	bcs.s .ir3	
+	bra.s .ir1
+.ir2:
+	moveq #MCF_UART_UCR_RESET_ERROR,D0
+	move.b D0,MCF_UART_UCR3
+.ir1:
+	movem.l (SP),D0-D2/A0-A2
+	lea 24(SP),SP
+	rte
+	
+rtc_init: /* MCF547X - FIREBEE */
+
+#ifdef DEBUG
+	lea debug49(PC),A0
+	bsr debug_display_string	
+#endif
+	link A6,#-66
 	moveq #MCF_UART_UCR_RESET_TX,D0
 	move.b D0,MCF_UART_UCR3  // Reset Transmitter
 	moveq #MCF_UART_UCR_RESET_RX,D0
@@ -2741,7 +3609,7 @@ ikbd_init:
 	/* Set Rx and Tx baud by timer */
 	move.b #MCF_UART_UCSR_RCS_SYS_CLK + MCF_UART_UCSR_TCS_SYS_CLK,D0
 	move.b D0,MCF_UART_UCSR3
-	move.l #(SYSTEM_CLOCK*1000000)/250000,D1 // 7812.5 bauds * 32
+	move.l #(SYSTEM_CLOCK*1000000)/(115200*32),D1 // 115200 bauds * 32
 	move.l D1,D0	            // ubgs
 	lsr.l #8,D0
 	move.b D0,MCF_UART_UBG13
@@ -2749,16 +3617,197 @@ ikbd_init:
 	/* Enable receiver and transmitter */
 	moveq #MCF_UART_UCR_TX_ENABLED + MCF_UART_UCR_RX_ENABLED,D0
 	move.b D0,MCF_UART_UCR3
-	lea int_ikbd(PC),A0
+	lea tab_rtc_init(PC),A0  // ACPF
+	moveq #3,D0
+	bsr rtc_ws
+	lea -4(A6),A0
+	clr.l (A0)
+	moveq #2,D0
+	bsr rtc_rd
+	bpl.s .ri4               // read OK! ?
+	// timeout
+#ifdef DEBUG
+	lea debug54(PC),A0
+	bsr debug_display_string	
+#endif
+	bra.s .ri5
+.ri4:
+#ifdef DEBUG
+	lea debug53(PC),A0
+	bsr debug_display_string
+	move.l -4(A6),D0
+	bsr debug_hex_long
+	moveq #13,D0
+	bsr debug_display_char
+	moveq #10,D0
+	bsr debug_display_char
+#endif
+	move.l -4(A6),D0
+	cmp.l #0x4F4B2100,D0     // OK!
+	bne .ri3
+#ifdef DEBUG
+	lea debug50(PC),A0
+	bsr debug_display_string	
+#endif
+.ri5:
+	lea -4(A6),A0
+	moveq #1,D0
+	move.b D0,(A0)           // cmd
+	moveq #0,D0
+	bsr rtc_ws
+	lea -65(A6),A0           // read buffer
+	clr.b (A0)
+	moveq #64,D0             // header + len - 1
+	bsr rtc_rd
+	bmi .ri3                 // timeout
+#ifdef DEBUG
+	lea debug53(PC),A0
+	bsr debug_display_string
+	move.b -65(A6),D0
+	bsr debug_hex_byte
+	moveq #13,D0
+	bsr debug_display_char
+	moveq #10,D0
+	bsr debug_display_char
+#endif
+	moveq #0,D0
+	move.b -65(A6),D0
+	cmp.l #0x81,D0           // header
+	bne .ri3
+#ifdef DEBUG
+	lea debug51(PC),A0
+	bsr debug_display_string	
+#endif
+	lea -64+14(A6),A0        // stack read buffer, NVM offset
+	moveq #0,D0
+	moveq #47,D1
+	moveq #0,D2              // checksum loop
+.ri6:
+		move.b (A0)+,D2
+		add.l D2,D0
+	subq.l #1,D1
+	bpl.s .ri6
+	and.l #0xFF,D0
+	move.b (A0)+,D1
+	not.l D1
+#if 1  // 2nd byte seems is bad ???
+	move.b D1,(A0)
+#endif
+	cmp.l D1,D0
+	bne.s .ri7               // bad checksum
+	move.b (A0)+,D1
+	cmp.l D1,D0
+	beq.s .ri8               // checksum OK
+.ri7:
+#ifdef DEBUG
+	lea debug55(PC),A0
+	bsr debug_display_string	
+#endif
+	lea -64+14(A6),A0        // stack read buffer, NVM offset
+	moveq #0,D0              // clear NVM read buffer
+	moveq #47,D1
+.ri9:
+		clr.b (A0)+
+	subq.l #1,D1
+	bpl.s .ri9
+	move.b D1,(A0)+          // new checksum
+	clr.b (A0)+
+.ri8:
+	moveq #0,D1
+	lea -64(A6),A0           // stack read buffer
+	lea 0xFFFF8961,A1        // F030 RTC (offset 0) / NVM (offset 14) - FPGA emulation
+	lea 0xFFFF8963,A2
+.ri2:
+		move.b D1,(A1)    // index
+		move.b (A0)+,(A2) // data
+		addq.l #1,D1
+	cmp.l #64,D1
+	bcs.s .ri2
+	lea int_rtc(PC),A0
 	move.l A0,(64+32+OFFSET_INT_CF68KLIB)*4 // PSC3
-	moveq #0x22,D0           // level 4, priority 4
-	move.b D0,MCF_INTC_ICR34
+	moveq #0x9,D0           // level 1, priority 1
+	move.b D0,MCF_INTC_ICR32
 	move.l #~MCF_INTC_IMRH_INT_MASK32,D0
 	and.l D0,MCF_INTC_IMRH
 	move.l #~MCF_INTC_IMRL_MASKALL,D0
 	and.l D0,MCF_INTC_IMRL   // global mask
 	moveq #MCF_UART_UIMR_RXRDY_FU,D0
 	move.b D0,MCF_UART_UIMR3 // enable RX interrupts
+	moveq #0,D0              // OK
+	bra.s .ri1
+.ri3:
+#ifdef DEBUG
+	lea debug52(PC),A0
+	bsr debug_display_string	
+#endif
+	moveq #-1,D0             // timeout
+.ri1:
+	unlk A6
+	rts
+	
+tab_rtc_init:
+	.ascii "ACPF"
+	.align 2
+
+rtc_ws:	// D0.W: len-1, A0: buffer
+
+	moveq #0,D2
+	move.w D0,D2             // len -1
+.rw1:
+		move.b MCF_UART_USR3,D1
+		and.l #MCF_UART_USR_TXEMP,D1
+		beq.s .rw1               // full
+		move.b (A0)+,D0          // data inside the buffer
+		move.b D0,MCF_UART_UTB3  // data
+	subq.l #1,D2
+	bpl.s .rw1
+	moveq #0,D0              // OK
+	rts
+
+rtc_rd:	// D0.W: len-1, A0: buffer
+
+	moveq #0,D3
+	move.w D0,D3             // len -1
+.rr3:
+	move.l MCF_SLT_SCNT1,D1
+.rr1:
+		moveq #MCF_UART_USR_RXRDY,D0
+		move.b MCF_UART_USR3,D2  // status
+		and.l D2,D0
+		beq.s .rr2               // nothing
+		moveq #0,D0
+		move.b MCF_UART_URB3,D0  // data
+		move.b D0,(A0)+          // store data inside the buffer
+                          subq.l #1,D3
+                          bpl.s .rr3
+                          moveq #0,D0
+                          rts         // OK
+.rr2:
+		move.l D1,D0
+		sub.l MCF_SLT_SCNT1,D0
+	cmp.l #1000000*SYSTEM_CLOCK,D0 // 1 S
+	bcs.s .rr1
+	moveq #-1,D0             // timeout
+	rts
+
+sysmidi:	/* MCF547X */
+
+	moveq #0,D2
+	move.w 4(A0),D2          // buffer size
+	moveq #0,D1
+	move.w 8(A0),D1          // tail index
+	addq.l #1,D1
+	cmp.l D2,D1
+	bcs.s .smd1
+	moveq #0,D1
+.smd1:
+	move.w 6(A0),D2          // head index
+	cmp.l D2,D1
+	beq.s .smd2
+	move.l (A0),A2           // buffer
+	move.b D0,(A2,D1.l)      // store received data
+	move.w D1,8(A0)          // tail index
+.smd2:
 	rts
 
 #else /* MCF548X - use CAN network for the IKBD with a special Eiffel version */
@@ -2917,7 +3966,7 @@ can_send_message: // D0:num, D1:ID, D2:DLC, A0:data
 	move.l D1,D0
 	bsr debug_hex_word
 	moveq #0x20,D0
-	bsr display_char
+	bsr debug_display_char
 	move.l D2,D0
 	bsr debug_hex_byte
 	moveq #0x20,D0
@@ -2986,8 +4035,8 @@ can_send_message: // D0:num, D1:ID, D2:DLC, A0:data
 int_can:
 
 	link A6,#-10
-	lea -32(SP),SP
-	movem.l D0-D3/A0-A3,(SP)
+	lea -56(SP),SP
+	movem.l D0-A5,(SP)
 	lea MCF_CAN_MSGBUF1+(15*16),A1 // message 15
 	move.l (A1),D2           // control/status
 	move.l 4(A1),D1
@@ -3051,8 +4100,8 @@ int_can:
 	move.w MCF_CAN_IFLAG1,D0
 	and.l #MCF_CAN_IFLAG_BUF15I,D0
 	move.w D0,MCF_CAN_IFLAG1 // clear interrupt
-	movem.l (SP),D0-D3/A0-A3
-	lea 32(SP),SP
+	movem.l (SP),D0-A5
+	lea 56(SP),SP
 	unlk A6
 	rte
 	
@@ -3142,6 +4191,7 @@ _Setscreen:
 Setscreen:	// D0.W: rez, D1.W: modecode, A0: logbase, A1: physbase
 
 #ifdef DEBUG
+
 	move.l D0,-(SP)
 	move.l A0,-(SP)
 	lea debug26(PC),A0
@@ -3280,11 +4330,18 @@ debug1r:	.asciz "NVMaccess read 0x"
 debug1w:	.asciz "NVMaccess write 0x"
 debug1c:	.ascii "NVMaccess clear"
 	.byte 13,10,0
+#ifdef MCF547X
+debug2:	.ascii "Init timers, serial and MFP"
+	.byte 13,10,0
+#else /* !MCF547X */
 debug2:	.ascii "Init timers, serial and CAN"
 	.byte 13,10,0
+#endif /* MCF547X */
+
 debug3:	.asciz "Flash parameter 0x"
 debug3r:	.asciz " read 0x"
 debug3w:	.asciz " write 0x"
+debug3wb:	.asciz " = 0x"
 debug4:      .byte 13,13
 	.ascii "Rsconf"
 	.byte 13,10,13,13,0
@@ -3299,6 +4356,7 @@ debug6:	.ascii "initint"
 debug7:	.asciz "Jdisint 0x"
 debug8:	.asciz "Jenabint 0x"
 #ifndef MCF5445X /* no CAN network on MCF5445X */
+#ifndef MCF547X
 debug9:	.ascii "CAN init"
 	.byte 13,10,0
 debug10:	.ascii "Ikbdws"
@@ -3317,7 +4375,8 @@ debug15:	.ascii "CAN enable interrupt message 15"
 	.byte 13,10,0
 debug16:	.ascii "CAN start the chip"
 	.byte 13,10,0
-#endif
+#endif /* MCF547X */
+#endif /* MCF5445X */
 debug17:	.ascii "Cache enable"
 	.byte 13,10,0
 debug18:	.ascii "Cache disable"
@@ -3330,8 +4389,10 @@ debug22:	.asciz "Install vector 0x"
 debug22b:	.asciz " at 0x"
 debug23:	.ascii "Test RTC"
 	.byte 13,10,0
+#ifndef MCF547X
 debug24:	.ascii "Gettime IKBD"
 	.byte 13,10,0
+#endif
 debug25:	.asciz "XBIOS #0x"
 debug26:	.asciz "Setscreen 0x"
 debug27:	.ascii "PCI set up the arbiter"
@@ -3356,14 +4417,14 @@ debug35c:	.asciz " ERRCNT 0x"
 debug35d:	.asciz " ERRSTAT 0x"
 debug36:	.asciz "PCICAR 0x"
 debug37:	.asciz "PCIIWxBTAR 0x"
+debug39:	.asciz "PCIIDR 0x"
 debug38:	.ascii "Delay 300 mS reset IKBD"
 	.byte 13,10,0
 debug38b:	.ascii "End delay IKBD"
 	.byte 13,10,0
-debug39:	.asciz "PCIIDR 0x"
 debug40:	.asciz "PCIREV 0x"
 debug41:	.asciz "PCIBARx "
-debug42:	.ascii "PCI Retry Error received"
+debug42:	.ascii "PCI Parity error"
 	.byte 13,10,0
 debug43:	.ascii "PCI Initiator Abort received"
 	.byte 13,10,0	
@@ -3374,6 +4435,27 @@ debug46:	.ascii "Multi function device found"
 	.byte 13,10,0
 debug47:	.ascii "This device is not a multi function device"
 	.byte 13,10,0
+#if defined(MCF5445X) || defined(MCF547X)
+debug48:	.ascii "Init IKBD"
+	.byte 13,10,0
+#endif
+#ifdef MCF547X
+debug49:	.ascii "Init PIC RTC"
+	.byte 13,10,0
+debug50:	.ascii "Get OK! from PIC"
+	.byte 13,10,0
+debug51:	.ascii "Read PIC RTC frame"
+	.byte 13,10,0
+debug52:	.ascii "Timeout or bad header received from PIC RTC"
+	.byte 13,10,0
+debug53:	.asciz "PIC answer 0x"
+debug54:	.ascii "Timeout from PIC RTC, OK! not received, continue..."
+	.byte 13,10,0
+debug55:	.ascii "PIC RTC bad checksum, reset all" 
+	.byte 13,10,0
+debug56:	.ascii "Write NVM to PIC RTC"
+	.byte 13,10,0
+#endif
 		
 	.align 2
 	
@@ -3429,6 +4511,10 @@ debug_display_char:
 	
 #endif /* DEBUG */
 
+#ifdef COLDFIRE
+#undef DEBUG
+#endif
+
 #else  /* ATARI */
 
 #ifdef DEBUG
@@ -3449,25 +4535,80 @@ debug28:	.asciz "PCI PLX word access failure, read: 0x"
 debug29:	.byte 13,10
 	.ascii "PCI init PLX registers"
 	.byte 13,10,0
-debug30:	.ascii "PCI PLX local registers by default are in big endian"
-	.byte 13,10,0 
-debug31b:	.ascii "PCI PLX local registers are in big endian"
-	.byte 13,10,0
-debug31l:	.ascii "PCI PLX local registers are in little endian"
-	.byte 13,10,0
 debug32:	.ascii "PCI init driver"
 	.byte 13,10,0
 debug33:	.ascii "PCI init devices"
 	.byte 13,10,0
 debug34:	.ascii "Add cookie _PCI"
 	.byte 13,10,0
-debug35:	.asciz "Parity error, read 0x"
-debug35b:	.asciz " at 0x"
-debug36:	.asciz "DMCFGA 0x"
-debug37:	.asciz "Parity error target, read 0x"
-debug38:	.asciz "Parity error target, write 0x"
-debug39:	.asciz "Master abort at 0x"
-debug40:	.ascii "Retry (y/n) ?"
+debug40:	.ascii "find_pci_device"
+	.byte 13,10,0
+debug41:	.ascii "find_pci_classcode"
+	.byte 13,10,0
+debug42:	.asciz "read_config_byte "
+debug43:	.asciz "read_config_word "
+debug44:	.asciz "read_config_longword "
+debug45:	.asciz "fast_read_config_byte "
+debug46:	.asciz "fast_read_config_word "
+debug47:	.asciz "fast_read_config_longword "
+debug48:	.asciz "write_config_byte "
+debug49:	.asciz "write_config_word "
+debug50:	.asciz "write_config_longword "
+debug51:	.asciz "hook_interrupt "
+debug52:	.ascii "unhook_interrupt"
+	.byte 13,10,0
+debug53:	.ascii "special_cycle"
+	.byte 13,10,0
+debug54:	.ascii "get_routing"
+	.byte 13,10,0
+debug55:	.ascii "set_interrupt"
+	.byte 13,10,0
+debug56:	.asciz "get_resource "
+debug57:	.ascii "get_card_used"
+	.byte 13,10,0
+debug58:	.ascii "set_card_used"
+	.byte 13,10,0
+debug59:	.ascii "read_mem_byte"
+	.byte 13,10,0
+debug60:	.ascii "read_mem_word"
+	.byte 13,10,0
+debug61:	.ascii "read_mem_longword"
+	.byte 13,10,0
+debug62:	.ascii "fast_read_mem_byte"
+	.byte 13,10,0
+debug63:	.ascii "fast_read_mem_word"
+	.byte 13,10,0
+debug64:	.ascii "fast_read_mem_longword"
+	.byte 13,10,0
+debug65:	.asciz "write_mem_byte "
+debug66:	.asciz "write_mem_word "
+debug67:	.asciz "write_mem_longword "
+debug68:	.ascii "read_io_byte"
+	.byte 13,10,0
+debug69:	.ascii "read_io_word"
+	.byte 13,10,0
+debug70:	.ascii "read_io_longword"
+	.byte 13,10,0
+debug71:	.ascii "fast_read_io_byte"
+	.byte 13,10,0
+debug72:	.ascii "fast_read_io_word"
+	.byte 13,10,0
+debug73:	.ascii "fast_read_io_longword"
+	.byte 13,10,0
+debug74:	.asciz "write_io_byte "
+debug75:	.asciz "write_io_word "
+debug76:	.asciz "write_io_longword "
+debug77:	.ascii "get_machine_id"
+	.byte 13,10,0
+debug78:	.ascii "get_pagesize"
+	.byte 13,10,0
+debug79:	.ascii "virt_to_bus"
+	.byte 13,10,0
+debug80:	.ascii "bus_to_virt"
+	.byte 13,10,0
+debug81:	.ascii "virt_to_phys"
+	.byte 13,10,0
+debug82:	.ascii "phys_to_virt"
 	.byte 13,10,0
 
 	.align 2
@@ -3510,10 +4651,34 @@ debug_display_char:
 
 	movem.l D0-D2/A0-A2,-(SP)
 	move.w D0,-(SP)
+	move.l #0x5F504349,D0 
+	lea 0xED0000,A0          // 128 KB
+	cmp.l (A0),D0            // _PCI
+	beq.s .ddc2
+	lea 0xEC0000,A0          // 192 KB
+	cmp.l (A0),D0            // _PCI
+	beq.s .ddc2
+	lea 0xEB0000,A0          // 256 KB
+	cmp.l (A0),D0            // _PCI
+	beq.s .ddc2
+	lea 0xEA0000,A0          // 320 KB
+	cmp.l (A0),D0            // _PCI
+	bne.s .ddc3
+.ddc2:
+	move.w (SP),D0           // character
+	swap D0
+	move.w #0x0076,D0        // 'v'
+	move.l D0,-(SP)
+	jsr 40(A0)               // drivers PCI in flash, dbug
+	addq.l #4,SP
+	bne.s .ddc1
+.ddc3:
 	move.w #2,-(SP)
 	move.w #3,-(SP)          // Bconout
 	trap #13
-	addq.l #6,SP
+	addq.l #4,SP
+.ddc1:	
+	addq.l #2,SP
 	movem.l (SP)+,D0-D2/A0-A2
 	rts
 
@@ -3544,7 +4709,7 @@ det_xbios:
 	move.w (A0),D0           // function
 	cmp.l #0xB,D0            // unused (DEBUG_GEMDOS)
 	beq. .xb0
-	cmp.l #353,D0
+	cmp.l #356,D0
 	bhi .xb00
 	cmp.l #299,D0            // BIOS PCI
 	bcc .xb0
@@ -3577,13 +4742,15 @@ det_xbios:
 .xb25:
 #endif
 #ifdef COLDFIRE
+#ifndef MCF547X
 	cmp.l #0x2C,D0           // Bconmap
 	beq.s .xb27              // just one serial port, no Bconmap
+#endif
 	cmp.l #0x96,D0           // VsetMask
 	bhi .xb10
-	move.w tab_xbios(PC,D0.L*2),D0
+	move.w tab_xbios(PC,D0.l*2),D0
 	bmi .xb1
-	jmp tab_xbios(PC,D0.L)
+	jmp tab_xbios(PC,D0.l)
 .xb27:
 	moveq #0,D0              // no Bconmap
 	rte
@@ -3614,7 +4781,11 @@ tab_xbios:
 #endif
 	dc.w _Mfpint-tab_xbios   // 0xD Mfpint
 	dc.w -1                  // 0xE Iorec
+#ifdef MCF547X
+	dc.w -1                  // 0xF Rsconf
+#else
 	dc.w _Rsconf-tab_xbios   // 0xF Rsconf
+#endif
 	dc.w -1                  // 0x10 Keytbl
 	dc.w -1                  // 0x11 Random
 	dc.w -1                  // 0x12 Protobt
@@ -3809,7 +4980,7 @@ _Rsconf:
 	move.w 4(A0),D1          // ctrl
 	move.w 6(A0),D2          // ucr
 	bsr Rsconf
-	rte	
+	rte
 
 _Ikbdws:
 
@@ -4069,25 +5240,116 @@ _Vgetsize:
 	rte
 .xb15:
 #ifdef COLDFIRE
-	cmp.l #353,D0
+	cmp.l #356,D0
 	bhi .xb26
 	cmp.l #299,D0            // BIOS PCI
 	bcs .xb1
 	sub.l #299,D0
-	move.w tab_pci_bios(PC,D0.L*2),D0
+	move.w tab_pci_bios(PC,D0.l*2),D0
 	bmi .xb1                // original TOS XBIOS
-	jsr tab_pci_bios(PC,D0.L)
+	jsr tab_pci_bios(PC,D0.l)
+	rte
 #else
-	cmp.w #353,D0
+	cmp.w #356,D0
 	bhi .xb26
 	cmp.w #299,D0            // BIOS PCI
 	bcs .xb1
 	sub.w #299,D0
+	bne.s .xb27
+	lea install_pci_bios_magic(PC),A1
+	move.l A1,0x80           // trap #0
+.xb27:	
 	move.w tab_pci_bios(PC,D0.W*2),D0
-	bmi .xb1                // original TOS XBIOS
+	bmi .xb1                 // original TOS XBIOS
 	jsr tab_pci_bios(PC,D0.W)
-#endif
 	rte
+
+det_xbios_magic:
+
+	move.l USP,A0
+	btst #5,(SP)             // call in supervisor state
+	beq.s .xb28
+	lea 8(SP),A0
+.xb28:
+	move.w (A0),D0           // function
+	cmp.w #read_core_temperature,D0
+	beq.s .xb33
+	cmp.w #read_core_temperature_bis,D0
+	bne.s .xb34
+.xb33:
+	move.w 2(A0),-(SP)       // deg_type
+	jsr ct60_read_temp
+	cmp.w #CT60_CELCIUS,(SP)
+	beq.s .xb35
+	cmp.w #CT60_FARENHEIT,(SP)
+	bne.s .xb36
+	mulu #9,D0
+	divu #5,D0
+	add.w #32,D0
+	ext.l D0
+	bra.s .xb35
+.xb36:
+	moveq #CT60_READ_ERROR,D0 // error
+.xb35:
+	addq.l #2,SP
+	rte
+.xb34:
+	cmp.w #rw_parameter,D0
+	beq.s .xb37
+	cmp.w #rw_parameter_bis,D0
+	bne.s .xb38
+.xb37:
+	move.w 2(A0),D0          // mode
+	move.l 4(A0),D1          // type_param
+	move.l 8(A0),D2          // value
+	jsr ct60_rw_param 
+	rte
+.xb38:
+	cmp.w #cache,D0
+	beq.s .xb39
+	cmp.w #cache_bis,D0
+	bne.s .xb40
+.xb39:
+	move.w 2(A0),D0
+	bmi.s .xb42
+	bne.s .xb41
+	jsr 0xE0085A             // caches off
+	bra.s .xb42
+.xb41:
+	jsr 0xE250C8             // caches on
+.xb42:
+	movec.l CACR,D0
+	rte
+.xb40:
+	cmp.w #flush_cache,D0
+	beq.s .xb43
+	cmp.w #flush_cache_bis,D0
+	bne.s .xb29
+.xb43:
+	cpusha BC
+	moveq #0,D0
+	rte
+.xb29:
+	cmp.w #356,D0
+	bhi.s .xb30
+	cmp.w #299,D0            // BIOS PCI
+	bcs.s .xb30
+	sub.w #299,D0
+	move.w tab_pci_bios(PC,D0.W*2),D0
+	bmi.s .xb30              // original TOS XBIOS
+	jsr tab_pci_bios(PC,D0.W)
+	rte
+.xb30:
+	move.l RESERVED_VEC,A0   // where old xbios XBRA vector is saved !
+	cmp.l #0x58425241,(A0)   // XBRA
+	bne.s .xb31              // invalid
+	cmp.l #0x63743630,4(A0)  // ct60
+	bne.s .xb31              // invalid
+	move.l 8(A0),-(SP)       // jump to MagiC XBIOS vector 
+	rts
+.xb31:
+	bra.s .xb31              // XBRA invalid => infinite loop !
+#endif /* COLDFIRE */
 tab_pci_bios:
 	dc.w _install_pci_bios-tab_pci_bios // 299
 	dc.w _find_pci_device-tab_pci_bios // 300
@@ -4144,6 +5406,9 @@ tab_pci_bios:
 	dc.w _dma_buffoper-tab_pci_bios  // 351
 	dc.w _read_mailbox-tab_pci_bios  // 352
 	dc.w _write_mailbox-tab_pci_bios // 353
+	dc.w _dma_alloc-tab_pci_bios // 354
+	dc.w _dma_free-tab_pci_bios // 355
+	dc.w _dma_lock-tab_pci_bios // 356
 .xb26:	
 #ifdef COLDFIRE
 	cmp.l #read_core_temperature,D0
@@ -4152,14 +5417,14 @@ tab_pci_bios:
 	bne.s .xb5
 .xb11:
 	moveq #0,D0
-#else
+#else /* !COLDFIRE */
 	cmp.w #read_core_temperature,D0
 	beq.s .xb11
 	cmp.w #read_core_temperature_bis,D0
 	bne.s .xb5
 .xb11:
 	move.w 2(A0),-(SP)       // deg_type
-	bsr ct60_read_temp
+	jsr ct60_read_temp
 	cmp.w #CT60_CELCIUS,(SP)
 	beq.s .xb3
 	cmp.w #CT60_FARENHEIT,(SP)
@@ -4173,7 +5438,7 @@ tab_pci_bios:
 	moveq #CT60_READ_ERROR,D0 // error
 .xb3:
 	addq.l #2,SP
-#endif
+#endif /* COLDFIRE */
 	rte
 .xb5:
 #ifdef COLDFIRE
@@ -4185,16 +5450,60 @@ tab_pci_bios:
 	beq.s .xb12
 	cmp.w #rw_parameter_bis,D0
 #endif
-	bne.s .xb6
+	bne .xb6
 .xb12:
 	move.w 2(A0),D0          // mode
 	move.l 4(A0),D1          // type_param
 	move.l 8(A0),D2          // value
 #ifdef COLDFIRE
-	bsr fire_rw_param
-#else
-	bsr ct60_rw_param 
-#endif
+#ifdef DEBUG
+	move.l D0,-(SP)
+	move.l D0,-(SP)
+	lea debug3(PC),A0
+	bsr debug_display_string
+	move.l D1,D0
+	bsr debug_hex_char
+	btst #0,3+4(SP)
+	beq.s .not_dbg_write
+	lea debug3w(PC),A0
+	bsr debug_display_string
+	move.l D2,D0
+	bsr debug_hex_long
+.not_dbg_write:
+	move.l (SP)+,D0
+#endif /* DEBUG */
+	jsr fire_rw_param
+#ifdef DEBUG
+	btst #0,3(SP)
+	bne.s .not_dbg_read
+	move.l D0,-(SP)
+	lea debug3r(PC),A0
+	bsr debug_display_string
+	move.l (SP),D0
+	bsr debug_hex_long
+	moveq #13,D0
+	bsr debug_display_char
+	moveq #10,D0
+	bsr debug_display_char
+	move.l (SP)+,D0
+	bra.s .end_dbg_read
+.not_dbg_read:
+	move.l D0,-(SP)
+	lea debug3wb(PC),A0
+	bsr debug_display_string
+	move.l (SP),D0
+	bsr debug_hex_long
+	moveq #13,D0
+	bsr debug_display_char
+	moveq #10,D0
+	bsr debug_display_char
+	move.l (SP)+,D0
+.end_dbg_read:
+	addq.l #4,SP
+#endif /* DEBUG */
+#else /* !COLDFIRE */
+	jsr ct60_rw_param 
+#endif /* COLDFIRE */
 	rte
 .xb6:
 #ifdef COLDFIRE
@@ -4228,6 +5537,10 @@ tab_pci_bios:
 	.chip 5200
 	rte
 .xb9:
+	cmp.l #vmalloc,D0
+	beq.s .xb32
+	cmp.l #vmalloc_bis,D0
+	beq.s .xb32
 	cmp.l #flush_cache,D0
 	beq.s .xb14
 	cmp.l #flush_cache_bis,D0
@@ -4241,6 +5554,10 @@ tab_pci_bios:
 	movec.l CACR,D0
 	rte
 .xb9:
+	cmp.w #vmalloc,D0
+	beq.s .xb32
+	cmp.w #vmalloc_bis,D0
+	beq.s .xb32
 	cmp.w #flush_cache,D0
 	beq.s .xb14
 	cmp.w #flush_cache_bis,D0
@@ -4248,6 +5565,7 @@ tab_pci_bios:
 .xb14:
 	cpusha BC
 #endif
+.xb32:
 	moveq #0,D0
 	rte
 .xb1:
@@ -4299,17 +5617,241 @@ tab_pci_bios:
 	move.w (A1)+,-(SP)       // restore SR
 	move.l A1,savptr
 	rte
-#else
+#else /* !COLDFIRE */
 	move.l det_xbios-4(PC),-(SP)
 	rts
-#endif
+	
+test_pci_drivers:
 
+	move.l #0x5F504349,D0    // _PCI
+	lea 0xED0000,A0          // 128 KB, 1st part
+	cmp.l (A0),D0            // _PCI
+	beq.s .test_pci_ok
+	lea 0xEC0000,A0          // 192 KB, 1st part
+	cmp.l (A0),D0            // _PCI
+	beq.s .test_pci_ok
+	lea 0xEB0000,A0          // 256 KB, 1st part
+	cmp.l (A0),D0            // _PCI
+	beq.s .test_pci_ok
+	lea 0xEA0000,A0          // 320 KB, 1st part
+	cmp.l (A0),D0            // _PCI
+.test_pci_ok:                         // (optional 2nd part inside 0xFC0000-0xFEFFFF)
+	rts
+
+magic_routine:                        // called before auto folder
+	
+	jmp install_scsidrv
+end_magic_routine:
+
+install_magic_routine:
+
+	lea magic_routine(PC),A0
+	pea end_magic_routine(PC)
+	move.l phystop,A1
+	lea -512(A1),A1
+	move.l #0x12123456,(A1)      // magic key
+	move.l A1,4(A1)
+	move.w #((512-8)/2)-2,D1
+	move.w (A1)+,D0
+	add.w (A1)+,D0
+	add.w (A1)+,D0
+	add.w (A1)+,D0
+.copy_magic_routine:
+		cmp.l (SP),A0
+		bcc.s .fill_end_magic_routine
+		add.w (A0),D0
+		move.w (A0)+,(A1)+
+	dbf D1,.copy_magic_routine
+	bra.s .end_copy_magic_routine
+.fill_end_magic_routine:
+		clr.w (A1)+
+	dbf D1,.fill_end_magic_routine
+.end_copy_magic_routine:
+	move.w #0x5678,D1            // checksum
+	sub.w D0,D1
+	move.w D1,(A1)+
+	addq.l #4,SP
+	rts
+
+install_pci_bios_magic:               // trap #0 handler called when MagiC enable interrupts (trap #1 not exist, seems always TOS)
+
+	movem.l D1-A6,-(SP)
+	move.l #0x4D616758,D0    // MagX
+	bsr get_cookie
+	beq .no_install          // not found
+	move.l #0x5F504349,D0    // _PCI cookie
+	bsr get_cookie
+	bne .no_install          // found
+	move.l #((3*4)+(3*2))*2,D0 // size for 2 x XBRA jumper
+	move.l _membot,A0        // boot alloc
+	add.l D0,_membot
+	move.l #0x58425241,D0    // XBRA
+	move.l D0,(A0)
+	move.l D0,18(A0)
+	move.l #0x63743630,D0    // ct60
+	move.l D0,4(A0)
+	move.l D0,22(A0)
+	move.w SR,-(SP)
+	or.w #0x700,SR
+	move.l A0,RESERVED_VEC   // save address of XBRA jumper
+	move.l XBIOS_VEC,8(A0)   // trap #14 vector saved
+	move.w #0x4EF9,12(A0)    // JMP
+	lea det_xbios_magic(PC),A1
+	move.l A1,14(A0)
+	lea 12(A0),A0
+	move.l A0,XBIOS_VEC      // to jumper
+	addq.l #6,A0             // 2nd jumper
+	move.l hdv_boot,8(A0)    // hdv_boot vector saved
+	move.w #0x4EF9,12(A0)    // JMP
+	lea det_hdv_boot_magic(PC),A1
+	move.l A1,14(A0)
+	lea 12(A0),A6
+	cpusha BC                // flush cache for JMP
+	move.w (SP)+,SR
+	move.w #2,-(SP)
+	lea -2(SP),A0            // install PCI BIOS 2nd time (no PCI RESET)
+	jsr _install_pci_bios(PC)
+	addq.l #2,SP
+	bmi .no_install
+	lea 0xE00FB6,A0          // exception fault vectors handler
+	lea 8,A1
+	moveq #2,D0              // access fault, address fault, illegal instruction
+.init_vectors:
+		move.l A0,(A1)+
+	dbf D0,.init_vectors
+	bsr test_pci_drivers
+	bne.s .no_install        // no PCI drivers
+	movec.l CACR,D0
+	move.l D0,-(SP)          // save CACR
+	cpusha BC
+	move.l #0xA0808000,D0    // enable caches
+	movec.l D0,CACR
+	move.l #2,-(SP)          // no reset (started a 2nd time) for MagiC
+	jsr 4(A0)                // drivers PCI in flash, init_devices
+	addq.l #4,SP
+	cpusha BC
+	move.l (SP)+,D0          // restore CACR
+	movec.l D0,CACR
+	clr.w -(SP)
+	lea -2(SP),A0            // display devices
+	jsr _install_pci_bios(PC)
+	addq.l #2,SP
+	move.l A6,hdv_boot       // to jumper
+	cpusha BC                // flush cache for JMP
+.no_install:
+	movem.l (SP)+,D1-A6
+	moveq #1,D0
+	rte
+
+det_hdv_boot_magic:
+	
+	movem.l D1-D2/A0-A2,-(SP)
+	bsr install_magic_routine
+	bsr test_pci_drivers
+	bne.s .no_pci_drivers    // no PCI drivers
+	jsr 10(A0)               // drivers PCI in flash, call after SDRAM added
+.no_pci_drivers:
+	move.l hdv_boot,A0
+.loop_xbra:
+		cmp.l #0x58425241,-12(A0) // XBRA
+		bne.s .no_xbra
+		cmp.l #0x63743630,-8(A0) // ct60
+		bne.s .next_xbra
+		move.l -4(A0),D0         // old vector
+		movem.l (SP)+,D1-D2/A0-A2
+		move.l D0,-(SP)          // old vector
+		rts	
+.next_xbra:
+		move.l -4(A0),D0
+		beq.s .no_xbra           // no vector
+		move.l D0,A0
+	bra.s .loop_xbra
+.no_xbra:
+	movem.l (SP)+,D1-D2/A0-A2
+	moveq #0,D0
+	rts
+
+#endif /* COLDFIRE */
 
 #include "pci_bios.S"
 
 	.text
 	
 	.align 4
+
+get_cookie:
+
+#ifdef COLDFIRE
+	move.l D1,-(SP)
+	move.l A0,-(SP)
+#else
+	movem.l D1/A0,-(SP)
+#endif
+	move.l D0,D1             // cookie
+	move.l cookie,D0
+	beq.s .cookie_not_found
+	move.l D0,A0
+.loop_cookie:
+		tst.l (A0)
+		beq.s .cookie_not_found
+		cmp.l (A0),D1
+		bne.s .next_cookie
+		move.l 4(A0),D0
+		bra.s .end_cookie
+.next_cookie:
+		addq.l #8,A0
+	bra.s .loop_cookie
+.cookie_not_found:
+	moveq #0,D0
+.end_cookie:
+#ifdef COLDFIRE
+	move.l (SP)+,A0
+	move.l (SP)+,D1
+#else
+	movem.l (SP)+,D1/A0
+#endif
+	tst.l D0
+	rts
+
+add_cookie:
+
+#ifdef COLDFIRE
+	lea -12(SP),SP
+	movem.l D1-D2/A0,(SP)
+#else
+	movem.l D1-D2/A0,-(SP)
+#endif
+	move.l cookie,D2
+	beq.s .cookie_not_found_add
+	move.l D2,A0
+	moveq #0,D2
+	bra.s .next_cookie_add
+.loop_add_cookie:
+		addq.l #8,A0
+		addq.l #1,D2
+.next_cookie_add:
+	tst.l (A0)
+	bne.s .loop_add_cookie
+	cmp.l 4(A0),D2
+	bcc.s .cookie_not_found_add
+	move.l 4(A0),D2
+	move.l D0,(A0)           // cookie
+	move.l D1,4(A0)          // value
+	addq.l #8,A0
+	clr.l (A0)
+	move.l D2,4(A0)
+	moveq #1,D0              // OK
+	bra.s .end_add_cookie
+.cookie_not_found_add:
+	moveq #0,D0              // error
+.end_add_cookie:
+#ifdef COLDFIRE
+	movem.l (SP),D1-D2/A0
+	lea 12(SP),SP
+#else
+	movem.l (SP)+,D1-D2/A0
+#endif
+	rts
 
 #ifdef DEBUG_GEMDOS
 debug_gemdos:
@@ -4402,7 +5944,54 @@ hex_value:
 .hv1:
 	movem.l (SP)+,D1/A0
 	rts
-#endif
+#endif /* DEBUG_GEMDOS */
+
+#ifndef COLDFIRE
+get_no_cache_memory:
+
+	movem.l A0-A5,-(SP)
+	move.w SR,-(SP)
+	or.w #0x700,SR               // no interrupts
+	lea .no_memory(PC),A1
+	move.l 8,A5                  // bus error
+	move.l A1,8
+	move.l SP,A4                 // save ssp
+	moveq #0,D0
+	move.l ramtop,A0
+	clr.l (A0)                   // if access fault it's PMMU tree
+	move.l A0,D0                 // buffer
+.no_memory:
+	move.l A5,8                  // restore bus error
+	move.l A4,SP                 // restore ssp
+	move.w (SP)+,SR
+	movem.l (SP)+,A0-A5
+	rts
+
+get_no_cache_memory_size:
+
+	move.l D1,-(SP)
+	bsr get_no_cache_memory
+	tst.l D0
+	beq.s .no_memory_size
+	move.l D0,D1
+	movec.l SRP,D0               // PMMU tree
+	sub.l D1,D0
+	moveq #32,D1
+.loop_find_first_msb:
+		subq.l #1,D1
+		add.l D0,D0 // search the first MSB to 1
+		bcs.s .found_first_msb
+	tst.l D1
+	bne.s .loop_find_first_msb
+	moveq #0,D0                  // not found ?
+	bra.s .no_memory_size
+.found_first_msb:
+	moveq #0,D0
+	bset D1,D0                   // size alignment
+.no_memory_size:
+	move.l (SP)+,D1
+	rts
+#endif /* COLDFIRE */
 
 nvm_access:
 
@@ -4441,8 +6030,8 @@ nvm_access:
 	moveq #CT60_MODE_READ,D0 // mode
 	moveq #CT60_SAVE_NVRAM_1,D1 // type_param
 	moveq #0,D2              // value
-#ifdef COLDFIRE
-	bsr fire_rw_param 
+#if defined(COLDFIRE) && !defined(MCF547X)
+	jsr fire_rw_param 
 	move.w D0,(A3)           // bootpreff
 	clr.w D0
 	swap D0
@@ -4450,8 +6039,12 @@ nvm_access:
 	bne .nvm_read
 	lea pseudo_nvram_data,A0
 	move.w (A3),(A0)
+#else /* ATARI - FIREBEE */
+#ifdef COLDFIRE
+	jsr fire_rw_param
 #else
-	bsr ct60_rw_param 
+	jsr ct60_rw_param
+#endif
 	move.w D0,(A3)           // bootpref
 	swap D0
 	cmp.w #0x4E56,D0         // NV magic code
@@ -4465,29 +6058,29 @@ nvm_access:
 	move.w D1,-(SP)          // write
 	jsr 0xE02172             // NVMaccess
 	lea 10(SP),SP
-#endif
+#endif /* defined(COLDFIRE) && !defined(MCF547X) */
 	clr.l 2(A3) 
 	moveq #CT60_MODE_READ,D0 // mode
 	moveq #CT60_SAVE_NVRAM_2,D1 // type_param
 	moveq #0,D2              // value
 #ifdef COLDFIRE
-	bsr fire_rw_param
+	jsr fire_rw_param
 #else
-	bsr ct60_rw_param 
+	jsr ct60_rw_param 
 #endif
 	move.l D0,6(A3)          // language, keyboard, datetime, separator
 	moveq #CT60_MODE_READ,D0 // mode
 	moveq #CT60_SAVE_NVRAM_3,D1 // type_param
 	moveq #0,D2              // value
 #ifdef COLDFIRE
-	bsr fire_rw_param
+	jsr fire_rw_param
 #else
-	bsr ct60_rw_param 
+	jsr ct60_rw_param 
 #endif
 	rol.l #8,D0
 	move.b D0,10(A3)         // bootdelay
 	move.l D0,14(A3)         // vmode, scsi, bootdelay
-#ifdef COLDFIRE
+#if defined(COLDFIRE) && !defined(MCF547X)
 	lea pseudo_nvram_data+6,A0
 	lea 6(A3),A1             // buffer: language, keyboard, datetime, separator, bootdelay
 	move.b (A1)+,(A0)+
@@ -4495,7 +6088,7 @@ nvm_access:
 	move.b (A1)+,(A0)+
 	move.b (A1)+,(A0)+
 	move.b (A1)+,(A0)+
-#else
+#else /* ATARI - FIREBEE */
 	pea 6(A3)                // buffer: language, keyboard, datetime, separator, bootdelay
 	move.w #5,-(SP)          // size
 	move.w #6,-(SP)          // start
@@ -4504,16 +6097,16 @@ nvm_access:
 	move.w D1,-(SP)          // write
 	jsr 0xE02172             // NVMaccess
 	lea 10(SP),SP
-#endif
+#endif /* defined(COLDFIRE) && !defined(MCF547X) */
 	clr.b 11(A3)
 	clr.w 12(A3)
-#ifdef COLDFIRE
+#if defined(COLDFIRE) && !defined(MCF547X)
 	lea pseudo_nvram_data+14,A0
 	lea 14(A3),A1            // buffer:  vmode, scsi
 	move.b (A1)+,(A0)+
 	move.b (A1)+,(A0)+
 	move.b (A1)+,(A0)+
-#else
+#else /* ATARI - FIREBEE */
 	pea 14(A3)               // buffer: vmode, scsi
 	move.w #3,-(SP)          // size
 	move.w #14,-(SP)         // start
@@ -4522,7 +6115,7 @@ nvm_access:
 	move.w D1,-(SP)          // write
 	jsr 0xE02172             // NVMaccess
 	lea 10(SP),SP
-#endif
+#endif /* defined(COLDFIRE) && !defined(MCF547X) */
 	clr.b 17(A3)
 	clr.l 18(A3)
 	clr.l 24(A3)
@@ -4564,9 +6157,8 @@ nvm_access:
 	moveq #-5,D0             // error
 	move.w 4(SP),D1          // mode
 .nvram_access:
-#ifdef COLDFIRE
+#if defined(COLDFIRE) && !defined(MCF547X)
 	ext.l D1
-	tst.l D1
 	bne .no_nvm_read
 #ifdef DEBUG
 	lea debug1r(PC),A0
@@ -4672,37 +6264,161 @@ nvm_access:
 	moveq #0,D0
 .end_nvm:
 	rts
-#else
-	jmp 0xE02172             // NVMaccess
+#else /* ATARI - FIREBEE */
+#if defined(COLDFIRE) && defined(MCF547X) /* FIREBEE */
+	cmp.l #1,D1              // write nvm
+	bne .no_write_nvm
+	lea -20(SP),SP
+	movem.l D1-D2/A0-A2,(SP)
+	lea 0xFFFF8961,A1        // F030 RTC (offset 0) / NVM (offset 14) - FPGA emulation
+	lea 0xFFFF8963,A2
+	moveq #0,D0
+	moveq #14,D1
+	moveq #0,D2
+.loop_sum_nvram:
+		move.b D1,(A1)
+		move.b (A2),D2
+		add.l D2,D0
+		addq.l #1,D1
+	cmp.l #64-2,D1
+	bcs.s .loop_sum_nvram
+	and.l #0xFF,D0
+	move.l D0,D1
+	moveq #-12,D0            // error
+	move.b #63,(a1)
+	move.b (A2),D2
+	cmp.l D2,D1
+	bne .write_nvm_error
+	eor.l #0xFF,D1
+	move.b #62,(A1)
+	move.b (A2),D2
+	cmp.l D2,D1
+	bne .write_nvm_error
+	moveq #-5,d0             // error
+	move.w 6+20(SP),D1       // start
+	cmp.l #48,D1
+	bcc .write_nvm_error
+	move.w 8+20(SP),D2       // size
+	bmi .write_nvm_error
+	add.l D1,D2
+	cmp.l #48,D2
+	bhi .write_nvm_error
+	move.w 6+20(SP),D1       // start
+	add.l #14,D1             // offset
+	move.w 8+20(SP),D2       // size
+	move.l 10+20(SP),A0      // buffer
+	bra.s .next_write_nvm
+.loop_write_nvm:
+		move.b D1,(A1)
+		move.b (A0)+,(A2)
+		addq.l #1,D1
+.next_write_nvm:
+	subq.l #1,D2
+	bpl.s .loop_write_nvm
+	moveq #0,D0
+	moveq #14,D1
+	moveq #0,D2
+.loop_sum_nvram2:
+		move.b D1,(A1)
+		move.b (A2),D2
+		add.l D2,D0
+		addq.l #1,D1
+	cmp.l #64-2,D1
+	bcs.s .loop_sum_nvram2
+	move.b #63,(A1)
+	move.b D0,(A2)
+	not.l D0
+	move.b #62,(A1)          // update sum
+	move.b D0,(A2)
+#ifdef DEBUG
+	lea debug56(PC),A0
+	bsr debug_display_string	
 #endif
+	move.b #0x82,D0          // header
+	move.b D0,MCF_UART_UTB3  // data	
+	moveq #0,D1
+.write_nvm_to_pic:
+		move.b MCF_UART_USR3,D0
+		and.l #MCF_UART_USR_TXEMP,D0
+		beq.s .write_nvm_to_pic // full
+		move.b D1,(A1) // index
+		move.b (A2),D0 // data
+		move.b D0,MCF_UART_UTB3  // send data
+		addq.l #1,D1
+	cmp.l #64,D1
+	bcs.s .write_nvm_to_pic
+	moveq #0,D0              // OK
+.write_nvm_error:
+	movem.l (SP),D1-D2/A0-A2
+	lea 20(SP),SP
+	rts
+.no_write_nvm:
+	tst.l D1
+#endif /* defined(COLDFIRE) && defined(MCF547X) */
+	jmp 0xE02172             // NVMaccess
+#endif /* defined(COLDFIRE) && !defined(MCF547X) */
 	
 test_rtc:
 
-#ifdef COLDFIRE
+#if defined(COLDFIRE) && !defined(MCF547X)
 #ifdef DEBUG
-//	move.l A0,-(SP)
-//	lea debug23(PC),A0
-//	bsr debug_display_string
-//	move.l (SP)+,A0
+	move.l A0,-(SP)
+	lea debug23(PC),A0
+	bsr debug_display_string
+	move.l (SP)+,A0
 #endif
-#else
+#else /* ATARI - FIREBEE */
 	movem.l D0-D2,-(SP)
 	moveq #CT60_MODE_READ,D0 // mode
 	moveq #CT60_SAVE_NVRAM_1,D1 // type_param
 	moveq #0,D2              // value
-	bsr ct60_rw_param 
+#ifdef COLDFIRE
+	jsr fire_rw_param
+#else
+	jsr ct60_rw_param 
+#endif
 	swap D0
 	cmp.w #0x4E56,D0         // NV magic code
 	movem.l (SP)+,D0-D2
 	bne .use_rtc
-#endif
+#endif /* defined(COLDFIRE) && !defined(MCF547X) */
 	or.b #1,CCR              // use IKBD clock
 	rts
-#ifndef COLDFIRE
+#if !defined(COLDFIRE) || defined(MCF547X)
 .use_rtc:
 	and.b #0xFE,CCR          // use RTC clock
 	rts
 #endif
+
+#if defined(COLDFIRE) && defined(MCF547X)
+end_settime_rtc:
+
+	lea -24(SP),SP
+	movem.l D0-D2/A0-A2,(SP)
+	lea 0xFFFF8961,A1        // F030 RTC (offset 0) / NVM (offset 14) - FPGA emulation
+	lea 0xFFFF8963,A2
+	move.b #0xE,(A2)
+#ifdef DEBUG
+	lea debug56(PC),A0
+	bsr debug_display_string	
+#endif
+	move.b #0x82,D0          // header
+	move.b D0,MCF_UART_UTB3  // data	
+	moveq #0,D1
+.write_rtc_to_pic:
+		move.b MCF_UART_USR3,D0
+		and.l #MCF_UART_USR_TXEMP,D0
+		beq.s .write_rtc_to_pic // full
+		move.b D1,(A1) // index
+		move.b (A2),D0 // data
+		move.b D0,MCF_UART_UTB3  // send data to PIC
+		addq.l #1,D1
+	cmp.l #64,D1
+	bcs.s .write_rtc_to_pic
+	movem.l (SP),D0-D2/A0-A2
+	lea 24(SP),SP
+	rts
+#endif /* defined(COLDFIRE) && defined(MCF57X) */
 	
 fix_settime:
 
@@ -4714,405 +6430,10 @@ fix_settime:
 	sub.w #100,D0
 .year_before_2000_settime:
 	rts
-
+	
 #ifdef COLDFIRE
 
-fire_rw_param: // D0.W: mode, D1.L: type_param, D2.L: value	
-
-	lea -52(SP),SP
-	movem.l D1-A5,(SP)
-	link A6,#-MAX_PARAM_FLASH*4 
-	tst.l D1
-	bmi out_param     
-	cmp.l #MAX_PARAM_FLASH-1,D1 // type_param
-	bcc out_param
-	addq.l #1,D1
-	asl.l #2,D1              // param * 4
-	move.l MCF_FBCS_CSAR0,D3
-	and.l #0xFFFF0000,D3
-	lea FLASH_TOS_FIRE_ENGINE-BOOT_FLASH_BASE+FLASH_SIZE-PARAM_SIZE,A2
-	add.l D3,A2              // base parameters
-	moveq #-1,D3
-	move.l #NB_BLOCK_PARAM-1,D4
-	moveq #0,D6
-find_last_block:
-		cmp.l (A2),D3
-		beq.s test_free_block
-next_block:
-		lea SIZE_BLOCK_PARAM(A2),A2
-		add.l #SIZE_BLOCK_PARAM,D6 // offset free block
-	subq.l #1,D4
-	bpl.s find_last_block
-	moveq #0,D6              // offset free block
-	lea -SIZE_BLOCK_PARAM(A2),A2
-	moveq #-1,D7             // erase sector if writing
-	bra.s test_read
-test_free_block:
-	lea 4(A2),A3
-	moveq #MAX_PARAM_FLASH-2,D5
-loop_test_free_block:
-		cmp.l (A3)+,D3
-		bne.s next_block
-	subq.l #1,D5 
-	bpl.s loop_test_free_block
-	moveq #0,D7              // writing inside the next block
-	tst.l D6
-	beq.s test_read          // 1st block is free block
-	lea -SIZE_BLOCK_PARAM(A2),A2
-test_read:
-	and.l #1,D0              // mode
-	beq read_param
-	move.l (A2,D1.l),D0
-#ifdef DEBUG
-	move.l D0,-(SP)
-	lea debug3(PC),A0
-	bsr debug_display_string
-	move.l D1,D0
-	lsr.l #2,D0
-	subq.l #1,D0
-	bsr debug_hex_char
-	lea debug3w(PC),A0
-	bsr debug_display_string
-	move.l D2,D0
-	bsr debug_hex_long
-	moveq #0x20,D0
-	bsr debug_display_char
-	moveq #0x30,D0
-	bsr debug_display_char
-	moveq #0x78,D0
-	bsr debug_display_char
-	move.b D7,D0
-	bsr debug_hex_byte
-	moveq #0x20,D0
-	bsr debug_display_char
-	moveq #0x30,D0
-	bsr debug_display_char
-	moveq #0x78,D0
-	bsr debug_display_char
-	move.l A2,D0
-	bsr debug_hex_long
-	moveq #13,D0
-	bsr debug_display_char
-	moveq #10,D0
-	bsr debug_display_char
-	move.l (SP)+,D0
-#endif
-	cmp.l D0,D2
-	beq end_param            // no change	
-	lea -MAX_PARAM_FLASH*4(A6),A3
-	addq.l #4,A2
-	clr.l (A3)+              // block used
-	moveq #MAX_PARAM_FLASH-2,D0
-save_param:
-		move.l (A2)+,(A3)+   // save params in the stack	
-	subq.l #1,D0
-	bpl.s save_param         // before erase sector command
-	move.l D2,-MAX_PARAM_FLASH*4(A6,D1.L) // value	
-	bsr fire_write_param
-	bra.s end_param
-read_param:
-#ifdef DEBUG
-	lea debug3(PC),A0
-	bsr debug_display_string
-	move.l D1,D0
-	lsr.l #2,D0
-	subq.l #1,D0
-	bsr debug_hex_char
-#endif
-	move.l (A2,D1.l),D0
-#ifdef DEBUG
-	move.l D0,-(SP)
-	lea debug3r(PC),A0
-	bsr debug_display_string
-	move.l (SP),D0
-	bsr debug_hex_long
-	moveq #13,D0
-	bsr debug_display_char
-	moveq #10,D0
-	bsr debug_display_char
-	move.l (SP)+,D0
-#endif
-	bra.s end_param
-out_param:
-	moveq #-5,D0             // unimplemented opcode
-end_param:
-	unlk A6
-	movem.l (SP),D1-A5
-	lea 52(SP),SP
-	rts
-
-fire_write_param:
-
-#ifdef MCF5445X /* M54455EVB */
-	
-	move.l D2,-(SP)          // save value
-	lea devices(PC),A1
-	add.l 4(A1),A1           // sector of device
-	movem.l (A1),A2-A4       // sector, flash_unlock1, flash_unlock2
-	moveq #FLASH_WP,D3
-	move.b D3,CPLD_FLASHCFG  // unprotect flash
-	move.l MCF_FBCS_CSAR0,D3 // boot flash
-	and.l #0xFFFF0000,D3
-	add.l D3,A2              // base parameters	
-	add.l D6,A2              // offset free block
-	add.l D3,A3              // base parameters (last sector)
-	move.w #CMD_UNLOCK1,(A3)
-	move.w #CMD_UNLOCK2,(A3)
-	tst.w D7
-	beq.s erase_sector_end
-	move.w #CMD_SECTOR_ERASE1,(A3)
-	move.w #CMD_SECTOR_ERASE2,(A3) // Erase sector command
-wait_erase_loop:
-		move.w #CMD_STATUS,(A3)
-		move.w (A3),D0
-	btst #7,D0
-	beq.s wait_erase_loop
-	move.w #CMD_READ,(A3)
-erase_sector_end:
-	lea -MAX_PARAM_FLASH*4(A6),A0   // buffer
-	moveq #(MAX_PARAM_FLASH*2)-1,D6 // word counter
-program_byte_loop:
-		move.w #CMD_PROGRAM,(A2)  // Byte program command
-		move.w (A0),(A2)
-wait_program_loop:
-			move.w #CMD_STATUS,(A2)
-			move.w (A2),D0
-		btst #7,D0
-		beq.s wait_program_loop
-		move.w #CMD_READ,(A2)
-		move.w (A2),D0
-		cmp.w (A0),D0
-		beq.s program_byte_ok
-		addq.l #4,SP
-		moveq #-10,D0      // write error
-		bra.s program_param_loop_end		
-program_byte_ok:
-		addq.l #2,A2
-		addq.l #2,A0
-	subq.l #1,D6
-	bpl.s program_byte_loop
-	move.l (SP)+,D0
-program_param_loop_end:
-	move.w #CMD_LOCK1,(A3)
-	move.w #CMD_LOCK2,(A3)
-	move.w #CMD_READ,(A3)
-	moveq #0,D1
-	move.b D1,CPLD_FLASHCFG  // protect flash
-	rts
-	
-devices:
-	dc.l 0x00890018, intel_28f128j3d-devices
-	dc.l 0
-	
-intel_28f128j3d:
-	dc.l FLASH_TOS_FIRE_ENGINE-BOOT_FLASH_BASE+FLASH_SIZE-PARAM_SIZE
-	dc.l FLASH_UNLOCK1, FLASH_UNLOCK2
-
-#else
-#ifdef MCF547X /* COLDARI */
-
-	move.l D2,-(SP)          // save value
-	lea devices(PC),A1
-	add.l 4(A1),A1           // sector of device
-	move.l (A1),A2           // sector
-	move.l 4(A1),A0          // flash_unlock1
-	move.l 8(A1),A1          // flash_unlock2
-	move.l MCF_FBCS_CSMR0,D3
-	and.l #~MCF_FBCS_CSMR_WP,D3 // unprotect flash
-	move.l D3,MCF_FBCS_CSMR0
-	move.l MCF_FBCS_CSAR0,D3 // boot flash
-	and.l #0xFFFF0000,D3
-	add.l D3,A2              // base parameters
-	add.l D3,A0
-	add.l D3,A1
-	move.w #CMD_UNLOCK1,D3
-	move.w #CMD_UNLOCK2,D4
-	move.w #CMD_AUTOSELECT,D5
-	move.w #CMD_READ,D1
-	move.w D3,(A0)           // unlock
-	move.w D4,(A1)
-	move.w D5,(A0)           // Autoselect command
-	move.l (A2),D0           // Manufacturer code / Device code
-	move.w D1,(A2)           // Read/Reset command
-	lea devices(PC),A3
-loop_dev:
-		tst.l (A3)
-		beq no_dev
-		cmp.l (A3),D0
-		beq.s found_dev
-		addq.l #8,A3
-	bra.s loop_dev
-no_dev:
-	addq.l #4,SP
-	moveq #-15,D0            // device error
-	bra program_param_loop_end_2
-found_dev:
-	lea devices(PC),A1
-	add.l 4(A3),A1           // sector of device
-	movem.l (A1),A2-A4       // sector, flash_unlock1, flash_unlock2
-	move.l MCF_FBCS_CSAR0,D3 // boot flash
-	and.l #0xFFFF0000,D3
-	add.l D3,A2              // base parameters	
-	add.l D6,A2              // offset free block
-	add.l D3,A3              // base parameters (last sector)
-	add.l D3,A4
-	tst.w D7
-	beq.s erase_sector_end
-	move.w #CMD_SECTOR_ERASE1,D5
-	move.w #CMD_SECTOR_ERASE2,D6
-	move.w D3,(A3)           // unlock
-	move.w D4,(A4)
-	move.w D5,(A3)
-	move.w D3,(A3)           // unlock
-	move.w D4,(A4)
-	move.w D6,(A2)           // Erase sector command
-wait_erase_loop:
-		move.w (A2),D0
-		btst #7,D0
-		bne.s erase_sector_end
-	btst #5,D0
-	beq.s wait_erase_loop
-	move.w (A2),D0
-	btst #7,D0
-	bne.s erase_sector_end
-	addq.l #4,SP
-	moveq #-10,D0            // write error
-	bra.s program_param_loop_end
-erase_sector_end:
-	lea -MAX_PARAM_FLASH*4(A6),A0   // buffer
-	move.w #CMD_PROGRAM,D5
-	moveq #(MAX_PARAM_FLASH*2)-1,D6 // word counter
-program_byte_loop:
-		moveq #15,D7         // retry counter
-program_byte_retry:
-			move.w D3,(A3)  // unlock
-			move.w D4,(A4)
-			move.w D5,(A3)  // Byte program command
-			move.w (A0),D0
-			move.w D0,(A2)
-			and.l #0x80,D0
-wait_program_loop:
-				move.w (A2),D1
-				and.l #0xFF,D1
-				eor.l D0,D1
-				bpl.s wait_program_loop_end
-			btst #5,D1       // error
-			beq.s wait_program_loop
-			move.w (A2),D1
-			and.l #0xFF,D1
-			eor.l D0,D1
-			bpl.s wait_program_loop_end
-program_byte_error:
-		subq.l #1,D7
-		bpl.s program_byte_retry
-		addq.l #4,SP
-		moveq #-10,D0        // write error
-		bra.s program_param_loop_end
-wait_program_loop_end:
-		move.w (A2),D1
-		cmp.w (A0),D1
-		bne.s program_byte_error
-		addq.l #2,A2
-		addq.l #2,A0
-	subq.l #1,D6
-	bpl.s program_byte_loop
-	move.l (SP)+,D0
-program_param_loop_end:
-	move.w #CMD_READ,D5
-	move.w D3,(A3)
-	move.w D4,(A4)
-	move.w D5,(A3)           // Read/Reset command
-program_param_loop_end_2:
-	move.l MCF_FBCS_CSMR0,D3
-	or.l #MCF_FBCS_CSMR_WP,D3 // protect flash
-	move.l D3,MCF_FBCS_CSMR0
-	rts
-	
-devices:
-	dc.l 0x000122d7, amd_29lv640-devices
-	dc.l 0
-	
-amd_29lv640:
-	dc.l FLASH_TOS_FIRE_ENGINE-BOOT_FLASH_BASE+FLASH_SIZE-PARAM_SIZE
-	dc.l FLASH_UNLOCK1, FLASH_UNLOCK2
-
-#else /* MCF548X - M5484LITE */
-
-	move.l D2,-(SP)          // save value
-	lea devices(PC),A1
-	add.l 4(A1),A1           // sector of device
-	move.l MCF_SIU_JTAGID,D0 // check the processor (not a good method => must check the flash device !)
-	and.l #MCF_SIU_JTAGID_PROCESSOR,D0
-	cmp.l #MCF_SIU_JTAGID_MCF5485,D0
-             beq.s .m5485evb          // M5485EVB  16F160C3
-	lea devices(PC),A1       // M5484LITE 28F320C3
-	add.l 4+8(A1),A1         // sector of device
-.m5485evb:
-	movem.l (A1),A2-A4       // sector, flash_unlock1, flash_unlock2
-	move.l MCF_FBCS_CSAR0,D3 // boot flash
-	and.l #0xFFFF0000,D3
-	add.l D3,A2              // base parameters	
-	add.l D6,A2              // offset free block
-	add.l D3,A3              // base parameters (last sector)
-	move.w #CMD_UNLOCK1,(A3)
-	move.w #CMD_UNLOCK2,(A3)
-	tst.w D7
-	beq.s erase_sector_end
-	move.w #CMD_SECTOR_ERASE1,(A3)
-	move.w #CMD_SECTOR_ERASE2,(A3) // Erase sector command
-wait_erase_loop:
-		move.w #CMD_STATUS,(A3)
-		move.w (A3),D0
-	btst #7,D0
-	beq.s wait_erase_loop
-	move.w #CMD_READ,(A3)
-erase_sector_end:
-	lea -MAX_PARAM_FLASH*4(A6),A0   // buffer
-	moveq #(MAX_PARAM_FLASH*2)-1,D6 // word counter
-program_byte_loop:
-		move.w #CMD_PROGRAM,(A2)  // Byte program command
-		move.w (A0),(A2)
-wait_program_loop:
-			move.w #CMD_STATUS,(A2)
-			move.w (A2),D0
-		btst #7,D0
-		beq.s wait_program_loop
-		move.w #CMD_READ,(A2)
-		move.w (A2),D0
-		cmp.w (A0),D0
-		beq.s program_byte_ok
-		addq.l #4,SP
-		moveq #-10,D0      // write error
-		bra.s program_param_loop_end		
-program_byte_ok:
-		addq.l #2,A2
-		addq.l #2,A0
-	subq.l #1,D6
-	bpl.s program_byte_loop
-	move.l (SP)+,D0
-program_param_loop_end:
-	move.w #CMD_LOCK1,(A3)
-	move.w #CMD_LOCK2,(A3)
-	move.w #CMD_READ,(A3)
-	rts
-	
-devices:
-	dc.l 0x008988C2, intel_28f160c3b-devices // M5485EVB
-	dc.l 0x008988C4, intel_28f320c3b-devices // M5484LITE
-	dc.l 0
-
-intel_28f160c3b:
-	dc.l FLASH_TOS_FIRE_ENGINE-BOOT_FLASH_BASE+FLASH_SIZE-PARAM_SIZE
-	dc.l FLASH_UNLOCK1, FLASH_UNLOCK2
-	
-intel_28f320c3b:
-	dc.l FLASH_TOS_FIRE_ENGINE-BOOT_FLASH_BASE+FLASH_SIZE-PARAM_SIZE
-	dc.l FLASH_UNLOCK1, FLASH_UNLOCK2
-
-#endif /* MCF547X */
-#endif /* MCF5445X */
-
-#else /* ATARI - CT60 */
+#ifdef MCF547X
 
 fix_gettime:
 
@@ -5123,334 +6444,31 @@ fix_gettime:
 	move.b D0,D2
 	rts
 
-ct60_read_temp:
+#endif /* MCF547X */
 
-	movem.l D1-D3/A0-A2,-(SP)
-	move.w SR,-(SP)
-	or.w #0x700,SR           // no interrupts
-	lea ct1(PC),A0
-	move.l 8,A1              // bus error
-	move.l A0,8
-	move.l SP,A2
-	lea _tcdr_mfp,A0         // timer C value changed at each 26 uS (clock 19,2 KHz)
-	tst.b _tbcr_mfp
-	bne ct8                  // timer B used
-	bclr #0,_imra_mfp
-	bclr #0,_iera_mfp
-	bclr #0,_ipra_mfp
-	bclr #0,_isra_mfp    
-	lea _tbdr_mfp,A0 
-	move.b #2,(A0)           // clock = 307,2 KHz 1,6 uS
-	move.b #1,_tbcr_mfp      // 2,4576MHz/4
-ct8:
-	clr.l _texas_tlv0831_cs_low // cs=0
-	move.b (A0),D0
-wait1:
-	cmp.b (A0),D0            // 26uS (timer C) or 1,6uS (timer B)
-	beq.s wait1
-	clr.l _texas_tlv0831_clk_high // clk=1	(10 to 600 KHz for the tlv0831)
-	move.b (A0),D0
-wait2:
-	cmp.b (A0),D0            // 26uS (timer C) or 1,6uS (timer B)
-	beq.s wait2
-	clr.l _texas_tlv0831_clk_low // clk=0
-	move.b (A0),D0
-wait3:
-	cmp.b (A0),D0            // 26uS (timer C) or 1,6uS (timer B)
-	beq.s wait3
-	clr.l _texas_tlv0831_clk_high // clk=1
-	move.b (A0),D0
-wait4:
-	cmp.b (A0),D0            // 26uS (timer C) or 1,6uS (timer B)
-	beq.s wait4
-	clr.l _texas_tlv0831_clk_low // clk=0
-	move.b (A0),D0
-wait5:
-	cmp.b (A0),D0            // 26uS (timer C) or 1,6uS (timer B)
-	beq.s wait5
-	move.l A1,8
-	move.l A2,SP
-	move.w (SP),SR
-	moveq #0,D3              // data
-	moveq #7,D2              // 8 bits
-ct4:	clr.l _texas_tlv0831_clk_high // clk=1
-		move.l _texas_tlv0831_data,d1
-		lsr.l #1,D1          // data
-		addx.w D3,D3
-		move.b (A0),D0
-wait6:
-		cmp.b (A0),D0        // 26uS (timer C) or 1,6uS (timer B)
-		beq.s wait6
-		clr.l _texas_tlv0831_clk_low // clk=0
-		move.b (A0),D0
-wait7:
-		cmp.b (A0),D0        // 26uS (timer C) or 1,6uS (timer B)
-		beq.s wait7
-	dbf D2,ct4
-	clr.l _texas_tlv0831_cs_high // cs=1
-	cmp.w #MES_TEMP_ERROR,D3 // error
-	beq.s ct3
-	moveq #0,D2              // value
-	moveq #CT60_PARAM_OFFSET_TLV,D1 // type_param
-	moveq #CT60_MODE_READ,D0 // read
-	bsr ct60_rw_param
-	add.l D3,D0              // offset
-	bmi.s ct5
-	cmp.w #MES_TEMP_0,D0
-	bcs.s ct5
-	cmp.w #MES_TEMP_25,D0
-	bcc.s ct6
-	sub.w #MES_TEMP_0,D0
-	mulu #25,D0
-	divu #(MES_TEMP_25-MES_TEMP_0),D0
-	ext.l D0
-	bra.s ct2
-ct6:
-	cmp.w #MES_TEMP_50,D0
-	bcc.s ct7
-	sub.w #MES_TEMP_25,D0
-	mulu #25,D0
-	divu #(MES_TEMP_50-MES_TEMP_25),D0
-	add.w #25,D0
-	ext.l D0
-	bra.s ct2
-ct7:
-	sub.w #MES_TEMP_50,D0
-	mulu #50,D0
-	divu #(MES_TEMP_100-MES_TEMP_50),D0
-	add.w #50,D0
-	ext.l D0
-	bra.s ct2
-ct5:
-	moveq #0,D0
-	bra.s ct2
-ct3:
-	moveq #CT60_READ_ERROR,D0 // error
-	bra.s ct2
-ct1:
-	moveq #CT60_READ_ERROR,D0 // bus error
-	move.l A1,8
-	move.l A2,SP
-ct2:
-	lea _tbdr_mfp,A1
-	cmp.l A0,A1
-	bne.s ct9                // timer C
-	clr.b _tbcr_mfp          // timer B stopped
-ct9:
-	move (SP)+,SR
-	tst.l D0
-	movem.l (SP)+,D1-D3/A0-A2
+#else /* ATARI -CT60 */
+
+fix_gettime:
+
+	sub.b #80,D0             // 1980
+	bpl.s .year_before_2000_gettime
+	add.b #100,D0
+.year_before_2000_gettime:
+	move.b D0,D2
 	rts
-
-ct60_rw_param: // D0.W: mode, D1.L: type_param, D2.L: value	
-
-	movem.l D1-A5,-(SP)
-	link A6,#-MAX_PARAM_FLASH*4 
-	tst.l D1
-	bmi out_param     
-	cmp.l #MAX_PARAM_FLASH-1,D1 // type_param
-	bcc out_param
-	addq.l #1,D1
-	asl.l #2,D1              // param * 4
-	lea FLASH_ADR+FLASH_SIZE-PARAM_SIZE+0xFF000000,A2
-	moveq #-1,D3
-	move.l #NB_BLOCK_PARAM-1,D4
-	moveq #0,D6
-find_last_block:
-		cmp.l (A2),D3
-		beq.s test_free_block
-next_block:
-		lea SIZE_BLOCK_PARAM(A2),A2
-		add.l #SIZE_BLOCK_PARAM,D6 // offset free block
-	dbf D4,find_last_block
-	moveq #0,D6              // offset free block
-	lea -SIZE_BLOCK_PARAM(A2),A2
-	moveq #-1,D7             // erase sector if writing
-	bra.s test_read
-test_free_block:
-	lea 4(A2),A3
-	moveq #MAX_PARAM_FLASH-2,D5
-loop_test_free_block:
-		cmp.l (A3)+,D3
-	dbne D5,loop_test_free_block
-	bne.s next_block 
-	moveq #0,D7              // writing inside the next block
-	tst.l D6
-	beq.s test_read          // 1st block is free block
-	lea -SIZE_BLOCK_PARAM(A2),A2
-test_read:
-	and #1,D0                // mode
-	beq read_param
-	move.l (A2,D1.l),D0
-	cmp.l D0,D2
-	beq end_param            // no change	
-	lea -MAX_PARAM_FLASH*4(A6),A3
-	addq.l #4,A2
-	clr.l (A3)+              // block used
-	moveq #MAX_PARAM_FLASH-2,D0
-save_param:
-		move.l (A2)+,(A3)+   // save params in the stack	
-	dbf D0,save_param        // before erase sector command
-	move.l D2,-MAX_PARAM_FLASH*4(A6,D1.L) // value	
-	move.w SR,-(SP)
-	or #0x700,SR             // lock interrupts
-	lea ct60_write_param(PC),A0
-	lea end_ct60_write_param(PC),A2
-	move.l phystop,A1
-	movec.l SRP,D3
-	sub.l #RESERVE_MEM_FONTS-0x6800,A1
-	cmp.l #0x1000000,D3
-	bcc.s .sdram
-	sub.l #RESERVE_MEM-RESERVE_MEM_FONTS,A1
-.sdram:
-	sub.l A0,A2
-	move.l A2,D3
-	move.l A1,A2
-	lsr.l #1,D3
-	subq.l #1,D3
-copy_prog:
-		move.w (A0)+,(A1)+   // copy program in the top of the STRAM
-	dbf D3,copy_prog         // after the copy of Atari logo
-	movec.l CACR,D3
-	move.l D3,A5             // save CACR
-	cpusha DC
-	bclr.l #31,D3
-	movec.l D3,CACR          // no cache
-	cinva DC
-	jsr (A2)                 // ct60_write_param
-	cpusha DC
-	move.l A5,D2
-	movec.l D2,CACR
-	move.w (SP)+,SR
-	bra.s end_param
-read_param:
-	move.l (A2,D1.l),D0
-	bra.s end_param
-out_param:
-	moveq #-5,D0             // unimplemented opcode
-end_param:
-	unlk A6
-	movem.l (SP)+,D1-A5
-	rts
-
-ct60_write_param:
-	
-	moveq #3,D3
-	movec.l D3,SFC           // CPU space 3
-	movec.l D3,DFC
-	move.l D2,-(SP)          // save value
-	lea FLASH_UNLOCK1+0xFF000000,A0
-	lea FLASH_UNLOCK2+0xFF000000,A1
-	lea FLASH_ADR+FLASH_SIZE-PARAM_SIZE+0xFF000000,A2
-	move.w #CMD_UNLOCK1,D3
-	move.w #CMD_UNLOCK2,D4
-	move.w #CMD_AUTOSELECT,D5
-	move.w #CMD_READ,D1
-	moves.w D3,(A0)          // unlock
-	moves.w D4,(A1)
-	moves.w D5,(A0)          // Autoselect command
-	move.l (A2),D0           // Manufacturer code / Device code
-	moves.w D1,(A2)          // Read/Reset command
-	lea devices(PC),A3
-loop_dev:
-		tst.l (A3)
-		beq no_dev
-		cmp.l (A3),D0
-		beq.s found_dev
-		addq.l #8,A3
-	bra.s loop_dev
-no_dev:
-	addq.l #4,SP
-	moveq #-15,D0            // device error
-	bra program_param_loop_end_2
-found_dev:
-	lea devices(PC),A1
-	add.l 4(A3),A1           // sector of device
-	movem.l (A1),A2-A4       // sector, flash_unlock1, flash_unlock2
-	add.l D6,A2              // offset free block
-	tst.w D7
-	beq.s erase_sector_end
-	move.w #CMD_SECTOR_ERASE1,D5
-	move.w #CMD_SECTOR_ERASE2,D6
-	moves.w D3,(A3)          // unlock
-	moves.w D4,(A4)
-	moves.w D5,(A3)
-	moves.w D3,(A3)          // unlock
-	moves.w D4,(A4)
-	moves.w D6,(A2)          // Erase sector command
-wait_erase_loop:
-		move.w (A2),D0
-		btst #7,D0
-		bne.s erase_sector_end
-	btst #5,D0
-	beq.s wait_erase_loop
-	move.w (A2),D0
-	btst #7,D0
-	bne.s erase_sector_end
-	addq.l #4,SP
-	moveq #-10,D0            // write error
-	bra.s program_param_loop_end
-erase_sector_end:
-	lea -MAX_PARAM_FLASH*4(A6),A0   // buffer
-	move.w #CMD_PROGRAM,D5
-	moveq #(MAX_PARAM_FLASH*2)-1,D6 // word counter
-program_byte_loop:
-		moveq #15,D7         // retry counter
-program_byte_retry:
-			moves.w D3,(A3)  // unlock
-			moves.w D4,(A4)
-			moves.w D5,(A3)  // Byte program command
-			move.w (A0),D0
-			moves.w D0,(A2)
-			and.b #0x80,D0
-wait_program_loop:
-				move.w (A2),D1
-				eor.b D0,D1
-				bpl.s wait_program_loop_end
-			btst #5,D1       // error
-			beq.s wait_program_loop
-			move.w (A2),D1
-			eor.b D0,D1
-			bpl.s wait_program_loop_end
-program_byte_error:
-		dbf D7,program_byte_retry
-		addq.l #4,SP
-		moveq #-10,D0        // write error
-		bra.s program_param_loop_end
-wait_program_loop_end:
-		move.w (A2),D1
-		cmp.w (A0),D1
-		bne.s program_byte_error
-		addq.l #2,A2
-		addq.l #2,A0
-	dbf D6,program_byte_loop
-	move.l (SP)+,D0
-program_param_loop_end:
-	move.w #CMD_READ,D5
-	moves.w D3,(A3)
-	moves.w D4,(A4)
-	moves.w D5,(A3)          // Read/Reset command
-program_param_loop_end_2:
-	rts
-	
-devices:
-	dc.l 0x000422AB, fujitsu_mbm29f400bc-devices
-	dc.l 0x00042258, fujitsu_mbm29f800ba-devices
-	dc.l 0x00012258, amd_am29f800bb-devices
-	dc.l 0x00202258, st_m29f800db-devices
-	dc.l 0
-	
-fujitsu_mbm29f400bc:
-	dc.l FLASH_ADR+0xFF0F0000, FLASH_UNLOCK1+0xFF000000, FLASH_UNLOCK2+0xFF000000
-
-fujitsu_mbm29f800ba:
-amd_am29f800bb:
-st_m29f800db:
-	dc.l FLASH_ADR+0xFF0F0000, FLASH_UNLOCK1+0xFF000000, FLASH_UNLOCK2+0xFF000000	
-
-end_ct60_write_param:
 
 #endif /* COLDFIRE */
+
+power_key:
+
+	move.l D0,-(SP)
+	move.l A0,-(SP)
+	move.l phystop,A0
+	move.l #0xCAFEFADE,D0
+	move.l D0,power_flag(A0) // tested inside evnt_multi AES
+	move.l (SP)+,A0
+	move.l (SP)+,D0
+	rts
 
 new_ikbdvect:                // test Eiffel keys
 
@@ -5511,13 +6529,7 @@ new_ikbdvect:                // test Eiffel keys
 	bne.s .test_shift
 	btst #7,D0
 	bne.s .test_shift
-	move.l D0,-(SP)
-	move.l A0,-(SP)
-	move.l phystop,A0
-	move.l #0xCAFEFADE,D0
-	move.l D0,power_flag(A0) // tested inside evnt_multi AES
-	move.l (SP)+,A0
-	move.l (SP)+,D0
+	bsr power_key
 .test_shift:
 	move.b 0x1187,D1         // Shift state
 	cmp.l #0x2A,D0	
@@ -5564,10 +6576,7 @@ new_ikbdvect:                // test Eiffel keys
 	bne.s .test_shift
 	btst #7,D0
 	bne.s .test_shift
-	move.l A0,-(SP)
-	move.l phystop,A0
-	move.l #0xCAFEFADE,power_flag(A0) // tested inside evnt_multi AES
-	move.l (SP)+,A0
+	bsr power_key
 .test_shift:
 	move.b 0x1187,D1         // Shift state
 	cmp.b #0x2A,D0
@@ -5603,8 +6612,7 @@ det_statvec:
 	movem.l D0/A0,-(SP)
 	cmp.b #0x73,6(A0)        // POWER
 	bne.s .not_power
-	move.l phystop,A0
-	move.l #0xCAFEFADE,power_flag(A0) // tested inside evnt_multi AES
+	bsr power_key
 	bra .not_volume_down
 .not_power:
 	cmp.b #0x32,6(A0)        // VOLUME UP

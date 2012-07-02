@@ -4,7 +4,7 @@
 #include "../freertos/FreeRTOSConfig.h"
 #include "../freertos/task.h"
 #include "../freertos/semphr.h"
-#include ../lwip/net.h"
+#include "../lwip/net.h"
 #include "mcf548x.h"
 
 extern void display_string(char *string);
@@ -66,7 +66,6 @@ struct rtc_tm {
 #define RTC8564_TD_1_60HZ		(0x3)
 
 #ifdef USE_RTC
-#ifdef NETWORK
 #ifdef LWIP
 
 static xSemaphoreHandle	smid;
@@ -394,13 +393,12 @@ void RTC_task(void)
         if(dt.hours && dt.mins && dt.secs && dt.year && dt.mon && dt.mday)
           date = ((((unsigned long)dt.year - 1980) & 0x7F) << 9) + ((unsigned long)dt.mon << 5) + (unsigned long)dt.mday;    
       }
-    	vTaskDelay(1);
+      vTaskDelay(1);
     }
     else  
-	    vTaskDelay(1);
+      vTaskDelay(1);
   }
 }
 
-#endif
 #endif
 #endif

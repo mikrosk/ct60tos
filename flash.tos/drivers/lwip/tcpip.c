@@ -47,7 +47,6 @@
 #include "resolv.h"
 #include "tcpip.h"
 
-#ifdef NETWORK
 #ifdef LWIP
 
 static void (* tcpip_init_done)(void *arg) = NULL;
@@ -216,7 +215,5 @@ tcpip_init(void (* initfunc)(void *), void *arg)
 }
 
 #endif /* LWIP */
-#endif /* NETWORK */
-
 
 

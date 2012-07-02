@@ -1,7 +1,7 @@
-/*  Install and uncompress the PCI part of the TOS 
+/*  Install and uncompress the drivers part of the TOS 
  *  and start the CF68KLIB
  * 
- * Didier Mequignon, 2006-2009, e-mail: aniplay@wanadoo.fr
+ * Didier Mequignon, 2006-2011, e-mail: aniplay@wanadoo.fr
  *
  *  This library is free software; you can redistribute it and/or
  *  modify it under the terms of the GNU Lesser General Public
@@ -19,11 +19,11 @@
  */
 
 #include "fire.h"
+#include "vars.h"
 
-#define cookie 0x5A0
 #define _run  0x6EE4                  /* TOS 404 PD */
 
-#undef DEBUG
+#define DEBUG
 
 	.text
 
@@ -36,7 +36,6 @@ cf68klib:
 	move.l A0,-(SP)          // init_mmu routine
 	move.l A1,-(SP)          // update_tlb routine
 #ifndef MCF5445X
-#ifndef MCF547X
 	/* Initialize RAMBAR0 - locate it on the data bus */
 	move.l #SRAM_BASE+0x0035,D0
 	movec.l D0,RAMBAR0
@@ -44,22 +43,33 @@ cf68klib:
 	move.l #SRAM_BASE2+0x0035,D0
 	movec.l D0,RAMBAR1
 #endif
+	move.l #0x5F4C5A5F,D0    // _LZ_
+	move.l #0x4C5A4D41,D1    // LZMA
+	moveq #3,D2
+	lea 0xED0000,A0          // 128KB / 192KB / 256KB / 320KB 
+.test_lz_loop:
+		cmp.l (A0),D0            // _LZ_
+		beq.s .uncompress_pci_drivers
+		cmp.l (A0),D1            // LZMA
+		beq.s .uncompress_pci_drivers
+		sub.l #0x10000,A0
+	subq.l #1,D2
+	bpl.s .test_lz_loop
+#ifdef DEBUG
+	bra.s .not_found_compressed_pci_drivers
 #endif
+.error_uncompress_pci_drivers:
+#ifdef DEBUG
+	move.l D0,-(SP)
+	bsr debug_hex_long
+	lea debug24c(PC),A0
+	bsr debug_display_string	
+	move.l (SP)+,D0
+.not_found_compressed_pci_drivers:
+#endif  
 	moveq #0,D0
 	moveq #0,D1              // normal PCI drivers
-	move.l #0x5F4C5A5F,D2    // _LZ_
-	lea 0xED0000,A0          // 128 KB
-	cmp.l (A0),D2            // _LZ_
-	beq.s .uncompress_pci_drivers
-	lea 0xEC0000,A0          // 192 KB
-	cmp.l (A0),D2            // _LZ_
-	beq.s .uncompress_pci_drivers
-	lea 0xEB0000,A0          // 256 KB
-	cmp.l (A0),D2            // _LZ_
-	beq.s .uncompress_pci_drivers
-	lea 0xEA0000,A0          // 320 KB
-	cmp.l (A0),D2            // _LZ_
-	bne.s .not_compressed_pci_drivers
+	bra .not_compressed_pci_drivers
 .uncompress_pci_drivers:
 #ifdef DEBUG
 	move.l A0,-(SP)
@@ -77,13 +87,46 @@ cf68klib:
 	bsr debug_display_string	
 	move.l (SP)+,A0
 #endif
+	cmp.l (A0),D1
+	beq.s .uncompress_pci_drivers2
 	move.l 4(A0),-(SP)       // insize
 	pea 0x1000000            // out: SDRAM temp
 	pea 8(A0)                // in
 	jsr (A2)                 // LZ_Uncompress routine
 	move.l (SP)+,D1
-	subq.l #8,D1
+	subq.l #8,D1             // base PCI drivers
 	addq.l #8,SP
+	bra.s .end_uncompress_pci_drivers
+.uncompress_pci_drivers2:
+	link A6,#-24
+	move.l A0,-(SP)          // base PCI drivers
+             pea 8(A0)                // propsData
+	pea -16(A6)              // Properties
+	jsr (A3)                 // LzmaDecodeProperties routine
+	addq.l #8,SP
+	tst.l D0
+	bne.s .error_header_lzma // error
+	move.l #0x1100000,D0
+	move.l D0,-4(A6)         // Probs buffer, size = (LZMA_BASE_SIZE + (LZMA_LIT_SIZE << (lc + lp))) * sizeof(CProb)
+	move.l (SP),A0           // base PCI drivers
+	pea -24(A6)              // outSizeProcessed
+	move.l #0x100000,-(SP)   // outSize
+	pea 0x1000000            // outStream: SDRAM temp
+	pea -20(A6)              // inSizeProcessed
+	move.l 4(A0),-(SP)       // inSize
+             pea 8+5(A0)              // inStream
+	pea -16(A6)              // CLzmaDecoderState structure
+	jsr (A4)                 // LzmaDecode routine
+	lea 28(SP),SP
+	move.l -24(A6),D1        // outSizeProcessed
+.error_header_lzma:
+	move.l (SP)+,A0
+	unlk a6
+	tst.l D0
+	bne .error_uncompress_pci_drivers  // error
+	move.l D1,D0             // outSizeProcessed
+	move.l A0,D1             // base PCI drivers
+.end_uncompress_pci_drivers:
 #ifdef DEBUG
 	move.l D0,-(SP)
 	bsr debug_hex_long
@@ -110,15 +153,18 @@ cf68klib:
 	move.l D0,MCF_XARB_IMR
 	lea cf68k_xarbint(PC),A0
 	move.l A0,(64+47)*4(A1)
+	lea cf68k_xlbpci(PC),A0
+	move.l A0,(64+43)*4(A1)
 	moveq #0x3F,D0           // level 7, priority 7
-	move.b D0,MCF_INTC_ICR47
+	move.b D0,MCF_INTC_ICR47 // XLBARB
+	move.b D0,MCF_INTC_ICR43 // XLBPCI
 	move.l #~MCF_INTC_IMRH_INT_MASK47,D0
 	and.l D0,MCF_INTC_IMRH
 //	lea cf68k_debugint(PC),A0
 //	move.l A0,12*4(A1)       // Non PC breakpoint debug interrupt
 #ifndef MCF547X /* MCF548X - M5484LITE */
 	move.b FIRE_ENGINE_CPLD_HW_REVISION,D0
-	move.b D0,fire_engine_hw_rev // for IDE test (sdram.S)
+	move.b D0,fire_engine_hw_rev // for IDE test (boot2.S)
 #endif
 #endif
 	lea library_data_area,A0 // 1024 bytes
@@ -151,6 +197,7 @@ cf68klib:
 	clr.b debug_cf68klib_count
 	clr.b debug_trap
 	clr.b debug_trap_count
+	clr.b debug_int7
 	clr.b trap_breakpoint
 	clr.l old_cacr
 	clr.l old_gemdos         // for store the BDOS/GEMDOS vector
@@ -206,27 +253,58 @@ start_emulation:
 	bpl.s .clear_nvram
 	move.w #DEFAULT_LANG_KEYB,D0
 	move.w D0,pseudo_nvram_data+6
-#ifdef MCF547X
-	lea 0xFFFF8800,A0        // PSG sound
-	moveq #7,D0
-	move.b D0,(A0)           // ports A & B
-	move.b #0xC0,D0          // are outputs
-	move.b D0,2(A0)
-	moveq #14,D0             // port A
-	move.b D0,(A0)
-	moveq #7,D0              // disable floppy
-	move.b D0,2(A0)	
-#endif
+	lea 0xE00000,A0         // TOS404
+	sub.l #RESERVE_MEM_FONTS,A0
+	move.l A0,phystop
+	clr.l hardware_type(A0)
 	jmp 0xE001DA
 	
 #ifndef MCF5445X /* there are no XL bus and arbiter on MCF5445X */
+
+cf68k_xlbpci:
+
+	.chip 68060
+	move.w #0x2700,SR        // mask interrupts
+	.chip 5200
+#if 0 // #ifdef DEBUG
+	move.l D0,-(SP)
+	move.l A0,-(SP)
+	lea debug17(PC),A0
+	bsr debug_display_string
+	move.l 12(SP),D0
+	bsr debug_hex_long
+	lea debug17sr(PC),A0
+	bsr debug_display_string
+	move.w 10(SP),D0
+	bsr debug_hex_word
+	lea debug17f(PC),A0
+	bsr debug_display_string
+	move.w 8(SP),D0
+	bsr debug_hex_word
+	lea crlf(PC),A0
+	bsr debug_display_string
+	move.l (SP)+,A0
+	move.l (SP)+,D0
+#endif
+	move.l D0,-(SP)
+	move.l 4(SP),D0
+	and.l #0xF000FFFF,D0
+	or.l  #0x000A0000,D0     // Access fault
+	move.l D0,4(SP)
+	move.l MCF_PCI_PCIGSCR,D0 // PERR and SERR seems on this interrupt
+	move.l D0,MCF_PCI_PCIGSCR
+	move.l MCF_PCI_PCIISR,D0 
+	move.l D0,MCF_PCI_PCIISR // clear interrupt
+	move.l (SP)+,D0
+	move.l coldfire_vector_base+8,-(SP) // access fault
+	rts
 	
 cf68k_xarbint:
 
 	.chip 68060
 	move.w #0x2700,SR        // mask interrupts
 	.chip 5200
-#ifdef DEBUG
+#if 0 // #ifdef DEBUG
 	move.l D0,-(SP)
 	move.l A0,-(SP)
 	lea debug17(PC),A0
@@ -316,6 +394,8 @@ tab_debug:
 cf68k_install_vector:
 
 #ifndef MCF5445X
+	cmp.l #64+43,D0               // XLB PCI interrupt
+	beq.s .no_install
 	cmp.l #64+47,D0               // XL Bus Arbiter interrupt
 	beq.s .no_install
 #endif
@@ -412,9 +492,77 @@ cf68k_address_error:
 	bsr debug_display_fault
 	moveq #0xC,D0
 	bra .error
-
+	
 cf68k_illegal_instruction:
 
+	move.l D0,-(SP)
+	and.l #0xF1FF,D0
+	cmp.l #0x013C,D0 // btst dx,imm
+	bne.s .not_btst_dx_imm
+	move.l (SP),D0
+	and.l #0x0E00,D0
+	lsr.l #7,D0
+	move.l reg_pc(A0),A1
+	move.w 2(A1),D1  // bit number
+	move.l reg_d0(A0,D0.l),D0
+	btst D1,D0
+	move ccr,D0
+	move.b D0,reg_ccr(A0)
+	addq.l #4,reg_pc(A0)
+	addq.l #4,SP
+	moveq #1,D0
+	rts
+.not_btst_dx_imm:
+	move.l (SP),D0
+	cmp.l #0x083A,D0 // btst #X,d16(PC)
+	beq.s .btst_16pc
+	cmp.l #0x087A,D0 // bchg #X,d16(PC)
+	beq.s .bchg_16pc
+	cmp.l #0x08BA,D0 // bclr #X,d16(PC)
+	beq.s .bclr_16pc
+	cmp.l #0x08FA,D0 // bset #X,d16(PC)
+	beq.s .bset_16pc
+	bra.s .true_illegal
+.btst_16pc:
+	move.l reg_pc(A0),A1
+	move.w 2(A1),D0  // bit number
+	move.w 4(A1),D1  // d16
+	ext.l D1
+	add.l D1,A1
+	btst.b D0,(A1)
+	bra.s .common_16pc
+.bchg_16pc:
+	move.l reg_pc(A0),A1
+	move.w 2(A1),D0  // bit number
+	move.w 4(A1),D1  // d16
+	ext.l D1
+	add.l D1,A1
+	bchg.b D0,(A1)
+	bra.s .common_16pc
+.bclr_16pc:
+	move.l reg_pc(A0),A1
+	move.w 2(A1),D0  // bit number
+	move.w 4(A1),D1  // d16
+	ext.l D1
+	add.l D1,A1
+	bclr.b D0,(A1)
+	bra.s .common_16pc
+.bset_16pc:
+	move.l reg_pc(A0),A1
+	move.w 2(A1),D0  // bit number
+	move.w 4(A1),D1  // d16
+	ext.l D1
+	add.l D1,A1
+	bset.b D0,(A1)
+.common_16pc:
+	move ccr,D0
+	move.b D0,reg_ccr(A0)
+	addq.l #6,reg_pc(A0)
+	addq.l #4,SP
+	moveq #1,D0
+	rts
+.true_illegal:
+	addq.l #4,SP	
 	bsr breakpoint_deinstall
 	beq .not_a_breakpoint
 	tst.l v_breakpoint_install
@@ -441,7 +589,7 @@ cf68k_illegal_instruction:
 	lea debug18(PC),A0
 	bsr debug_display_string
 	move.l current_tcb,A0
-	lea 0x138(A0),A0
+	lea 0x13C(A0),A0
 	bsr debug_display_string
 	move.l (SP)+,A0
 	bra .display_registers_and_suspend_task
@@ -518,8 +666,8 @@ cf68k_privilege_violation:
 	bsr breakpoint_deinstall
 	move.l (SP)+,D0
 	and.l #0xFFC0,D0
-	cmp.l #0x40C0,D0 // move from SR
-	beq.s .move_from_sr // 68000 emulation under TOS
+	cmp.l #0x40C0,D0         // move from SR
+	beq.s .move_from_sr      // 68000 emulation under TOS
 	bsr debug_display_fault
 .move_from_sr:
 	moveq #0x20,D0
@@ -527,18 +675,230 @@ cf68k_privilege_violation:
 	
 cf68k_line_a:
 
+	move.l D0,-(SP)
+	and.l #0xFFF8,D0
+	cmp.l #0xA910,D0         // move.b DX,-(SP) replacement
+	bne.s .not_moveb_sp
+	moveq #7,D0
+	and.l (SP),D0            // register number
+	move.l reg_d0(A0,D0.l*4),D0
+	bra.s .common_moveb_sp
+.not_moveb_sp:
+	cmp.l #0xA930,D0         // move.b (AX),-(SP) replacement
+	bne.s .not_moveb_ax_sp
+	moveq #7,D0
+	and.l (SP),D0            // register number
+	move.l reg_a0(A0,D0.l*4),A2
+	move.b (A2),D0
+	bra.s .common_moveb_sp
+.not_moveb_ax_sp:	
+	cmp.l #0xA9B0,D0         // move.b d(AX),-(SP) replacement
+	bne.s .not_moveb_dax_sp
+	moveq #7,D0
+	and.l (SP),D0            // register number
+	move.l reg_a0(A0,D0.l*4),A2
+	move.l reg_pc(A0),A1
+	addq.l #2,A1
+	move.l A1,reg_pc(A0)
+	move.w (A1),D0           // offset
+	ext.l D0
+	move.b (A2,D0.l),D0
+	bra.s .common_moveb_sp
+.not_moveb_dax_sp:
+	cmp.l #0xA9F1,D0         // move.b abs.l,-(SP) replacement
+	bne.s .not_moveb_absl_sp
+	move.l reg_pc(A0),A1
+	addq.l #4,A1
+	move.l A1,reg_pc(A0)
+	move.l -2(A1),A2         // address
+	move.l (A2),D0
+	bra.s .common_moveb_sp
+.not_moveb_absl_sp:
+	cmp.l #0xA9F2,D0         // move.b d(PC),-(SP) replacement
+	bne.s .not_moveb_dpc_sp
+	move.l reg_pc(A0),A1
+	addq.l #2,A1
+	move.l A1,reg_pc(A0)
+	move.w (A1),D0           // offset
+	ext.l D0
+	move.l (A1,D0.l),D0
+.common_moveb_sp:
+	move.l reg_a7(A0),A1
+	subq.l #2,A1
+	move.b D0,(A1)           // upper byte on the stack
+	move ccr,D0
+	move.b D0,reg_ccr(A0)
+	bra.s .common_moveb_sp_spp
+.not_moveb_dpc_sp:
+	cmp.l #0xA918,D0         // move.b (SP)+,DX replacement
+	bne.s .not_moveb_spp
+	moveq #7,D0
+	and.l (SP),D0            // register number
+	move.l reg_a7(A0),A1
+	move.b (A1),reg_d0(A0,D0.l*4)
+	bra.s .common_moveb_spp
+.not_moveb_spp:
+	cmp.l #0xA938,D0         // move.b (SP)+,(AX) replacement
+	bne.s .not_moveb_spp_ax
+	moveq #7,D0
+	and.l (SP),D0            // register number
+	move.l reg_a0(A0,D0.l*4),A2
+	bra.s .common_moveb_spp_abs
+.not_moveb_spp_ax:
+	cmp.l #0xA9B8,D0         // move.b (SP)+,d(AX) replacement
+	bne.s .not_moveb_spp_dax
+	moveq #7,D0
+	and.l (SP),D0            // register number
+	move.l reg_a0(A0,D0.l*4),A2
+	move.l reg_pc(A0),A1
+	addq.l #2,A1
+	move.l A1,reg_pc(A0)
+	move.w (A1),D0           // offset
+	ext.l D0
+	move.l reg_a7(A0),A1
+	move.b (A1),(A2,D0.l)
+	bra.s .common_moveb_spp
+.not_moveb_spp_dax:
+	cmp.l #0xA9F9,D0         // move.b (SP)+,abs.l replaced by 0xA9F9
+	bne.s .not_moveb_spp_absl
+	move.l reg_pc(A0),A1
+	addq.l #4,A1
+	move.l A1,reg_pc(A0)
+	move.l -2(A1),A2
+.common_moveb_spp_abs:
+	move.l reg_a7(A0),A1
+	move.b (A1),(A2)         // upper byte on the stack
+.common_moveb_spp:
+	move ccr,D0
+	move.b D0,reg_ccr(A0)
+	addq.l #2,A1
+.common_moveb_sp_spp:
+	move.l A1,reg_a7(A0)
+	btst #SR_S_BIT,reg_sr(A0)
+	beq.s .update_usp
+	move.l reg_a7(A0),reg_ssp(A0)
+	bra .jump_linea2
+.update_usp:
+	move.l reg_a7(A0),reg_usp(A0)
+	bra .jump_linea2
+.not_moveb_spp_absl:
+	move.l (SP),D0
+	and.l #0xFFC0,D0
+	cmp.l #0xABC0,D0        // mulu/s.l <ea>,dh:dl
+	bne.s .not_mul64
+	move.l A0,A6            // RegList structure
+	move.l reg_pc(A6),A0    // PC
+	addq.l #2,A0
+	move.l (SP),D5          // opcode
+	move.w (A0),D7          // ext
+	jsr read_operand_long   // => A0 (PC) updated, D0 operand
+	move.l D7,D1            // save ext
+	lsr.l #8,D7
+	lsr.l #4,D7
+	moveq #7,D6
+	and.l D6,D7             // Dl
+	and.l D1,D6             // Dh
+	move.l D0,-(SP)         // <ea>
+	move.l reg_d0(A6,D7.l*4),-(SP)
+	btst #11,D1             // ext
+	beq.s .mulu_64
+	jsr _PA_muls32
+	bra.s .mul_64_done
+.mulu_64:
+	jsr _PA_mulu32
+.mul_64_done:
+	moveq #0,D1
+	move.l 4(SP),D0
+	move.l D0,reg_d0(A6,D7.l*4) // Dl
+	sne.b D1
+	move.l (SP)+,reg_d0(A6,D6.l*4) // Dh
+	bne.s .muldiv_done
+	tst.l D1
+	bra.s .muldiv_done
+.not_mul64:
+	cmp.l #0xAFC0,D0        // divu/s.l <ea>,Dr:Dq
+	bne .not_div64
+	move.l A0,A6            // RegList structure
+	move.l reg_pc(A6),A0    // PC
+	addq.l #2,A0
+	move.l (SP),D5          // opcode
+	move.w (A0),D7          // ext
+	jsr read_operand_long   // => A0 (PC) updated, D0 operand
+	move.l D7,D1            // save ext
+	lsr.l #8,D7
+	lsr.l #4,D7
+	moveq #7,D6
+	and.l D6,D7             // Dq
+	and.l D1,D6             // Dr
+	move.l reg_d0(A6,D7.l*4),-(SP)
+	move.l reg_d0(A6,D6.l*4),-(SP)
+	move.l D0,-(SP)         // <ea>
+	beq.s .div64_overflow   // zero divide, to FIX
+	btst #11,D1
+	beq.s .divu_64
+	jsr _PA_divs64
+	bra.s .div64_done
+.divu_64:
+	jsr _PA_divu64
+.div64_done:
+	move ccr,D0
+	bvs.s .div64_overflow
+	move.l (SP)+,reg_d0(A6,D6.l*4) // Dr
+	move.l (SP)+,reg_d0(A6,D7.l*4) // Dq
+	bra.s .muldiv_done
+.div64_overflow:
+	addq.l #8,SP
+.muldiv_done:
+	addq.l #8,SP
+	move ccr,D0
+	move.b D0,reg_ccr(A6)
+	move.l A0,reg_pc(A6)
+	moveq #1,D0
+	btst #SR_S_BIT,reg_sr(A6)
+	beq.s .update_usp2
+	move.l reg_a7(A6),reg_ssp(A6)
+	rts
+.update_usp2:
+	move.l reg_a7(A6),reg_usp(A6)
+	rts
+.not_div64:
+	move.l (SP),D0
+	cmp.l #0xA920,D0
+	bne.s .jump_linea
+	move.l #0x41303030,D0    // A000
+	bsr get_cookie
+	beq.s .jump_linea
+	move.l A0,-(SP)
+	move.l D0,A0
+	jsr (A0)
+	move.l (SP)+,A3
+	move.l D0,reg_d0(A3)
+	move.l A0,reg_a0(A3)
+	move.l A1,reg_a1(A3)
+	move.l A2,reg_a2(A3)
+	move.l A3,A0
+.jump_linea:
 #ifdef DEBUG
 	move.l A0,-(SP)
-	move.l D0,-(SP)
 	lea debug13(PC),A0
 	bsr debug_display_string
+	move.l 4(SP),D0
 	bsr debug_hex_word
+	lea debug13b(PC),A0
+	bsr debug_display_string
+	move.l (SP),A0
+	move.l reg_pc(A0),D0
+	bsr debug_hex_long
 	lea crlf(PC),A0
 	bsr debug_display_string
-	move.l (SP)+,D0
 	move.l (SP)+,A0
 #endif
-	bra .vector_ok
+.jump_linea2:
+	moveq #2,D0
+	add.l D0,reg_pc(A0)
+	addq.l #4,SP
+	moveq #1,D0
+	rts
 
 cf68k_line_f:
 
@@ -561,7 +921,6 @@ cf68k_line_f:
 	moveq #7,D0
 	and.l (SP),D0
 	move.l A0,-(SP)
-	move.l A1,-(SP)
 	move.l reg_pc(A0),A1
 	move.w 2(A1),A1          // offset
 	move.l reg_a0(A0,D0.l*4),A0
@@ -569,7 +928,6 @@ cf68k_line_f:
 	.chip 68060
 	fsave (A0)
 	.chip 5200
-	move.l (SP)+,A1
 	moveq #4,D0
 	bra.s .inc_pc
 .not_fsave:
@@ -585,12 +943,11 @@ cf68k_line_f:
 	moveq #2,D0
 	bra.s .inc_pc
 .not_frestore_ax:
-	cmp.l #0xF368,D0
+	cmp.l #0xF368,D0         // frestore d(Ax)
 	bne.s .not_frestore
 	moveq #7,D0
 	and.l (SP),D0
 	move.l A0,-(SP)
-	move.l A1,-(SP)
 	move.l reg_pc(A0),A1
 	move.w 2(A1),A1          // offset
 	move.l reg_a0(A0,D0.l*4),A0
@@ -598,7 +955,6 @@ cf68k_line_f:
 	.chip 68060
 	frestore (A0)
 	.chip 5200
-	move.l (SP)+,A1
 	moveq #4,D0
 .inc_pc:
 	move.l (SP)+,A0
@@ -608,31 +964,55 @@ cf68k_line_f:
 	rts
 .not_frestore:
 	move.l (SP),D0
-#if 0
-	cmp.l #0xF800,D0         // lpstop
-	bne .not_lpstop
-	move.l A0,-(SP)
-	move.l reg_pc(A0),A0
-	move.w 2(A0),D0
-	cmp.l #0x01C0,D0
-	bne .not_lpstop2
-	move.w (A0)+,D0          // immediate data
-	move.l (SP),A0
-	addq.l #6,reg_pc(A0)
-	move.w D0,stop_area+2(A0) // copy user's STOP #n instruction to scratchpad
-	move.w #0x4E72,D0
-	move.w D0,stop_area(A0)
-	move.w #0x4E75,D0        // append an RTS
-	move.w D0,stop_area+4(A0)
+	cmp.l #0xF23C,D0         // fabs, fadd, fcmp, fdiv, fint, fintrz, fmove, fmul, fneg, fsqrt, fsub, ftst #
+	bne .not_fimm
+	move.l reg_pc(A0),A1
+	move.w 2(A1),D0          // 2nd word opcode
+	cmp.l #0x4423,D0         // fmul.s #x,fp0
+	beq .fmulsimm
+	and.l #0x7F,D0           // opmode
+	lea fvalid(PC),A1
+	move.b (A1,D0.l),D0
+	beq .not_fimm            // invalid
+	move.l reg_pc(A0),A1
+	move.w 2(A1),D0          // 2nd word opcode
+	and.l #0xE000,D0
+	cmp.l #0x4000,D0         // R/M
+	bne.s .not_fimm        
+	move.w 2(A1),D0          // 2nd word opcode
+	lsr.l #8,D0
+	lsr.l #2,D0
+	and.l #7,D0              // source specifier
+	lea flen(PC),A1
+	move.b (A1,D0.l),D0
+	beq.s .not_fimm          // invalid
+	move.l reg_pc(A0),A1
+	lea fpu_area,A2
+	addq.l #4,D0             // len data + opcode len
+	add.l D0,reg_pc(A0)
+	move.l (A1)+,D0          // opcode
+	and.l #0xFFC0FFFF,D0
+	or.l #0x00110000,D0      // (A1)
+	move.l D0,(A2)	
+	move.w #0x4E75,D0
+	move.w D0,4(A2)          // RTS
 	bsr cpushl_dc
 	bsr cpushl_ic
-	// to do
-	halt
-.not_lpstop2:
-	move.l (SP)+,A0
+	jsr (A2)	            // call fpu_area
+	addq.l #4,SP
+	moveq #1,D0
+	rts
+.fmulsimm:
+	.chip 68060
+	fmul.s 4(A1),fp0
+	.chip 5200
+	moveq #8,D0               // len data + opcode len
+	add.l D0,reg_pc(A0)
+	addq.l #4,SP
+	moveq #1,D0
+	rts
+.not_fimm:
 	move.l (SP),D0
-.not_lpstop:
-#endif
 #if 0
 	cmp.l #0xF438,D0
 	bne.s .not_debug_int_on
@@ -669,13 +1049,15 @@ cf68k_line_f:
 #endif
 	and.l #0xFF3F,D0
 	cmp.l #0xF418,D0 // cinva
-	beq.s .is_cinva  // cinva DC (0xF458), cinva IC (0xF498), cinva BC (0xF4D8)
-	cmp.l #0xF438,D0 // cpusha
+	beq.s .is_cpushl // cinva DC (0xF458), cinva IC (0xF498), cinva BC (0xF4D8)
+	cmp.l #0xF428,D0 // cpushl
+	beq.s .is_cpushl // cpushl DC (0xF468), cpushl IC (0xF4A8), cpushl BC (0xF4E8)
+	cmp.l #0xF438,D0 // cpusha DC (0xF478), cpusha IC (0xF4B8 ), cpusha BC (0xF4F8)
 	bne .no_cpushl
-.is_cinva:
+.is_cpushl:
 	move.l (SP),D0
 	and.l #0xC0,D0
-	beq .no_cpushl
+	beq.s .inc2_pc
 	cmp.l #0x40,D0   // 0xF478
 	beq.s .cpushl_dc 
 	cmp.l #0x80,D0   // 0xF4B8
@@ -713,6 +1095,138 @@ cf68k_line_f:
 #endif
 #endif
 	bra .vector_ok
+
+
+flen:	dc.b 4,4,0,0,2,8,1,0
+fvalid:
+	dc.b 1 // 0x00 fmove	
+	dc.b 1 // 0x01 fint
+	dc.b 0 // 0x02
+	dc.b 1 // 0x03 fintrz
+	dc.b 1 // 0x04 fsqrt
+	dc.b 0 // 0x05
+	dc.b 0 // 0x06
+	dc.b 0 // 0x07
+	dc.b 0 // 0x08
+	dc.b 0 // 0x09
+	dc.b 0 // 0x0A
+	dc.b 0 // 0x0B
+	dc.b 0 // 0x0C
+	dc.b 0 // 0x0D
+	dc.b 0 // 0x0E
+	dc.b 0 // 0x0F
+	dc.b 0 // 0x10
+	dc.b 0 // 0x11
+	dc.b 0 // 0x12
+	dc.b 0 // 0x13
+	dc.b 0 // 0x14
+	dc.b 0 // 0x15
+	dc.b 0 // 0x16
+	dc.b 0 // 0x17
+	dc.b 1 // 0x18 fabs
+	dc.b 0 // 0x19
+	dc.b 1 // 0x1A fneg
+	dc.b 0 // 0x1B
+	dc.b 0 // 0x1C
+	dc.b 0 // 0x1D
+	dc.b 0 // 0x1E
+	dc.b 0 // 0x1F
+	dc.b 1 // 0x20 fdiv
+	dc.b 0 // 0x21
+	dc.b 1 // 0x22 fadd
+	dc.b 1 // 0x23 fmul
+	dc.b 0 // 0x24
+	dc.b 0 // 0x25
+	dc.b 0 // 0x26
+	dc.b 0 // 0x27
+	dc.b 1 // 0x28 fsub
+	dc.b 0 // 0x29
+	dc.b 0 // 0x2A
+	dc.b 0 // 0x2B
+	dc.b 0 // 0x2C
+	dc.b 0 // 0x2D
+	dc.b 0 // 0x2E
+	dc.b 0 // 0x2F
+	dc.b 0 // 0x30
+	dc.b 0 // 0x31	
+	dc.b 0 // 0x32
+	dc.b 0 // 0x33
+	dc.b 0 // 0x34
+	dc.b 0 // 0x35	
+	dc.b 0 // 0x36
+	dc.b 0 // 0x37	
+	dc.b 1 // 0x38 fcmp
+	dc.b 0 // 0x39
+	dc.b 1 // 0x3A ftst
+	dc.b 0 // 0x3B
+	dc.b 0 // 0x3C
+	dc.b 0 // 0x3D
+	dc.b 0 // 0x3E
+	dc.b 0 // 0x3F
+	dc.b 0 // 0x40
+	dc.b 1 // 0x41 fsqrt
+	dc.b 0 // 0x42
+	dc.b 0 // 0x43
+	dc.b 0 // 0x44
+	dc.b 1 // 0x45 fsqrt
+	dc.b 0 // 0x46
+	dc.b 0 // 0x47
+	dc.b 0 // 0x48
+	dc.b 0 // 0x49
+	dc.b 0 // 0x4A
+	dc.b 0 // 0x4B
+	dc.b 0 // 0x4C
+	dc.b 0 // 0x4D
+	dc.b 0 // 0x4E
+	dc.b 0 // 0x4F
+	dc.b 0 // 0x50
+	dc.b 0 // 0x51
+	dc.b 0 // 0x52
+	dc.b 0 // 0x53
+	dc.b 0 // 0x54
+	dc.b 0 // 0x55
+	dc.b 0 // 0x56
+	dc.b 0 // 0x57	
+	dc.b 1 // 0x58 fsabs
+	dc.b 0 // 0x59
+	dc.b 1 // 0x5A fsneg
+	dc.b 0 // 0x5B
+	dc.b 1 // 0x5C fdabs
+	dc.b 0 // 0x5D
+	dc.b 1 // 0x5E fdneg
+	dc.b 0 // 0x5F	
+	dc.b 1 // 0x60 fsdiv
+	dc.b 0 // 0x61
+	dc.b 1 // 0x62 fsadd
+	dc.b 1 // 0x63 fsmul
+	dc.b 1 // 0x64 fddiv
+	dc.b 0 // 0x65
+	dc.b 1 // 0x66 fdadd
+	dc.b 1 // 0x67 fdmul
+	dc.b 1 // 0x68 fssub
+	dc.b 0 // 0x69
+	dc.b 0 // 0x6A
+	dc.b 0 // 0x6B
+	dc.b 1 // 0x6C fdsub
+	dc.b 0 // 0x6D
+	dc.b 0 // 0x6E
+	dc.b 0 // 0x6F
+	dc.b 0 // 0x70
+	dc.b 0 // 0x71
+	dc.b 0 // 0x72
+	dc.b 0 // 0x73
+	dc.b 0 // 0x74
+	dc.b 0 // 0x75
+	dc.b 0 // 0x76
+	dc.b 0 // 0x77
+	dc.b 0 // 0x78
+	dc.b 0 // 0x79
+	dc.b 0 // 0x7A
+             dc.b 0 // 0x7B
+	dc.b 0 // 0x7C
+	dc.b 0 // 0x7D
+	dc.b 0 // 0x7E
+	dc.b 0 // 0x7F
 	
 cf68k_trace:
 
@@ -748,24 +1262,40 @@ cf68k_trace:
 	bsr debug_display_disassemble_pc
 	move.l cpu_step_over,D0
 	beq.s .no_breakpoint_remove
+#if 1
+	move.l A0,-(SP)
+#else
 	lea -20(SP),SP
 	movem.l D1-D2/A0-A2,(SP)
+#endif
 	move.l D0,-(SP)
 	move.l v_breakpoint_remove,A0
 	jsr (A0)
 	addq.l #4,SP
+#if 1
+	move.l (SP)+,A0
+#else
 	movem.l (SP),D1-D2/A0-A2 
 	lea 20(SP),SP
+#endif
 	clr.l cpu_step_over
 .no_breakpoint_remove:
+#if 1
+	move.l A0,-(SP)
+#else
 	lea -20(SP),SP
 	movem.l D1-D2/A0-A2,(SP)
+#endif
 	clr.l -(SP)              // suspend current task
 	move.l v_suspend_task,A0
 	jsr (A0)
 	addq.l #4,SP
+#if 1
+	move.l (SP)+,A0
+#else
 	movem.l (SP),D1-D2/A0-A2 
 	lea 20(SP),SP
+#endif
 	move.l cpu_trace_thru,D0
 	or.l cpu_trace_count,D0
 	beq.s .end_trace
@@ -893,7 +1423,7 @@ cf68k_trap15:
 	// Let 680x0 virtual machine handle all these exceptions
 	moveq #0,D0
 	rts
-	
+
 //#########################################################################
 //# Callbacks from emulation library for hardware-related instructions    #
 //#########################################################################
@@ -916,7 +1446,7 @@ cf68k_cas:
 cf68k_cas2:
 cf68k_callm:
 cf68k_rtm:
-#ifdef DEBUG
+#if 0 // #ifdef DEBUG
 	move.l A0,-(SP)
 	lea debug4(PC),A0
 	bsr debug_display_string
@@ -934,16 +1464,24 @@ breakpoint_deinstall:
 	moveq #0,D0              // not a breakpoint
 	tst.l v_breakpoint_deinstall
 	beq.s .no_v_breakpoint
+#if 1
+	move.l A0,-(SP)
+#else
 	lea -20(SP),SP
 	movem.l D1-D2/A0-A2,(SP)
+#endif
 	move.l current_tcb,-(SP) // pxCurrentTCB
 	pea user_triggered
 	move.l reg_pc(A0),-(SP)  // PC
 	move.l v_breakpoint_deinstall,A0
 	jsr (A0)
 	lea 12(SP),SP
+#if 1
+	move.l (SP)+,A0
+#else
 	movem.l (SP),D1-D2/A0-A2 
 	lea 20(SP),SP
+#endif
 .no_v_breakpoint:
 	tst.l D0
 	rts
@@ -953,14 +1491,22 @@ breakpoint_install:
 	moveq #0,D0
 	tst.l v_breakpoint_install
 	beq.s .no_v_breakpoint
+#if 1
+	move.l A0,-(SP)
+#else
 	lea -20(SP),SP
 	movem.l D1-D2/A0-A2,(SP)
+#endif
 	move.l reg_pc(A0),-(SP)  // reinstall breakpoint and continue
 	move.l v_breakpoint_install,A0
 	jsr (A0)
 	addq.l #4,SP
+#if 1
+	move.l (SP)+,A0
+#else
 	movem.l (SP),D1-D2/A0-A2 
 	lea 20(SP),SP
+#endif
 	tst.l D0
 	rts
 	
@@ -1022,51 +1568,56 @@ cf68k_write_control_register:
 	move.l (SP)+,A0
 #endif
 	and.l #~CF_CACR_EUSP,D0
-	cmp.l #(CF_CACR_DCINVA+CF_CACR_ICINVA),D0
-	beq .cacr_ok
-	cmp.l #(CF_CACR_DCINVA+CF_CACR_BCINVA+CF_CACR_ICINVA),D0
-	beq .cacr_ok
-	cmp.l #(CF_CACR_DEC+CF_CACR_DESB+CF_CACR_BEC+CF_CACR_IEC),D0
-	beq.s .cacr_ok
-	cmp.l #(CF_CACR_DESB+CF_CACR_BEC+CF_CACR_IEC),D0
-	beq.s .cacr_ok
-	cmp.l #(CF_CACR_DEC+CF_CACR_DESB+CF_CACR_BEC),D0
-	beq.s .cacr_ok	
-	cmp.l #(CF_CACR_DESB+CF_CACR_BEC),D0
-	beq.s .cacr_ok
-	cmp.l #(CF_CACR_DEC+CF_CACR_BEC+CF_CACR_IEC),D0
-	beq.s .cacr_ok
-	cmp.l #(CF_CACR_BEC+CF_CACR_IEC),D0
-	beq.s .cacr_ok
-	cmp.l #(CF_CACR_DEC+CF_CACR_BEC),D0
-	beq.s .cacr_ok	
-	cmp.l #(CF_CACR_BEC),D0
-	beq.s .cacr_ok
-	cmp.l #(CF_CACR_DEC+CF_CACR_DESB+CF_CACR_IEC),D0
-	beq.s .cacr_ok
-	cmp.l #(CF_CACR_DESB+CF_CACR_IEC),D0
-	beq.s .cacr_ok
-	cmp.l #(CF_CACR_DEC+CF_CACR_DESB),D0
-	beq.s .cacr_ok	
-	cmp.l #(CF_CACR_DESB),D0
-	beq.s .cacr_ok
-	cmp.l #(CF_CACR_DEC+CF_CACR_IEC),D0
-	beq.s .cacr_ok
-	cmp.l #(CF_CACR_IEC),D0
-	beq.s .cacr_ok
-	cmp.l #(CF_CACR_DEC),D0
-	beq.s .cacr_ok	
-	tst.l D0
-	bne.s .not_cacr
+	move.l A0,-(SP)
+	lea tab_cacr_valid-4(PC),A0
+.search_cacr_valid:
+		addq.l #4,A0
+		cmp.l (A0),D0
+		beq.s .cacr_ok
+	tst.l (A0)
+	bne.s .search_cacr_valid
+	btst #3,D0 // CI - 68K
+	beq.s .not_ci
+	bsr cpushl_ic
+.not_ci:
+	btst #11,D0 // CD - 68K 
+	beq.s .not_cd
+	bsr cpushl_dc
+.not_cd:
+	move.l (SP)+,A0
+	move.l #~0x808,D0
+	and.l D0,reg_cacr(A0)
+	bra.s .not_cacr
 .cacr_ok:
 	bsr cpushl_dc
 	bsr cpushl_ic
 	or.l #CF_CACR_EUSP,D0
 	movec.l D0,CACR
 	move.l D0,old_cacr
+	move.l (SP)+,A0
 .not_cacr:
 	move.l (SP)+,D0
 	rts
+
+tab_cacr_valid:
+	dc.l CF_CACR_DCINVA+CF_CACR_ICINVA
+	dc.l CF_CACR_DCINVA+CF_CACR_BCINVA+CF_CACR_ICINVA
+	dc.l CF_CACR_DEC+CF_CACR_DESB+CF_CACR_BEC+CF_CACR_IEC
+	dc.l CF_CACR_DESB+CF_CACR_BEC+CF_CACR_IEC
+	dc.l CF_CACR_DEC+CF_CACR_DESB+CF_CACR_BEC
+	dc.l CF_CACR_DESB+CF_CACR_BEC
+	dc.l CF_CACR_DEC+CF_CACR_BEC+CF_CACR_IEC
+	dc.l CF_CACR_BEC+CF_CACR_IEC
+	dc.l CF_CACR_DEC+CF_CACR_BEC
+	dc.l CF_CACR_BEC
+	dc.l CF_CACR_DEC+CF_CACR_DESB+CF_CACR_IEC
+	dc.l CF_CACR_DESB+CF_CACR_IEC
+	dc.l CF_CACR_DEC+CF_CACR_DESB
+	dc.l CF_CACR_DESB
+	dc.l CF_CACR_DEC+CF_CACR_IEC
+	dc.l CF_CACR_IEC
+	dc.l CF_CACR_DEC
+	dc.l 0
 
 cpushl_dc:
 
@@ -1103,26 +1654,6 @@ cpushl_ic:
 	ble.s .loop_cpushl_ic
 	move.l (SP)+,A1
 	rts
-	
-#if 0
-cpushl_bc:
-
-	move.l A1,-(SP)
-	lea 0,A1
-.loop_cpushl_bc:
-		dc.w 0xF4A9 // cpushl IC,(A1)
-		addq.l #1,A1
-		dc.w 0xF4A9 // cpushl IC,(A1)
-		addq.l #1,A1
-		dc.w 0xF4A9 // cpushl IC,(A1)
-		addq.l #1,A1
-		dc.w 0xF4A9 // cpushl IC,(A1)
-		add.l #0x10-3,A1
-	cmp.l #LAST_ICACHE_ADDR,A1
-	ble.s .loop_cpushl_ic
-	move.l (SP)+,A1
-	rts
-#endif
 	
 debug_disassemble_pc:
 
@@ -1291,7 +1822,7 @@ debug_display_fault:
 	lea debug18(PC),A0
 	bsr debug_display_string
 	move.l current_tcb,A0
-	lea 0x138(A0),A0
+	lea 0x13C(A0),A0
 	bsr debug_display_string
 	move.l current_tcb,D0
 	cmp.l tid_tos,D0
@@ -1353,11 +1884,12 @@ debug_display_fault:
 .not_an_interrupt:
 	move.l handler_fault,D0
 	beq.s .no_handler_fault
+	pea (A3)                 // RegList
 	move.l D3,-(SP)          // vector
 	move.l reg_pc(A3),-(SP)
 	move.l D0,A0
 	jsr (A0)
-	addq.l #8,SP
+	lea 12(SP),SP
 .no_handler_fault:
 	movem.l (SP),D0-D3/A0-A3
 	lea 32(SP),SP
@@ -1560,8 +2092,8 @@ debug1:	.byte 13,10,10
 	.asciz "Breakpoint encountered at 0x"
 debug2:	.asciz " - Base: "
 debug3:	.asciz "cf68k emulation error, opcode 0x"
-debug4:	.ascii "Hardware-related instructions not emulated"
-	.byte 13,10,0
+//debug4:	.ascii "Hardware-related instructions not emulated"
+//	.byte 13,10,0
 debug5:	.ascii "CF68K emulation started"
 	.byte 13,10,0
 debug6:	.byte 13,10
@@ -1578,15 +2110,18 @@ debug11:	.byte 13,10
 	.asciz "User Stack (USP): "
 //debug12:	.asciz "movec opcode 0x"
 debug13:	.asciz "Line A opcode 0x"
+debug13b:	.asciz " at 0x"
 debug14:	.asciz "Line F opcode 0x"
 //debug15:	.asciz "movec Dx,CACR 0x"
 debug16:	.ascii "Format error"
 	.byte 13,10,0
+#if 0
 debug17:	.ascii "Interrupt"
 	.byte 13,10
 	.asciz "PC 0x"
 debug17sr:	.asciz " SR 0x"
 debug17f:	.asciz " Format 0x"
+#endif
 debug18:	.asciz " - Task: "
 debug19:	.asciz "CF68KLIB stack (SP): "
 debug20:	.asciz "VDI 0x"
@@ -1752,10 +2287,11 @@ tab_mess_fault:
  	.asciz "Not an access or address error"
 #ifndef MCF5445X
  	.asciz "Arbiter timeout interrupt"
+ 	.asciz "XLB PCI interrupt"
 #else
 	.byte 0
-#endif
  	.byte 0
+#endif
  	.byte 0
  	.asciz "Protection fault"
  	.asciz "TLB miss on opword instruction"

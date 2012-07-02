@@ -28,6 +28,9 @@
 
 #include <mint/osbind.h>
 #include <mint/sysvars.h>
+#ifndef ramtop
+#define ramtop (((unsigned long *) 0x5A4L)) 
+#endif
 #include <stdlib.h>
 #include <string.h>
 #include "pcixbios.h"
@@ -69,7 +72,7 @@ extern long *tab_funcs_pci;
 
 extern void kprint(const char *fmt, ...);
 extern int sprintD(char *s, const char *fmt, ...);
-#if defined(COLDFIRE) && defined(NETWORK) && defined(LWIP)
+#if defined(COLDFIRE) && defined(LWIP)
 extern void board_printf(const char *fmt, ...);
 #else
 #define board_printf kprint
@@ -231,6 +234,17 @@ struct usb_device {
 	int usbnum;
 };
 
+typedef struct
+{
+	long ident;
+	union
+	{
+		long l;
+		short i[2];
+		char c[4];
+	} v;
+} USB_COOKIE;
+
 /**********************************************************************
  * this is how the lowlevel part communicate with the outer world
  */
@@ -316,6 +330,8 @@ int usb_mem_init(void);
 void usb_mem_stop(void);
 
 /* routines */
+USB_COOKIE *usb_get_cookie(long id);
+void usb_error_msg(const char *const fmt, ... );
 int usb_init(long handle, const struct pci_device_id *ent); /* initialize the USB Controller */
 int usb_stop(void); /* stop the USB Controller */
 
@@ -328,7 +344,7 @@ int usb_bulk_msg(struct usb_device *dev, unsigned int pipe, void *data, int len,
 int usb_submit_int_msg(struct usb_device *dev, unsigned long pipe, void *buffer, int transfer_len, int interval);
 void usb_disable_asynch(int disable);
 int usb_maxpacket(struct usb_device *dev, unsigned long pipe);
-inline void wait_ms(unsigned long ms);
+void wait_ms(unsigned long ms);
 int usb_get_configuration_no(struct usb_device *dev, unsigned char *buffer, int cfgno);
 int usb_get_report(struct usb_device *dev, int ifnum, unsigned char type, unsigned char id, void *buf, int size);
 int usb_get_class_descriptor(struct usb_device *dev, int ifnum, unsigned char type, unsigned char id, void *buf, int size);
@@ -336,6 +352,13 @@ int usb_clear_halt(struct usb_device *dev, int pipe);
 int usb_string(struct usb_device *dev, int index, char *buf, size_t size);
 int usb_set_interface(struct usb_device *dev, int interface, int alternate);
 
+extern unsigned short swap_short(unsigned short val);
+extern unsigned long swap_long(unsigned long val);
+
+#if 1
+	#define __swap_16(x) swap_short(x)
+  #define __swap_32(x) swap_long(x)
+#else
 /* big endian -> little endian conversion */
 /* some CPUs are already little endian e.g. the ARM920T */
 #define __swap_16(x) \
@@ -351,12 +374,10 @@ int usb_set_interface(struct usb_device *dev, int interface, int alternate);
 		((x_ & 0x00FF0000UL) >>	 8) | \
 		((x_ & 0xFF000000UL) >> 24)); \
 	})
+#endif
 
 #define swap_16(x) __swap_16(x)
 #define swap_32(x) __swap_32(x)
-
-extern unsigned short swap_short(unsigned short val);
-extern unsigned long swap_long(unsigned long val);
 
 #define le16_to_cpu cpu_to_le16
 #define le32_to_cpu cpu_to_le32

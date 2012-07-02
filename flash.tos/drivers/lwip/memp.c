@@ -47,7 +47,15 @@
 #include "sys.h"
 #include "stats.h"
 
-#ifdef NETWORK
+#define USE_MALLOC
+
+#ifdef COLDFIRE
+#define pvPortMalloc pvPortMalloc2
+#else
+#include <mint/osbind.h>
+#define pvPortMalloc(a) Mxalloc(a, 3) 
+#endif
+
 #ifdef LWIP
 
 struct memp {
@@ -89,8 +97,9 @@ static const u16_t memp_num[MEMP_MAX] = {
 #define MEMP_TYPE_SIZE(qty, type) \
   ((qty) * (MEMP_SIZE + MEM_ALIGN_SIZE(sizeof(type))))
 
+#ifdef USE_MALLOC
 static u8_t *memp_memory;
-#if 0
+#else
 static u8_t memp_memory[MEM_ALIGNMENT - 1 + 
   MEMP_TYPE_SIZE(MEMP_NUM_PBUF, struct pbuf) +
   MEMP_TYPE_SIZE(MEMP_NUM_RAW_PCB, struct raw_pcb) +
@@ -144,7 +153,8 @@ memp_init(void)
   }
 #endif /* MEMP_STATS */
 
-	memp_memory = (u8_t *)pvPortMalloc2(MEM_ALIGNMENT - 1 + 
+#ifdef USE_MALLOC
+	memp_memory = (u8_t *)pvPortMalloc(MEM_ALIGNMENT - 1 + 
   MEMP_TYPE_SIZE(MEMP_NUM_PBUF, struct pbuf) +
   MEMP_TYPE_SIZE(MEMP_NUM_RAW_PCB, struct raw_pcb) +
   MEMP_TYPE_SIZE(MEMP_NUM_UDP_PCB, struct udp_pcb) +
@@ -156,6 +166,7 @@ memp_init(void)
   MEMP_TYPE_SIZE(MEMP_NUM_API_MSG, struct api_msg) +
   MEMP_TYPE_SIZE(MEMP_NUM_TCPIP_MSG, struct tcpip_msg) +
   MEMP_TYPE_SIZE(MEMP_NUM_SYS_TIMEOUT, struct sys_timeo));
+#endif /* USE_MALLOC */
   memp = MEM_ALIGN(memp_memory);
   for (i = 0; i < MEMP_MAX; ++i) {
     memp_tab[i] = NULL;
@@ -258,6 +269,5 @@ memp_free(memp_t type, void *mem)
 }
 
 #endif /* LWIP */
-#endif /* NETWORK */
 
 

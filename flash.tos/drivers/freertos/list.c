@@ -86,8 +86,7 @@ Changes from V4.0.4
 #include "FreeRTOS.h"
 #include "list.h"
 
-#ifdef NETWORK
-#ifdef LWIP
+#if defined(LWIP) || defined(FREERTOS)
 
 /*-----------------------------------------------------------
  * PUBLIC LIST API documented in list.h
@@ -206,5 +205,4 @@ xList * pxList;
 }
 /*-----------------------------------------------------------*/
 
-#endif /* LWIP */
-#endif /* NETWORK */
+#endif /* defined(LWIP) || defined(FREERTOS) */

@@ -47,7 +47,6 @@
 #include "snmp.h"
 #include "stats.h"
 
-#ifdef NETWORK
 #ifdef LWIP
 
 static u8_t ip_reassbuf[IP_HLEN + IP_REASS_BUFSIZE];
@@ -392,5 +391,4 @@ ip_frag(struct pbuf *p, struct netif *netif, struct ip_addr *dest)
 }
 
 #endif /* LWIP */
-#endif /* NETWORK */
 

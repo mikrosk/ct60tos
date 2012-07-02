@@ -1,5 +1,5 @@
 /* TOS 4.04 Xbios PCI for the CT60 board
-*  Didier Mequignon 2005, e-mail: aniplay@wanadoo.fr
+*  Didier Mequignon 2005-2012, e-mail: aniplay@wanadoo.fr
 *
 *  This library is free software; you can redistribute it and/or
 *  modify it under the terms of the GNU Lesser General Public
@@ -63,6 +63,24 @@
                                         Capability Pointer                  */
 #define PVPDAD                0x4E   /* PCI Vital Product Data Address      */
 #define PVPDATA               0x50   /* PCI VPD Data                        */
+
+/* Header type 1 (PCI-to-PCI bridges) */
+#define PCI_PRIMARY_BUS        0x18  /* Primary bus number */
+#define PCI_SECONDARY_BUS      0x19  /* Secondary bus number */
+#define PCI_SUBORDINATE_BUS    0x1A  /* Highest bus number behind the bridge */
+#define PCI_SEC_LATENCY_TIMER  0x1B  /* Latency timer for secondary interface */
+#define PCI_IO_BASE            0x1C  /* I/O range behind the bridge */
+#define PCI_IO_LIMIT           0x1D
+#define PCI_SEC_STATUS         0x1E  /* Secondary status register, only bit 14 used */
+#define PCI_MEMORY_BASE        0x20  /* Memory range behind */
+#define PCI_MEMORY_LIMIT       0x22
+#define PCI_PREF_MEMORY_BASE   0x24  /* Prefetchable memory range behind */
+#define PCI_PREF_MEMORY_LIMIT  0x26
+#define PCI_PREF_BASE_UPPER32  0x28  /* Upper half of prefetchable memory range */
+#define PCI_PREF_LIMIT_UPPER32 0x2C
+#define PCI_IO_BASE_UPPER16    0x30	 /* Upper half of I/O addresses */
+#define PCI_IO_LIMIT_UPPER16   0x32
+#define PCI_BRIDGE_CONTROL     0x3E  /* Bridge Control */
 
 typedef struct
 {
@@ -193,9 +211,9 @@ __extension__	\
 	short  _c = (short) (c);	\
 	\
 	__asm__ volatile (	\
-		"movl	%4,sp@-\n\t"	\
+		"movw	%4,sp@-\n\t"	\
 		"movw	%3,sp@-\n\t"	\
-		"movw	%2,sp@-\n\t"	\
+		"movl	%2,sp@-\n\t"	\
 		"movw	%1,sp@-\n\t"	\
 		"trap	#14\n\t"	\
 		"lea	sp@(10),sp"	\
@@ -273,8 +291,8 @@ __extension__	\
 #define get_card_used(handle,callback) (long)trap_14_wll((short)(317),(long)(handle),(long *)(address))
 #define set_card_used(handle,callback) (long)trap_14_wll((short)(318),(long)(handle),(long *)(callback))
 #define read_mem_byte(handle,offset,address) (long)trap_14_wlll((short)(319),(long)(handle),(unsigned long)(offset),(unsigned char *)(address))
-#define read_mem_word(handle,offset,address) (long)trap_14_wlll((short)(320),(unsigned long)(offset),(unsigned short *)(address))
-#define read_mem_longword(handle,offset,address) (long)trap_14_wlll((short)(321),(unsigned long)(offset),(unsigned long *)(address))
+#define read_mem_word(handle,offset,address) (long)trap_14_wlll((short)(320),(long)(handle),(unsigned long)(offset),(unsigned short *)(address))
+#define read_mem_longword(handle,offset,address) (long)trap_14_wlll((short)(321),(long)(handle),(unsigned long)(offset),(unsigned long *)(address))
 #define fast_read_mem_byte(handle,offset) (unsigned char)trap_14_wll((short)(322),(long)(handle),(unsigned long)(offset))
 #define fast_read_mem_word(handle,offset) (unsigned short)trap_14_wll((short)(323),(long)(handle),(unsigned long)(offset))
 #define fast_read_mem_longword(handle,offset) (unsigned long)trap_14_wll((short)(324),(long)(handle),(unsigned long)(offset))
@@ -300,6 +318,9 @@ __extension__	\
 #define dma_buffoper(mode) (long)trap_14_ww((short)(351),(short)(mode))
 #define read_mailbox(mailbox,pointer)  (long)trap_14_wwl((short)(352),(short)(mailbox),(unsigned long *)(pointer))
 #define write_mailbox(mailbox,data) (long)trap_14_wwl((short)(353),(short)(mailbox),(unsigned long)(data))
+#define dma_alloc(size) (long)trap_14_wl((short)(354),(unsigned long)(size))
+#define dma_free(addr) (long)trap_14_wl((short)(355),(unsigned long)(addr))
+#define dma_lock(mode) (long)trap_14_ww((short)(356),(short)(mode))
 
 extern long Find_pci_device(unsigned long id, unsigned short index);
 extern long Find_pci_classcode(unsigned long class, unsigned short index);

@@ -27,7 +27,7 @@
 #include "../../include/fire.h"
 #endif
 
-#if defined(NETWORK) && defined(LWIP) && defined(DEBUG)
+#if defined(LWIP) && defined(DEBUG)
 extern void board_printf(const char *fmt, ...);
 #endif
 
@@ -108,31 +108,33 @@ struct videl_table {
 
 /* Videl native VGA modes */
 static struct videl_table table_rez[] = {
+#if 0
 	{ 320, 200, 60, 25,  4, FLAGS_ST_MODES, 0x017, 0x012, 0x001, 0x20E, 0x00D, 0x011, 0x419, 0x3AF, 0x08F, 0x08F, 0x3AF, 0x415, 5, 0x186 }, // ST-LOW 25 MHz
 	{ 640, 200, 60, 25,  2, FLAGS_ST_MODES, 0x017, 0x012, 0x001, 0x20E, 0x00D, 0x011, 0x419, 0x3AF, 0x08F, 0x08F, 0x3AF, 0x415, 9, 0x186 }, // ST-MED 25 MHz
 	{ 640, 400, 60, 25,  1, FLAGS_ST_MODES, 0x0C6, 0x08D, 0x015, 0x273, 0x050, 0x096, 0x419, 0x3AF, 0x08F, 0x08F, 0x3AF, 0x415, 8, 0x186 }, // ST-HIG 25 MHz
-	{ 640, 240, 60, 25,  1, 0, 0x0C6, 0x08D, 0x015, 0x273, 0x050, 0x096, 0x419, 0x3FF, 0x03F, 0x03F, 0x3FF, 0x415, 9, 0x186 }, // 25 MHz
 	{ 320, 240, 60, 25,  2, 0, 0x017, 0x012, 0x001, 0x20A, 0x009, 0x011, 0x419, 0x3FF, 0x03F, 0x03F, 0x3FF, 0x415, 5, 0x186 }, // 25 MHz
-	{ 640, 240, 60, 25,  2, 0, 0x017, 0x012, 0x001, 0x20E, 0x00D, 0x011, 0x419, 0x3FF, 0x03F, 0x03F, 0x3FF, 0x415, 9, 0x186 }, // 25 MHz
 	{ 320, 240, 60, 25,  4, 0, 0x0C6, 0x08D, 0x015, 0x28A, 0x06B, 0x096, 0x419, 0x3FF, 0x03F, 0x03F, 0x3FF, 0x415, 5, 0x186 }, // 25 MHz
-	{ 640, 240, 60, 25,  4, 0, 0x0C6, 0x08D, 0x015, 0x2A3, 0x07C, 0x096, 0x419, 0x3FF, 0x03F, 0x03F, 0x3FF, 0x415, 9, 0x186 }, // 25 MHz
 	{ 320, 240, 60, 25,  8, 0, 0x0C6, 0x08D, 0x015, 0x29A, 0x07B, 0x096, 0x419, 0x3FF, 0x03F, 0x03F, 0x3FF, 0x415, 5, 0x186 }, // 25 MHz
-	{ 640, 240, 60, 25,  8, 0, 0x0C6, 0x08D, 0x015, 0x2AB, 0x084, 0x096, 0x419, 0x3FF, 0x03F, 0x03F, 0x3FF, 0x415, 9, 0x186 }, // 25 MHz
 	{ 320, 240, 60, 25, 16, 0, 0x0C6, 0x08D, 0x015, 0x2AC, 0x091, 0x096, 0x419, 0x3FF, 0x03F, 0x03F, 0x3FF, 0x415, 5, 0x186 }, // 25 MHz
+	{ 320, 480, 60, 25,  2, 0, 0x017, 0x012, 0x001, 0x20A, 0x009, 0x011, 0x419, 0x3FF, 0x03F, 0x03F, 0x3FF, 0x415, 4, 0x186 }, // 25 MHz
+	{ 320, 480, 60, 25,  4, 0, 0x0C6, 0x08D, 0x015, 0x28A, 0x06B, 0x096, 0x419, 0x3FF, 0x03F, 0x03F, 0x3FF, 0x415, 4, 0x186 }, // 25 MHz
+	{ 320, 480, 60, 25,  8, 0, 0x0C6, 0x08D, 0x015, 0x29A, 0x07B, 0x096, 0x419, 0x3FF, 0x03F, 0x03F, 0x3FF, 0x415, 4, 0x186 }, // 25 MHz
+	{ 320, 480, 60, 25, 16, 0, 0x0C6, 0x08D, 0x015, 0x2AC, 0x091, 0x096, 0x419, 0x3FF, 0x03F, 0x03F, 0x3FF, 0x415, 4, 0x186 }, // 25 MHz
+	{ 640, 240, 60, 25,  1, 0, 0x0C6, 0x08D, 0x015, 0x273, 0x050, 0x096, 0x419, 0x3FF, 0x03F, 0x03F, 0x3FF, 0x415, 9, 0x186 }, // 25 MHz
+	{ 640, 240, 60, 25,  2, 0, 0x017, 0x012, 0x001, 0x20E, 0x00D, 0x011, 0x419, 0x3FF, 0x03F, 0x03F, 0x3FF, 0x415, 9, 0x186 }, // 25 MHz
+	{ 640, 240, 60, 25,  4, 0, 0x0C6, 0x08D, 0x015, 0x2A3, 0x07C, 0x096, 0x419, 0x3FF, 0x03F, 0x03F, 0x3FF, 0x415, 9, 0x186 }, // 25 MHz
+	{ 640, 240, 60, 25,  8, 0, 0x0C6, 0x08D, 0x015, 0x2AB, 0x084, 0x096, 0x419, 0x3FF, 0x03F, 0x03F, 0x3FF, 0x415, 9, 0x186 }, // 25 MHz
 	{ 640, 240, 60, 25, 16, 0, 0x0C6, 0x08D, 0x015, 0x2AC, 0x091, 0x096, 0x419, 0x3FF, 0x03F, 0x03F, 0x3FF, 0x415, 9, 0x186 }, // 25 MHz
 	{ 640, 480, 60, 25,  1, 0, 0x0C6, 0x08D, 0x015, 0x273, 0x050, 0x096, 0x419, 0x3FF, 0x03F, 0x03F, 0x3FF, 0x415, 8, 0x186 }, // 25 MHz
-	{ 320, 480, 60, 25,  2, 0, 0x017, 0x012, 0x001, 0x20A, 0x009, 0x011, 0x419, 0x3FF, 0x03F, 0x03F, 0x3FF, 0x415, 4, 0x186 }, // 25 MHz
 	{ 640, 480, 60, 25,  2, 0, 0x017, 0x012, 0x001, 0x20E, 0x00D, 0x011, 0x419, 0x3FF, 0x03F, 0x03F, 0x3FF, 0x415, 8, 0x186 }, // 25 MHz
-	{ 320, 480, 60, 25,  4, 0, 0x0C6, 0x08D, 0x015, 0x28A, 0x06B, 0x096, 0x419, 0x3FF, 0x03F, 0x03F, 0x3FF, 0x415, 4, 0x186 }, // 25 MHz
+#endif
 	{ 640, 480, 60, 25,  4, 0, 0x0C6, 0x08D, 0x015, 0x2A3, 0x07C, 0x096, 0x419, 0x3FF, 0x03F, 0x03F, 0x3FF, 0x415, 8, 0x186 }, // 25 MHz
-	{ 320, 480, 60, 25,  8, 0, 0x0C6, 0x08D, 0x015, 0x29A, 0x07B, 0x096, 0x419, 0x3FF, 0x03F, 0x03F, 0x3FF, 0x415, 4, 0x186 }, // 25 MHz
 	{ 640, 480, 60, 25,  8, 0, 0x0C6, 0x08D, 0x015, 0x2AB, 0x084, 0x096, 0x419, 0x3FF, 0x03F, 0x03F, 0x3FF, 0x415, 8, 0x186 }, // 25 MHz
-	{ 320, 480, 60, 25, 16, 0, 0x0C6, 0x08D, 0x015, 0x2AC, 0x091, 0x096, 0x419, 0x3FF, 0x03F, 0x03F, 0x3FF, 0x415, 4, 0x186 }, // 25 MHz
 	{ 640, 480, 60, 25, 16, 0, 0x0C6, 0x08D, 0x015, 0x2AC, 0x091, 0x096, 0x419, 0x3FF, 0x03F, 0x03F, 0x3FF, 0x415, 8, 0x186 }, // 25 MHz
 //	{ 640, 480, 60, 50, 16, 0, 0x189, 0x126, 0x031, 0x000, 0x160, 0x135, 0x419, 0x3FF, 0x03F, 0x03F, 0x3FF, 0x415, 4, 0x182 }, // 50 MHz
-#if defined(COLDFIRE) && defined(MCF547X) /* FIREBEE */
-//	{ 1280, 1024, 60, 137, 16, FLAGS_ACP_MODES, 1800, 1380, 99, 100, 1379, 1500, 1150, 1074, 49, 50, 1073, 1100, 0, 0 }, // 137 MHz
-//	{ 1280, 1024, 60, 137, 32, FLAGS_ACP_MODES, 1800, 1380, 99, 100, 1379, 1500, 1150, 1074, 49, 50, 1073, 1100, 0, 0 }  // 137 MHz
+#if 0 // #if defined(COLDFIRE) && defined(MCF547X) /* FIREBEE */
+	{ 1280, 1024, 60, 137, 16, FLAGS_ACP_MODES, 1800, 1380, 99, 100, 1379, 1500, 1150, 1074, 49, 50, 1073, 1100, 0, 0 }, // 137 MHz
+	{ 1280, 1024, 60, 137, 32, FLAGS_ACP_MODES, 1800, 1380, 99, 100, 1379, 1500, 1150, 1074, 49, 50, 1073, 1100, 0, 0 }  // 137 MHz
 #endif
 };
 
@@ -400,7 +402,7 @@ static struct fb_videomode *find_mode(long width, long height, long clock, long 
 						continue;
 					if(db->vmode & (FB_VMODE_DOUBLE | FB_VMODE_INTERLACED))
 					 	continue;
-#if defined(NETWORK) && defined(LWIP) && defined(DEBUG)
+#if defined(LWIP) && defined(DEBUG)
 //					board_printf(" %dx%d@%d %dMHz i:%d j:%d k:%d\r\n", db->xres, db->yres, db->refresh, (int)(PICOS2KHZ(db->pixclock)/1000), i, j, k);
 #endif			
 					if(i) // second loop
@@ -435,7 +437,7 @@ static struct fb_videomode *find_mode(long width, long height, long clock, long 
 							diff = abs;
 							best_db = db;
 						}
-#if defined(NETWORK) && defined(LWIP) && defined(DEBUG)
+#if defined(LWIP) && defined(DEBUG)
 //						board_printf(" ref:%d abs:%d diff:%d best:%08X j:%d k:%d\r\n",  db->refresh, abs, diff, best_db, j, k);
 #endif			
 					}							
@@ -455,7 +457,7 @@ static struct fb_videomode *find_mode(long width, long height, long clock, long 
 	}
 	if(best_db == NULL)
 		return(NULL);
-#if defined(NETWORK) && defined(LWIP) && defined(DEBUG)
+#if defined(LWIP) && defined(DEBUG)
 //	board_printf(" best:%08X\r\n",  best_db);
 #endif			
 	return(best_db);
@@ -769,13 +771,13 @@ void init_videl_i2c(void)
 	I2CsendByte(0xBF, TFP410_CTL1_MODE, TFP_ADDR); /* ctl1: power on, T:M:D:S: enable */
  	if((data = I2CreceiveByte(TFP410_CTL1_MODE, TFP_ADDR)) != 0xBF)
  	{
-#if defined(NETWORK) && defined(LWIP) && defined(DEBUG)
+#if defined(LWIP) && defined(DEBUG)
 		board_printf("init_videl TFP410 failure ctl1 write 0xBF => read 0x%02X\r\n", data);
 	}
 	else
 	{
 		board_printf("init_videl TFP410 OK\r\n");
-#endif /* defined(NETWORK) && defined(LWIP) && defined(DEBUG) */
+#endif /* defined(LWIP) && defined(DEBUG) */
 	}
 #ifdef CONFIG_FB_MODE_HELPERS
 	if(I2CreceiveByte(8, DCC_ADDR) || I2CreceiveByte(9, DCC_ADDR)) /* Manufactor ID */
@@ -789,7 +791,7 @@ void init_videl_i2c(void)
 		else
 			videl_monitor_type = MT_CRT;
 	}
-#if defined(NETWORK) && defined(LWIP) && defined(DEBUG)
+#if defined(LWIP) && defined(DEBUG)
 	else
 		board_printf("init_videl EDID read failure\r\n");
 #endif
@@ -843,7 +845,7 @@ long init_videl(long width, long height, long bpp, long refresh, long extended)
 	if((width > 640) || (height > 480) || (bpp > 16))
 		return(0);
 #endif
-#if defined(NETWORK) && defined(LWIP) && defined(DEBUG)
+#if defined(LWIP) && defined(DEBUG)
 #if defined(COLDFIRE) && defined(MCF547X) /* FIREBEE */
 	board_printf("init_videl search in videl list %dx%dx%d@%dHz on %s\r\n", (int)width, (int)height, (int)bpp, (int)refresh, (videl_monitor_type == MT_DFP) ? "DFP" : "CRT");
 #else
@@ -853,7 +855,7 @@ long init_videl(long width, long height, long bpp, long refresh, long extended)
 #if defined(COLDFIRE) && defined(MCF547X)
 	if(acp_new_hardware())
 		acp_has_pll = 1;
-#if defined(NETWORK) && defined(LWIP) && defined(DEBUG)
+#if defined(LWIP) && defined(DEBUG)
 	 board_printf("init_videl PLL%s detected\r\n", acp_has_pll ? "" : " not");
 #endif
 	if(!extended)
@@ -906,7 +908,7 @@ long init_videl(long width, long height, long bpp, long refresh, long extended)
 			if((db = find_mode(width, height, 0, refresh)) != NULL)
 			{
 				long clock = PICOS2KHZ(db->pixclock)/1000;
-#if defined(NETWORK) && defined(LWIP) && defined(DEBUG)
+#if defined(LWIP) && defined(DEBUG)
 				board_printf("init_videl found in modedb list %dx%dx%d with clock %dMHz\r\n", (int)width, (int)height, (int)bpp, (int)clock);
 #endif
 				unsigned long hfreq, vfreq, htotal, vtotal, pixclock;
@@ -989,7 +991,7 @@ long init_videl(long width, long height, long bpp, long refresh, long extended)
 				for(x = 0; x < (sizeof(video_control) / sizeof(struct acp_table)); x++)
 				{
 					long clock = video_control[x].clock;
-#if defined(NETWORK) && defined(LWIP) && defined(DEBUG)
+#if defined(LWIP) && defined(DEBUG)
 					if(loop)
 						board_printf("init_videl search in modedb list %dx%dx%d with clock %dMHz +/- 5MHz\r\n", (int)width, (int)height, (int)bpp, (int)clock);
 					else
@@ -1120,7 +1122,7 @@ long init_videl(long width, long height, long bpp, long refresh, long extended)
 	}
 #endif
 	*((char **)_v_bas_ad) = (char *)addr;
-#if defined(NETWORK) && defined(LWIP) && defined(DEBUG)
+#if defined(LWIP) && defined(DEBUG)
 #if defined(COLDFIRE) && defined(MCF547X)
 	if(db != NULL)
 		board_printf("init_videl %dx%dx%d@%dHz %dMHz %s %s\r\n", (int)width, (int)height, (int)bpp, (int)videl_rez->frq, (int)videl_rez->clk,
@@ -1215,7 +1217,7 @@ long init_videl(long width, long height, long bpp, long refresh, long extended)
 			break;
 	}
 	asm_set_ipl(level); // restore interrupts
-#if defined(NETWORK) && defined(LWIP) && defined(DEBUG) && defined(COLDFIRE) && defined(MCF547X)
+#if defined(LWIP) && defined(DEBUG) && defined(COLDFIRE) && defined(MCF547X)
 	board_printf(" ACP_VIDEO_CONTROL:%08X (%08X)\r\n", *(volatile unsigned long *)ACP_VIDEO_CONTROL, acp_video_control);
 #endif
 #endif /* defined(COLDFIRE) && defined(MCF547X) */

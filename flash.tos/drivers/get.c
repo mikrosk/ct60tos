@@ -5,7 +5,7 @@
 #include "get.h"
 #include "../include/ramcf68k.h"
 
-#if defined(COLDFIRE) && defined(NETWORK) && defined(LWIP)
+#if defined(COLDFIRE) && defined(LWIP)
 extern void board_printf(const char *fmt, ...);
 #else
 #define board_printf
@@ -15,7 +15,7 @@ extern void board_printf(const char *fmt, ...);
 #define client_ip_addr *(unsigned long *)(ip_address)
 #define server_ip_addr *(unsigned long *)(server_ip_address)
 
-#ifdef NETWORK
+#ifdef LWIP
 
 unsigned char *board_get_ethaddr(unsigned char *ethaddr)
 {
@@ -101,7 +101,7 @@ unsigned char *board_get_netmask(unsigned char *netmask)
 	if((client_ip_addr != 0xFFFFFFFF) && (client_ip_addr & 0xFFFF0000))
 	{
 		netmask[0] = 0xFF;
-		if(client_ip_addr <= 0x80000000)
+		if(client_ip_addr < 0x80000000)
 		{
 			if((client_ip_addr & 0xFF000000) == 0x0A000000)
 			{
@@ -114,7 +114,7 @@ unsigned char *board_get_netmask(unsigned char *netmask)
 				netmask[2] = 0x00;
 			}
 		}
-		else if(client_ip_addr <= 0xC0000000)
+		else if(client_ip_addr < 0xC0000000)
 		{
 			netmask[1] = 0xFF;
 			netmask[2] = 0x00;
@@ -163,5 +163,5 @@ char *board_get_filename(char *filename)
 	return filename;
 }
 
-#endif /* NETWORK */
+#endif /* LWIP */
 

@@ -1,5 +1,5 @@
 /* TOS 4.04 boot version for for the CT60 board
-*  Didier Mequignon 2003-2008, e-mail: aniplay@wanadoo.fr
+*  Didier Mequignon 2003-2010, e-mail: aniplay@wanadoo.fr
 *
 *  This library is free software; you can redistribute it and/or
 *  modify it under the terms of the GNU Lesser General Public
@@ -23,4 +23,5 @@
 	.align	2
 	
 	.short	VERSION
-	.short	DATE
+	.short	DATE  // 10 bytes
+

@@ -15,10 +15,8 @@
 #define  _MINT_OSTRUCT_H
 #include <osbind.h>
 #include "config.h"
-#ifdef NETWORK
 #ifdef LWIP
 #include "../../include/vars.h"
-#endif
 #endif
 #include "portab.h"
 #include "asm.h"
@@ -454,14 +452,12 @@ long    xsetdrv(short drv)
     display_string(") => ");
 #endif
     {
-#ifdef NETWORK
 #ifdef LWIP
         extern long pxCurrentTCB, tid_TOS;
         if(pxCurrentTCB != tid_TOS)
             drvmap = *(unsigned long *)_drvbits;
         else       
 #endif
-#endif       
         drvmap = Drvmap();
     }
     

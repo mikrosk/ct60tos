@@ -34,6 +34,7 @@ MD
 	MD *m_link;
 	long m_start;
 	long m_length;
+  void *m_own;
 };
 
 /* MPB - Memory Partition Block */
@@ -47,12 +48,32 @@ MPB
 	MD *mp_rover;
 };
 
-#define MAXMD 100
+#define MAXMD 256
 
-static int count_md;
 static MD tab_md[MAXMD];
 static MPB pmd;
 static long wrap;
+
+static void *xmgetblk(void)
+{
+	int i;
+	for(i = 0; i < MAXMD; i++)
+	{
+		if(tab_md[i].m_own == NULL)
+		{
+			tab_md[i].m_own = (void*)1L;
+			return(&tab_md[i]);
+		}
+	}			   
+	return(NULL);
+}
+
+static void xmfreblk(void *m)
+{
+	int i = (int)(((long)m - (long)tab_md) / sizeof(MD));
+	if((i > 0) && (i < MAXMD))
+		tab_md[i].m_own = NULL;
+}
 
 static MD *ffit(long amount, MPB *mp)
 {
@@ -73,11 +94,11 @@ static MD *ffit(long amount, MPB *mp)
 	if((q = mp->mp_rover) == 0)      /* get rotating pointer */
 		return(0) ;
 	maxval = 0;
-	maxflg = (amount == -1 ? TRUE : FALSE) ;
+	maxflg = ((amount == -1) ? TRUE : FALSE) ;
 	p = q->m_link;                   /* start with next MD */
 	do /* search the list for an MD with enough space */
 	{
-		if(p == 0)
+		if(p == NULL)
 		{
 			/*  at end of list, wrap back to start  */
 			q = (MD *) &mp->mp_mfl;      /*  q => mfl field  */
@@ -92,9 +113,9 @@ static MD *ffit(long amount, MPB *mp)
 			{
 				/* break it up - 1st allocate a new
 				   MD to describe the remainder */
-				if(count_md >= MAXMD)
-					return(0);
-				p1 = &tab_md[count_md++];
+				p1 = xmgetblk();
+				if(p1 == NULL)
+					return(NULL);
 				/* init new MD */
 				p1->m_length = p->m_length - amount;
 				p1->m_start = p->m_start + amount;
@@ -129,7 +150,7 @@ static MD *ffit(long amount, MPB *mp)
 static void freeit(MD *m, MPB *mp)
 {
 	MD *p, *q;
-	q = 0;
+	q = NULL;
 	for(p = mp->mp_mfl; p ; p = (q=p) -> m_link)
 	{
 		if(m->m_start <= p->m_start)
@@ -150,8 +171,7 @@ static void freeit(MD *m, MPB *mp)
 			m->m_link = p->m_link;
 			if(p == mp->mp_rover)
 				mp->mp_rover = m;
-			if(count_md>=0)
-				count_md--;
+			xmfreblk(p);
 		}
 	}
 	if(q)
@@ -162,8 +182,7 @@ static void freeit(MD *m, MPB *mp)
 			q->m_link = m->m_link;
 			if(m == mp->mp_rover)
 				mp->mp_rover = q;
-			if(count_md>=0)
-				count_md--;
+			xmfreblk(m);
 		}
 	}
 }
@@ -243,7 +262,8 @@ long offscreen_alloc(struct fb_info *info, long amount)
 
 long offscren_reserved(void)
 {
-	return(tab_md[0].m_start + tab_md[0].m_length);
+	extern struct fb_info *info_fvdi;
+	return((long)info_fvdi->ram_base + (long)info_fvdi->ram_size - USB_BUFFER_SIZE);
 }
 
 void offscreen_init(struct fb_info *info)
@@ -260,8 +280,7 @@ void offscreen_init(struct fb_info *info)
 	tab_md[0].m_link = (MD *)NULL;
 	tab_md[0].m_start = (long)((unsigned long)info->ram_base + (unsigned long)size_screen);
 	tab_md[0].m_length = (long)info->ram_size - size_screen;
-	if(tab_md[0].m_length > USB_BUFFER_SIZE)
-		tab_md[0].m_length -= USB_BUFFER_SIZE;
+	tab_md[0].m_own = (void *)1L;
 	max_offscreen_size = ((long)info->var.xres_virtual * 8192L * (long)(info->var.bits_per_pixel / 8)) - size_screen;
 	if(max_offscreen_size < 0)
 		max_offscreen_size = 0;
@@ -280,6 +299,5 @@ void offscreen_init(struct fb_info *info)
 	Funcs_puts("\r\n");
 #endif
 	pmd.mp_mal = (MD *)NULL;
-	count_md = 1;
 }
 
