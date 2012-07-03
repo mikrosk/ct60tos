@@ -56,7 +56,7 @@ static  short    osmem[LENOSM];
 /*
  *  root - root array for 'quick' pool.
  *      root is an array of ptrs to memblocks of size 'i' paragraphs,
- *      where 'i' is the index into the araay (a paragraph is 16 bites).
+ *      where 'i' is the index into the array (a paragraph is 16 bites).
  *      Each list is singly linked.  Items on the list are
  *      deleted/added in LIFO order from the root.
  */
@@ -169,9 +169,9 @@ void xmfreblk(void *m)
     if( i < 0 || i >= MAXQUICK )
     {
         /*  bad index  */
-#if     DBGOSMEM
-        kprintf("xmfreblk: bad index (0x%x)\n") ;
-        kprintf("stack at %08lx\n",&m) ;
+#if DBGOSMEM
+        board_printf("xmfreblk: bad index (0x%lx)\r\n", (long)i) ;
+        board_printf("stack at 0x%08lx\r\n",&m) ;
         while(1) ;
 #endif
         dbgfreblk++ ;
@@ -181,11 +181,11 @@ void xmfreblk(void *m)
         /*  ok to free up  */
         *((short **) m) = root[i];
         root[i] = m;
-#if     DBGFREMEM
+#if DBGFREMEM
         if(  *((short **)m) == m )
         {
-            kprintf("xmfreblk: Circular link in root[%x]\n",i) ;
-            kprintf("\tat %lx\n",m) ;
+            board_printf("xmfreblk: Circular link in root[0x%lx]\r\n", (long)i) ;
+            board_printf("\tat 0x%08lx\r\n", m) ;
         }
 #endif
 

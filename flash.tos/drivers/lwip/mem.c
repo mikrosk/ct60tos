@@ -48,7 +48,15 @@
 #include "sys.h"
 #include "stats.h"
 
-#ifdef NETWORK
+#define USE_MALLOC
+
+#ifdef COLDFIRE
+#define pvPortMalloc pvPortMalloc2
+#else
+#include <mint/osbind.h>
+#define pvPortMalloc(a) Mxalloc(a, 3) 
+#endif
+
 #ifdef LWIP
 
 #if (MEM_LIBC_MALLOC == 0)
@@ -73,8 +81,11 @@ struct mem {
 };
 
 static struct mem *ram_end;
+#ifdef USE_MALLOC
 static u8_t *ram;
-// static u8_t ram[MEM_SIZE + sizeof(struct mem) + MEM_ALIGNMENT];
+#else
+static u8_t ram[MEM_SIZE + sizeof(struct mem) + MEM_ALIGNMENT];
+#endif /* USE_MALLOC */
 
 #define MIN_SIZE 12
 #if 0 /* this one does not align correctly for some, resulting in crashes */
@@ -127,9 +138,11 @@ mem_init(void)
 {
   struct mem *mem;
 
-  u8_t *ram_heap = (u8_t *)pvPortMalloc2(MEM_SIZE+ sizeof(struct mem) + MEM_ALIGNMENT);
+#ifdef USE_MALLOC
+  u8_t *ram_heap = (u8_t *)pvPortMalloc(MEM_SIZE+ sizeof(struct mem) + MEM_ALIGNMENT);
 	LWIP_ASSERT("mem_init: ram != NULL", ram_heap != NULL);
   ram = MEM_ALIGN(ram_heap);
+#endif /* USE_MALLOC */
   memset(ram, 0, MEM_SIZE);
   mem = (struct mem *)ram;
   mem->next = MEM_SIZE;
@@ -411,5 +424,4 @@ mem_malloc(mem_size_t size)
 #endif /* MEM_LIBC_MALLOC == 0 */
 
 #endif /* LWIP */
-#endif /* NETWORK */
 

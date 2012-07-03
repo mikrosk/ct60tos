@@ -87,7 +87,6 @@
 #define DNS_SERVER_PORT 53
 #endif
 
-#ifdef NETWORK
 #ifdef LWIP
 
 PACK_STRUCT_BEGIN
@@ -600,4 +599,3 @@ struct hostent *gethostbyname(const char *hostname)
 }
 
 #endif /* LWIP */
-#endif /* NETWORK */

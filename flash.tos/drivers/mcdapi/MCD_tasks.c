@@ -41,7 +41,7 @@
 #include "config.h"
 #include "MCD_dma.h"
 
-#ifdef NETWORK
+#ifdef LWIP
 
 u32 MCD_varTab0[];
 u32 MCD_varTab1[];

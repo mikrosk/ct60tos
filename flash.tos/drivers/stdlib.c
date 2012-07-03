@@ -5,6 +5,8 @@
  * Notes:       This supports ASCII only!!!
  */
 
+#include <mint/osbind.h>
+
 #define FALSE       (0)
 #define TRUE        (1)
 #define NULL        (0)
@@ -594,6 +596,19 @@ char *strchr(const char *s, int c)
 }
 
 /****************************************************************/
+char *strrchr(const char *s, int c)
+{
+	char *p = NULL;
+	do
+	{
+		if(*s == c)
+			p = (char *) s;
+	}
+	while(*s++);
+	return(p);
+}
+
+/****************************************************************/
 int memcmp(const void *s1, const void *s2, long size)
 {
   char *src1, *src2;
@@ -635,3 +650,17 @@ char *strstr(const char *s1, const char *s2)
   return(NULL);
 }
 
+/****************************************************************/
+char *strndup(char const *s, int n)
+{
+	extern void *memcpy(void *dest, const void *src, unsigned n);
+  int len = strlen(s);
+  char *new = (char *)Malloc((len > n) ? n + 1 : len + 1);
+  if (new == NULL)
+    return NULL;
+  new[len] = '\0';
+	memcpy(new, s, len);
+  return(new);
+}
+
+/****************************************************************/

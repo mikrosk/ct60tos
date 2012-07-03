@@ -45,6 +45,9 @@ static void *usb_buffer;
 extern int asm_set_ipl(int level);
 extern void *info_fvdi;
 extern long offscren_reserved(void);
+#ifndef COLDFIRE
+extern long get_no_cache_memory(void);
+#endif
 
 /* MD - Memory Descriptor */
 
@@ -55,6 +58,7 @@ MD
 	MD *m_link;
 	long m_start;
 	long m_length;
+  void *m_own;
 };
 
 /* MPB - Memory Partition Block */
@@ -68,11 +72,31 @@ MPB
 	MD *mp_rover;
 };
 
-#define MAXMD 100
+#define MAXMD 256
 
-static int count_md;
 static MD tab_md[MAXMD];
 static MPB pmd;
+
+static void *xmgetblk(void)
+{
+	int i;
+	for(i = 0; i < MAXMD; i++)
+	{
+		if(tab_md[i].m_own == NULL)
+		{
+			tab_md[i].m_own = (void*)1L;
+			return(&tab_md[i]);
+		}
+	}			   
+	return(NULL);
+}
+
+static void xmfreblk(void *m)
+{
+	int i = (int)(((long)m - (long)tab_md) / sizeof(MD));
+	if((i > 0) && (i < MAXMD))
+		tab_md[i].m_own = NULL;
+}
 
 static MD *ffit(long amount, MPB *mp)
 {
@@ -87,7 +111,7 @@ static MD *ffit(long amount, MPB *mp)
 	if((q = mp->mp_rover) == 0)      /* get rotating pointer */
 		return(0) ;
 	maxval = 0;
-	maxflg = (amount == -1 ? TRUE : FALSE) ;
+	maxflg = ((amount == -1) ? TRUE : FALSE) ;
 	p = q->m_link;                   /* start with next MD */
 	do /* search the list for an MD with enough space */
 	{
@@ -106,9 +130,9 @@ static MD *ffit(long amount, MPB *mp)
 			{
 				/* break it up - 1st allocate a new
 				   MD to describe the remainder */
-				if(count_md >= MAXMD)
-					return(0);
-				p1 = &tab_md[count_md++];
+				p1 = xmgetblk();
+				if(p1 == NULL)
+					return(NULL);
 				/* init new MD */
 				p1->m_length = p->m_length - amount;
 				p1->m_start = p->m_start + amount;
@@ -164,8 +188,7 @@ static void freeit(MD *m, MPB *mp)
 			m->m_link = p->m_link;
 			if(p == mp->mp_rover)
 				mp->mp_rover = m;
-			if(count_md>=0)
-				count_md--;
+			xmfreblk(p);
 		}
 	}
 	if(q)
@@ -176,8 +199,7 @@ static void freeit(MD *m, MPB *mp)
 			q->m_link = m->m_link;
 			if(m == mp->mp_rover)
 				mp->mp_rover = q;
-			if(count_md>=0)
-				count_md--;
+			xmfreblk(m);
 		}
 	}
 }
@@ -210,6 +232,7 @@ int usb_free(void *addr)
 
 void *usb_malloc(long amount)
 {
+	void *ret = NULL;
 	int level;
 	MD *m;
 	if(usb_buffer == NULL)
@@ -222,11 +245,11 @@ void *usb_malloc(long amount)
 		amount++;
 	level = asm_set_ipl(7);
 	m = ffit(amount, &pmd);
+	if(m != NULL)
+		ret = (void *)m->m_start;
 	asm_set_ipl(level);
-	USB_MEM_PRINTF("usb_malloc(%d) = 0x%08X\r\n", amount, (m == NULL) ? 0 : m->m_start);
-	if(m == NULL)
-		return(NULL);
-	return((void *)m->m_start);
+	USB_MEM_PRINTF("usb_malloc(%d) = 0x%08X\r\n", amount, ret);
+	return(ret);
 }
 
 int usb_mem_init(void)
@@ -240,11 +263,16 @@ int usb_mem_init(void)
 	tab_md[0].m_start = (long)usb_buffer;
 	tab_md[0].m_length = (long)__NO_CACHE_MEMORY_SIZE;
 #else /* !CONFIG_USB_MEM_NO_CACHE */
-#if 0
+#ifdef USE_RADEON_MEMORY
 	usb_buffer = (void *)offscren_reserved();
 	if(usb_buffer == NULL)
-#endif	
-	usb_buffer = (void *)Mxalloc(USB_BUFFER_SIZE + 16, 0); /* STRAM - cache in writethough */
+#else
+#ifndef COLDFIRE
+	usb_buffer = (void *)get_no_cache_memory();
+	if(usb_buffer == NULL)
+#endif
+#endif
+		usb_buffer = (void *)Mxalloc(USB_BUFFER_SIZE + 16, 0); /* STRAM - cache in writethough */
 	if(usb_buffer == NULL)
 		return(-1);
 	pmd.mp_mfl = pmd.mp_rover = &tab_md[0];
@@ -252,16 +280,20 @@ int usb_mem_init(void)
 	tab_md[0].m_start = ((long)usb_buffer + 15) & ~15;
 	tab_md[0].m_length = USB_BUFFER_SIZE;	
 #endif /* CONFIG_USB_MEM_NO_CACHE */
+	tab_md[0].m_own = (void *)1L;
 	pmd.mp_mal = (MD *)NULL;
 	memset(usb_buffer, 0, tab_md[0].m_length);
 	USB_MEM_PRINTF("USB malloc buffer at 0x%08X size %d\r\n", tab_md[0].m_start, tab_md[0].m_length);
-	count_md = 1;
 	return(0);
 }
 
 void usb_mem_stop(void)
 {
 #ifndef CONFIG_USB_MEM_NO_CACHE
+#ifdef USE_RADEON_MEMORY
+	if(usb_buffer == (void *)offscren_reserved())
+		return;
+#endif
 	if(usb_buffer != NULL)
 		Mfree(usb_buffer);
 #endif

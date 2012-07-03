@@ -646,13 +646,11 @@ static void proc_go(PD *p)
     sp->basepage = p;      /* the stack contains the basepage */
        
     sp->retaddr = p->p_tbase;    /* return address a3 is text start */
-#ifdef NETWORK
 #ifdef LWIP
     {
         extern void install_auto_breakpoint(long address);
         install_auto_breakpoint(p->p_tbase);
     }
-#endif
 #endif
     sp->sr = 0;                  /* the process will start in user mode */
     

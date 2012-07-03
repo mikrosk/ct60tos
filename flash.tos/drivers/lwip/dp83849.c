@@ -8,7 +8,6 @@
 #include "fec.h"
 #include "dp83849.h"
 
-#ifdef NETWORK
 #ifdef LWIP
 
 #undef DEBUG
@@ -84,4 +83,3 @@ int dp83849_init(uint8 fec_ch, uint8 phy_addr, uint8 speed, uint8 duplex)
 /********************************************************************/
 
 #endif /* LWIP */
-#endif /* NETWORK */

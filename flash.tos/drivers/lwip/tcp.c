@@ -52,7 +52,6 @@
 
 #include "tcp.h"
 
-#ifdef NETWORK
 #ifdef LWIP
 
 #if LWIP_TCP
@@ -1191,7 +1190,6 @@ tcp_pcbs_sane(void)
 #endif /* LWIP_TCP */
 
 #endif /* LWIP */
-#endif /* NETWORK */
 
 
 

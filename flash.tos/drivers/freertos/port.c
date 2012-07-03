@@ -1,6 +1,6 @@
 /*
     FreeRTOS V4.1.1 - Copyright (C) 2003-2006 Richard Barry.
-    MCF548x Port - Copyright (C) 2008 Didier Mequignon.
+    MCF548x Port - Copyright (C) 2008-2012 Didier Mequignon.
 
     This file is part of the FreeRTOS distribution.
 
@@ -31,6 +31,8 @@
     ***************************************************************************
 */
 
+#include <mint/osbind.h>
+#include <mint/sysvars.h>
 #include "config.h"
 #include "FreeRTOS.h"
 #include "FreeRTOSConfig.h"
@@ -40,21 +42,27 @@
 
 #include "../lwip/perf.h"
 
+#ifndef _timer_ms
+#define _timer_ms 0x442
+#endif
+
 typedef volatile unsigned long vuint32;
 typedef volatile unsigned short vuint16;
 typedef volatile unsigned char vuint8;
 
+#ifdef COLDFIRE
 #ifdef MCF5445X
 #include "mcf5445x.h"
 #else /* MCF548X */
 #include "mcf548x.h"
 extern unsigned char __MBAR[];
 #endif
+#endif /* COLDFIRE */
 
-#ifdef NETWORK
-#ifdef LWIP
+#if defined(LWIP) || defined(FREERTOS)
 
 /* ------------------------ Defines --------------------------------------- */
+#ifdef COLDFIRE
 #ifdef MCF5445X
 #define SYSTEM_CLOCK                    133 // system bus frequency in MHz
 #define portVECTOR_TIMER                ( 64 + INT0_HI_DTMR2 )
@@ -66,6 +74,10 @@ extern unsigned char __MBAR[];
 #endif /* MCF547X */
 #define portVECTOR_TIMER                ( 64 + 54 )
 #endif
+#else /* !COLDFIRE */
+#define portVECTOR_VBL                  ( 28 )
+#define portVECTOR_TIMER_D              ( 68 )
+#endif /* COLDFIRE */
 #define portVECTOR_SYSCALL              ( 32 + portTRAP_YIELD )
 
 #define portNO_CRITICAL_NESTING         ( ( unsigned portLONG ) 0 )
@@ -73,7 +85,11 @@ extern unsigned char __MBAR[];
 
 /* ------------------------ Static variables ------------------------------ */
 volatile unsigned portLONG              ulCriticalNesting;
+#ifdef COLDFIRE
 static unsigned portLONG                portIntCounter;
+#else
+static unsigned long                    prvOldTrap;
+#endif
 
 /* ------------------------ Static functions ------------------------------ */
 #if configUSE_PREEMPTION == 0
@@ -117,8 +133,8 @@ portSTACK_TYPE *pxPortInitialiseStack( portSTACK_TYPE * pxTopOfStack, pdTASK_COD
     }
 #endif
 
-    /* Create a Motorola Coldfire exception stack frame. First comes the return
-     * address. */
+#ifdef COLDFIRE
+    /* Create a Motorola Coldfire exception stack frame. First comes the return address. */
     *pxTopOfStack = ( portSTACK_TYPE ) pxCode;
     pxTopOfStack--;
 
@@ -131,6 +147,21 @@ portSTACK_TYPE *pxPortInitialiseStack( portSTACK_TYPE * pxTopOfStack, pdTASK_COD
     else
         *pxTopOfStack = 0x40000000UL | (portVECTOR_SYSCALL << 18) | ((uxMaskIntLevel & 7) << 8);
 #endif
+
+#else /* !COLDFIRE */
+
+    *pxTopOfStack = (( portSTACK_TYPE ) pxCode << 16)  | (portVECTOR_SYSCALL << 2);
+    pxTopOfStack--;
+
+#if( HAVE_USP == 1 )
+    if(uxSuper)
+#endif
+        *pxTopOfStack = 0x20000000UL | (( portSTACK_TYPE ) pxCode >> 16) | ((uxMaskIntLevel & 7) << 24);
+#if( HAVE_USP == 1 )
+    else
+        *pxTopOfStack = (( portSTACK_TYPE ) pxCode >> 16) | ((uxMaskIntLevel & 7) << 8);
+#endif
+#endif /* COLDFIRE */
 
     *pxContext++ = ( portSTACK_TYPE ) 0xD0;    /* D0 */
     *pxContext++ = ( portSTACK_TYPE ) 0xD1;    /* D1 */
@@ -157,10 +188,15 @@ portSTACK_TYPE *pxPortInitialiseStack( portSTACK_TYPE * pxTopOfStack, pdTASK_COD
 #endif
     
 #if( SAVE_FPU == 1 )
+#ifdef COLDFIRE
     *pxContext++ = ( portSTACK_TYPE ) 0x05000000; /* FSAVE IDLE state */
     *pxContext++ = ( portSTACK_TYPE ) 0x00;
     *pxContext++ = ( portSTACK_TYPE ) 0x00;
     *pxContext++ = ( portSTACK_TYPE ) 0x00;
+#else
+    *pxContext++ = ( portSTACK_TYPE ) 0xFC;    /* FPICR */
+    *pxContext++ = ( portSTACK_TYPE ) 0xFC;    /* FPISR */
+#endif
     *pxContext++ = ( portSTACK_TYPE ) 0xFA;    /* FPIAR */
     *pxContext++ = ( portSTACK_TYPE ) 0x00;    /* FP0 */
     *pxContext++ = ( portSTACK_TYPE ) 0xF0;    /* FP0 */
@@ -178,7 +214,7 @@ portSTACK_TYPE *pxPortInitialiseStack( portSTACK_TYPE * pxTopOfStack, pdTASK_COD
     *pxContext++ = ( portSTACK_TYPE ) 0xF6;    /* FP6 */
     *pxContext++ = ( portSTACK_TYPE ) 0x00;    /* FP7 */
     *pxContext++ = ( portSTACK_TYPE ) 0xF7;    /* FP7 */
-#endif
+#endif /* ( SAVE_FPU == 1 ) */
 
     /* Set the initial critical section nesting counter to zero. This value
      * is used to restore the value of ulCriticalNesting. */
@@ -188,6 +224,9 @@ portSTACK_TYPE *pxPortInitialiseStack( portSTACK_TYPE * pxTopOfStack, pdTASK_COD
 }
 
 extern long pxCurrentTCB, tid_TOS;
+
+#ifdef COLDFIRE
+
 extern volatile portTickType xTickCount;
 #ifdef MCF5445X
 unsigned long save_imrl0, save_imrl0_tos, save_imrh0, save_imrh0_tos, save_imrh1, save_imrh1_tos;
@@ -231,8 +270,6 @@ portSaveRestoreInt( int iSave )
     }
     else
     {
-#define _timer_ms 0x442
-#define _hz_200   0x4BA
 #ifdef MCF5445X
         if( pxCurrentTCB == tid_TOS )
         {
@@ -311,50 +348,51 @@ prvPortYield( void )
 #if _GCC_USES_FP == 1
     asm volatile (" unlk fp\n\t");
 #endif
-    asm volatile (" move.l d0, -(sp)\n\t"); 
-    asm volatile (" move.l a0, -(sp)\n\t"); 
-    asm volatile (" move.l usp, a0\n\t");
-    asm volatile (" btst #5, 10(sp)\n\t");   // call in supervisor state
-    asm volatile (" beq.s .user\n\t" );
-    asm volatile (" move.b 8(sp), d0\r\n");  // get SP alignment bits from A7 stack frame
-    asm volatile (" lsr.l #4, d0\n\t");
-    asm volatile (" and.l #3, d0\n\t");
-    asm volatile (" addq.l #8, d0\n\t");
-    asm volatile (" addq.l #8, d0\n\t");
-    asm volatile (" add.l sp, d0\n\t");
-    asm volatile (" move.l d0, a0\n\t");
-    asm volatile (".user:\n\t" );
-    asm volatile (" moveq #0, d0\n\t");
-    asm volatile (" move.w (a0), d0\n\t");
-    asm volatile (" cmp.l #0xFE, d0\n\t");   // function
-    asm volatile (" beq .set_ipl\n\t" );
-    asm volatile (" cmp.l #0xFF, d0\n\t");   // function
-    asm volatile (" beq .yield\n\t" );
-    asm volatile (" move.l (sp)+, a0\n\t"); 
-    asm volatile (" addq.l #4, sp\n\t"); 
-    asm volatile (" moveq #-1, d0\n\t"); 
-    asm volatile (" rte\n\t");
-    asm volatile (".set_ipl:\n\t");
-    asm volatile (" move.l d6, -(sp)\n\t"); 
-    asm volatile (" move.l d7, -(sp)\n\t"); 
-    asm volatile (" move.w 18(sp), d7\n\t"); // current SR
-    asm volatile (" move.l d7, d0\n\t");     // prepare return value
-    asm volatile (" and.l #0x700, d0\n\t");  // mask out IPL
-    asm volatile (" lsr.l #8, d0\n\t");      // IPL
-    asm volatile (" move.l 2(a0), d6\n\t");  // get argument
-    asm volatile (" and.l #7, d6\n\t");      // least significant three bits
-    asm volatile (" lsl.l #8, d6\n\t");      // move over to make mask
-    asm volatile (" and.l #0xF8FF, d7\n\t"); // zero out current IPL
-    asm volatile (" or.l d6, d7\n\t");       // place new IPL in SR
-    asm volatile (" move.w d7, 18(sp)\n\t");
-    asm volatile (" move.l (sp)+, d7\n\t");
-    asm volatile (" move.l (sp)+, d6\n\t"); 
-    asm volatile (" move.l (sp)+, a0\n\t");
-    asm volatile (" addq.l #4, sp\n\t"); 
-    asm volatile (" rte\n\t");;    
-    asm volatile (".yield:\n\t");
-    asm volatile (" move.l (sp)+, a0\n\t"); 
-    asm volatile (" move.l (sp)+, d0\n\t"); 
+    asm volatile (
+                  " move.l d0, -(sp)\n\t" 
+                  " move.l a0, -(sp)\n\t" 
+                  " move.l usp, a0\n\t"
+                  " btst #5, 10(sp)\n\t"   // call in supervisor state
+                  " beq.s .user\n\t" 
+                  " move.b 8(sp), d0\r\n"  // get SP alignment bits from A7 stack frame
+                  " lsr.l #4, d0\n\t"
+                  " and.l #3, d0\n\t"
+                  " addq.l #8, d0\n\t"
+                  " addq.l #8, d0\n\t"
+                  " add.l sp, d0\n\t"
+                  " move.l d0, a0\n\t"
+                  ".user:\n\t" 
+                  " moveq #0, d0\n\t"
+                  " move.w (a0), d0\n\t"
+                  " cmp.l #0xFE, d0\n\t"   // function
+                  " beq .set_ipl\n\t" 
+                  " cmp.l #0xFF, d0\n\t"   // function
+                  " beq .yield\n\t" 
+                  " move.l (sp)+, a0\n\t" 
+                  " addq.l #4, sp\n\t" 
+                  " moveq #-1, d0\n\t" 
+                  " rte\n\t"
+                  ".set_ipl:\n\t"
+                  " move.l d6, -(sp)\n\t" 
+                  " move.l d7, -(sp)\n\t" 
+                  " move.w 18(sp), d7\n\t" // current SR
+                  " move.l d7, d0\n\t"     // prepare return value
+                  " and.l #0x700, d0\n\t"  // mask out IPL
+                  " lsr.l #8, d0\n\t"      // IPL
+                  " move.l 2(a0), d6\n\t"  // get argument
+                  " and.l #7, d6\n\t"      // least significant three bits
+                  " lsl.l #8, d6\n\t"      // move over to make mask
+                  " and.l #0xF8FF, d7\n\t" // zero out current IPL
+                  " or.l d6, d7\n\t"       // place new IPL in SR
+                  " move.w d7, 18(sp)\n\t"
+                  " move.l (sp)+, d7\n\t"
+                  " move.l (sp)+, d6\n\t" 
+                  " move.l (sp)+, a0\n\t"
+                  " addq.l #4, sp\n\t" 
+                  " rte\n\t"
+                  ".yield:\n\t"
+                  " move.l (sp)+, a0\n\t" 
+                  " move.l (sp)+, d0" ); 
      /* Perform the context switch.  First save the context of the current task. */
     portSAVE_CONTEXT(  );
     /* Find the highest priority task that is ready to run. */
@@ -362,6 +400,93 @@ prvPortYield( void )
     /* Restore the context of the new task. */
     portRESTORE_CONTEXT(  );
 }
+
+#else /* !COLDFIRE */
+
+/*
+ * Called by portYIELD() or taskYIELD() to manually force a context switch.
+ */
+static void
+prvPortYield( void )
+{
+#if _GCC_USES_FP == 1
+    asm volatile (" unlk fp\n\t");
+#endif
+    asm volatile (
+                  " move.l d0, -(sp)\n\t" 
+                  " move.l a0, -(sp)\n\t" 
+                  " move.l usp, a0\n\t"
+                  " btst #5, 8(sp)\n\t"   // call in supervisor state
+                  " beq.s .user\n\t" 
+                  " move.l 10(sp), a0\n\t" // return address
+                  " move.l -6(a0), d0\n\t" // instruction before trap
+                  " cmp.l #0x46FC2300, d0\n\t" // move.w #0x2300,SR MAGXBOOT.PRG
+                  " beq.s .oldtrap\n\t" 
+                  " lea 8+8(sp), a0\n\t"
+                  ".user:\n\t" 
+                  " moveq #0, d0\n\t"
+                  " move.w (a0), d0\n\t"
+                  " cmp.l #0xFE, d0\n\t"   // function
+                  " beq .set_ipl\n\t" 
+                  " cmp.l #0xFF, d0\n\t"   // function
+                  " beq .yield\n\t" 
+                  " move.l (sp)+, a0\n\t" 
+                  " move.l (sp)+, d0\n\t" 
+                  " rte\n\t"
+                  ".oldtrap:\n\t"
+                  " move.l d1, -(sp)\n\t" 
+                  " move.l a1, -(sp)\n\t" 
+                  " jsr _vPortEndScheduler\n\t"
+                  " move.l (sp)+, a1\n\t" 
+                  " move.l (sp)+, d1\n\t"               
+                  " move.l (sp)+, a0\n\t" 
+                  " move.l (sp)+, d0\n\t" 
+                  " move.l _prvOldTrap, -(%sp)\n\t" 
+                  " rts\n\t"
+                  ".set_ipl:\n\t"
+                  " move.l d6, -(sp)\n\t" 
+                  " move.l d7, -(sp)\n\t" 
+                  " move.w 16(sp), d7\n\t" // current SR
+                  " move.l d7, d0\n\t"     // prepare return value
+                  " and.l #0x700, d0\n\t"  // mask out IPL
+                  " lsr.l #8, d0\n\t"      // IPL
+                  " move.l 2(a0), d6\n\t"  // get argument
+                  " and.l #7, d6\n\t"      // least significant three bits
+                  " lsl.l #8, d6\n\t"      // move over to make mask
+                  " and.l #0xF8FF, d7\n\t" // zero out current IPL
+                  " or.l d6, d7\n\t"       // place new IPL in SR
+                  " move.w d7, 16(sp)\n\t"
+                  " move.l (sp)+, d7\n\t"
+                  " move.l (sp)+, d6\n\t" 
+                  " move.l (sp)+, a0\n\t"
+                  " addq.l #4, sp\n\t" 
+                  " rte\n\t"      
+                  ".yield:\n\t"
+                  " move.l (sp)+, a0\n\t" 
+                  " move.l (sp)+, d0\n\t" 
+                  " or.w #0x0700, sr" );  // mask interrupts
+     /* Perform the context switch.  First save the context of the current task. */
+    portSAVE_CONTEXT(  );
+    /* Find the highest priority task that is ready to run. */
+    vTaskSwitchContext(  );
+    /* Restore the context of the new task. */
+    portRESTORE_CONTEXT(  );
+}
+
+void MfpTimer(void)
+{
+    *(unsigned long *)((portVECTOR_SYSCALL) * 4) = (unsigned long)prvPortYield;
+    *(volatile unsigned char *)0xFFFFFA11 = 0xEF; /* clear Timer D ISRB MFP */
+}
+
+static void
+prvPortVBL( void )
+{
+    *(unsigned long *)((portVECTOR_TIMER_D) * 4) = (unsigned long)prvPortPreemptiveTick;
+    asm volatile ( " jmp 0xE00CB0\n\t"); /* VBL TOS 4.04 */
+}
+
+#endif /* COLDFIRE */
 
 void portYIELD(void)
 {
@@ -373,17 +498,15 @@ void portYIELD(void)
 
 int vPortSetIPL( unsigned long int uiNewIPL )
 {
-#if 0 // ugly hack fixed by using portOldIPLTOS
-    portSTACK_TYPE *p = (portSTACK_TYPE *) pxCurrentTCB;
-    unsigned portBASE_TYPE uxStartIntLevel = (unsigned portBASE_TYPE) p[65];
-    if(( pxCurrentTCB != tid_TOS ) && ( (unsigned portBASE_TYPE) uiNewIPL < uxStartIntLevel ) )
-        uiNewIPL = (unsigned long int) uxStartIntLevel;
-#endif
 #if ( HAVE_USP == 1 )
 		if( !xTaskIsSuper() || ( pxCurrentTCB == tid_TOS ) )
 #else
+#ifdef COLDFIRE
     if(*(unsigned long *)(((portVECTOR_SYSCALL) * 4) + coldfire_vector_base)  == (unsigned long)prvPortYield)
-#endif
+#else /* !COLDFIRE */
+		if( pxCurrentTCB == tid_TOS )
+#endif /* COLDFIRE */
+#endif /* ( HAVE_USP == 1 ) */
     {
         register int iOldIPL __asm__("d0");
         asm volatile (
@@ -411,7 +534,7 @@ int vPortSetIPL( unsigned long int uiNewIPL )
     } 
 }
 
-#if configUSE_PREEMPTION == 0
+#if (configUSE_PREEMPTION == 0)
 /*
  * The ISR used for the scheduler tick depends on whether the cooperative or
  * the preemptive scheduler is being used.
@@ -423,11 +546,15 @@ prvPortPreemptiveTick ( void )
      * simply increment the system tick.
      */
     vTaskIncrementTick(  );
+#ifdef COLDFIRE
 #ifdef MCF5445X
     MCF_DTIM_DTER(2) = DTIM_DTER_REF;
 #else /* MCF548X */
 	  MCF_SLT_SSR(0) |= MCF_SLT_SSR_ST; /* clear interrupt */
 #endif
+#else /* !COLDFIRE */
+    MfpTimer( );
+#endif /* COLDFIRE */
 }
 
 #else
@@ -435,21 +562,26 @@ prvPortPreemptiveTick ( void )
 static void
 prvPortPreemptiveTick( void )
 {
-    asm volatile ( "move.w  #0x2700, sr\n\t" );
+    asm volatile ( " move.w #0x2700, sr\n\t" );
 #if _GCC_USES_FP == 1
-    asm volatile ( "unlk fp\n\t" );
+    asm volatile ( " unlk fp\n\t" );
 #endif
     portSAVE_CONTEXT(  );
+#ifdef COLDFIRE
 #ifdef MCF5445X
     MCF_DTIM_DTER(2) = DTIM_DTER_REF;
 #else /* MCF548X */
 	  MCF_SLT_SSR(0) |= MCF_SLT_SSR_ST; /* clear interrupt */
 #endif
+#else /* !COLDFIRE */
+    MfpTimer( );
+#endif /* COLDFIRE */
     vTaskIncrementTick(  );
     vTaskSwitchContext(  );
-    portRESTORE_CONTEXT(  );
+    portRESTORE_CONTEXT(  );	  
 }
-#endif
+
+#endif /* (configUSE_PREEMPTION == 0) */
 
 static int portOldIPL, portOldIPLTOS;
 
@@ -484,6 +616,8 @@ vPortExitCritical()
     }
 }
 
+#ifdef COLDFIRE
+
 static void rte_int(void)
 {
 #if _GCC_USES_FP == 1
@@ -492,11 +626,14 @@ static void rte_int(void)
 	asm volatile (" rte\n\t");	
 }
 
+#endif
+
 portBASE_TYPE
 xPortStartScheduler( void )
 {
     asm volatile ( "move.w  #0x2700, sr\n\t" );
 
+#ifdef COLDFIRE
     *(unsigned long *)_hz_200 = 0;
     /* Add entry in vector table for yield system call. */
     *(unsigned long *)(((portVECTOR_SYSCALL) * 4) + coldfire_vector_base) = (unsigned long)prvPortYield;
@@ -504,12 +641,21 @@ xPortStartScheduler( void )
     *(unsigned long *)(((portVECTOR_TIMER) * 4) + coldfire_vector_base) = (unsigned long)prvPortPreemptiveTick;
     /* sometimes spurious interrupt not fixed ! */
     *(unsigned long *)((24 * 4) + coldfire_vector_base) = (long)rte_int;
+#else /* !COLDFIRE */
+    /* Add entry in vector table for yield system call. */
+    prvOldTrap = *(unsigned long *)((portVECTOR_SYSCALL) * 4);  
+    *(unsigned long *)((portVECTOR_SYSCALL) * 4) = (unsigned long)prvPortYield;
+    /* Add entry in vector table for periodic timer. */
+    *(unsigned long *)((portVECTOR_TIMER_D) * 4) = (unsigned long)prvPortPreemptiveTick;
+//    *(unsigned long *)((portVECTOR_VBL) * 4) = (unsigned long)prvPortVBL;
+#endif /* COLDFIRE */
 
     ulCriticalNesting = portINITIAL_CRITICAL_NESTING;
 
     /* Configure the timer for the system clock. */
-    if ( configTICK_RATE_HZ > 0)
+    if(configTICK_RATE_HZ > 0)
     {
+#ifdef COLDFIRE
 #ifdef MCF5445X
         /* Initialize the periodic timer interrupt. */
         MCF_DTIM_DTMR(2) = DTIM_DTMR_ORRI | DTIM_DTMR_FRR | DTIM_DTMR_CLK(1);
@@ -533,7 +679,11 @@ xPortStartScheduler( void )
         MCF_INTC_IMRL &= ~MCF_INTC_IMRL_MASKALL;
         save_imrl = save_imrl_tos = MCF_INTC_IMRL;
         save_imrh = save_imrh_tos = MCF_INTC_IMRH;
-#endif 
+#endif /* MCF5445X */
+#else /* !COLDFIRE */
+        Xbtimer(3, 5, 2457600 / (64 * configTICK_RATE_HZ), -1);
+        Jenabint(4); /* timer D */
+#endif /* COLDFIRE */
     }
     
     /* Restore the context of the first task that is going to run. */
@@ -545,17 +695,23 @@ xPortStartScheduler( void )
 void
 vPortEndScheduler( void )
 {
+#ifndef COLDFIRE
+    *(unsigned long *)((portVECTOR_SYSCALL) * 4) = prvOldTrap; /* for MAGXBOOT */
+#endif
 }
 
 unsigned portBASE_TYPE
 uxPortReadTimer( void ) /* vTaskStartTrace */
 {
+#ifdef COLDFIRE
 #ifdef MCF5445X
-	return((unsigned portBASE_TYPE)MCF_DTIM_DTCN(2) / SYSTEM_CLOCK);
+    return((unsigned portBASE_TYPE)MCF_DTIM_DTCN(2) / SYSTEM_CLOCK);
 #else  /* MCF548X */
-	return((unsigned portBASE_TYPE)(MCF_SLT_SLTCNT(0) - MCF_SLT_SCNT(0)) / SYSTEM_CLOCK);
-#endif
+    return((unsigned portBASE_TYPE)(MCF_SLT_SLTCNT(0) - MCF_SLT_SCNT(0)) / SYSTEM_CLOCK);
+#endif /* MCF5445X */
+#else /* !COLDFIRE */
+    return(0);
+#endif /* COLDFIRE */
 }
 
-#endif /* LWIP */
-#endif /* NETWORK */
+#endif /* defined(LWIP) || defined(FREERTOS) */

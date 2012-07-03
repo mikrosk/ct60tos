@@ -5,15 +5,16 @@
 #include <string.h>
 #include <pcixbios.h>
 #include <x86emu/x86emu.h>
-#include "../../include/pci_bios.h" /* for LITTLE_ENDIAN_LANE_SWAPPED */
+#include "../../include/pci_bios.h" /* for LITTLE_ENDIAN_LANE_SWAPPED and PCI_MAX_FUNCTION */
+#include "pci_ids.h"
 // #include "vgatables.h"
 
 #define USE_SDRAM
 
 #ifdef COLDFIRE
-#ifdef LITTLE_ENDIAN_LANE_SWAPPED /* PCI BIOS */
-#define DIRECT_ACCESS
-#endif
+//#ifdef LITTLE_ENDIAN_LANE_SWAPPED /* PCI BIOS */
+//#define DIRECT_ACCESS
+//#endif
 #ifndef PCI_XBIOS
 #define PCI_XBIOS // else sometimes system is locked ???
 #endif
@@ -196,23 +197,23 @@ u32 inl(u16 port)
 	}
 	else if((port == 0xCFC) && ((config_address_reg & 0x80000000) !=0))
 	{
-		if((config_address_reg & 0xFC) == PCIBAR1)
-			val = (u32)offset_port+1;
-		else
+		switch(config_address_reg & 0xFC)
 		{
-#ifdef DEBUG_X86EMU_PCI
-			DPRINTVALHEX("inl(", port);
-#endif
+			case PCIIDR: val = ((u32)rinfo_biosemu->chipset << 16) + PCI_VENDOR_ID_ATI; break;
+			case PCIBAR1: val = (u32)offset_port+1; break;
+			default: 
 #ifdef PCI_XBIOS
 			val = fast_read_config_longword(rinfo_biosemu->handle, config_address_reg & 0xFC);
 #else
 			val = Fast_read_config_longword(rinfo_biosemu->handle, config_address_reg & 0xFC);
 #endif
-#ifdef DEBUG_X86EMU_PCI
-			DPRINTVALHEX(") = ", val);
-			DPRINT("\r\n");
-#endif
+			break;
 		}
+#ifdef DEBUG_X86EMU_PCI
+		DPRINTVALHEX("inl(", port);
+		DPRINTVALHEX(") = ", val);
+		DPRINT("\r\n");
+#endif
 	}
 	return val;
 }
@@ -248,7 +249,7 @@ void outw(u16 val, u16 port)
 		DPRINT("\r\n");
 #endif
 #ifdef DIRECT_ACCESS
-#ifndef COLDFIRE // write_io_word sometimes lock the system on the Coldfire ????
+#if 1 // #ifndef COLDFIRE // write_io_word sometimes lock the system on the Coldfire ????
 		*(u16 *)(offset_io+(u32)port) = swap_short(val);
 #else
 		*(u8 *)(offset_io+(u32)port) = val;
@@ -257,7 +258,7 @@ void outw(u16 val, u16 port)
 		*(u8 *)(offset_io+(u32)port) = val;
 #endif /* COLDFIRE */
 #else /* !DIRECT_ACCESS */
-#ifndef COLDFIRE // write_io_word sometimes lock the system on the Coldfire ????
+#if 1 // #ifndef COLDFIRE // write_io_word sometimes lock the system on the Coldfire ????
 #ifdef PCI_XBIOS
 		write_io_word(rinfo_biosemu->handle,offset_io+(u32)port,val);
 #else
@@ -287,6 +288,7 @@ void outl(u32 val, u16 port)
 #ifdef DEBUG_X86EMU_PCI
 		DPRINTVALHEX("outl(", port);
 		DPRINTVALHEX(") = ", val);
+		DPRINT("\r\n");
 #endif
 #ifdef DIRECT_ACCESS
 		*(u32 *)(offset_io+(u32)port) = swap_long(val);
@@ -303,6 +305,7 @@ void outl(u32 val, u16 port)
 #ifdef DEBUG_X86EMU_PCI
 		DPRINTVALHEX("outl(", port);
 		DPRINTVALHEX(") = ", val);
+		DPRINT("\r\n");
 #endif
 		config_address_reg = val;
 	}
@@ -315,6 +318,7 @@ void outl(u32 val, u16 port)
 #ifdef DEBUG_X86EMU_PCI
 			DPRINTVALHEX("outl(", port);
 			DPRINTVALHEX(") = ", val);
+			DPRINT("\r\n");
 #endif
 #ifdef PCI_XBIOS
 			write_config_longword(rinfo_biosemu->handle, config_address_reg & 0xFC, val);
@@ -323,9 +327,6 @@ void outl(u32 val, u16 port)
 #endif
 		}
 	}
-#ifdef DEBUG_X86EMU_PCI
-	DPRINT("\r\n");
-#endif
 }
 
 /* Interrupt multiplexer */
@@ -656,18 +657,18 @@ void run_bios(struct radeonfb_info *rinfo)
 	struct pci_data *rom_data;
 	unsigned long rom_size=0;
 	unsigned long image_size=0;
-	unsigned long biosmem=0x01000000; /* when run_bios() is called, SDRAM is valid but not add to the system */
+	unsigned long biosmem=0x01000000; /* when run_bios() is called, SDRAM is valid but not added to the system */
 	unsigned long addr;
 	unsigned short initialcs;
 	unsigned short initialip;
-	unsigned short devfn = (unsigned short)(rinfo->handle << 3); // was dev->bus->secondary << 8 | dev->path.u.pci.devfn;
+	unsigned short devfn = (unsigned short)( ((rinfo->handle & 0xFF) << 3) + ((((rinfo->handle >> 16) / PCI_MAX_FUNCTION) & 0xFF) <<  8)); // was dev->bus->secondary << 8 | dev->path.u.pci.devfn;
 	X86EMU_intrFuncs intFuncs[256];
 
 	if((rinfo->mmio_base == NULL) || (rinfo->io_base == NULL))
 		return;
 #ifndef COLDFIRE
-	/* try to not init the board with thr X86 VGA BIOS, too long on CT60 (more than 10 seconds, 2 seconds on Coldfire) */
-	if(os_magic == 1)
+	/* try to not init the board with the X86 VGA BIOS, too long on CT60 (more than 20 seconds, 2 seconds on Coldfire) */
+	if(os_magic)
 		return;
 	if(restart /* CTRL-ALT-DEL else 0 if reset */
 	 && (*memvalid == MEMVALID_MAGIC) && (*memval2 == MEMVAL2_MAGIC)
@@ -699,7 +700,7 @@ void run_bios(struct radeonfb_info *rinfo)
 	{
 #ifdef USE_SDRAM
 #if 0
-		if(os_magic == 1)
+		if(os_magic)
 		{
 			biosmem = Mxalloc(SIZE_EMU, 3);
 			if(biosmem == 0)
@@ -720,36 +721,6 @@ void run_bios(struct radeonfb_info *rinfo)
 #if 0 // 8 bits copy
 		ptr = (char *)biosmem;
 		for(i = (long)rom_header, j = PCI_VGA_RAM_IMAGE_START; i < (long)rom_header+rom_size; ptr[j++] = BIOS_IN8(i++));
-#if 0
-		{
-			extern u32 swap_long(u32 val);
-			unsigned long sum = 0, data;
-			unsigned char *ptr2;
-			ptr = (char *)0x01100000;
-			ptr2 = ptr;
-			memset((char *)ptr, 0, SIZE_EMU);
-			for(i = (long)rom_header, j = PCI_VGA_RAM_IMAGE_START; i < (long)rom_header+rom_size; i+=4, j+=4)
-			{
-				data = swap_long(BIOS_IN32(i));
-				sum += data;
-				*((unsigned long *)&ptr[j]) = data;
-			}
-			ptr = (char *)biosmem;
-			for(i = (long)rom_header, j = PCI_VGA_RAM_IMAGE_START; i < (long)rom_header+rom_size; i++)
-			{
-			  if(ptr[j] != ptr2[j])
-			  {
-					DPRINTVALHEXBYTE("VGA ROM error read ", ptr[j]);
-					DPRINTVALHEXBYTE(" / ", ptr2[j]);
-					DPRINTVALHEXLONG(" at ", (long)&ptr[j]);
-					DPRINT("\r\n");
-			  }
-			  j++;
-			}
-			DPRINTVALHEXLONG("VGA ROM checksum ", sum);
-			DPRINT("\r\n");
-		}
-#endif
 #else // 32 bits copy
 		{
 			extern u32 swap_long(u32 val);
@@ -768,7 +739,7 @@ void run_bios(struct radeonfb_info *rinfo)
 	{
 #ifdef USE_SDRAM
 #if 0
-		if(os_magic == 1)
+		if(os_magic)
 		{
 			biosmem = Mxalloc(SIZE_EMU, 3);
 			if(biosmem == 0)
@@ -843,7 +814,7 @@ void run_bios(struct radeonfb_info *rinfo)
 //	biosfn_set_video_mode(0x13); /* 320 x 200 x 256 colors */
 #ifdef USE_SDRAM
 #if 0
-	if(os_magic == 1)
+	if(os_magic)
 	{
 		memset((char *)biosmem, 0, SIZE_EMU);
 		Mfree(biosmem);

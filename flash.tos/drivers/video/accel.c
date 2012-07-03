@@ -201,7 +201,7 @@ static int check_table(short *table, int length)
 
 #ifdef DRIVER_IN_ROM
 #ifdef COLDFIRE
-#ifndef NETWORK
+#ifndef LWIP
 
 inline int dma_transfer(char *src, char *dest, int size, int width, int src_incr, int dest_incr, int step)
 {
@@ -211,7 +211,7 @@ inline int dma_transfer(char *src, char *dest, int size, int width, int src_incr
 inline int dma_status(void) { return(-1); }
 inline void wait_dma(void) { }
 
-#endif /* NETWORK */
+#endif /* LWIP */
 #endif /* COLDFIRE */
 #endif /* DRIVER_IN_ROM */
 
@@ -1567,7 +1567,7 @@ long CDECL c_write_pixel_1(Virtual *vwk, MFDB *dst, long x, long y, long color)
 	if(!dst || !dst->address || (dst->address == wk->screen.mfdb.address))
 	{
 		offset = ((long)wk->screen.wrap * y) + x;
-		p = (unsigned short *)((unsigned long)wk->screen.mfdb.address + (unsigned long)offset);
+		p = (short *)((unsigned long)wk->screen.mfdb.address + (unsigned long)offset);
 		if(color)
 			*p |= mask;
 		else
@@ -1576,7 +1576,7 @@ long CDECL c_write_pixel_1(Virtual *vwk, MFDB *dst, long x, long y, long color)
 	else
 	{
 		offset = ((dst->wdwidth * 2 * dst->bitplanes) * y) + x;
-		p = (unsigned short *)((unsigned long)dst->address + (unsigned long)offset);
+		p = (short *)((unsigned long)dst->address + (unsigned long)offset);
 		if(color)
 			*p |= mask;
 		else
@@ -1928,7 +1928,7 @@ long CDECL c_expand_area(Virtual *vwk, MFDB *src, long src_x, long src_y, MFDB *
 			{
 #ifndef COLDFIRE
 				case 1:
-					replace_1(src_addr,src_line_add,dst_addr,dst_line_add,src_x,dst_x,w,h,(unsigned char)foreground,(unsigned char)background);
+					replace_1((void *)src_addr,src_line_add,dst_addr,dst_line_add,src_x,dst_x,w,h,(unsigned char)foreground,(unsigned char)background);
 					break;
 #endif
 				case 16:
@@ -1947,7 +1947,7 @@ long CDECL c_expand_area(Virtual *vwk, MFDB *src, long src_x, long src_y, MFDB *
 			{
 #ifndef COLDFIRE
 				case 1:
-					transparent_1(src_addr,src_line_add,dst_addr,dst_line_add,src_x,dst_x,w,h,(unsigned char)foreground,(unsigned char)background);
+					transparent_1((void *)src_addr,src_line_add,dst_addr,dst_line_add,src_x,dst_x,w,h,(unsigned char)foreground,(unsigned char)background);
 					break;
 #endif
 				case 16:
@@ -1966,7 +1966,7 @@ long CDECL c_expand_area(Virtual *vwk, MFDB *src, long src_x, long src_y, MFDB *
 			{
 #ifndef COLDFIRE
 				case 1:
-					xor_1(src_addr,src_line_add,dst_addr,dst_line_add,src_x,dst_x,w,h,(unsigned char)foreground,(unsigned char)background);
+					xor_1((void *)src_addr,src_line_add,dst_addr,dst_line_add,src_x,dst_x,w,h,(unsigned char)foreground,(unsigned char)background);
 					break;
 #endif
 				case 16:
@@ -1985,7 +1985,7 @@ long CDECL c_expand_area(Virtual *vwk, MFDB *src, long src_x, long src_y, MFDB *
 			{
 #ifndef COLDFIRE
 				case 1:			
-					revtransp_1(src_addr,src_line_add,dst_addr,dst_line_add,src_x,dst_x,w,h,(unsigned char)foreground,(unsigned char)background);
+					revtransp_1((void *)src_addr,src_line_add,dst_addr,dst_line_add,src_x,dst_x,w,h,(unsigned char)foreground,(unsigned char)background);
 					break;
 #endif
 				case 16:			

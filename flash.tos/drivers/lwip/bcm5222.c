@@ -13,7 +13,6 @@
 #include "fec.h"
 #include "bcm5222.h"
 
-#ifdef NETWORK
 #ifdef LWIP
 
 #undef DEBUG
@@ -168,4 +167,3 @@ void bcm5222_get_reg(uint16* status0, uint16* status1)
 /********************************************************************/
 
 #endif /* LWIP */
-#endif /* NETWORK */

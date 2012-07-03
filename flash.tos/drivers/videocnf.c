@@ -275,7 +275,7 @@ extern long total_modedb;
 OBJECT *rs_object, *rs_object_menu, *rs_object_menu2;
 TEDINFO *rs_tedinfo;
 char **rs_strings;
-LISTE_RES liste_rez[MAX_RES];
+LISTE_RES *liste_rez;
 int offset_select, nb_res, sel_color, type_modes;
 #if defined(COLDFIRE) && defined(MCF547X) /* FIREBEE */
 extern unsigned long videl_modedb_len;
@@ -311,11 +311,18 @@ short set_video(void)
 	if(!video_found && (Physbase() < (void *)0x01000000))
 		return(-1);
 	vdi_handle = graf_handle(&gr_hwchar, &gr_hhchar, &gr_hwbox, &gr_hhbox);
-	if(!init_rsc())
+	liste_rez = (LISTE_RES *)Mxalloc(sizeof(LISTE_RES) * MAX_RES, 3);
+	if(liste_rez == NULL)
 		return(0);
+	if(!init_rsc())
+	{
+		Mfree(liste_rez);
+		return(0);
+	}
 	v_opnvwk(work_in, &vdi_handle, work_out);
 	if(vdi_handle <= 0)
 	{
+		Mfree(liste_rez);
 		free_rsc();
 		return(0);
 	}
@@ -658,6 +665,7 @@ change:
 	wind_update(END_UPDATE);
 	v_clsvwk(vdi_handle);
 	free_rsc();
+	Mfree(liste_rez);
 	return(chg_res);
 }
 

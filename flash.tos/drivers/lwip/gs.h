@@ -32,15 +32,19 @@
 
 #include "transprt.h"
 
-#if 0
-#define GS_DEBUG
-#endif
+#undef GS_DEBUG
 
 #ifndef GS_DEBUG
 #define PRINT_DEBUG(x)
 #else
+#if defined(COLDFIRE) && defined(LWIP)
 extern void board_printf(const char *fmt, ...);
-#define PRINT_DEBUG(x)	{ board_printf x; board_printf ("\r\n"); }
+#define PRINT_DEBUG(x)	{ board_printf x; board_printf("\r\n"); }
+#else
+#include <mint/osbind.h>
+extern void kprint(const char *fmt, ...);
+#define PRINT_DEBUG(x)	{ long stack=0; if(Super(1L) >= 0) stack=Super(0L); kprint x; kprint("\r\n"); if(stack) Super((void *)stack); }
+#endif
 #endif
 
 typedef unsigned char	uchar;

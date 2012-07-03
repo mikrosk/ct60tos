@@ -45,11 +45,14 @@
 #include "FreeRTOS.h"
 #include "task.h"
 
-#ifdef NETWORK
-#ifdef LWIP
+#if defined(LWIP) || defined(FREERTOS)
 
 extern unsigned char __FREERTOS_BASE[];
+#ifdef COLDFIRE
 extern unsigned char __FREERTOS_SIZE[];
+#else
+#define __FREERTOS_SIZE configTOTAL_HEAP_SIZE
+#endif
 
 /* Setup the correct byte alignment mask for the defined byte alignment. */
 #if portBYTE_ALIGNMENT == 4
@@ -234,5 +237,4 @@ xBlockLink *pxLink;
 }
 /*-----------------------------------------------------------*/
 
-#endif /* LWIP */
-#endif /* NETWORK */
+#endif /* defined(LWIP) || defined(FREERTOS) */

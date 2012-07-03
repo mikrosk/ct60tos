@@ -39,7 +39,6 @@
 #include "api_msg.h"
 #include "memp.h"
 
-#ifdef NETWORK
 #ifdef LWIP
 
 struct
@@ -745,4 +744,3 @@ netconn_err(struct netconn *conn)
 }
 
 #endif /* LWIP */
-#endif /* NETWORK */

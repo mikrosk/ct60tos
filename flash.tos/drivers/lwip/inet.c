@@ -49,7 +49,6 @@
 
 #include "sys.h"
 
-#ifdef NETWORK
 #ifdef LWIP
 
 /* These are some reference implementations of the checksum algorithm, with the
@@ -541,4 +540,3 @@ ntohl(u32_t n)
 #endif /* (LWIP_PLATFORM_BYTESWAP == 0) && (BYTE_ORDER == LITTLE_ENDIAN) */
 
 #endif /* LWIP */
-#endif /* NETWORK */

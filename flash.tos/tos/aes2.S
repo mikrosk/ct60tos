@@ -1,6 +1,6 @@
 /* TOS 4.04 AES patch for Eiffel POWER OFF alert for the CT60 board
 *                     color icons and GEM dispatcher on Coldfire
-*  Didier Mequignon 2004 February, e-mail: aniplay@wanadoo.fr
+*  Didier Mequignon 2004-2011, e-mail: aniplay@wanadoo.fr
 *
 *  This library is free software; you can redistribute it and/or
 *  modify it under the terms of the GNU Lesser General Public
@@ -19,6 +19,7 @@
 
 	.globl det_evnt_multi,patch_tran_check,patch_gr_cicon,patch_set_video
 #ifdef COLDFIRE
+	.globl userdef_call
 	.globl det_aes
 	.globl _dsptch,_savestate,_switchto,_gotopgm,_psetup
 	.globl _far_mchange,_far_bchange,_forkq
@@ -27,7 +28,7 @@
 
 #include "vars.h"
 
-//#define DEBUG
+#undef DEBUG
 	
 #define saddr        0x08
 #define daddr        0x0C
@@ -73,7 +74,9 @@
 #define P_BLEN       0x1C // length of BSS
                 
 	.chip 68060
-#endif
+
+#endif /* COLDFIRE */
+
 	.text
 
 alert_power_en:
@@ -93,6 +96,8 @@ debug3:	.asciz "AES gotopgm 0x"
 debug4:	.ascii "AES psetup"
 	.byte 13,10,0
 debug5:	.asciz "AES #0x"
+debug6:	.asciz "AES userdef 0x"
+debug7:	.asciz "AES end userdef 0x"
 
 	.align 2
 	
@@ -185,8 +190,8 @@ det_evnt_multi:
 	bne.s .no_pci_drivers
 .pci_drivers:
 	jsr 46(A0)               // drivers PCI in flash, call event_aes
-	movem.l (SP)+,D0-D2/A0-A2
 .no_pci_drivers:
+	movem.l (SP)+,D0-D2/A0-A2
 	move.l phystop,A1
 	cmp.l #0xCAFEFADE,power_flag(A1)
 	bne.s .no_power_off
@@ -596,11 +601,6 @@ tab_rgb:
 	
 patch_set_video:
 
-	move.w #3,-(SP)          // Logbase
-	trap #14
-	addq.l #2,SP
-        	cmp.l #0x01000000,D0
-        	bcs.s .no_pci_drivers2
 	move.l #0x5F504349,D0
 	lea 0xED0000,A0          // 128 KB
 	cmp.l (A0),D0            // _PCI
@@ -625,6 +625,62 @@ patch_set_video:
 	jmp 0xE48014             // TOS 4.04 set_video
 
 #ifdef COLDFIRE
+
+#if 0
+userdef_call:
+
+	link A6,#-16
+#ifdef DEBUG
+	lea debug6(PC),A0
+	bsr debug_display_string
+	move.l 4(A6),D0
+	bsr debug_hex_long
+	moveq #13,D0
+	bsr debug_display_char
+	moveq #10,D0
+	bsr debug_display_char
+#endif
+#if 0
+	move.l SP,-8(A6)         // save SSP
+	move.w #3,-(SP)          // TT ram if possible
+	move.l #0x8000,-(SP)
+	move.w #0x44,-(SP)       // Mxalloc
+	trap #1
+	addq.l #8,SP
+	move.l D0,-4(A6)
+	beq.s .no_mem
+	move.l D0,SP
+.no_mem:
+#endif
+	move.l 12(A6),-(SP)      // param
+	move.l 8(A6),A0
+	jsr (A0)
+	move.l D0,-12(A6)
+	addq.l #4,SP
+#if 0
+	move.l -4(A6),D0
+	beq.s .no_free
+	move.l -8(A6),SP         // restore SSP
+	move.l D0,-(SP)
+	move.w #0x49,-(SP)       // Mfree
+	trap #1
+	addq.l #6,SP
+.no_free:
+#endif
+#ifdef DEBUG
+	lea debug7(PC),A0
+	bsr debug_display_string
+	move.l 4(A6),D0
+	bsr debug_hex_long
+	moveq #13,D0
+	bsr debug_display_char
+	moveq #10,D0
+	bsr debug_display_char
+#endif
+	move.l -12(A6),D0
+	unlk A6
+	rts
+#endif
 
 	dc.l 0x58425241          // XBRA
 	dc.l 0x5F43465F          // _CF_
@@ -1053,6 +1109,6 @@ _forkq:
 .fq1:
 	move.l (SP)+,A5
 	unlk a6
-	rts	
-
-#endif
+	rts
+	
+#endif /* COLDFIRE */

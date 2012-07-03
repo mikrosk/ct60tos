@@ -72,13 +72,9 @@
  *       Christian E. Hopps.
  */
  
- /* M.D. (04.07.2011) added CF instructions and length opcode functions
-   TODO: mac instruction group (line A)
- */
+ /* M.D. (04.07.2011) added CF instructions and length opcode functions */
 
 #include "config.h"
-
-#ifdef DBUG
 
 #define M68K_DISASM_C
 #include <string.h>
@@ -4531,6 +4527,4 @@ void print_RnPlus(dis_buffer_t *dbuf, u_short opc, int An, int sb, int inc)
   }
   *dbuf->casm = 0;
 }
-
-#endif /* DBUG */
 

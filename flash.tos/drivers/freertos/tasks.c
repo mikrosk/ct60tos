@@ -216,8 +216,7 @@ Changes since V4.3.1:
 #include "FreeRTOS.h"
 #include "task.h"
 
-#ifdef NETWORK
-#ifdef LWIP
+#if defined(LWIP) || defined(FREERTOS)
 
 #define MAGIC_KEY 0x19641016
 
@@ -597,7 +596,11 @@ static unsigned portBASE_TYPE uxTaskNumber = 0; /*lint !e956 Static is deliberat
 		but had been interrupted by the scheduler.  The return address is set
 		to the start of the task function. Once the stack has been initialised
 		the	top of stack variable is updated. */
+#ifdef COLDFIRE
 		pxNewTCB->uxStartIntLevel = strcmp( (void *)pcName, "TOS" ) == 0 ? 0 : 3; 
+#else
+		pxNewTCB->uxStartIntLevel = 3; /* HBL mask */
+#endif
 #if( HAVE_USP == 1 )
 		pxNewTCB->pxTopOfStack = pxPortInitialiseStack( pxTopOfStack, pvTaskCode, pvParameters, pxNewTCB->Context, pxNewTCB->uxSuper, pxTopOfUserStack, pxNewTCB->uxStartIntLevel );
 #else
@@ -1631,7 +1634,18 @@ void vTaskSwitchContext( void )
 
 	/* listGET_OWNER_OF_NEXT_ENTRY walks through the list, so the tasks of the
 	same priority get an equal share of the processor time. */
+#ifdef COLDFIRE
 	listGET_OWNER_OF_NEXT_ENTRY( pxCurrentTCB, &( pxReadyTasksLists[ uxTopReadyPriority ] ) );
+#else
+	{
+		tskTCB * pxTempTCB;
+		listGET_OWNER_OF_NEXT_ENTRY( pxTempTCB, &( pxReadyTasksLists[ uxTopReadyPriority ] ) );
+		if(pxTempTCB)		
+			pxCurrentTCB = pxTempTCB;
+		else
+			conws_debug("pxCurrentTCB NULL\r\n");		
+	}
+#endif
 	vWriteTraceToBuffer();
 }
 /*-----------------------------------------------------------*/
@@ -2062,6 +2076,100 @@ tskTCB *pxNewTCB;
 		} while( pxNextTCB != pxFirstTCB );
 		pxListTCB->pxTCB = NULL;
 	}
+static xTaskHandle prvTaskSearchName( const signed portCHAR * const pcName , xList * pxList )
+{
+	volatile tskTCB *pxNextTCB, *pxFirstTCB;
+	listGET_OWNER_OF_NEXT_ENTRY( pxFirstTCB, pxList );
+	do
+	{
+		listGET_OWNER_OF_NEXT_ENTRY( pxNextTCB, pxList );
+		if( strcmp( pcName, ( const signed portCHAR * ) pxNextTCB->pcTaskName ) == 0 ) 
+			return( (xTaskHandle ) pxNextTCB );
+	}
+	while( pxNextTCB != pxFirstTCB );
+	return 0;
+}
+
+xTaskHandle xTaskGetTaskHandleFromName( const signed portCHAR * const pcName )
+{
+	xTaskHandle xReturn = 0;
+	unsigned portBASE_TYPE uxQueue;
+	vTaskSuspendAll();
+	uxQueue = uxTopUsedPriority + 1;
+	do
+	{
+		uxQueue--;
+		if(!listLIST_IS_EMPTY(&(pxReadyTasksLists[uxQueue])))
+		{
+      xReturn = prvTaskSearchName( pcName, (xList *)&(pxReadyTasksLists[uxQueue]) );
+      if(xReturn)
+        break;
+    }
+  }
+	while( uxQueue > ( unsigned portSHORT ) tskIDLE_PRIORITY );
+	if( !xReturn && !listLIST_IS_EMPTY( pxDelayedTaskList  ))
+		xReturn = prvTaskSearchName( pcName, (xList *)pxDelayedTaskList );
+	if( !xReturn && !listLIST_IS_EMPTY( pxOverflowDelayedTaskList ) )
+		xReturn = prvTaskSearchName( pcName, (xList *)pxOverflowDelayedTaskList );
+#if ( INCLUDE_vTaskDelete == 1 )
+  if( !xReturn && !listLIST_IS_EMPTY( &xTasksWaitingTermination ) )
+		xReturn = prvTaskSearchName( pcName, (xList *)&xTasksWaitingTermination );
+#endif
+#if ( INCLUDE_vTaskSuspend == 1 )
+	if( !xReturn && !listLIST_IS_EMPTY( &xSuspendedTaskList ) )
+		xReturn = prvTaskSearchName( pcName, (xList *)&xSuspendedTaskList );
+#endif
+	xTaskResumeAll();
+	return xReturn;
+}
+
+signed portCHAR * prvTaskSearchTCBNumber( unsigned portBASE_TYPE uxTCBNumber , xList * pxList )
+{
+	volatile tskTCB *pxNextTCB, *pxFirstTCB;
+	listGET_OWNER_OF_NEXT_ENTRY( pxFirstTCB, pxList );
+	do
+	{
+		listGET_OWNER_OF_NEXT_ENTRY( pxNextTCB, pxList );
+		if( uxTCBNumber ==  pxNextTCB->uxTCBNumber )
+			return (signed portCHAR * ) pxNextTCB->pcTaskName;
+	}
+	while( pxNextTCB != pxFirstTCB );
+	return NULL;
+}
+
+signed portCHAR * pTaskGetTraceName( unsigned portBASE_TYPE uxTCBNumber )
+{
+	signed portCHAR * pReturn = NULL;
+	unsigned portBASE_TYPE uxQueue;
+	vTaskSuspendAll();
+	uxQueue = uxTopUsedPriority + 1;
+	do
+	{
+		uxQueue--;
+		if(!listLIST_IS_EMPTY(&(pxReadyTasksLists[uxQueue])))
+		{
+      pReturn = prvTaskSearchTCBNumber( uxTCBNumber, (xList *)&(pxReadyTasksLists[uxQueue]) );
+      if(pReturn)
+        break;
+    }
+  }
+	while( uxQueue > ( unsigned portSHORT ) tskIDLE_PRIORITY );
+	if( !pReturn && !listLIST_IS_EMPTY( pxDelayedTaskList  ))
+		pReturn = prvTaskSearchTCBNumber( uxTCBNumber, (xList *)pxDelayedTaskList );
+	if( !pReturn && !listLIST_IS_EMPTY( pxOverflowDelayedTaskList ) )
+		pReturn = prvTaskSearchTCBNumber( uxTCBNumber, (xList *)pxOverflowDelayedTaskList );
+#if ( INCLUDE_vTaskDelete == 1 )
+  if( !pReturn && !listLIST_IS_EMPTY( &xTasksWaitingTermination ) )
+		pReturn = prvTaskSearchTCBNumber( uxTCBNumber, (xList *)&xTasksWaitingTermination );
+#endif
+#if ( INCLUDE_vTaskSuspend == 1 )
+	if( !pReturn && !listLIST_IS_EMPTY( &xSuspendedTaskList ) )
+		pReturn = prvTaskSearchTCBNumber( uxTCBNumber, (xList *)&xSuspendedTaskList );
+#endif
+	xTaskResumeAll();
+	return pReturn;
+}
+
 #endif
 
 /*-----------------------------------------------------------*/
@@ -2166,7 +2274,6 @@ tskTCB *pxNewTCB;
 
 #endif
 
-#endif /* LWIP */
-#endif /* NETWORK */
+#endif /* defined(LWIP) || defined(FREERTOS) */
 
 

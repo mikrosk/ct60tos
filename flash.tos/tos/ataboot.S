@@ -1378,33 +1378,6 @@ lb4:
 	moveq	#0,D0
 	movec	D0,CACR
 lb3:
-#if 0                                    // removed for TOS in RAM
-	moveq	#0xC,D0        // disable_mmu
-	and.l	D1,D0          // bi_cputype
-	beq.s	lb2
-	moveq	#0,D0          // 68040/60
-	movec	D0,TC
-	move.l	#0x807FE040,D0 // cache inhibit precise
-	movec	D0,ITT0
-	movec	D0,DTT0
-	move.l	#0x007FE040,D0
-	movec	D0,ITT1
-	movec	D0,DTT1
-	bra.s	lb1
-lb2:
-	subq.l	#4,SP
-	pmove	TC,(SP)
-	bclr	#7,(SP)
-	pmove	(SP),TC
-	addq.l	#4,SP
-	btst	#1,D1
-	beq.s	lb1
-	clr.l	-(SP)
-	pmove	(SP),TT0
-	pmove	(SP),TT1
-	addq.l	#4,SP
-lb1:
-#endif
 	clr.l	resvalid.w
 	lea	copyall(PC),A0
 	lea	copyallend(PC),A1
@@ -2193,16 +2166,15 @@ check_video_screen:
 	move	#0x58,-(SP) // Vsetmode
 	trap	#14
 	addq	#4,SP
-	move	D0,-(SP)
+	move	D0,-(SP)    // old modecode
 	move.l	(video_modecode-_bss).w(A5),D0
+       	cmp.l	#0x01000000,_v_bas_ad
+	bcc	graphic_card2
 	or.l	#0xFFFF0000,D0
 try_again:
 		move.l	(internal_clock_frequency-_bss).w(A5),D1
 		move.l	(external_clock_frequency-_bss).w(A5),D2
-		lea	init_screen,A0
-		add.l	#0xE80000,A0
-		sub.l	#_ct60tos_half_flash,A0
-		jsr	(A0)
+		jsr	init_screen
 		move	(SP)+,D1 // old modecode
 		tst	D0
 		bpl.s	screen_ok
@@ -2211,11 +2183,22 @@ try_again:
 		cmp.l	#40,(internal_clock_frequency-_bss).w(A5) // MHz
 		bcs.s	screen_error
 		move.l	(video_modecode-_bss).w(A5),D0
-		or.l	#0xFFFF8000,D0 // CLOCK_FORCED 
+		or.l	#0xFFFF8000,D0 // CLOCK_FORCED
+		move	D1,-(SP) // old modecode
 	bra.s	try_again
+graphic_card2:
+	move	D0,-(SP) // new modecode
+	move	#3,-(SP)
+	clr.l	-(SP)
+	clr.l	-(SP)	                                  
+	move	#5,-(SP) // Setscreen
+	trap	#14
+	lea	14(SP),SP
+	move	(SP)+,D1 // old modecode
+	bra.s	screen_ok
 screen_error:
 	move	D0,-(SP)
-	move	D1,-(SP)
+	move	D1,-(SP) // old modecode
 	move	#3,-(SP)
 	clr.l	-(SP)
 	clr.l	-(SP)	                                  
@@ -2230,12 +2213,12 @@ screen_error:
 	pea	error_58(PC)
 	bsr	_printline
 	addq	#4,SP
-	bra.s	screen_end
+	bra	screen_end
 memory_error:
 	pea	error_59(PC)
 	bsr	_printline
 	addq	#4,SP
-	bra.s	screen_end
+	bra	screen_end
 screen_ok:
 	move	D0,-(SP)         // clock selected
 	pea	screen_ptr(PC)
@@ -2247,6 +2230,10 @@ screen_ok:
 	.short	0xA000           // lineA
 	moveq	#0,D2
 	move	(A0),D0          // number of planes
+	cmp	#16,D0
+	bls.s	not_tc
+	moveq	#24,D0
+not_tc:	
 	bset	D0,D2            // number of colors
 	moveq	#0,D0
 	move	dev_tab(A0),D0   // width pixels workstation info
@@ -2265,11 +2252,16 @@ screen_ok:
 	bsr	display_deci
 	pea	screen_info_4(PC)
 	bsr	_printline
-	lea	20(SP),SP
+	lea	20(SP),SP         // printlines(s) stack fix
 	moveq	#0,D0
-	move	(SP)+,D0
+	move	(SP)+,D0          // clock selected
+	lea	screen_info_6(PC),A0
+       	cmp.l	#0x01000000,_v_bas_ad
+	bcc	graphic_card
 	bsr	display_deci
-	pea	screen_info_5(PC)
+	lea	screen_info_5(PC),A0
+graphic_card:
+	pea	(A0)
 	bsr	_printline
 	addq	#4,SP
 screen_end:
@@ -7159,6 +7151,7 @@ screen_info_4:
 	.asciz	" colors, "
 screen_info_5:
 	.ascii	" MHz"
+screen_info_6:
 	.byte	13,10,0
 
 	.align	2
@@ -7203,6 +7196,8 @@ islower:
 
 rotchar:
 	.long	0x7C2F2D5C /* |/-\ */
+
+	.bss
 	
 	.align	2
 

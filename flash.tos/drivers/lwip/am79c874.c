@@ -8,7 +8,6 @@
 #include "fec.h"
 #include "am79c874.h"
 
-#ifdef NETWORK
 #ifdef LWIP
 
 #undef DEBUG
@@ -126,4 +125,3 @@ int am79c874_init(uint8 fec_ch, uint8 phy_addr, uint8 speed, uint8 duplex)
 /********************************************************************/
 
 #endif /* LWIP */
-#endif /* NETWORK */

@@ -33,7 +33,6 @@
 #include "config.h"
 #include "err.h"
 
-#ifdef NETWORK
 #ifdef LWIP
 
 
@@ -65,4 +64,3 @@ lwip_strerr(err_t err)
 
 
 #endif /* LWIP */
-#endif /* NETWORK */

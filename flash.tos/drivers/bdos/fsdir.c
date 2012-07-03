@@ -127,10 +127,8 @@
 #define         _MINT_OSTRUCT_H
 #include        <osbind.h>
 #include        "config.h"
-#ifdef NETWORK
 #ifdef LWIP
 #include        "../../include/vars.h"
-#endif
 #endif
 #include        "portab.h"
 #include        "asm.h"
@@ -1165,14 +1163,12 @@ long    xgetdir(char *buf, short drv)
         drv = (drv == 0) ? run->p_curdrv : drv-1 ;
 
         {
-#ifdef NETWORK
 #ifdef LWIP
             extern long pxCurrentTCB, tid_TOS;
             if(pxCurrentTCB != tid_TOS)
                 drvmap = *(unsigned long *)_drvbits;
             else       
 #endif
-#endif       
             drvmap = Drvmap();
         }        
         if( !(drvmap & (1<<drv)) || (ckdrv(drv) < 0) )     /* M01.01.1031.01 */

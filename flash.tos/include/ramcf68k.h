@@ -1,4 +1,4 @@
-/* TOS 4.04 Xbios for the Coldfire boards
+/* TOS 4.04 CF68KLIB RAM for the Coldfire boards
 *  Didier Mequignon 2011, e-mail: aniplay@wanadoo.fr
 *
 *  This library is free software; you can redistribute it and/or

@@ -25,7 +25,6 @@
 #include "sockets.h"
 #include "tftp.h"
 
-#ifdef NETWORK
 #ifdef LWIP
 
 #define TIMEOUT 2 /* seconds */
@@ -394,4 +393,3 @@ char *tftp_get_error(void)
 }
 
 #endif /* LWIP */
-#endif /* NETWORK */

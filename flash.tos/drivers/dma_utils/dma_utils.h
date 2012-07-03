@@ -3,7 +3,7 @@
 
 #ifdef COLDFIRE
 
-#ifdef NETWORK
+#ifdef LWIP
 
 #ifdef MCF5445X
 
@@ -71,22 +71,24 @@
 #endif /* MCF5445X */
 
 void dma_init_tables(void);
-void dma_irq_enable(unsigned char, unsigned char);
+void dma_irq_enable(unsigned char lvl, unsigned char pri);
 void dma_irq_disable(void);
-int dma_set_initiator(int);
-unsigned long dma_get_initiator(int);
-void dma_free_initiator(int);
-int dma_set_channel(int, void (*)(void));
-int dma_get_channel(int);
-void dma_free_channel(int);
-void dma_clear_channel(int);
 void dma_interrupt_handler(void);
 void dma_reg_dump(void);
+
+int dma_set_initiator(int initiator);
+unsigned long dma_get_initiator(int requestor);
+void dma_free_initiator(int requestor);
+int dma_set_channel(int requestor, void (*handler)(void));
+int dma_get_channel(int requestor);
+void dma_free_channel(int requestor);
+void dma_clear_channel(int channel);
+
 int dma_transfer(char *src, char *dest, int size, int width, int src_incr, int dest_incr, int step);
 int dma_status(void);
 void wait_dma(void);
 
-#endif /* NETWORK */
+#endif /* LWIP */
 
 #else /* !COLDFIRE */
 

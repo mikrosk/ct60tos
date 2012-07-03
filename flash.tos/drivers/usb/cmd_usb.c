@@ -38,14 +38,14 @@
 extern int usb_stor_curr_dev; /* current device */
 #endif
 
-#if defined(COLDFIRE) && defined(NETWORK) && defined(LWIP)
+#if defined(COLDFIRE) && defined(LWIP)
 extern long pxCurrentTCB, tid_TOS;
 // #define info(format, arg...) do { if(pxCurrentTCB == tid_TOS) kprint(format, ## arg); else board_printf(format, ## arg); } while(0)
 #else
 #define info(format, arg...) kprint(format, ## arg)
 #endif
 
-#if defined(COLDFIRE) && defined(NETWORK) && defined(LWIP)
+#if defined(COLDFIRE) && defined(LWIP)
 
 typedef struct
 {
@@ -76,7 +76,7 @@ static void info(const char *const fmt, ...)
 	va_end(ap);
 }
 
-#endif /* defined(COLDFIRE) && defined(NETWORK) && defined(LWIP) */
+#endif /* defined(COLDFIRE) && defined(LWIP) */
 
 /* some display routines (info command) */
 char *usb_get_class_desc(unsigned char dclass)

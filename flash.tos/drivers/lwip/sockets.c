@@ -50,7 +50,6 @@ extern void board_printf(const char *fmt, ...);
 extern unsigned long pxCurrentTCB, tid_TOS;
 #endif
 
-#ifdef NETWORK
 #ifdef LWIP
 
 #define NUM_SOCKETS MEMP_NUM_NETCONN
@@ -1467,6 +1466,5 @@ void socket_init(void)
 
 
 #endif /* LWIP */
-#endif /* NETWORK */
 
 

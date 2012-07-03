@@ -1,34 +1,37 @@
-CROSS=		N
+#CC = gcc
+CC = /usr/local/bin/gcc
+LD = ld
+STRIP = strip
+STACK =	stack
 
-CROSSBINDIR_IS_Y=	m68k-atari-mint-
-CROSSBINDIR_IS_N=
+VERSION = 0x0202
 
-CROSSBINDIR=	$(CROSSBINDIR_IS_$(CROSS))
+FIREBEE_COD = ./nonfree/firebee1.rbf
 
-CC=		$(CROSSBINDIR)gcc
-STRIP=		$(CROSSBINDIR)strip
-STACK=		$(CROSSBINDIR)stack
-
-VERSION=        0x0104
-
-SRCDIR=		./
-INCDIR=		./include
-OBJDIR=		./obj
-OBJDIRCF=	./obj_cf
-OBJDIRCF2=	./obj_cf2
-OBJDIRCF3=	./obj_cf3
+SRCDIR = .
+INCDIR = ./include
+OBJDIR = ./obj
+OBJDIRCF = ./obj_cf
+OBJDIRCF2 = ./obj_cf2
+OBJDIRCF3 = ./obj_cf3
 
 SUBOBJDIRS=	\
-		$(OBJDIR)/tos
+		$(OBJDIR)/tos \
+		$(OBJDIR)/tos/patches
 
 SUBOBJDIRSCF=	\
-		$(OBJDIRCF)/tos
+		$(OBJDIRCF)/tos \
+		$(OBJDIRCF)/tos/patches \
+		$(OBJDIRCF)/desk \
+		$(OBJDIRCF)/aes
 
 SUBOBJDIRSCF2=	\
-		$(OBJDIRCF2)/tos
+		$(OBJDIRCF2)/tos \
+		$(OBJDIRCF2)/tos/patches
 
 SUBOBJDIRSCF3=	\
-		$(OBJDIRCF3)/tos
+		$(OBJDIRCF3)/tos \
+		$(OBJDIRCF3)/tos/patches
 
 INCLUDE=	-I$(INCDIR)
 CFLAGS=		-m68060 -Wall -O2 -fomit-frame-pointer
@@ -39,378 +42,413 @@ CFLAGS_TOS=	-m68060 -Wall -O2 -fomit-frame-pointer
 CFLAGSCF_TOS=	-m5200 -Wall -O2 -fomit-frame-pointer -Wa,-m5200 -DCOLDFIRE
 CFLAGSCF2_TOS=	$(CFLAGSCF_TOS) -DMCF5445X
 CFLAGSCF3_TOS=	$(CFLAGSCF_TOS) -DMCF547X
+CFLAGSDESK=     -D_MINT_=0 -D_MORE_AV=0 -D_EDITLABELS=0 -D_OVSCAN=0 -D__USE_MACROS=0 -DCFGEMP=0 -DPALETTES=0 -D_PREDEF=0 -D_SHOWFIND=0 -D_MENUDEL=0 -D_FONT_SEL=0 -DAES_RECT=0 -D_LOGFILE=0
 
-FLASH_TOS_FIRE_ENGINE=	0xFFB00000
+FLASH_BOOT=             0x00E80000
+FLASH_DIAG=             0x00ED0000
+FLASH_TOS=              0x00E00000
+FLASH_TOS_FIRE_ENGINE=	0xFF900000
 FLASH_TOS_M54455EVB=	0xC0000000
-FLASH_TOS_COLDARI=	0xFF700000
+FLASH_BOOT_TOS_FIREBEE=	0xE0000000
+FLASH_TOS_FIREBEE=	0xE0400000
+FLASH_COD_FIREBEE=	0xE0700000
+
 FLASH_CF68KLIB=         0x00E90000
 FLASH_CF68KLIB2=        0x00E90000
 FLASH_CF68KLIB3=        0x00E90000
+FLASH_AES=              0x00E1F38A
+FLASH2_AES=             0x00E5050A
+RAM_AES=                0x8F9A
 
-TOS=	  ct60tos.bin
-TOSPCI=   ctpcitos.bin
-TOSPCI_1GB=   ctpci1gb.bin
-CF68KLIB= cf68klib.bin
-CF68KLIB2= cf68klib2.bin
-CF68KLIB3= cf68klib3.bin
-TOSCF=    firetos_m5484lite.bin
-TOSCF2=   firetos_m54455evb.bin
-TOSCF3=   firetos_coldari.bin
-TOSCFHEX= firetos_m5484lite.hex
-TOSCFHEX2=firetos_m54455evb.hex
-TOSCFHEX3=firetos_coldari.hex
-PCI=      pci.hex
-PCICF=    pci_cf.hex
-PCICF2=   pci_cf2.hex
-PCICF3=   pci_cf3.hex
-
-BINHEX_BINARY= binhex.ttp
-COMPRESS_BINARY= compress.ttp
+TOS=	   ct60tos.bin
+TOSPCI=    ctpcitos.bin
+ATARIDIAG= sparrow.out 
+CF68KLIB=  cf68klib.hex
+CF68KLIB2= cf68klib2.hex
+CF68KLIB3= cf68klib3.hex
+AESCF=     aes_m5484lite.hex
+TOSCF=     firetos_m5484lite.bin
+TOSCF2=    firetos_m54455evb.bin
+TOSCF3=    firetos_firebee.bin
+TOSCFHEX=  firetos_m5484lite.hex
+TOSCFHEX2= firetos_m54455evb.hex
+TOSCFHEX3= firetos_firebee.hex
+TOSCFHEX3B= rescuetos_firebee.hex
+BOOT=         boot.hex
+BOOTCF=       boot_cf.hex
+BOOTCF2=      boot_cf2.hex
+BOOTCF3=      boot_cf3.hex
+DIAG=         diag.hex
+FPGACF3=      fpga_cf3.hex
+DRIVERS=      drivers.hex
+DRIVERSCF=    drivers_cf.hex
+DRIVERSCF2=   drivers_cf2.hex
+DRIVERSCF3=   drivers_cf3.hex
 GENTOS_BINARY= gentos.ttp
-GENTOS_BINARY_1GB= gentos1g.ttp
 GENTOS_BINARYCF= gentoscf.ttp
 GENTOS_BINARYCF2= gentoscf2.ttp
 GENTOS_BINARYCF3= gentoscf3.ttp
 GENTOS_STACKSIZE= 64k
-GENTOS_OBJS=	\
-		$(OBJDIR)/gentos.o \
-		$(OBJDIR)/lz.o \
-		$(OBJDIR)/srec.o \
-		\
-		$(OBJDIR)/tos/start.o \
-		\
-		$(OBJDIR)/tos/pmmu.o \
-		$(OBJDIR)/tos/cookies.o \
-		$(OBJDIR)/tos/dsp.o \
-		$(OBJDIR)/tos/periph.o \
-		$(OBJDIR)/tos/cache.o \
-		$(OBJDIR)/tos/movep.o \
-		$(OBJDIR)/tos/boot.o \
-		$(OBJDIR)/tos/init_par.o \
-		$(OBJDIR)/tos/blitter.o \
-		$(OBJDIR)/tos/bios.o \
-		$(OBJDIR)/tos/xbios.o \
-		$(OBJDIR)/tos/gemdos.o \
-		$(OBJDIR)/tos/aes.o \
-		$(OBJDIR)/tos/vectors.o \
-		$(OBJDIR)/tos/videl.o \
-		$(OBJDIR)/tos/debug.o \
-		\
-		$(OBJDIR)/tos/half.o \
-		\
+
+BOOT_OBJS=	\
 		$(OBJDIR)/tos/version.o \
+		$(OBJDIR)/tos/boot2.o \
+		\
+		$(OBJDIR)/tos/patches/start.o \
+		$(OBJDIR)/tos/patches/boot.o \
+		$(OBJDIR)/tos/patches/pmmu.o \
+		$(OBJDIR)/tos/patches/cookies.o \
+		$(OBJDIR)/tos/patches/dsp.o \
+		$(OBJDIR)/tos/patches/periph.o \
+		$(OBJDIR)/tos/patches/cache.o \
+		$(OBJDIR)/tos/patches/movep.o \
+		$(OBJDIR)/tos/patches/params.o \
+		$(OBJDIR)/tos/patches/blitter.o \
+		$(OBJDIR)/tos/patches/bios.o \
+		$(OBJDIR)/tos/patches/xbios.o \
+		$(OBJDIR)/tos/patches/gemdos.o \
+		$(OBJDIR)/tos/patches/aes.o \
+		$(OBJDIR)/tos/patches/vectors.o \
+		$(OBJDIR)/tos/patches/videl.o \
+		$(OBJDIR)/tos/patches/end.o \
+		\
+		$(OBJDIR)/tos/cache2.o \
 		$(OBJDIR)/tos/movep2.o \
 		$(OBJDIR)/tos/blitter2.o \
 		$(OBJDIR)/tos/bios2.o \
+		$(OBJDIR)/tos/conout.o \
 		$(OBJDIR)/tos/xbios2.o \
 		$(OBJDIR)/tos/gemdos2.o \
 		$(OBJDIR)/tos/aes2.o \
 		$(OBJDIR)/tos/vectors2.o \
-		$(OBJDIR)/tos/debug2.o \
 		$(OBJDIR)/tos/ataboot.o \
 		$(OBJDIR)/tos/extvidel.o \
 		$(OBJDIR)/tos/magxboot.o \
-		$(OBJDIR)/tos/sdram.o \
 		$(OBJDIR)/tos/pmmu2.o \
+		$(OBJDIR)/tos/params2.o \
+		$(OBJDIR)/tos/ide_scsi.o \
+		$(OBJDIR)/tos/i2c.o \
+		$(OBJDIR)/tos/temp.o \
+		$(OBJDIR)/tos/fan.o \
 		$(OBJDIR)/tos/lz.o \
-		$(OBJDIR)/tos/videl2.o \
-		\
-		$(OBJDIR)/tos/end.o
+		$(OBJDIR)/tos/LzmaDecode.o \
+		$(OBJDIR)/tos/videl2.o
 
-GENTOS_OBJS_1GB=	\
-		$(OBJDIR)/gentos.o \
-		$(OBJDIR)/lz.o \
-		$(OBJDIR)/srec.o \
+BOOT_OBJSCF=	\
+		$(OBJDIRCF)/tos/version.o  \
+		$(OBJDIRCF)/tos/boot2.o \
 		\
-		$(OBJDIR)/tos/start.o \
+		$(OBJDIRCF)/tos/patches/start.o \
+		$(OBJDIRCF)/tos/patches/boot.o \
+		$(OBJDIRCF)/tos/patches/pmmu.o \
+		$(OBJDIRCF)/tos/patches/cookies.o \
+		$(OBJDIRCF)/tos/patches/dsp.o \
+		$(OBJDIRCF)/tos/patches/periph.o \
+		$(OBJDIRCF)/tos/patches/cartridge.o \
+		$(OBJDIRCF)/tos/patches/cache.o \
+		$(OBJDIRCF)/tos/patches/movep.o \
+		$(OBJDIRCF)/tos/patches/params.o \
+		$(OBJDIRCF)/tos/patches/blitter.o \
+		$(OBJDIRCF)/tos/patches/bios.o \
+		$(OBJDIRCF)/tos/patches/xbios.o \
+		$(OBJDIRCF)/tos/patches/gemdos.o \
+		$(OBJDIRCF)/tos/patches/aes.o \
+		$(OBJDIRCF)/tos/patches/vectors.o \
+		$(OBJDIRCF)/tos/patches/videl.o \
+		$(OBJDIRCF)/tos/patches/end.o \
 		\
-		$(OBJDIR)/tos/pmmu.o \
-		$(OBJDIR)/tos/cookies.o \
-		$(OBJDIR)/tos/dsp.o \
-		$(OBJDIR)/tos/periph.o \
-		$(OBJDIR)/tos/cache.o \
-		$(OBJDIR)/tos/movep.o \
-		$(OBJDIR)/tos/boot.o \
-		$(OBJDIR)/tos/init_par.o \
-		$(OBJDIR)/tos/blitter.o \
-		$(OBJDIR)/tos/bios.o \
-		$(OBJDIR)/tos/xbios.o \
-		$(OBJDIR)/tos/gemdos.o \
-		$(OBJDIR)/tos/aes.o \
-		$(OBJDIR)/tos/vectors.o \
-		$(OBJDIR)/tos/videl.o \
-		$(OBJDIR)/tos/debug.o \
-		\
-		$(OBJDIR)/tos/half.o \
-		\
-		$(OBJDIR)/tos/version.o \
-		$(OBJDIR)/tos/movep2.o \
-		$(OBJDIR)/tos/blitter2.o \
-		$(OBJDIR)/tos/bios2.o \
-		$(OBJDIR)/tos/xbios2_1gb.o \
-		$(OBJDIR)/tos/gemdos2.o \
-		$(OBJDIR)/tos/aes2.o \
-		$(OBJDIR)/tos/vectors2.o \
-		$(OBJDIR)/tos/debug2.o \
-		$(OBJDIR)/tos/ataboot.o \
-		$(OBJDIR)/tos/extvidel.o \
-		$(OBJDIR)/tos/magxboot.o \
-		$(OBJDIR)/tos/sdram.o \
-		$(OBJDIR)/tos/pmmu2.o \
-		$(OBJDIR)/tos/lz.o \
-		$(OBJDIR)/tos/videl2.o \
-		\
-		$(OBJDIR)/tos/end.o
-
-GENTOS_OBJSCF=	\
-		$(OBJDIRCF)/gentos.o \
-		$(OBJDIRCF)/lz.o \
-		$(OBJDIRCF)/srec.o \
-		\
-		$(OBJDIRCF)/tos/start.o \
-		\
-		$(OBJDIRCF)/tos/pmmu.o \
-		$(OBJDIRCF)/tos/cookies.o \
-		$(OBJDIRCF)/tos/dsp.o \
-		$(OBJDIRCF)/tos/periph.o \
-		$(OBJDIRCF)/tos/mfp.o \
-		$(OBJDIRCF)/tos/cartridge.o \
-		$(OBJDIRCF)/tos/cache.o \
-		$(OBJDIRCF)/tos/movep.o \
-		$(OBJDIRCF)/tos/boot.o \
-		$(OBJDIRCF)/tos/init_par.o \
-		$(OBJDIRCF)/tos/blitter.o \
-		$(OBJDIRCF)/tos/bios.o \
-		$(OBJDIRCF)/tos/xbios.o \
-		$(OBJDIRCF)/tos/gemdos.o \
-		$(OBJDIRCF)/tos/aes.o \
-		$(OBJDIRCF)/tos/vectors.o \
-		$(OBJDIRCF)/tos/videl.o \
-		$(OBJDIRCF)/tos/debug.o \
-		\
-		$(OBJDIRCF)/tos/half.o \
-		\
-		$(OBJDIRCF)/tos/version.o \
+		$(OBJDIRCF)/tos/cache2.o \
 		$(OBJDIRCF)/tos/movep2.o \
 		$(OBJDIRCF)/tos/blitter2.o \
 		$(OBJDIRCF)/tos/bios2.o \
+		$(OBJDIRCF)/tos/conout.o \
 		$(OBJDIRCF)/tos/xbios2.o \
 		$(OBJDIRCF)/tos/gemdos2.o \
 		$(OBJDIRCF)/tos/aes2.o \
 		$(OBJDIRCF)/tos/vectors2.o \
-		$(OBJDIRCF)/tos/debug2.o \
-		$(OBJDIRCF)/tos/magxboot.o \
-		$(OBJDIRCF)/tos/sdram.o \
 		$(OBJDIRCF)/tos/pmmu2.o \
+		$(OBJDIRCF)/tos/params2.o \
+		$(OBJDIRCF)/tos/ide_scsi.o \
 		$(OBJDIRCF)/tos/lz.o \
-		$(OBJDIRCF)/tos/videl2.o \
-		\
-		$(OBJDIRCF)/tos/end.o
+		$(OBJDIRCF)/tos/LzmaDecode.o \
+		$(OBJDIRCF)/tos/videl2.o
 
-GENTOS_OBJSCF2=	\
-		$(OBJDIRCF2)/gentos.o \
-		$(OBJDIRCF)/lz.o \
-		$(OBJDIRCF)/srec.o \
-		\
-		$(OBJDIRCF)/tos/start.o \
-		\
-		$(OBJDIRCF)/tos/pmmu.o \
-		$(OBJDIRCF)/tos/cookies.o \
-		$(OBJDIRCF)/tos/dsp.o \
-		$(OBJDIRCF)/tos/periph.o \
-		$(OBJDIRCF)/tos/mfp.o \
-		$(OBJDIRCF)/tos/cartridge.o \
-		$(OBJDIRCF)/tos/cache.o \
-		$(OBJDIRCF)/tos/movep.o \
-		$(OBJDIRCF)/tos/boot.o \
-		$(OBJDIRCF)/tos/init_par.o \
-		$(OBJDIRCF)/tos/blitter.o \
-		$(OBJDIRCF)/tos/bios.o \
-		$(OBJDIRCF)/tos/xbios.o \
-		$(OBJDIRCF)/tos/gemdos.o \
-		$(OBJDIRCF)/tos/aes.o \
-		$(OBJDIRCF)/tos/vectors.o \
-		$(OBJDIRCF)/tos/videl.o \
-		$(OBJDIRCF)/tos/debug.o \
-		\
-		$(OBJDIRCF)/tos/half.o \
-		\
+BOOT_OBJSCF2=	\
 		$(OBJDIRCF2)/tos/version.o \
+		$(OBJDIRCF2)/tos/boot2.o \
+		\
+		$(OBJDIRCF)/tos/patches/start.o \
+		$(OBJDIRCF2)/tos/patches/boot.o \
+		$(OBJDIRCF)/tos/patches/pmmu.o \
+		$(OBJDIRCF2)/tos/patches/cookies.o \
+		$(OBJDIRCF)/tos/patches/dsp.o \
+		$(OBJDIRCF)/tos/patches/periph.o \
+		$(OBJDIRCF)/tos/patches/cartridge.o \
+		$(OBJDIRCF)/tos/patches/cache.o \
+		$(OBJDIRCF)/tos/patches/movep.o \
+		$(OBJDIRCF)/tos/patches/params.o \
+		$(OBJDIRCF)/tos/patches/blitter.o \
+		$(OBJDIRCF)/tos/patches/bios.o \
+		$(OBJDIRCF)/tos/patches/xbios.o \
+		$(OBJDIRCF)/tos/patches/gemdos.o \
+		$(OBJDIRCF)/tos/patches/aes.o \
+		$(OBJDIRCF)/tos/patches/vectors.o \
+		$(OBJDIRCF)/tos/patches/videl.o \
+		$(OBJDIRCF)/tos/patches/end.o \
+		\
+		$(OBJDIRCF)/tos/cache2.o \
 		$(OBJDIRCF)/tos/movep2.o \
 		$(OBJDIRCF2)/tos/blitter2.o \
 		$(OBJDIRCF2)/tos/bios2.o \
+		$(OBJDIRCF2)/tos/conout.o \
 		$(OBJDIRCF2)/tos/xbios2.o \
 		$(OBJDIRCF2)/tos/gemdos2.o \
 		$(OBJDIRCF2)/tos/aes2.o \
 		$(OBJDIRCF2)/tos/vectors2.o \
-		$(OBJDIRCF2)/tos/debug2.o \
-		$(OBJDIRCF)/tos/magxboot.o \
-		$(OBJDIRCF2)/tos/sdram.o \
 		$(OBJDIRCF2)/tos/pmmu2.o \
+		$(OBJDIRCF2)/tos/params2.o \
+		$(OBJDIRCF2)/tos/ide_scsi.o \
 		$(OBJDIRCF)/tos/lz.o \
-		$(OBJDIRCF2)/tos/videl2.o \
-		\
-		$(OBJDIRCF)/tos/end.o
+		$(OBJDIRCF)/tos/LzmaDecode.o \
+		$(OBJDIRCF2)/tos/videl2.o
 		
-GENTOS_OBJSCF3=	\
-		$(OBJDIRCF3)/gentos.o \
-		$(OBJDIRCF)/lz.o \
-		$(OBJDIRCF)/srec.o \
-		\
-		$(OBJDIRCF)/tos/start.o \
-		\
-		$(OBJDIRCF)/tos/pmmu.o \
-		$(OBJDIRCF)/tos/cookies.o \
-		$(OBJDIRCF)/tos/dsp.o \
-		$(OBJDIRCF)/tos/periph.o \
-		$(OBJDIRCF)/tos/mfp.o \
-		$(OBJDIRCF)/tos/cartridge.o \
-		$(OBJDIRCF)/tos/cache.o \
-		$(OBJDIRCF)/tos/movep.o \
-		$(OBJDIRCF)/tos/boot.o \
-		$(OBJDIRCF)/tos/init_par.o \
-		$(OBJDIRCF)/tos/blitter.o \
-		$(OBJDIRCF)/tos/bios.o \
-		$(OBJDIRCF)/tos/xbios.o \
-		$(OBJDIRCF)/tos/gemdos.o \
-		$(OBJDIRCF)/tos/aes.o \
-		$(OBJDIRCF)/tos/vectors.o \
-		$(OBJDIRCF)/tos/videl.o \
-		$(OBJDIRCF)/tos/debug.o \
-		\
-		$(OBJDIRCF)/tos/half.o \
-		\
+BOOT_OBJSCF3=	\
 		$(OBJDIRCF3)/tos/version.o \
+		$(OBJDIRCF3)/tos/boot2.o \
+		\
+		$(OBJDIRCF)/tos/patches/start.o \
+		$(OBJDIRCF3)/tos/patches/boot.o \
+		$(OBJDIRCF)/tos/patches/pmmu.o \
+		$(OBJDIRCF3)/tos/patches/cookies.o \
+		$(OBJDIRCF)/tos/patches/dsp.o \
+		$(OBJDIRCF)/tos/patches/periph.o \
+		$(OBJDIRCF)/tos/patches/cartridge.o \
+		$(OBJDIRCF)/tos/patches/cache.o \
+		$(OBJDIRCF)/tos/patches/movep.o \
+		$(OBJDIRCF)/tos/patches/params.o \
+		$(OBJDIRCF)/tos/patches/blitter.o \
+		$(OBJDIRCF)/tos/patches/bios.o \
+		$(OBJDIRCF3)/tos/patches/xbios.o \
+		$(OBJDIRCF)/tos/patches/gemdos.o \
+		$(OBJDIRCF)/tos/patches/aes.o \
+		$(OBJDIRCF)/tos/patches/vectors.o \
+		$(OBJDIRCF3)/tos/patches/videl.o \
+		$(OBJDIRCF)/tos/patches/end.o \
+		\
+		$(OBJDIRCF)/tos/cache2.o \
 		$(OBJDIRCF)/tos/movep2.o \
 		$(OBJDIRCF)/tos/blitter2.o \
 		$(OBJDIRCF3)/tos/bios2.o \
+		$(OBJDIRCF3)/tos/conout.o \
 		$(OBJDIRCF3)/tos/xbios2.o \
 		$(OBJDIRCF3)/tos/gemdos2.o \
 		$(OBJDIRCF3)/tos/aes2.o \
 		$(OBJDIRCF3)/tos/vectors2.o \
-		$(OBJDIRCF3)/tos/debug2.o \
-		$(OBJDIRCF)/tos/magxboot.o \
-		$(OBJDIRCF3)/tos/sdram.o \
 		$(OBJDIRCF3)/tos/pmmu2.o \
+		$(OBJDIRCF3)/tos/params2.o \
+		$(OBJDIRCF3)/tos/ide_scsi.o \
 		$(OBJDIRCF)/tos/lz.o \
-		$(OBJDIRCF3)/tos/videl2.o \
-		\
-		$(OBJDIRCF)/tos/end.o
+		$(OBJDIRCF)/tos/LzmaDecode.o \
+		$(OBJDIRCF3)/tos/videl2.o
+		
+AES_OBJSCF=	\
+		$(OBJDIRCF)/aes/gcc.o \
+		$(OBJDIRCF)/aes/hard_dep.o \
+		$(OBJDIRCF)/aes/trap_aes.o \
+		$(OBJDIRCF)/aes/phandle3.o \
+		$(OBJDIRCF)/aes/mouse2.o \
+		$(OBJDIRCF)/aes/userdef2.o \
+		$(OBJDIRCF)/aes/flagset2.o \
+		$(OBJDIRCF)/aes/setjmp2.o \
+		$(OBJDIRCF)/aes/aes_main.o \
+		$(OBJDIRCF)/aes/initstru.o \
+		$(OBJDIRCF)/aes/appl.o \
+		$(OBJDIRCF)/aes/evnt.o \
+		$(OBJDIRCF)/aes/form.o \
+		$(OBJDIRCF)/aes/fsel.o \
+		$(OBJDIRCF)/aes/graf.o \
+		$(OBJDIRCF)/aes/menu.o \
+		$(OBJDIRCF)/aes/objc.o \
+		$(OBJDIRCF)/aes/rsrc2.o \
+		$(OBJDIRCF)/aes/scrp.o \
+		$(OBJDIRCF)/aes/shel.o \
+		$(OBJDIRCF)/aes/wind.o \
+		$(OBJDIRCF)/aes/utils.o \
+		$(OBJDIRCF)/aes/wdlg.o \
+		$(OBJDIRCF)/aes/pdlg.o \
+		$(OBJDIRCF)/aes/memory.o \
+		$(OBJDIRCF)/aes/myaesrsc.o \
+		$(OBJDIRCF)/aes/config.o \
+		$(OBJDIRCF)/aes/stdlib.o \
+		$(OBJDIRCF)/aes/printk.o
 
-NFDISTDIR =	./nonfree
-NFDISTFILES =	\
-		$(NFDISTDIR)/tos404.bin \
-		$(NFDISTDIR)/sparrow.out
+DESK_OBJSCF=	\
+		$(OBJDIRCF)/desk/deskstart.o \
+		$(OBJDIRCF)/desk/deskmain.o \
+		$(OBJDIRCF)/desk/config.o \
+		$(OBJDIRCF)/desk/resource.o \
+		$(OBJDIRCF)/desk/icon.o \
+		$(OBJDIRCF)/desk/window.o \
+		$(OBJDIRCF)/desk/copy.o \
+		$(OBJDIRCF)/desk/printer.o \
+		$(OBJDIRCF)/desk/lists.o \
+		$(OBJDIRCF)/desk/applik.o \
+		$(OBJDIRCF)/desk/prgtype.o \
+		$(OBJDIRCF)/desk/icontype.o \
+		$(OBJDIRCF)/desk/filetype.o \
+		$(OBJDIRCF)/desk/screen.o \
+		$(OBJDIRCF)/desk/showinfo.o \
+		$(OBJDIRCF)/desk/font.o \
+		$(OBJDIRCF)/desk/va.o \
+		$(OBJDIRCF)/desk/dragdrop.o \
+		$(OBJDIRCF)/desk/environm.o \
+		$(OBJDIRCF)/desk/startprg.o \
+		$(OBJDIRCF)/desk/floppy.o \
+		$(OBJDIRCF)/desk/video.o \
+		$(OBJDIRCF)/desk/file.o \
+		$(OBJDIRCF)/desk/dir.o \
+		$(OBJDIRCF)/desk/open.o \
+		$(OBJDIRCF)/desk/viewer.o \
+		$(OBJDIRCF)/desk/events.o \
+		$(OBJDIRCF)/desk/slider.o \
+		$(OBJDIRCF)/desk/stringf.o \
+		$(OBJDIRCF)/desk/error.o \
+		$(OBJDIRCF)/desk/xerror.o \
+		$(OBJDIRCF)/desk/xfilesys.o \
+		$(OBJDIRCF)/desk/xdialog.o \
+		$(OBJDIRCF)/desk/xdnmdial.o \
+		$(OBJDIRCF)/desk/xdevent.o \
+		$(OBJDIRCF)/desk/xddraw.o \
+		$(OBJDIRCF)/desk/xdutil.o \
+		$(OBJDIRCF)/desk/xdemodes.o \
+		$(OBJDIRCF)/desk/xwindow.o \
+		$(OBJDIRCF)/desk/pathutil.o \
+		$(OBJDIRCF)/desk/gettos.o \
+		$(OBJDIRCF)/desk/strsncpy.o \
+		$(OBJDIRCF)/desk/minmax.o \
+		$(OBJDIRCF)/desk/other.o \
+		$(OBJDIRCF)/desk/qsort.o \
+		$(OBJDIRCF)/desk/getenv.o
 
-NFDISTFILESCF =	\
-		$(NFDISTDIR)/tos404.bin \
+DIR =	./nonfree
+FILES =	\
+		$(DIR)/tos404.bin \
+		$(BOOT) \
+		$(DIR)/$(ATARIDIAG)
+
+#FILESCF =	\
+#		$(DIR)/tos404.bin \
+#		$(BOOT) \
+#		$(DESKCF) \
+#		$(AESCF) \
+#		$(CF68KLIB)
+		
+FILESCF =	\
+		$(DIR)/tos404.bin \
+		$(BOOTCF) \
 		$(CF68KLIB)
 
-NFDISTFILESCF2 =	\
-		$(NFDISTDIR)/tos404.bin \
+FILESCF2 =	\
+		$(DIR)/tos404.bin \
+		$(BOOTCF2) \
 		$(CF68KLIB2)
 		
-NFDISTFILESCF3 =	\
-		$(NFDISTDIR)/tos404.bin \
+FILESCF3 =	\
+		$(DIR)/tos404.bin \
+		$(BOOTCF3) \
 		$(CF68KLIB3)
 		
-all:	version.h $(BINHEX_BINARY) $(COMPRESS_BINARY) $(PCI) $(PCICF) $(PCICF2) $(PCICF3) $(TOS) $(TOSPCI) $(TOSPCI_1GB) $(CF68KLIB) $(CF68KLIB2) $(CF68KLIB3) $(TOSCF) $(TOSCF2) $(TOSCF3) $(TOSCFHEX) $(TOSCFHEX2) $(TOSCFHEX3)
+all:	$(GENTOS_BINARY) $(GENTOS_BINARYCF) $(GENTOS_BINARYCF2) $(GENTOS_BINARYCF3) version.h $(BOOT) $(BOOTCF) $(BOOTCF2) $(BOOTCF3) $(DIAG) $(DRIVERS) $(DRIVERSCF) $(DRIVERSCF2) $(DRIVERSCF3) \
+	$(TOS) $(TOSPCI) $(CF68KLIB) $(CF68KLIB2) $(CF68KLIB3) $(TOSCF) $(TOSCF2) $(TOSCF3) $(TOSCFHEX) $(TOSCFHEX2) $(TOSCFHEX3)
 
-ct60:	version.h $(BINHEX_BINARY) $(COMPRESS_BINARY) $(PCI) $(TOS) $(TOSPCI) $(TOSPCI_1GB)
+ct60:	$(GENTOS_BINARY) version.h $(BOOT) $(DRIVERS) $(DIAG) $(TOS) $(TOSPCI)
 
-m5484lite:	version.h $(BINHEX_BINARY) $(COMPRESS_BINARY) $(PCICF) $(CF68KLIB) $(TOSCF) $(TOSCFHEX)
+m5484lite:	version.h $(GENTOS_BINARYCF) $(BOOTCF) $(DRIVERSCF) $(CF68KLIB) $(TOSCF) $(TOSCFHEX)
+#m5484lite:	version.h $(GENTOS_BINARYCF) $(BOOTCF) $(DRIVERSCF) $(CF68KLIB) $(AESCF) $(TOSCF) $(TOSCFHEX)
 
-m54455evb:	version.h $(BINHEX_BINARY) $(COMPRESS_BINARY) $(PCICF2) $(CF68KLIB2) $(TOSCF2) $(TOSCFHEX2)
+m54455evb:	version.h $(GENTOS_BINARYCF2) $(BOOTCF2) $(DRIVERSCF2) $(CF68KLIB2) $(TOSCF2) $(TOSCFHEX2)
 
-coldari:	version.h $(BINHEX_BINARY) $(COMPRESS_BINARY) $(PCICF3) $(CF68KLIB3) $(TOSCF3) $(TOSCFHEX3)
+firebee:	version.h $(GENTOS_BINARYCF3) $(BOOTCF3) $(DRIVERSCF3) $(CF68KLIB3) $(TOSCF3) $(TOSCFHEX3)
 
 clean:
 	rm -rf $(OBJDIR) $(OBJDIRCF) $(OBJDIRCF2) $(OBJDIRCF3)
-	rm -f $(BINHEX_BINARY) $(COMPRESS_BINARY) $(GENTOS_BINARY) $(GENTOS_BINARYCF) $(GENTOS_BINARYCF2) $(GENTOS_BINARYCF3) $(TOS) $(TOSPCI) $(TOSPCI_1GB) $(CF68KLIB) $(CF68KLIB2) $(CF68KLIB3) $(TOSCF) $(TOSCF2) $(TOSCF3) $(TOSCFHEX) $(TOSCFHEX2) $(TOSCFHEX3)
-	make clean -C pci
+	rm -f $(GENTOS_BINARY) $(GENTOS_BINARYCF) $(GENTOS_BINARYCF2) $(GENTOS_BINARYCF3) $(BOOT) $(BOOTCF) $(BOOTCF2) $(BOOTCF3) $(CF68KLIB) $(CF68KLIB2) $(CF68KLIB3) \
+	$(TOS) $(TOSPCI) $(TOSCF) $(TOSCF2) $(TOSCF3) $(TOSCFHEX) $(TOSCFHEX2) $(TOSCFHEX3) $(TOSCFHEX3B) $(DIAG) $(FPGACF3) boot.map boot_cf.map boot_cf2.map boot_cf3.map  
+	make clean -C drivers
 
-$(BINHEX_BINARY):	$(OBJDIR)/binhex.o
-	$(CC) $(OBJDIR)/binhex.o -o $(BINHEX_BINARY)
-	$(STRIP) $(BINHEX_BINARY)
-	$(STACK) -S $(GENTOS_STACKSIZE) $(BINHEX_BINARY)
+$(BOOT):	$(BOOT_OBJS)
+	$(LD) --oformat srec -Map boot.map --cref -Ttext $(FLASH_BOOT) -s -o $(BOOT) $(BOOT_OBJS)
 
-$(COMPRESS_BINARY):	$(OBJDIR)/compress.o $(OBJDIR)/lz.o
-	$(CC) $(OBJDIR)/compress.o $(OBJDIR)/lz.o -o $(COMPRESS_BINARY)
-	$(STRIP) $(COMPRESS_BINARY)
-	$(STACK) -S $(GENTOS_STACKSIZE) $(COMPRESS_BINARY)
+$(BOOTCF):	$(BOOT_OBJSCF)
+	$(LD) --oformat srec -Map boot_cf.map --cref -Ttext $(FLASH_BOOT) -s -o $(BOOTCF) $(BOOT_OBJSCF)
 
-$(GENTOS_BINARY):	$(GENTOS_OBJS)
-	$(CC) $(GENTOS_OBJS) -o $(GENTOS_BINARY)
-	$(STRIP) $(GENTOS_BINARY)
-	$(STACK) -S $(GENTOS_STACKSIZE) $(GENTOS_BINARY)
+$(BOOTCF2):	$(BOOT_OBJSCF2)
+	$(LD) --oformat srec -Map boot_cf2.map --cref -Ttext $(FLASH_BOOT) -s -o $(BOOTCF2) $(BOOT_OBJSCF2)
 
-$(GENTOS_BINARY_1GB):	$(GENTOS_OBJS_1GB)
-	$(CC) $(GENTOS_OBJS_1GB) -o $(GENTOS_BINARY_1GB)
-	$(STRIP) $(GENTOS_BINARY_1GB)
-	$(STACK) -S $(GENTOS_STACKSIZE) $(GENTOS_BINARY_1GB)
+$(BOOTCF3):	$(BOOT_OBJSCF3)
+	$(LD) --oformat srec -Map boot_cf3.map --cref -Ttext $(FLASH_BOOT) -s -o $(BOOTCF3) $(BOOT_OBJSCF3)
 
-$(GENTOS_BINARYCF):	$(GENTOS_OBJSCF)
-	$(CC) $(GENTOS_OBJSCF) -o $(GENTOS_BINARYCF)
-	$(STRIP) $(GENTOS_BINARYCF)
-	$(STACK) -S $(GENTOS_STACKSIZE) $(GENTOS_BINARYCF)
-
-$(GENTOS_BINARYCF2):	$(GENTOS_OBJSCF2)
-	$(CC) $(GENTOS_OBJSCF2) -o $(GENTOS_BINARYCF2)
-	$(STRIP) $(GENTOS_BINARYCF2)
-	$(STACK) -S $(GENTOS_STACKSIZE) $(GENTOS_BINARYCF2)
-
-$(GENTOS_BINARYCF3):	$(GENTOS_OBJSCF3)
-	$(CC) $(GENTOS_OBJSCF3) -o $(GENTOS_BINARYCF3)
-	$(STRIP) $(GENTOS_BINARYCF3)
-	$(STACK) -S $(GENTOS_STACKSIZE) $(GENTOS_BINARYCF3)
-
-$(TOS):	$(GENTOS_BINARY) $(NFDISTFILES)
-	./$(GENTOS_BINARY) $(NFDISTFILES) $(TOS)
-
-$(TOSPCI):	$(GENTOS_BINARY) $(NFDISTFILES) ./pci/$(PCI)
-	./$(GENTOS_BINARY) $(NFDISTFILES) ./pci/$(PCI) $(TOSPCI)
-
-$(TOSPCI_1GB):	$(GENTOS_BINARY_1GB) $(NFDISTFILES) ./pci/$(PCI)
-	./$(GENTOS_BINARY) $(NFDISTFILES) ./pci/$(PCI) $(TOSPCI_1GB)
-	
-$(PCI):	
-	make ctpci -C pci
+$(DRIVERS):	
+	make ctpci -C drivers
 
 $(CF68KLIB):	$(OBJDIRCF)/tos/cf68klib.o
-	$(LD) -oformat binary -Ttext $(FLASH_CF68KLIB) -s -o $(CF68KLIB) $(OBJDIRCF)/tos/cf68klib.o
+	$(LD) --oformat srec -Ttext $(FLASH_CF68KLIB) -s -o $(CF68KLIB) $(OBJDIRCF)/tos/cf68klib.o
 
 $(CF68KLIB2):	$(OBJDIRCF2)/tos/cf68klib.o
-	$(LD) -oformat binary -Ttext $(FLASH_CF68KLIB2) -s -o $(CF68KLIB2) $(OBJDIRCF2)/tos/cf68klib.o
+	$(LD) --oformat srec -Ttext $(FLASH_CF68KLIB2) -s -o $(CF68KLIB2) $(OBJDIRCF2)/tos/cf68klib.o
 
 $(CF68KLIB3):	$(OBJDIRCF3)/tos/cf68klib.o
-	$(LD) -oformat binary -Ttext $(FLASH_CF68KLIB3) -s -o $(CF68KLIB3) $(OBJDIRCF3)/tos/cf68klib.o
+	$(LD) --oformat srec -Ttext $(FLASH_CF68KLIB3) -s -o $(CF68KLIB3) $(OBJDIRCF3)/tos/cf68klib.o
 
-$(TOSCF):	$(GENTOS_BINARYCF) $(NFDISTFILESCF) ./pci/$(PCICF)
-	./$(GENTOS_BINARYCF) $(NFDISTFILESCF) ./pci/$(PCICF) $(TOSCF)
+$(AESCF):	$(AES_OBJSCF) $(DESK_OBJSCF)
+	$(LD) --oformat srec -Ttext $(FLASH_AES) -Tdata $(FLASH2_AES) -Tbss $(RAM_AES) -Map aescf.map --cref -o $(AESCF) $(AES_OBJSCF) -lgem
 
-$(TOSCF2):	$(GENTOS_BINARYCF2) $(NFDISTFILESCF2) ./pci/$(PCICF2)
-	./$(GENTOS_BINARYCF2) $(NFDISTFILESCF2) ./pci/$(PCICF2) $(TOSCF2)
+$(DIAG): $(DIR)/$(ATARIDIAG)
+	objcopy --verbose -I binary -O srec --adjust-vma=$(FLASH_DIAG) $(DIR)/$(ATARIDIAG) $(DIAG) 
 
-$(TOSCF3):	$(GENTOS_BINARYCF3) $(NFDISTFILESCF3) ./pci/$(PCICF3)
-	./$(GENTOS_BINARYCF3) $(NFDISTFILESCF3) ./pci/$(PCICF3) $(TOSCF3)
+$(TOS):	$(GENTOS_BINARY) $(FILES)
+	./$(GENTOS_BINARY) $(FILES) $(TOS)
+
+$(TOSPCI):	$(GENTOS_BINARY) $(FILES) ./drivers/$(DRIVERS)
+	./$(GENTOS_BINARY) $(FILES) ./drivers/$(DRIVERS) $(TOSPCI)
+
+$(TOSCF):	$(GENTOS_BINARYCF) $(FILESCF) ./drivers/$(DRIVERSCF)
+	./$(GENTOS_BINARYCF) $(FILESCF) ./drivers/$(DRIVERSCF) $(TOSCF)
+
+$(TOSCF2):	$(GENTOS_BINARYCF2) $(FILESCF2) ./drivers/$(DRIVERSCF2)
+	./$(GENTOS_BINARYCF2) $(FILESCF2) ./drivers/$(DRIVERSCF2) $(TOSCF2)
+
+$(TOSCF3):	$(GENTOS_BINARYCF3) $(FILESCF3) ./drivers/$(DRIVERSCF3)
+	./$(GENTOS_BINARYCF3) $(FILESCF3) ./drivers/$(DRIVERSCF3) $(TOSCF3)
 
 $(TOSCFHEX):	$(TOSCF)
 	objcopy --verbose -I binary -O srec --adjust-vma=$(FLASH_TOS_FIRE_ENGINE) $(TOSCF) $(TOSCFHEX)
+	cp  $(TOSCFHEX) /home/firetos.hex
 
 $(TOSCFHEX2):	$(TOSCF2)
 	objcopy --verbose -I binary -O srec --adjust-vma=$(FLASH_TOS_M54455EVB) $(TOSCF2) $(TOSCFHEX2)
+	cp  $(TOSCFHEX2) /home/firetos.hex
 
 $(TOSCFHEX3):	$(TOSCF3)
-	objcopy --verbose -I binary -O srec --adjust-vma=$(FLASH_TOS_COLDARI) $(TOSCF3) $(TOSCFHEX3)
+	objcopy --verbose -I binary -O srec --adjust-vma=$(FLASH_TOS_FIREBEE) $(TOSCF3) $(TOSCFHEX3)
+	objcopy --verbose -I binary -O srec --adjust-vma=$(FLASH_BOOT_TOS_FIREBEE) $(TOSCF3) $(TOSCFHEX3B)
+# FIREBEE_COD added, if INIT_FPGA_FROM_RAM defined inside boot2.S
+#	objcopy --verbose -I binary -O srec --adjust-vma=$(FLASH_COD_FIREBEE) $(FIREBEE_COD) $(FPGACF3)
+#	@grep -E -v S7 $(TOSCFHEX3) > temp.hex
+#	@grep -E S3 $(FPGACF3) > temp2.hex
+#	@echo "S705E0400000DA" > temp3.hex
+#	@cat temp.hex temp2.hex temp3.hex > /home/firetos.hex
+#	@rm temp.hex temp2.hex temp3.hex
+	cp  $(TOSCFHEX3) /home/firetos.hex
 
-$(PCICF):	
-	make m5484lite -C pci
+$(DRIVERSCF):	
+	make m5484lite -C drivers
 
-$(PCICF2):	
-	make m54455evb -C pci
+$(DRIVERSCF2):	
+	make m54455evb -C drivers
 	
-$(PCICF3):	
-	make coldari -C pci
+$(DRIVERSCF3):	
+	make firebee -C drivers
 
 version.h:
 	@date -u +%e,%_m,%Y,%k,%_M > date.tmp
@@ -421,6 +459,26 @@ version.h:
 	@rm version.tmp
 	@rm date.tmp
 	@touch -m $(SRCDIR)/tos/version.S
+
+$(GENTOS_BINARY):	$(OBJDIR)/gentos.o $(OBJDIR)/srec.o
+	$(CC) $(OBJDIR)/gentos.o $(OBJDIR)/srec.o -o $(GENTOS_BINARY)
+	$(STRIP) $(GENTOS_BINARY)
+	$(STACK) -S $(GENTOS_STACKSIZE) $(GENTOS_BINARY)
+
+$(GENTOS_BINARYCF):	$(OBJDIRCF)/gentos.o $(OBJDIRCF)/srec.o
+	$(CC) $(OBJDIRCF)/gentos.o $(OBJDIRCF)/srec.o -o $(GENTOS_BINARYCF)
+	$(STRIP) $(GENTOS_BINARYCF)
+	$(STACK) -S $(GENTOS_STACKSIZE) $(GENTOS_BINARYCF)
+
+$(GENTOS_BINARYCF2):	$(OBJDIRCF2)/gentos.o $(OBJDIRCF)/srec.o
+	$(CC) $(OBJDIRCF2)/gentos.o $(OBJDIRCF)/srec.o -o $(GENTOS_BINARYCF2)
+	$(STRIP) $(GENTOS_BINARYCF2)
+	$(STACK) -S $(GENTOS_STACKSIZE) $(GENTOS_BINARYCF2)
+
+$(GENTOS_BINARYCF3):	$(OBJDIRCF3)/gentos.o $(OBJDIRCF)/srec.o
+	$(CC) $(OBJDIRCF3)/gentos.o $(OBJDIRCF)/srec.o -o $(GENTOS_BINARYCF3)
+	$(STRIP) $(GENTOS_BINARYCF3)
+	$(STACK) -S $(GENTOS_STACKSIZE) $(GENTOS_BINARYCF3)
 
 define CREATEOBJDIRS
 	@for d in $(OBJDIR) $(SUBOBJDIRS); do \
@@ -465,10 +523,6 @@ $(OBJDIRCF)/tos/version.o:	$(SRCDIR)/tos/version.S $(INCDIR)/main.h
 $(OBJDIR)/tos/xbios2.o:	$(SRCDIR)/tos/xbios2.S $(SRCDIR)/tos/pci_bios.S
 	$(CREATEOBJDIRS)
 	$(CC) $(INCLUDE) $(CFLAGS_TOS) -c $< -o $@
-
-$(OBJDIR)/tos/xbios2_1gb.o:	$(SRCDIR)/tos/xbios2.S $(SRCDIR)/tos/pci_bios.S
-	$(CREATEOBJDIRS)
-	$(CC) $(INCLUDE) $(CFLAGS_TOS) -DCTPCI_1GB -c $< -o $@
 
 $(OBJDIRCF)/tos/xbios2.o:	$(SRCDIR)/tos/xbios2.S $(SRCDIR)/tos/pci_bios.S
 	$(CREATEOBJDIRSCF)
@@ -546,6 +600,22 @@ $(OBJDIRCF3)/tos/%.o:	$(SRCDIR)/tos/%.S
 	$(CREATEOBJDIRSCF3)
 	$(CC) $(INCLUDE) $(CFLAGSCF3_TOS) -c $< -o $@
 
+$(OBJDIR)/tos/patches/%.o:	$(SRCDIR)/tos/patches/%.S
+	$(CREATEOBJDIRS)
+	$(CC) $(INCLUDE) $(CFLAGS_TOS) -c $< -o $@
+
+$(OBJDIRCF)/tos/patches/%.o:	$(SRCDIR)/tos/patches/%.S
+	$(CREATEOBJDIRSCF)
+	$(CC) $(INCLUDE) $(CFLAGSCF_TOS) -c $< -o $@
+
+$(OBJDIRCF2)/tos/patches/%.o:	$(SRCDIR)/tos/patches/%.S
+	$(CREATEOBJDIRSCF2)
+	$(CC) $(INCLUDE) $(CFLAGSCF2_TOS) -c $< -o $@
+
+$(OBJDIRCF3)/tos/patches/%.o:	$(SRCDIR)/tos/patches/%.S
+	$(CREATEOBJDIRSCF3)
+	$(CC) $(INCLUDE) $(CFLAGSCF3_TOS) -c $< -o $@
+
 $(OBJDIRCF)/tos/cf68klib.o:	$(SRCDIR)/tos/cf68klib.S
 	$(CREATEOBJDIRSCF)
 	$(CC) $(INCLUDE) $(CFLAGSCF_TOS) -c $< -o $@
@@ -558,6 +628,22 @@ $(OBJDIRCF3)/tos/cf68klib.o:	$(SRCDIR)/tos/cf68klib.S
 	$(CREATEOBJDIRSCF3)
 	$(CC) $(INCLUDE) $(CFLAGSCF3_TOS) -c $< -o $@
 
+$(OBJDIRCF)/aes/%.o:	$(SRCDIR)/aes/%.c
+	$(CREATEOBJDIRSCF)
+	$(CC) $(INCLUDE) $(CFLAGSCF_TOS) -fno-builtin -Wno-multichar -c $< -o $@
+
+$(OBJDIRCF)/aes/%o:	$(SRCDIR)/aes/%.S
+	$(CREATEOBJDIRSCF)
+	$(CC) $(INCLUDE) $(CFLAGSCF_TOS) -fno-builtin -Wno-multichar -c $< -o $@
+
+$(OBJDIRCF)/desk/%.o:	$(SRCDIR)/desk/%.c
+	$(CREATEOBJDIRSCF)
+	$(CC) $(INCLUDE) $(CFLAGSCF_TOS) $(CFLAGSDESK) -fno-builtin -Wno-multichar -c $< -o $@
+
+$(OBJDIRCF)/desk/%o:	$(SRCDIR)/desk/%.S
+	$(CREATEOBJDIRSCF)
+	$(CC) $(INCLUDE) $(CFLAGSCF_TOS) $(CFLAGSDESK) -fno-builtin -Wno-multichar -c $< -o $@
+	
 $(OBJDIR)/%.o:	$(SRCDIR)/%.c
 	$(CREATEOBJDIRS)
 	$(CC) $(INCLUDE) $(CFLAGS) -c $< -o $@

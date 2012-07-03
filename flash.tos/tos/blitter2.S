@@ -1,5 +1,5 @@
-/* TOS 4.04 Blitter patch for the CT60 board
-*  Didier Mequignon 2002 December, e-mail: aniplay@wanadoo.fr
+/* TOS 4.04 Blitter patch for the CT60 and Coldfire boards
+*  Didier Mequignon 2002/2011, e-mail: aniplay@wanadoo.fr
 *
 *  This library is free software; you can redistribute it and/or
 *  modify it under the terms of the GNU Lesser General Public
@@ -28,7 +28,6 @@
 	.globl	logo_atari
 	.globl	det_vdi
 	
-#include "main.h"
 #include "vars.h"
 
 #ifdef COLDFIRE
@@ -38,6 +37,8 @@
 // #define DEBUG
 
 	.text
+	
+#ifndef COLDFIRE /* for reduce boot size, blitter not exist */
 	
 get_font_6x6_a0:
 
@@ -128,21 +129,9 @@ copy_fonts:
 	movem.l D0-D3/A0-A2,-(SP)
 #endif
 	move.l phystop,D0
-	sub.l #RESERVE_MEM_FONTS,D0
-#ifndef COLDFIRE
-	move.l _sysbase,A0       // header ROM
-	move.l 0x24(A0),A0       // kbshift
-	move.b (A0),D1
-	and.b #0xF,D1
-	cmp.b #0x3,D1            // SHIFT-SHIFT
-	bne.s .sdram
-	sub.l #RESERVE_MEM-RESERVE_MEM_FONTS,D0
-.sdram:	
-#endif
-	move.l D0,_memtop
 	move.l D0,A1
 	move.l D0,D1
-	lea 0xE4AFEC,A0
+	lea 0xE4AFEC,A0 // f6x6 FONT_HEAD
 #ifdef COLDFIRE
 	move.l #0xFFF,D0
 cf1:
@@ -156,7 +145,7 @@ cf1:
 	dbf D0,cf1	
 #endif
 	move.l A1,D2
-	lea 0xE09410,A0
+	lea 0xE09410,A0 // f16x32 FONT_HEAD
 	moveq #0x17,D0
 cf2:
 		move.l (A0)+,(A1)+
@@ -192,7 +181,7 @@ cf3:
 	clr.l flag_statvec(A2)
 	clr.l power_flag(A2)
 	lea adr_fonts(A2),A2
-	lea 0xE4AFEC,A0
+	lea 0xE4AFEC,A0 // f6x6 FONT_HEAD 
 	move.l D1,A1
 	movem.l 0x48(A0),D0/D3
 	sub.l A0,D0
@@ -202,7 +191,7 @@ cf3:
 	movem.l D0/D3,0x48(A1)
 	move.l A1,(A2)+
 	add.l #0xE4B6C8-0xE4AFEC,D1
-	add.l #0xE4B6C8-0xE4AFEC,A0
+	add.l #0xE4B6C8-0xE4AFEC,A0 // f8x8 FONT_HEAD
 	move.l D1,A1
 	movem.l 0x48(A0),D0/D3
 	sub.l A0,D0
@@ -212,7 +201,7 @@ cf3:
 	movem.l D0/D3,0x48(A1)	
 	move.l A1,(A2)+
 	add.l #0xE4D124-0xE4B6C8,D1
-	add.l #0xE4D124-0xE4B6C8,A0
+	add.l #0xE4D124-0xE4B6C8,A0 // f8x16 FONT_HEAD
 	move.l D1,A1
 	movem.l 0x48(A0),D0/D3
 	sub.l A0,D0
@@ -221,7 +210,7 @@ cf3:
 	add.l D1,D3
 	movem.l D0/D3,0x48(A1)
 	move.l A1,(A2)+
-	lea 0xE09410,A0
+	lea 0xE09410,A0 // f16x32 FONT_HEAD
 	move.l D2,A1
 	movem.l D0/D3,0x48(A1)
 	move.l A1,(A2)+
@@ -235,12 +224,14 @@ cf3:
 #endif
 	rts
 	
+#endif /* COLDFIRE */
+	
 logo_atari:
 
 #ifndef COLDFIRE
 	cmp.l #0x01000000,_v_bas_ad
 	bcc.s .no_logo
-	move.l _memtop,A0
+	move.l phystop,A0
 	add.l #0x6408,A0
 	pea.l (A0)
 	jmp 0xE00666
@@ -248,8 +239,8 @@ logo_atari:
 #endif
 	jmp 0xE0066E
 
-//#ifndef COLDFIRE /* there are a new Coldfire VDI inside the PCI part */
-	
+#ifndef COLDFIRE  /* for reduce boot size, blitter not exist */
+
 	dc.l 0x58425241          // XBRA
 #ifdef COLDFIRE
 	dc.l 0x5F43465F          // _CF_
@@ -541,8 +532,8 @@ free_stram:
 #endif
 	rts
 	
-//#endif /* COLDFIRE */
-
+#endif /* COLDFIRE */
+	
 #ifdef COLDFIRE
 #ifdef DEBUG
 

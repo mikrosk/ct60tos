@@ -1,5 +1,5 @@
 /* time / delay functions for the CT60/CTPCI & Coldfire boards
- * Didier Mequignon 2005-2011, e-mail: aniplay@wanadoo.fr
+ * Didier Mequignon 2005-2012, e-mail: aniplay@wanadoo.fr
  *
  * This file is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -159,16 +159,14 @@ static long save_stack;
 
 void install_vbl_timer(void *func, int remove)
 {
-#ifdef COLDFIRE
-#if defined(NETWORK) && defined (LWIP) && defined(DRIVER_IN_ROM)
-#if (defined(CONFIG_USB_UHCI) || defined(CONFIG_USB_OHCI) || defined(CONFIG_USB_EHCI)) && defined(CONFIG_USB_MEM_NO_CACHE) && defined(CONFIG_USB_MEM_NO_CACHE)
+#if ((defined(COLDFIRE) && defined(LWIP)) || defined(FREERTOS)) && defined(DRIVER_IN_ROM)
+#if (defined(CONFIG_USB_UHCI) || defined(CONFIG_USB_OHCI) || defined(CONFIG_USB_EHCI))
 	extern void *usb_malloc(long amount);
 	extern int usb_free(void *addr);
 #endif
 	extern void flush_dc(void);
 	extern unsigned long pxCurrentTCB, tid_TOS;
-#endif
-#endif /* COLDFIRE */
+#endif /* ((defined(COLDFIRE) && defined(LWIP)) || defined(FREERTOS)) && defined(DRIVER_IN_ROM) */
 	XBRA *xbra;
 	int i = (int)*nvbls;
 	void (**func_vbl)(void);
@@ -183,7 +181,7 @@ void install_vbl_timer(void *func, int remove)
 			if((xbra->xbra == 'XBRA') && (xbra->ident == '_PCI')
 			 && (xbra->caller[0] == 0x23CF) && (*(long *)&xbra->caller[7] == (long)func))
 			{
-#if defined(COLDFIRE) && defined(NETWORK) && defined(LWIP) && defined(DRIVER_IN_ROM) && defined(CONFIG_USB_MEM_NO_CACHE) && (defined(CONFIG_USB_UHCI) || defined(CONFIG_USB_OHCI) || defined(CONFIG_USB_EHCI))
+#if ((defined(COLDFIRE) && defined(LWIP)) || defined(FREERTOS)) && defined(DRIVER_IN_ROM) && (defined(CONFIG_USB_UHCI) || defined(CONFIG_USB_OHCI) || defined(CONFIG_USB_EHCI))
 			if(pxCurrentTCB != tid_TOS)
 				usb_free(xbra);
 			else
@@ -194,7 +192,7 @@ void install_vbl_timer(void *func, int remove)
 		}
 		if(*func_vbl == NULL)
 		{
-#if defined(COLDFIRE) && defined(NETWORK) && defined(LWIP) && defined(DRIVER_IN_ROM) && defined(CONFIG_USB_MEM_NO_CACHE) && (defined(CONFIG_USB_UHCI) || defined(CONFIG_USB_OHCI) || defined(CONFIG_USB_EHCI))
+#if ((defined(COLDFIRE) && defined(LWIP)) || defined(FREERTOS)) && defined(DRIVER_IN_ROM) && (defined(CONFIG_USB_UHCI) || defined(CONFIG_USB_OHCI) || defined(CONFIG_USB_EHCI))
 			if(pxCurrentTCB != tid_TOS)
 				xbra = (XBRA *)usb_malloc(sizeof(XBRA));
 			else
@@ -214,7 +212,7 @@ void install_vbl_timer(void *func, int remove)
 				*(long *)&xbra->caller[10] = (long)&save_stack;
 				xbra->caller[12] = 0x4E75; /* rts */
 #ifdef COLDFIRE
-#if defined(NETWORK) && defined (LWIP) && defined(DRIVER_IN_ROM)
+#if defined(LWIP) && defined(DRIVER_IN_ROM)
 				if(pxCurrentTCB != tid_TOS)
 					flush_dc();
 				else

@@ -1,6 +1,6 @@
 /*  PMMU tree on the CT60 / MMU on Coldfire
  *
- *  Didier Mequignon 2002-2009, e-mail: aniplay@wanadoo.fr
+ *  Didier Mequignon 2002-2012, e-mail: aniplay@wanadoo.fr
  *
  *  This library is free software; you can redistribute it and/or
  *  modify it under the terms of the GNU Lesser General Public
@@ -20,14 +20,10 @@
 #include <mint/osbind.h>
 #include "main.h"
 #include "ct60.h"
-
 #include "pci_bios.h"
+#include "vars.h"
 
 #undef DEBUG
-
-#define phystop 0x42E
-#define cookie  0x5A0
-#define ramtop  0x5A4
 
 #define ZONE_EPROM 0x00E00000
 #define END_ZONE_EPROM 0x00F00000
@@ -41,9 +37,20 @@
 #define END_ZONE_EPROM2 0x00FF0000
 #define F030_UNUSED 0x00FF0000
 #define END_F030_UNUSED 0x00FF8000
+#define FIREBEE_UNIMPLEMENTED 0x00FF8C00
+#define END_FIREBEE_UNIMPLEMENTED 0x00FF9000
+#define FIREBEE_UNIMPLEMENTED2 0x00FFA000
+#define END_FIREBEE_UNIMPLEMENTED2 0x00FFF800
 #define ZONE_SDRAM 0x01000000
 
 #ifdef COLDFIRE
+
+#ifdef MCF5445X
+#define NO_CACHE_MEMORY_BASE 0x40F00000
+#else
+#define NO_CACHE_MEMORY_BASE 0x00F10000
+#define NO_CACHE_MEMORY_SIZE 0x00090000
+#endif
 
 #define ZONE_IO_MCF5445X MCF_SCM_MPR
 #define END_ZONE_IO_MCF5445X (MCF_PLL_PCR+0x4000)
@@ -51,8 +58,17 @@
 #define ZONE1_SRAM 0xFFF00000     /* MCF5445X */
 #define ZONE2_SRAM 0xFFFFE000     /* MCF5445X */
 
-#define FPGA_ZONE_IO   0xFFF00000 /* COLDARI - ATARI I/O */
-#define FPGA_ZONE_CART 0xFFFA0000 /* COLDARI - ATARI CARTRIDGE */
+#define VIDEO_RAM          0x00D00000 /* FIREBEE */
+#define END_VIDEO_RAM      0x00E00000 /* FIREBEE */
+#define VIDEO_RAM2         0x60000000 /* FIREBEE */
+#define END_VIDEO_RAM2     0x80000000 /* FIREBEE */
+#define FPGA_VIDEO_RAM     0x60D00000 /* FIREBEE */
+#define END_FPGA_VIDEO_RAM 0x60E00000 /* FIREBEE */
+#define FPGA_ACP_IO        0xF0000000 /* FIREBEE */
+#define END_FPGA_ACP_IO    0xF8000000 /* FIREBEE */
+#define FPGA_SRAM          0xF8000000 /* FIREBEE */
+#define END_FPGA_SRAM      0xFC000000 /* FIREBEE */
+#define FPGA_ZONE_IO       0xFFF00000 /* FIREBEE - ATARI I/O */
 
 #define MMUCR (*(volatile unsigned long *)(MMU_BASE+0x0000))
 #define MMUOR (*(volatile unsigned long *)(MMU_BASE+0x0004))
@@ -91,8 +107,8 @@
 
 #define MMUSR_HITN         0x02
 
-#define PAGE_SIZE          8192
-#define MMUDR_PAGE         MMUDR_SZ8K
+#define PAGE_SIZE          1024
+#define MMUDR_PAGE         MMUDR_SZ1K
 #define PAGE_SIZE_1M       0x100000
 
 #define mmu_map(virt_addr,phys_addr,flag_itlb,flags_mmutr,flags_mmudr) \
@@ -135,6 +151,8 @@ do { \
 #endif
 
 #else /* ATARI - 68060 */
+
+#define NO_CACHE_MEMORY_SIZE 0x00080000
 
 #define GLOBALBIT    0x400
 #define SUPERBIT      0x80
@@ -180,31 +198,23 @@ do { \
 #define SIZE_TREE ((SIZE_LEVEL1+SIZE_LEVEL2+SIZE_LEVEL3+PAGESIZE-1) & ~(PAGESIZE-1))
 #define SIZE_PROT (65536L+SIZE_TREE+PAGESIZE)
 
-#endif
+extern void apply_patches(char *src, char *dest);
 
-typedef struct
-{
-	long ident;
-	union
-	{
-		long l;
-		short i[2];
-		char c[4];
-	} v;
-} COOKIE;
+#endif
 
 #ifdef COLDFIRE
 
 void update_mmu(void) // MMU access fault
 {
 	unsigned long format, pc, addr;
-	asm(" .global _update_tlb");
-	asm("_update_tlb:");
-	asm(" MOVE.W #0x2700,SR");
-	asm(" LEA -32(SP),SP"); // + reserve space for jump to old vector
-	asm(" MOVEM.L D0-D5/A0,(SP)"); // normally it's enough !!!
-	asm(" MOVE.L 32(SP),%0" : "=d" (format) : );
-	asm(" MOVE.L 36(SP),%0" : "=d" (pc) : );
+	asm volatile (
+		".global _update_tlb\n\t"
+		"_update_tlb:\n\t"
+		" MOVE.W #0x2700,SR\n\t"
+		" LEA -32(SP),SP\n\t"        /* + reserve space for jump to old vector */
+		" MOVEM.L D0-D5/A0,(SP)\n\t" /* normally it's enough !!! */
+		" MOVE.L 32(SP),%0" : "=d" (format) : );
+	asm volatile (" MOVE.L 36(SP),%0\n\t" : "=d" (pc) : );
 	unsigned long MMU_BASE = (unsigned long)__MMU_BASE;
 	format >>= 16;
 	switch(format & 0x0C03)
@@ -214,16 +224,24 @@ void update_mmu(void) // MMU access fault
 		case 0x0401: /* 5: TLB miss on opword instruction */
 			addr = pc & ~(PAGE_SIZE_1M-1);
 			if((addr < END_ZONE_EPROM) /* STRAM & TOS (1st part) */
-			 || ((addr >= ZONE_SDRAM) && (addr < SDRAM_SIZE)))
+			 || ((addr >= ZONE_SDRAM) && (addr < SDRAM_SIZE))
 #ifdef MCF5445X
+			)
 				mmu_remap(addr,addr+PHYSICAL_OFFSET_SDRAM,MMUOR_ITLB,MMUTR_SG,MMUDR_SZ1M+MMUDR_WRITEBACK+MMUDR_X);
 #else /* MCF548X */
+			 || ((addr >= BOOT_FLASH_BASE) && (addr < BOOT_FLASH_BASE+BOOT_FLASH_SIZE)))
 				mmu_remap(addr,addr,MMUOR_ITLB,MMUTR_SG,MMUDR_SZ1M+MMUDR_WRITEBACK+MMUDR_X);
 #endif
 			else
 			{
 				addr = pc & ~(PAGE_SIZE-1);
+#ifdef MCF547X
+				if((addr >= ZONE_CART) && (addr < END_ZONE_CART))
+					mmu_remap(addr,(addr|FPGA_ZONE_IO),MMUOR_ITLB,MMUTR_SG,MMUDR_PAGE+MMUDR_WRITEBACK+MMUDR_X);
+				else if((addr >= ZONE_EPROM2) && (addr < END_ZONE_EPROM2))
+#else /* MCF548X */
 				if((addr >= ZONE_CART) && (addr < END_ZONE_EPROM2))
+#endif
 					mmu_remap(addr,addr,MMUOR_ITLB,MMUTR_SG,MMUDR_PAGE+MMUDR_WRITEBACK+MMUDR_X);
 				else /* invalid */
 					mmu_remap(addr,addr,MMUOR_ITLB,MMUTR_SG,MMUDR_PAGE+MMUDR_NOCACHE);
@@ -270,8 +288,17 @@ void update_mmu(void) // MMU access fault
 			else if((addr >= ZONE_SDRAM) && (addr < SDRAM_SIZE))
 				mmu_remap(addr,addr+PHYSICAL_OFFSET_SDRAM,0,MMUTR_SG,MMUDR_SZ1M+MMUDR_WRITEBACK+MMUDR_R+MMUDR_W);
 #else /* MCF548X */
+#ifdef MCF547X /* FIREBEE */
+			if(addr < VIDEO_RAM) /* STRAM */
+				mmu_remap(addr,addr,0,MMUTR_SG,MMUDR_SZ1M+MMUDR_WRITETHROUGH+MMUDR_R+MMUDR_W);
+			else if((addr >= VIDEO_RAM) && (addr < ZONE_EPROM))
+				mmu_remap(addr,addr-VIDEO_RAM+FPGA_VIDEO_RAM,0,MMUTR_SG,MMUDR_SZ1M+MMUDR_WRITETHROUGH+MMUDR_R+MMUDR_W);
+			else if((addr >= VIDEO_RAM2) && (addr < END_VIDEO_RAM2))
+				mmu_remap(addr,addr,0,MMUTR_SG,MMUDR_SZ1M+MMUDR_WRITETHROUGH+MMUDR_R+MMUDR_W);
+#else /* MCF548X */
 			if(addr < ZONE_EPROM) /* STRAM */
 				mmu_remap(addr,addr,0,MMUTR_SG,MMUDR_SZ1M+MMUDR_WRITETHROUGH+MMUDR_R+MMUDR_W);
+#endif /* MCF547X */
 			else if((addr >= ZONE_EPROM) && (addr < END_ZONE_EPROM))
         mmu_remap(addr,addr,0,MMUTR_SG,MMUDR_SZ1M+MMUDR_WRITEBACK+MMUDR_R);
 			else if((addr >= ZONE_SDRAM) && (addr < SDRAM_SIZE))
@@ -283,6 +310,10 @@ void update_mmu(void) // MMU access fault
 			else if(((addr >= PCI_MEMORY_OFFSET+(PCI_MEMORY_SIZE/2)) && (addr < PCI_MEMORY_OFFSET+PCI_MEMORY_SIZE))
 #else
 			else if(((addr >= PCI_MEMORY_OFFSET) && (addr < PCI_MEMORY_OFFSET+PCI_MEMORY_SIZE))
+#endif
+#ifdef MCF547X /* FIREBEE */
+			 || ((addr >= FPGA_ACP_IO) && (addr < END_FPGA_ACP_IO))
+			 || ((addr >= FPGA_SRAM) && (addr < END_FPGA_SRAM))			
 #endif
 			 || ((addr >= PCI_IO_OFFSET) && (addr < PCI_IO_OFFSET+PCI_IO_SIZE))
 			 || ((addr >= BOOT_FLASH_BASE) && (addr < BOOT_FLASH_BASE+BOOT_FLASH_SIZE)))
@@ -306,16 +337,19 @@ void update_mmu(void) // MMU access fault
 				 || ((addr >= ZONE_IO_MCF5445X) && (addr < END_ZONE_IO_MCF5445X))
 				 || (addr == CPLD_BASE) || (addr == FPGA_BASE)
 #else /* MCF547X - MCF548X */
-#ifdef MCF547X
-				if((addr >= ZONE_CART) && (addr < END_ZONE_CART))
-					mmu_remap(addr,addr+FPGA_ZONE_CART-ZONE_CART,0,MMUTR_SG,MMUDR_PAGE+MMUDR_WRITEBACK+MMUDR_R);
-        else if((addr == ZONE_IO) // IDE
-				 || ((addr >= END_F030_UNUSED) && (addr < END_ZONE_IO)))
-					mmu_remap(addr,addr+FPGA_ZONE_IO-ZONE_IO,0,MMUTR_SG,MMUDR_PAGE+MMUDR_NOCACHE+MMUDR_R+MMUDR_W);		
-				else if(((addr >= ZONE_EPROM2) && (addr < END_ZONE_EPROM2))		
-				 || ((addr >= FPGA_ZONE_CART) && (addr < FPGA_ZONE_CART+END_ZONE_CART-ZONE_CART)))
+#ifdef MCF547X /* FIREBEE */
+        if((addr == ZONE_IO) // IDE
+				 || ((addr >= ZONE_CART) && (addr < END_ZONE_CART))
+				 || ((addr >= END_F030_UNUSED) && (addr < FIREBEE_UNIMPLEMENTED))
+				 || ((addr >= END_FIREBEE_UNIMPLEMENTED) && (addr < FIREBEE_UNIMPLEMENTED2))
+				 || ((addr >= END_FIREBEE_UNIMPLEMENTED2) && (addr < END_ZONE_IO)))
+					mmu_remap(addr,(addr|FPGA_ZONE_IO),0,MMUTR_SG,MMUDR_PAGE+MMUDR_NOCACHE+MMUDR_R+MMUDR_W);		
+				else if((addr >= ZONE_EPROM2) && (addr < END_ZONE_EPROM2))
 					mmu_remap(addr,addr,0,MMUTR_SG,MMUDR_PAGE+MMUDR_WRITEBACK+MMUDR_R);
-				else if((addr == FPGA_ZONE_IO) || (addr >= FPGA_ZONE_IO+END_F030_UNUSED-ZONE_IO)
+				else if((addr == FPGA_ZONE_IO) // IDE
+				 || ((addr >= FPGA_ZONE_IO+END_F030_UNUSED-ZONE_IO) && (addr < FPGA_ZONE_IO+FIREBEE_UNIMPLEMENTED-ZONE_IO))
+				 || ((addr >= FPGA_ZONE_IO+END_FIREBEE_UNIMPLEMENTED-ZONE_IO) && (addr < FPGA_ZONE_IO+FIREBEE_UNIMPLEMENTED2-ZONE_IO))
+				 || (addr >= FPGA_ZONE_IO+END_FIREBEE_UNIMPLEMENTED2-ZONE_IO)
 				 || ((addr >= __MBAR) && (addr < __MBAR+0x20000))
 #else /* MCF548X */				 
 				if((addr >= ZONE_CART) && (addr < END_ZONE_EPROM2))
@@ -323,6 +357,7 @@ void update_mmu(void) // MMU access fault
 				else if((addr == COMPACTFLASH_BASE)
 				 || ((addr >= __MBAR) && (addr < __MBAR+0x20000))
 #endif /* MCF547X */
+				 || ((addr >= NO_CACHE_MEMORY_BASE) && (addr < NO_CACHE_MEMORY_BASE+NO_CACHE_MEMORY_SIZE))
 #endif /* MCF5445X */
 				 || ((addr >= __MMU_BASE) && (addr < __MMU_BASE+0x10000)))
 					mmu_remap(addr,addr,0,MMUTR_SG,MMUDR_PAGE+MMUDR_NOCACHE+MMUDR_R+MMUDR_W);
@@ -356,14 +391,16 @@ void update_mmu(void) // MMU access fault
 #endif
 			*(unsigned long *)(address_fault) = MMUAR;
 			addr = *(unsigned long *)(save_coldfire_vector);
-			asm(" MOVE.L %0,28(SP)" : : "d" (addr));
-			asm(" MOVEM.L (SP),D0-D5/A0");
-			asm(" LEA 28(SP),SP");
-			asm(" RTS"); // CF68KLIB
+			asm volatile (
+				" MOVE.L %0,28(SP)\n\t"
+				" MOVEM.L (SP),D0-D5/A0\n\t"
+				" LEA 28(SP),SP\n\t"
+				" RTS" : : "d" (addr) ); /* CF68KLIB */
 	}
-	asm(" MOVEM.L (SP),D0-D5/A0");
-	asm(" LEA 32(SP),SP");
-	asm(" RTE");
+	asm volatile (
+		" MOVEM.L (SP),D0-D5/A0\n\t"
+		" LEA 32(SP),SP\n\t"
+		" RTE" );
 }
 
 void init_mmu(unsigned long base_pci_drivers, unsigned long size_pci_drivers)
@@ -441,10 +478,11 @@ void init_mmu(unsigned long base_pci_drivers, unsigned long size_pci_drivers)
 		*p2++ = 0xFFFFFFFF;
 		size--;
 	}
-	asm(" MOVE.L D0,-(SP)");
-	asm(" MOVE.L %0,D0" : : "d" (MMU_BASE+1));
-	asm(" DC.L 0x4E7B0008");                    /* MOVEC.L D0,MMUBAR */
-	asm(" MOVE.L (SP)+,D0");
+	asm volatile (
+		" MOVE.L D0,-(SP)\n\t"
+		" MOVE.L %0,D0\n\t"
+		" DC.L 0x4E7B0008\n\t"                   /* MOVEC.L D0,MMUBAR */
+		" MOVE.L (SP)+,D0" : : "d" (MMU_BASE+1) );
 	MMUOR =	MMUOR_CA;
 	MMUOR = MMUOR_CA+MMUOR_ITLB;
 #ifdef MCF5445X
@@ -455,108 +493,122 @@ void init_mmu(unsigned long base_pci_drivers, unsigned long size_pci_drivers)
 	}	
 	mmu_map(ZONE_EPROM,ZONE_EPROM+PHYSICAL_OFFSET_SDRAM,MMUOR_ITLB,MMUTR_SG,MMUDR_SZ1M+MMUDR_WRITEBACK+MMUDR_X+MMUDR_LK);
 	mmu_map(ZONE_EPROM,ZONE_EPROM+PHYSICAL_OFFSET_SDRAM,0,MMUTR_SG,MMUDR_SZ1M+MMUDR_WRITEBACK+MMUDR_R+MMUDR_LK);
+	mmu_map(NO_CACHE_MEMORY_BASE,NO_CACHE_MEMORY_BASE,MMUOR_ITLB,MMUTR_SG,MMUDR_SZ1M+MMUDR_NOCACHE+MMUDR_X+MMUDR_LK);
+	mmu_map(NO_CACHE_MEMORY_BASE,NO_CACHE_MEMORY_BASE,0,MMUTR_SG,MMUDR_SZ1M+MMUDR_NOCACHE+MMUDR_R+MMUDR_W+MMUDR_LK);
 	mmu_map(RAM_BASE_CF68KLIB,RAM_BASE_CF68KLIB,MMUOR_ITLB,MMUTR_SG,MMUDR_SZ1M+MMUDR_WRITEBACK+MMUDR_X+MMUDR_LK);
 	mmu_map(RAM_BASE_CF68KLIB,RAM_BASE_CF68KLIB,0,MMUTR_SG,MMUDR_SZ1M+MMUDR_WRITEBACK+MMUDR_R+MMUDR_W+MMUDR_LK);
 #else /* MCF548X */
 	for(addr=0;addr<ZONE_EPROM;addr+=PAGE_SIZE_1M)
 	{
-		mmu_map(addr,addr,MMUOR_ITLB,MMUTR_SG,MMUDR_SZ1M+MMUDR_WRITETHROUGH+MMUDR_X+MMUDR_LK);
-		mmu_map(addr,addr,0,MMUTR_SG,MMUDR_SZ1M+MMUDR_WRITETHROUGH+MMUDR_R+MMUDR_W+MMUDR_LK);
-	}	
+#ifdef MCF547X /* FIREBEE */
+		if((addr>=VIDEO_RAM) && (addr<END_VIDEO_RAM))
+		{
+			mmu_map(addr,addr-VIDEO_RAM+FPGA_VIDEO_RAM,MMUOR_ITLB,MMUTR_SG,MMUDR_SZ1M+MMUDR_WRITETHROUGH+MMUDR_X+MMUDR_LK);
+			mmu_remap(addr,addr-VIDEO_RAM+FPGA_VIDEO_RAM,0,MMUTR_SG,MMUDR_SZ1M+MMUDR_WRITETHROUGH+MMUDR_R+MMUDR_W);
+		}
+		else
+#endif /* MCF547X */
+		{
+			mmu_map(addr,addr,MMUOR_ITLB,MMUTR_SG,MMUDR_SZ1M+MMUDR_WRITETHROUGH+MMUDR_X+MMUDR_LK);
+			mmu_map(addr,addr,0,MMUTR_SG,MMUDR_SZ1M+MMUDR_WRITETHROUGH+MMUDR_R+MMUDR_W+MMUDR_LK);
+		}
+	}
 	mmu_map(ZONE_EPROM,ZONE_EPROM,MMUOR_ITLB,MMUTR_SG,MMUDR_SZ1M+MMUDR_WRITEBACK+MMUDR_X+MMUDR_LK);
 	mmu_map(ZONE_EPROM,ZONE_EPROM,0,MMUTR_SG,MMUDR_SZ1M+MMUDR_WRITEBACK+MMUDR_R+MMUDR_LK);
 	mmu_map(RAM_BASE_CF68KLIB,RAM_BASE_CF68KLIB,MMUOR_ITLB,MMUTR_SG,MMUDR_SZ1M+MMUDR_WRITEBACK+MMUDR_X+MMUDR_LK);
 	mmu_map(RAM_BASE_CF68KLIB,RAM_BASE_CF68KLIB,0,MMUTR_SG,MMUDR_SZ1M+MMUDR_WRITEBACK+MMUDR_R+MMUDR_W+MMUDR_LK);
+#ifdef MCF547X /* FIREBEE */
+	mmu_map(FPGA_ZONE_IO,FPGA_ZONE_IO,0,MMUTR_SG,MMUDR_PAGE+MMUDR_NOCACHE+MMUDR_R+MMUDR_W+MMUDR_LK); // IDE
+#endif
 #endif /* MCF5445X */
 #ifdef DEBUG
 	addr = MCF_UART_UTB0 & ~(PAGE_SIZE-1);
 	mmu_map(addr,addr,0,MMUTR_SG,MMUDR_PAGE+MMUDR_NOCACHE+MMUDR_R+MMUDR_W+MMUDR_LK);
 #endif
-	asm(" MOVE.W SR,D0");
-	asm(" MOVE.L D0,-(SP)");
-	asm(" OR.L #0x700,D0");
-	asm(" MOVE.W D0,SR");
+	asm volatile (
+		" MOVE.W SR,D0\n\t"
+		" MOVE.L D0,-(SP)\n\t"
+		" OR.L #0x700,D0\n\t"
+		" MOVE.W D0,SR" : : : "d0");
 #ifdef MCF5445X /* because SDRAM is remapped on MCF5445X, it's impossible to use ACRs for this zone */
   /* zone PCI memory in cache inhibit precise */
 	{
 		unsigned long ACR_PCI = (PCI_MEMORY_OFFSET & 0xFF000000) + (((PCI_MEMORY_SIZE-1) >> 8) & 0xFF0000) + 0xE040;
-		asm(" MOVE.L %0,D0" : : "d" (ACR_PCI));
-		asm(" MOVEC.L D0,ACR0"); // data	
+		asm volatile (
+			" MOVE.L %0,D0\n\t"
+			" MOVEC.L D0,ACR0" : : "d" (ACR_PCI) : "d0" ); /* data	*/
 	}
   /* zone FLASH in cache inhibit precise */
 	{
 		unsigned long ACR_FLASH = (BOOT_FLASH_BASE & 0xFFF00000) + (((BOOT_FLASH_SIZE-1) >> 4) & 0xF0000) + 0xE440;
-		asm(" MOVE.L %0,D0" : : "d" (ACR_FLASH));
-		asm(" MOVEC.L D0,ACR1"); // data
+		asm volatile (
+			" MOVE.L %0,D0\n\t"
+			" MOVEC.L D0,ACR1\n\t"                           /* data */
+			" MOVEC.L D0,ACR3" : : "d" (ACR_FLASH) : "d0" ); /* instruction */
 	}
-	asm(" MOVEQ #0,D0");
-	asm(" MOVEC.L D0,ACR2");   // instruction 
-	asm(" MOVEC.L D0,ACR3");   // instruction 
+	asm volatile (
+		" MOVEQ #0,D0\n\t"
+		" MOVEC.L D0,ACR2" : : : "d0" );    /* instruction */
 #else /* MCF547X - MCF548X */
-#ifdef MCF547X
-	asm(" MOVEQ #0,D0");
-	asm(" MOVEC.L D0,ACR0");   // data
-	asm(" MOVEC.L D0,ACR1");   // data
-#else /* MCF548X */
 	/* zone TT-RAM 48MB in copyback */
-	asm(" MOVE.L #0x0201E020,D0");
-	asm(" MOVEC.L D0,ACR0");   // data
-	asm(" MOVE.L #0x0100E020,D0");
-	asm(" MOVEC.L D0,ACR1");   // data
-#endif /* MCF547X */
+	asm volatile (
+		" MOVE.L #0x0201E020,D0\n\t"
+		" MOVEC.L D0,ACR0\n\t"              /* data */
+		" MOVE.L #0x0100E020,D0\n\t"
+		" MOVEC.L D0,ACR1" : : : "d0" );    /* data */
   /* SDRAM is cacheable */
 	{
 		unsigned long ACR_SDRAM = (SDRAM_BASE & 0xFF000000) + (((SDRAM_SIZE-1) >> 8) & 0xFF0000) + 0xE000;
-		asm(" MOVE.L %0,D0" : : "d" (ACR_SDRAM));
-		asm(" MOVEC.L D0,ACR2"); // instruction
+		asm volatile (
+			" MOVE.L %0,D0\n\t"
+			" MOVEC.L D0,ACR2" : : "d" (ACR_SDRAM) : "d0" ); /* instruction */
 	}	
-	asm(" MOVEQ #0,D0");
-	asm(" MOVEC.L D0,ACR3");   // instruction 
+	asm volatile (
+		" MOVEQ #0,D0\n\t"
+		" MOVEC.L D0,ACR3" : : : "d0");     /* instruction */
 #endif
-	asm(" NOP");
-	MMUCR = MMUCR_EN;                           /* enable */
-	asm(" NOP");
-	asm(" MOVE.L (SP)+,D0");
-	asm(" MOVE.W D0,SR");
+	asm volatile (" NOP");
+	MMUCR = MMUCR_EN;                     /* enable */
+	asm volatile (
+		" NOP\n\t"
+		" MOVE.L (SP)+,D0\n\t"
+		" MOVE.W D0,SR\n\t" : : : "d0" );
 }
 
 #else /* ATARI - 68060 */
 
-long init_mmu_tree(unsigned long base_pci_drivers, unsigned long size_pci_drivers)
+void init_mmu_tree(unsigned long base_pci_drivers, unsigned long size_pci_drivers)
 {
-	unsigned long end_tree,offset,end_stram,end_sdram,srp_reg,tos_in_ram,offset_tos,offset_drivers;
+	unsigned long end_tree,offset,end_stram,end_sdram,srp_reg,tos_in_ram,offset_tos,offset_drivers,no_cache_memory;
 	unsigned long ri,pi,pgi,adr,size;
 	unsigned long *p0,*p1,*p2;
-	COOKIE *p;
 
-	tos_in_ram=offset_tos=offset_drivers=0;
-	if(base_pci_drivers)
-		tos_in_ram=1;
-	else
-		tos_in_ram=(unsigned long)ct60_rw_parameter(CT60_MODE_READ,CT60_PARAM_TOSRAM,tos_in_ram)&1;
-	end_sdram=*(unsigned long *)ramtop;
-	if(tos_in_ram && end_sdram)                 /* copy TOS inside the top of the SDRAM */
+	tos_in_ram=offset_tos=offset_drivers=no_cache_memory=0;
+	end_stram=*(unsigned long *)phystop;        /* save phystop before change if PMMU tree in STRAM */
+	end_sdram=*(unsigned long *)ramtop;         /* save ramtop before change if PMMU tree in SDRAM */
+	if(end_sdram)                               /* copy TOS inside the top of the SDRAM */
 	{
-		if(base_pci_drivers)                      /* 2 parts is possible */
+		if(base_pci_drivers)                      /* 2 parts are possible */
 		{
-			*(unsigned long *)ramtop-=(FLASH_SIZE+END_ZONE_EPROM2-ZONE_EPROM2+PCI_DRIVERS_SIZE);
+			(*(unsigned long *)ramtop)-=(FLASH_SIZE+END_ZONE_EPROM2-ZONE_EPROM2+PCI_DRIVERS_SIZE);
 			offset_tos=tos_in_ram=end_sdram-FLASH_SIZE-(END_ZONE_EPROM2-ZONE_EPROM2+PCI_DRIVERS_SIZE);
 			offset_drivers=end_sdram-PCI_DRIVERS_SIZE;
 		}
 		else
 		{
-			*(unsigned long *)ramtop-=(FLASH_SIZE+PAGESIZE);
+			(*(unsigned long *)ramtop)-=(FLASH_SIZE+PAGESIZE);
 			offset_tos=tos_in_ram=end_sdram-FLASH_SIZE;
 		}
-		p1=(unsigned long *)ZONE_EPROM;           /* source */
-		p2=(unsigned long *)tos_in_ram;           /* target */
+		apply_patches((char *)ZONE_EPROM,(char *)tos_in_ram); /* 512KB original TOS */
+		p1=(unsigned long *)(ZONE_EPROM+(FLASH_SIZE>>1)); /* source */
+		p2=(unsigned long *)(tos_in_ram+(FLASH_SIZE>>1)); /* target */
 		if(base_pci_drivers)
-			size=(base_pci_drivers-ZONE_EPROM)>>4;  /* size   */
+			size=((base_pci_drivers-ZONE_EPROM)-(FLASH_SIZE>>1))>>4;  /* size */
 		else		
-			size=FLASH_SIZE>>4;                     /* size   */
+			size=FLASH_SIZE>>5;                     /* size   */
 		while((long)size > 0)
 		{ 
-			*p2++ = *p1++;                          /* copy patched TOS */
+			*p2++ = *p1++;                          /* copy boot TOS */
 			*p2++ = *p1++;
 			*p2++ = *p1++;
 			*p2++ = *p1++;
@@ -620,23 +672,42 @@ long init_mmu_tree(unsigned long base_pci_drivers, unsigned long size_pci_driver
 				}
 			}
 		}
-	}
-	else
-		tos_in_ram=0;
-	if(end_sdram!=0)
 		srp_reg = (*(unsigned long *)ramtop)-SIZE_TREE-PAGESIZE;
-	else
+	}
+	else /* STRAM only, copy TOS inside the top of the STRAM */
+	{
+		(*(unsigned long *)phystop)-=(FLASH_SIZE+PAGESIZE);
+		offset_tos=tos_in_ram=end_stram-FLASH_SIZE;
+		apply_patches((char *)ZONE_EPROM,(char *)tos_in_ram); /* 512KB original TOS */
+		p1=(unsigned long *)(ZONE_EPROM+(FLASH_SIZE>>1)); /* source */
+		p2=(unsigned long *)(tos_in_ram+(FLASH_SIZE>>1)); /* target */
+		size=FLASH_SIZE>>5;                       /* 2nd part for boot */
+		while((long)size > 0)
+		{ 
+			*p2++ = *p1++;                          /* copy boot TOS */
+			*p2++ = *p1++;
+			*p2++ = *p1++;
+			*p2++ = *p1++;
+			size--;	
+		} 
 		srp_reg = (*(unsigned long *)phystop)-SIZE_TREE-PAGESIZE;
+	}
 	srp_reg += (PAGESIZE-1);
 	srp_reg &= ~(PAGESIZE-1);                   /* alignment adress on PAGESIZE bytes */
 	end_tree=srp_reg+SIZE_TREE;
 	p0=(unsigned long *)srp_reg;
 	p1=p0+ROOT_TABLE_SIZE;
 	p2=p1+(PTR_TABLE_SIZE*NB_32MB);
-	end_stram=*(unsigned long *)phystop;
 	offset=0;
-	if(end_sdram!=0)
-		*(unsigned long *)ramtop=srp_reg;
+	if(end_sdram)
+	{
+		if(base_pci_drivers)
+			*(unsigned long *)ramtop=no_cache_memory=(srp_reg&~(NO_CACHE_MEMORY_SIZE-1))-NO_CACHE_MEMORY_SIZE;
+		else
+			*(unsigned long *)ramtop=srp_reg;
+	}
+	else
+		*(unsigned long *)phystop=srp_reg;
 	for(ri=0;ri<ROOT_TABLE_SIZE;ri++)           /* 1st level of the mmu tree => pages 32 MB */
 	{
 		if(ri<NB_32MB)
@@ -648,41 +719,41 @@ long init_mmu_tree(unsigned long base_pci_drivers, unsigned long size_pci_driver
 				adr = (ri<<25UL) + (pi<<18UL);
 				if(adr<end_stram)
 				{
-					for(pgi=0;pgi<PAGE_TABLE_SIZE;pgi++)       /* 3rd level of the mmu tree */
+					if(!end_sdram && adr>=tos_in_ram)
 					{
-						adr = (ri<<25UL) + (pi<<18UL) + (pgi<<13UL);
-						if(adr>=srp_reg && adr<end_tree)         /* tree in STRAM */
-							*p2++ = offset+(NOCACHE+READONLYBIT+RESIDENT);
-						else
-							*p2++ = offset+(WRITETHROUGH+RESIDENT);
-						offset+=PAGESIZE;
-					}
-				}
-				else if(adr>=ZONE_EPROM && adr<END_ZONE_EPROM)
-				{
-					if(tos_in_ram)                             /* SDRAM */
-					{	
 						for(pgi=0;pgi<PAGE_TABLE_SIZE;pgi++)     /* 3rd level of the mmu tree */
 						{
-							*p2++ = offset_tos+(WRITETHROUGH+READONLYBIT+RESIDENT);
-							offset_tos+=PAGESIZE;
+							*p2++ = INVALID;
 							offset+=PAGESIZE;
 						}
 					}
 					else
 					{
-						for(pgi=0;pgi<PAGE_TABLE_SIZE;pgi++)     /* 3rd level of the mmu tree */
+						for(pgi=0;pgi<PAGE_TABLE_SIZE;pgi++)       /* 3rd level of the mmu tree */
 						{
-							*p2++ = offset+(WRITETHROUGH+READONLYBIT+RESIDENT);
+							adr = (ri<<25UL) + (pi<<18UL) + (pgi<<13UL);
+							if(adr>=srp_reg && adr<end_tree)         /* tree in STRAM */
+								*p2++ = offset+(NOCACHE+READONLYBIT+RESIDENT);
+							else
+								*p2++ = offset+(WRITETHROUGH+RESIDENT);
 							offset+=PAGESIZE;
 						}
 					}
 				}
 				else if(adr>=end_stram && adr<ZONE_EPROM)
 				{
-					for(pgi=0;pgi<PAGE_TABLE_SIZE;pgi++)       /* 3rd level of the mmu tree */
+					for(pgi=0;pgi<PAGE_TABLE_SIZE;pgi++)     /* 3rd level of the mmu tree */
 					{
-						*p2++ = offset+(NOCACHE+RESIDENT);
+						*p2++ = offset+(NOCACHE+RESIDENT);     /* board with 4MB STRAM ? */
+						offset+=PAGESIZE;
+					}
+				}
+				else if(adr>=ZONE_EPROM && adr<END_ZONE_EPROM)
+				{
+					for(pgi=0;pgi<PAGE_TABLE_SIZE;pgi++)     /* 3rd level of the mmu tree */
+					{
+						*p2++ = offset_tos+(WRITETHROUGH+READONLYBIT+RESIDENT);  /* TOS copied in SDRAM or STRAM */
+						offset_tos+=PAGESIZE;
 						offset+=PAGESIZE;
 					}
 				}
@@ -697,12 +768,12 @@ long init_mmu_tree(unsigned long base_pci_drivers, unsigned long size_pci_driver
 							*p2++ = offset+(NOCACHE+READONLYBIT+RESIDENT);
 						else if(adr>=ZONE_EPROM2 && adr<END_ZONE_EPROM2)
 						{
-							if(tos_in_ram)                         /* SDRAM */
+							if(end_sdram)                          /* SDRAM => TOS 2nd part */
 							{	
 								*p2++ = offset_tos+(WRITETHROUGH+READONLYBIT+RESIDENT);
 								offset_tos+=PAGESIZE;
 							}
-							else
+							else                                   /* STRAM => no 2nd part */
 								*p2++ = INVALID;
 						}				
 						else if(adr>=F030_UNUSED && adr<END_F030_UNUSED)
@@ -712,9 +783,9 @@ long init_mmu_tree(unsigned long base_pci_drivers, unsigned long size_pci_driver
 						offset+=PAGESIZE;
 					}
 				}                                            /* SDRAM */
-				else if(end_sdram!=0 && adr>=ZONE_SDRAM && adr<end_sdram)
+				else if(end_sdram && adr>=ZONE_SDRAM && adr<end_sdram)
 				{
-					if(tos_in_ram!=0 && adr>=tos_in_ram)
+					if(adr>=tos_in_ram)
 					{
 						for(pgi=0;pgi<PAGE_TABLE_SIZE;pgi++)     /* 3rd level of the mmu tree */
 						{
@@ -729,13 +800,16 @@ long init_mmu_tree(unsigned long base_pci_drivers, unsigned long size_pci_driver
 							adr = (ri<<25UL) + (pi<<18UL) + (pgi<<13UL);
 							if(adr>=srp_reg && adr<end_tree)       /* tree in SDRAM */
 								*p2++ = offset+(NOCACHE+READONLYBIT+RESIDENT);
+							else if(base_pci_drivers && adr>=no_cache_memory) 
+								*p2++ = offset+(NOCACHE+RESIDENT);	 /* SDRAM without cache */								
+//								*p2++ = offset+(WRITETHROUGH+RESIDENT);	/* SDRAM in WT */			
 							else                                   /* SDRAM */
 								*p2++ = offset+(WRITEBACK+RESIDENT);									
 							offset+=PAGESIZE;
 						}
 					}
-				}
-				else if(tos_in_ram && adr>=PCI_DRIVERS_OFFSET && adr<PCI_DRIVERS_OFFSET+PCI_DRIVERS_SIZE)
+				}                                            /* SDRAM */
+				else if(end_sdram && adr>=PCI_DRIVERS_OFFSET && adr<PCI_DRIVERS_OFFSET+PCI_DRIVERS_SIZE)
 				{
 					for(pgi=0;pgi<PAGE_TABLE_SIZE;pgi++)       /* 3rd level of the mmu tree */
 					{
@@ -763,39 +837,35 @@ long init_mmu_tree(unsigned long base_pci_drivers, unsigned long size_pci_driver
 		else
 			*p0++ = (unsigned long)INVALID;                /* bits of TC by default */
 	}
-	asm(" MOVE.W SR,-(SP)");
-	asm(" OR.W #0x700,SR");
-	asm(" CPUSHA BC");
-	asm(" PFLUSHA");
-	asm(" MOVEC.L %0,URP" : : "d" (srp_reg));
-	asm(" MOVEC.L %0,SRP" : : "d" (srp_reg));
-//	asm(" MOVE.L #0x401FE020,D0");    /* zone at 0x40000000 to 0x5FFFFFFF in copyback */
-//	asm(" MOVE.L #0x401FE000,D0");    /* zone at 0x40000000 to 0x5FFFFFFF in writethrough */
-	asm(" MOVE.L #0x401FE040,D0");    /* zone at 0x40000000 to 0x5FFFFFFF in cache inhibed precise */
-	asm(" MOVEC.L D0,ITT1");
-	asm(" MOVEC.L D0,DTT1");
-	asm(" MOVE.L #0x807FE040,D0");    /* zone at 0x80000000 to 0xFFFFFFFF in cache inhibed precise */
-	asm(" MOVEC.L D0,ITT0");
-	asm(" MOVEC.L D0,DTT0");
-	asm(" MOVE.L #0xC210,D0");        /* enable, 8Ko, cache inhibed by default */
-	asm(" MOVEC.L D0,TC");
-	asm(" MOVE.W (SP)+,SR");
-	if(tos_in_ram)
-	{ 
-		p = *(COOKIE **)cookie;
-		while(p)
-		{
-			if(!p->ident)
-			{
-				*(p+1) = *p;
-				p->ident = 0x504D4D55;      /* PMMU */
-				p->v.l = srp_reg;
-				break;
-			}
-			p++;
-		}
-	}		
-	return(tos_in_ram);
+	asm volatile (
+		" MOVE.W SR,-(SP)\n\t"
+		" OR.W #0x700,SR\n\t"
+		" CPUSHA BC\n\t"
+		" PFLUSHA\n\t"
+		" MOVEC.L %0,URP" : : "d" (srp_reg) );
+	asm volatile (" MOVEC.L %0,SRP" : : "d" (srp_reg) );
+//	asm volatile (" MOVE.L #0x401FE020,D0");    /* zone at 0x40000000 to 0x5FFFFFFF in copyback */
+//	asm volatile (" MOVE.L #0x401FE000,D0");    /* zone at 0x40000000 to 0x5FFFFFFF in writethrough */
+//	asm volatile (" MOVE.L #0x401FE040,D0");    /* zone at 0x40000000 to 0x5FFFFFFF in cache inhibed precise */
+#if 1
+	asm volatile (
+		" MOVE.L #0x403FE040,D0\n\t"    /* zone at 0x40000000 to 0x7FFFFFFF in cache inhibed precise */
+		" MOVEC.L D0,ITT1\n\t"
+		" MOVEC.L D0,DTT1\n\t"
+		" MOVE.L #0x807FE040,D0" );    /* zone at 0x80000000 to 0xFFFFFFFF in cache inhibed precise */
+#else
+	asm volatile (
+		" MOVE.L #0xE00FE044,D0\n\t"    /* zone at 0xE0000000 to 0xEFFFFFFF in cache inhibed precise + write protect */
+		" MOVEC.L D0,ITT1\n\t"
+		" MOVEC.L D0,DTT1\n\t"
+		" MOVE.L #0xF00FE040,D0" );    /* zone at 0xF0000000 to 0xFFFFFFFF in cache inhibed precise */
+#endif
+	asm volatile (
+		" MOVEC.L D0,ITT0\n\t"
+		" MOVEC.L D0,DTT0\n\t"
+		" MOVE.L #0xC210,D0\n\t"        /* enable, 8Ko, cache inhibed by default */
+		" MOVEC.L D0,TC\n\t"
+		" MOVE.W (SP)+,SR" );
 }
 
 #endif

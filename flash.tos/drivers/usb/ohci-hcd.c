@@ -49,13 +49,13 @@
 #include "usb.h"
 #include "ohci.h"
 
-#if defined(COLDFIRE) && defined(NETWORK) && defined(LWIP)
+#if (defined(COLDFIRE) && defined(LWIP)) || defined (FREERTOS)
 #include "../freertos/FreeRTOS.h"
 #include "../freertos/queue.h"
 extern xQueueHandle queue_poll_hub;
-#define USB_POLL_HUB
 #endif
 
+#undef DEBUG_PCIE
 
 #undef OHCI_USE_NPS /* force NoPowerSwitching mode */
 
@@ -65,8 +65,7 @@ extern xQueueHandle queue_poll_hub;
 #undef OHCI_FILL_TRACE
 
 /* For initializing controller (mask in an HCFS mode too) */
-#define OHCI_CONTROL_INIT \
-	(OHCI_CTRL_CBSR & 0x3) | OHCI_CTRL_IE | OHCI_CTRL_PLE
+#define OHCI_CONTROL_INIT (OHCI_CTRL_CBSR & 0x3) | OHCI_CTRL_IE | OHCI_CTRL_PLE
 
 /*
  * e.g. PCI controllers need this
@@ -79,8 +78,7 @@ extern xQueueHandle queue_poll_hub;
 # define writel(a, b) (*((volatile u32 *)(b)) = ((volatile u32)a))
 #endif /* CONFIG_SYS_OHCI_SWAP_REG_ACCESS */
 
-#define min_t(type, x, y) \
-		    ({ type __x = (x); type __y = (y); __x < __y ? __x: __y; })
+#define min_t(type, x, y) ({ type __x = (x); type __y = (y); __x < __y ? __x: __y; })
 
 struct pci_device_id ohci_usb_pci_table[] = {
 	{ PCI_VENDOR_ID_AL, PCI_DEVICE_ID_AL_M5237, PCI_ANY_ID, PCI_ANY_ID, PCI_CLASS_SERIAL_USB_OHCI, 0, 0 }, /* ULI1575 PCI OHCI module ids */
@@ -91,21 +89,13 @@ struct pci_device_id ohci_usb_pci_table[] = {
 };
 
 #ifdef DEBUG
-#define dbg(format, arg...) board_printf("DEBUG: " format "\r\n", ## arg)
+#define dbg(format, arg...) do board_printf("DEBUG: " format "\r\n", ## arg)
 #else
 #define dbg(format, arg...) do {} while (0)
 #endif /* DEBUG */
-#if defined(DEBUG) || defined(USB_POLL_HUB)
-#define err(format, arg...) sprintD(usb_error_str, "ERROR: " format "\r\n", ## arg); if(ohci->irq) board_printf(usb_error_str) 
-#else
-#define err(format, arg...) sprintD(usb_error_str, "ERROR: " format "\r\n", ## arg); if(ohci->irq) kprint(usb_error_str) 
-#endif
+#define err usb_error_msg
 #ifdef SHOW_INFO
-#ifdef COLDFIRE
-#define info(format, arg...) board_printf("INFO: " format "\r\n", ## arg)
-#else
-#define info(format, arg...) board_printf("INFO: " format "\r\n", ## arg)
-#endif /* COLDFIRE */
+#define info(format, arg...)  do board_printf("INFO: " format "\r\n", ## arg)
 #else
 #define info(format, arg...) do {} while (0)
 #endif
@@ -113,18 +103,6 @@ struct pci_device_id ohci_usb_pci_table[] = {
 #define m16_swap(x) cpu_to_le16(x)
 #define m32_swap(x) cpu_to_le32(x)
 
-typedef struct
-{
-	long ident;
-	union
-	{
-		long l;
-		short i[2];
-		char c[4];
-	} v;
-} COOKIE;
-
-extern COOKIE *get_cookie(long id);
 extern void udelay(long usec);
 
 /* global ohci_t */
@@ -137,10 +115,11 @@ static inline u32 roothub_status(ohci_t *ohci) { return readl(&ohci->regs->rooth
 static inline u32 roothub_portstatus(ohci_t *ohci, int i) { return readl(&ohci->regs->roothub.portstatus[i]); }
 
 /* forward declaration */
+static void flush_data_cache(ohci_t *ohci);
 static int hc_interrupt(ohci_t *ohci);
 static void td_submit_job(ohci_t *ohci, struct usb_device *dev, unsigned long pipe,
  void *buffer, int transfer_len, struct devrequest *setup, urb_priv_t *urb, int interval);
-
+ 
 /*-------------------------------------------------------------------------*
  * URB support functions
  *-------------------------------------------------------------------------*/
@@ -321,7 +300,8 @@ static void ohci_dump_roothub(ohci_t *controller, int verbose)
 {
 	__u32	temp, ndp, i;
 	temp = roothub_a(controller);
-	ndp = (temp & RH_A_NDP);
+//	ndp = (temp & RH_A_NDP);
+	ndp = controller->ndp;
 	if(verbose)
 	{
 		dbg("roothub.a: %08x POTPGT=%d%s%s%s%s%s NDP=%d", temp,
@@ -806,6 +786,20 @@ static void td_fill(ohci_t *ohci, unsigned int info, void *data, int len,
 	td->hwNextTD = m32_swap((unsigned long)td_pt - ohci->dma_offset);
 	/* append to queue */
 	td->ed->hwTailP = td->hwNextTD;
+#if 0
+	if(data)
+	{
+		int i;
+		board_printf("td_fill: %08x %08x %08X %08X at 0x%08X\r\n", 
+		 m32_swap(td->hwINFO), m32_swap(td->hwCBP), m32_swap(td->hwNextTD), m32_swap(td->hwBE), td);
+		for(i = 0; i < len; i++)
+			board_printf("%02X ", *(unsigned char *)(data + i) & 0xff);
+		board_printf("\r\n");
+	}
+	else
+		board_printf("td_fill: %08x %08x %08X %08X at 0x%08X\r\n", 
+		 m32_swap(td->hwINFO), m32_swap(td->hwCBP), m32_swap(td->hwNextTD), m32_swap(td->hwBE), td);
+#endif
 }
 
 /*-------------------------------------------------------------------------*/
@@ -1152,7 +1146,8 @@ int rh_check_port_status(ohci_t *controller)
 	__u32 temp, ndp, i;
 	int res = -1;
 	temp = roothub_a(controller);
-	ndp = (temp & RH_A_NDP);
+//	ndp = (temp & RH_A_NDP);
+	ndp = controller->ndp;
 	for(i = 0; i < ndp; i++)
 	{
 		temp = roothub_portstatus(controller, i);
@@ -1307,7 +1302,8 @@ static int ohci_submit_rh_msg(ohci_t *ohci, struct usb_device *dev, unsigned lon
 			__u32 temp = roothub_a(ohci);
 			data_buf[0] = 9;		/* min length; */
 			data_buf[1] = 0x29;
-			data_buf[2] = temp & RH_A_NDP;
+//			data_buf[2] = temp & RH_A_NDP;
+			data_buf[2] = (__u8)ohci->ndp;
 			data_buf[3] = 0;
 			if(temp & RH_A_PSM)	/* per-port power switching? */
 				data_buf[3] |= 0x1;
@@ -1416,26 +1412,7 @@ static int submit_common_msg(ohci_t *ohci, struct usb_device *dev, unsigned long
 	while(ohci->irq)
 	{
 		/* check whether the controller is done */
-#ifndef CONFIG_USB_MEM_NO_CACHE
-#ifdef COLDFIRE /* no bus snooping on Coldfire */
-#ifdef NETWORK
-#ifdef LWIP
-		extern unsigned long pxCurrentTCB, tid_TOS;
-		extern void flush_dc(void);
-		if(pxCurrentTCB != tid_TOS)
-			flush_dc();
-		else
-#endif /* LWIP */
-#endif /* NETWORK */
-#if (__GNUC__ > 3)
-			asm volatile (" .chip 68060\n\t cpusha DC\n\t .chip 5485\n\t"); /* from CF68KLIB */
-#else
-			asm volatile (" .chip 68060\n\t cpusha DC\n\t .chip 5200\n\t"); /* from CF68KLIB */
-#endif
-#else  /* !COLDFIRE */
-			asm volatile (" cpusha DC\n\t");
-#endif /* COLDFIRE */
-#endif /* CONFIG_USB_MEM_NO_CACHE */
+		flush_data_cache(ohci);
 #ifndef CONFIG_USB_INTERRUPT_POLLING
 		if(ohci->irq_enabled)
 			stat = ohci->stat_irq;
@@ -1560,11 +1537,11 @@ static int hc_reset(ohci_t *ohci)
 			{
 				unsigned long id = 0;
 #ifdef PCI_XBIOS
-				long err = read_config_longword(handle, PCIIDR, &id);
+				long error = read_config_longword(handle, PCIIDR, &id);
 #else
-				long err = Read_config_longword(handle, PCIIDR, &id);
+				long error = Read_config_longword(handle, PCIIDR, &id);
 #endif
-				if((err >= 0) && (PCI_VENDOR_ID_PHILIPS == (id & 0xFFFF))
+				if((error >= 0) && (PCI_VENDOR_ID_PHILIPS == (id & 0xFFFF))
 				 && (PCI_DEVICE_ID_PHILIPS_ISP1561_2 == (id >> 16)))
 				 {
 					int timeout = 1000;
@@ -1599,7 +1576,7 @@ static int hc_reset(ohci_t *ohci)
 								}
 							}
 							flags = pci_rsc_desc->flags;
-							(unsigned long)pci_rsc_desc += (unsigned long)pci_rsc_desc->next;
+							pci_rsc_desc = (PCI_RSC_DESC *)((unsigned long)pci_rsc_desc->next + (unsigned long)pci_rsc_desc);
 						}
 						while(!(flags & FLG_LAST));
 					}
@@ -1612,26 +1589,32 @@ static int hc_reset(ohci_t *ohci)
 	 && (ohci->ent->device == PCI_DEVICE_ID_NEC_USB))
 	{
 #ifdef MCF547X
-		dbg("USB OHCI set 48MHz clock\r\n");
+		if(ohci->handle == 1) /* NEC on motherboard has FPGA clock */
+		{
+			dbg("USB OHCI set 48MHz clock\r\n");
 #ifdef PCI_XBIOS
-	 	write_config_longword(ohci->handle, 0xE4, 0x21); // oscillator & disable ehci
+		 	write_config_longword(ohci->handle, 0xE4, 0x21); // oscillator & disable ehci
 #else
-	 	Write_config_longword(ohci->handle, 0xE4, 0x21); // oscillator & disable ehci
+		 	Write_config_longword(ohci->handle, 0xE4, 0x21); // oscillator & disable ehci
 #endif
-#else /* !MCF547X */
-#if 0
+			wait_ms(10);
+		}
+		else
+#endif /* !MCF547X */
+		{
 #ifdef PCI_XBIOS
-	 	write_config_longword(ohci->handle, 0xE4, 0x01); // disable ehci
+		 	write_config_longword(ohci->handle, 0xE4, fast_read_config_longword(ohci->handle, 0xE4) | 0x01); // disable ehci
 #else
-	 	Write_config_longword(ohci->handle, 0xE4, 0x01); // disable ehci
+		 	Write_config_longword(ohci->handle, 0xE4, Fast_read_config_longword(ohci->handle, 0xE4) | 0x01); // disable ehci
 #endif
-#endif
-#endif /* MCF547X */
+			wait_ms(10);
+		}
 	}
 #else /* CONFIG_USB_EHCI */
 #ifdef MCF547X
 	if((ohci->controller == 0) && (ohci->ent->vendor == PCI_VENDOR_ID_NEC)
-	 && (ohci->ent->device == PCI_DEVICE_ID_NEC_USB))
+	 && (ohci->ent->device == PCI_DEVICE_ID_NEC_USB)
+	 && (ohci->handle == 1)) /* NEC on motherboard has FPGA clock */
 	{
 		dbg("USB OHCI set 48MHz clock\r\n");
 #ifdef PCI_XBIOS
@@ -1639,6 +1622,7 @@ static int hc_reset(ohci_t *ohci)
 #else
 	 	Write_config_longword(ohci->handle, 0xE4, 0x20); // oscillator
 #endif
+		wait_ms(10);
 	}
 #endif /* MCF547X */
 #endif /* CONFIG_USB_EHCI */
@@ -1659,12 +1643,13 @@ static int hc_reset(ohci_t *ohci)
 	}
 	/* Disable HC interrupts */
 	writel(OHCI_INTR_MIE, &ohci->regs->intrdisable);
-	dbg("USB OHCI HC reset_hc usb-%s-%c: ctrl = 0x%X ;\r\n", ohci->slot_name, (char)ohci->controller + '0', readl(&ohci->regs->control));
+	dbg("USB OHCI HC reset_hc usb-%s-%c: ctrl = 0x%X", ohci->slot_name, (char)ohci->controller + '0', readl(&ohci->regs->control));
 	/* Reset USB (needed by some controllers) */
 	ohci->hc_control = 0;
 	writel(ohci->hc_control, &ohci->regs->control);
+	wait_ms(50);
 	/* HC Reset requires max 10 us delay */
-	writel(OHCI_HCR,  &ohci->regs->cmdstatus);
+	writel(OHCI_HCR, &ohci->regs->cmdstatus);
 	while((readl(&ohci->regs->cmdstatus) & OHCI_HCR) != 0)
 	{
 		if(--timeout == 0)
@@ -1712,20 +1697,46 @@ static int hc_start(ohci_t *ohci)
 	/* Choose the interrupts we care about now  - but w/o MIE */
 	mask = OHCI_INTR_RHSC | OHCI_INTR_UE | OHCI_INTR_WDH | OHCI_INTR_SO;
 	writel(mask, &ohci->regs->intrenable);
+	ohci->ndp = roothub_a(ohci);
 #ifdef OHCI_USE_NPS
 	/* required for AMD-756 and some Mac platforms */
-	writel((roothub_a(ohci) | RH_A_NPS) & ~RH_A_PSM, &ohci->regs->roothub.a);
+	writel((ohci->ndp | RH_A_NPS) & ~RH_A_PSM, &ohci->regs->roothub.a);
 	writel(RH_HS_LPSC, &ohci->regs->roothub.status);
 #endif /* OHCI_USE_NPS */
-#define mdelay(n) ({unsigned long msec = (n); while (msec--) udelay(1000); })
 	/* POTPGT delay is bits 24-31, in 2 ms units. */
-	mdelay((roothub_a(ohci) >> 23) & 0x1fe);
+	wait_ms((ohci->ndp >> 23) & 0x1fe);
+	ohci->ndp &= RH_A_NDP;
 	/* connect the virtual root hub */
 	ohci->rh.devnum = 0;
 	return 0;
 }
 
 /*-------------------------------------------------------------------------*/
+
+static void flush_data_cache(ohci_t *ohci)
+{
+#ifndef CONFIG_USB_MEM_NO_CACHE
+#ifdef COLDFIRE /* no bus snooping on Coldfire */
+#ifdef LWIP
+	extern unsigned long pxCurrentTCB, tid_TOS;
+	extern void flush_dc(void);
+	if(pxCurrentTCB != tid_TOS)
+		flush_dc();
+	else
+#endif /* LWIP */
+#if (__GNUC__ > 3)
+		asm volatile (" .chip 68060\n\t cpusha DC\n\t .chip 5485\n\t"); /* from CF68KLIB */
+#else
+		asm volatile (" .chip 68060\n\t cpusha DC\n\t .chip 5200\n\t"); /* from CF68KLIB */
+#endif
+#else  /* !COLDFIRE */
+	if((unsigned long)ohci->hcca_unaligned < *ramtop) /* memory above ramtop is uncached memory */
+		asm volatile (" cpusha DC\n\t");
+#endif /* COLDFIRE */
+#else
+	if(ohci);
+#endif /* CONFIG_USB_MEM_NO_CACHE */
+}
 
 #ifdef CONFIG_USB_INTERRUPT_POLLING
 
@@ -1735,36 +1746,20 @@ void ohci_usb_event_poll(int interrupt)
 	if(ohci_inited)
 	{
 		int i;
-#ifndef CONFIG_USB_MEM_NO_CACHE
-#ifdef COLDFIRE /* no bus snooping on Coldfire */
-#ifdef NETWORK
-#ifdef LWIP
-		extern unsigned long pxCurrentTCB, tid_TOS;
-		extern void flush_dc(void);
-		if(pxCurrentTCB != tid_TOS)
-			flush_dc();
-		else
-#endif /* LWIP */
-#endif /* NETWORK */
-#if (__GNUC__ > 3)
-		asm volatile (" .chip 68060\n\t cpusha DC\n\t .chip 5485\n\t"); /* from CF68KLIB */
-#else
-		asm volatile (" .chip 68060\n\t cpusha DC\n\t .chip 5200\n\t"); /* from CF68KLIB */
-#endif
-#else  /* !COLDFIRE */
-		asm volatile (" cpusha DC\n\t");
-#endif /* COLDFIRE */
-#endif /* CONFIG_USB_MEM_NO_CACHE */
 		for(i = 0; i < (sizeof(gohci) / sizeof(ohci_t)); i++)
 		{
 			ohci_t *ohci = &gohci[i];
-			if(!ohci->handle)
+			if(!ohci->handle || ohci->disabled)
 				continue;
-			if(interrupt)
-				ohci->irq = 0;
-			hc_interrupt(ohci);
-			if(interrupt)
-				ohci->irq = -1;
+			else
+			{
+				flush_data_cache(ohci);
+				if(interrupt)
+					ohci->irq = 0;
+				hc_interrupt(ohci);
+				if(interrupt)
+					ohci->irq = -1;
+			}
 		}
 	}
 }
@@ -1776,11 +1771,9 @@ static int hc_interrupt(ohci_t *ohci)
 {
 	struct ohci_regs *regs = ohci->regs;
 	int ints, stat = -1;
-#if 0
 	if((ohci->hcca->done_head != 0) && !(m32_swap(ohci->hcca->done_head) & 0x01))
 		ints =  OHCI_INTR_WDH;
 	else
-#endif
 	{
 		ints = readl(&regs->intrstatus);
 		if(ints == ~(u32)0)
@@ -1874,22 +1867,9 @@ static int hc_interrupt(ohci_t *ohci)
 
 static int handle_usb_interrupt(ohci_t *ohci)
 {
-#ifndef CONFIG_USB_MEM_NO_CACHE
-#ifdef COLDFIRE /* no bus snooping on Coldfire */
-#if 1
-#if (__GNUC__ > 3)
-	asm volatile (" .chip 68060\n\t cpusha DC\n\t .chip 5485\n\t"); /* from CF68KLIB */
-#else
-	asm volatile (" .chip 68060\n\t cpusha DC\n\t .chip 5200\n\t"); /* from CF68KLIB */
-#endif
-#else
-	extern void flush_dc(void);
-	flush_dc(); /* native interrupt */
-#endif
-#else  /* !COLDFIRE */
-	asm volatile (" cpusha DC\n\t");
-#endif /* COLDFIRE */
-#endif /* CONFIG_USB_MEM_NO_CACHE */
+	if(!ohci->irq_enabled)
+		return 0;
+	flush_data_cache(ohci);
 	ohci->irq = 0;
 	ohci->stat_irq = hc_interrupt(ohci);
 	ohci->irq = -1;
@@ -1960,7 +1940,7 @@ int ohci_usb_lowlevel_init(long handle, const struct pci_device_id *ent, void **
 	PCI_RSC_DESC *pci_rsc_desc = (PCI_RSC_DESC *)get_resource(handle); /* USB OHCI */
 #else
 	PCI_RSC_DESC *pci_rsc_desc;
-	COOKIE *p = get_cookie('_PCI'); 
+	USB_COOKIE *p = usb_get_cookie('_PCI'); 
 	PCI_COOKIE *bios_cookie = (PCI_COOKIE *)p->v.l;
 	if(bios_cookie == NULL)   /* faster than XBIOS calls */
 		return(-1);	
@@ -1976,7 +1956,7 @@ int ohci_usb_lowlevel_init(long handle, const struct pci_device_id *ent, void **
 	else if(!ohci->handle) /* for restart USB cmd */
 		return(-1);	
 	info("ohci 0x%p", ohci);
-	ohci->controller = ohci->handle >> 16; /* PCI function */
+	ohci->controller = (ohci->handle >> 16) & 3; /* PCI function */
 	/* this must be aligned to a 256 byte boundary */
 	ohci->hcca_unaligned = (struct ohci_hcca *)usb_malloc(sizeof(struct ohci_hcca) + 256);
 	if(ohci->hcca_unaligned == NULL)
@@ -2016,7 +1996,7 @@ int ohci_usb_lowlevel_init(long handle, const struct pci_device_id *ent, void **
 		unsigned short flags;
 		do
 		{
-			dbg("PCI USB descriptors: flags 0x%08x start 0x%08x \r\n offset 0x%08x dmaoffset 0x%08x length 0x%08x",
+			dbg("PCI USB descriptors: flags 0x%04x start 0x%08lx \r\n offset 0x%08lx dmaoffset 0x%08lx length 0x%08lx",
 			 pci_rsc_desc->flags, pci_rsc_desc->start, pci_rsc_desc->offset, pci_rsc_desc->dmaoffset, pci_rsc_desc->length);
 			if(!(pci_rsc_desc->flags & FLG_IO))
 			{
@@ -2077,9 +2057,6 @@ int ohci_usb_lowlevel_init(long handle, const struct pci_device_id *ent, void **
 	}
 #ifdef DEBUG
 	ohci_dump(ohci, 1);
-#else
-	if(ohci->irq)
-		wait_ms(1);
 #endif
 #ifndef CONFIG_USB_INTERRUPT_POLLING
 #ifdef PCI_XBIOS

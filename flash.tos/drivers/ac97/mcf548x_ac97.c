@@ -53,7 +53,7 @@ extern unsigned long save_imrh;
 #define EMUL_DMA_STE
 
 #ifdef SOUND_AC97
-#ifdef NETWORK /* for DMA API */
+#ifdef LWIP /* for DMA API */
 
 /* ======================================================================== */
 /* Structs / Defines                                                        */
@@ -260,7 +260,7 @@ extern void psc3_ac97_interrupt(void);
 extern void timer_ac97_interrupt(void);
 #ifdef USE_DMA
 extern void timeout_ac97_interrupt(void);
-#if (defined(CONFIG_USB_UHCI) || defined(CONFIG_USB_OHCI) || defined(CONFIG_USB_EHCI)) && defined(CONFIG_USB_MEM_NO_CACHE)
+#if defined(CONFIG_USB_UHCI) || defined(CONFIG_USB_OHCI) || defined(CONFIG_USB_EHCI)
 extern int usb_mem_init(void);
 extern void *usb_malloc(long amount);
 extern int usb_free(void *addr);
@@ -269,7 +269,7 @@ extern int usb_free(void *addr);
 extern long install_xbra(short vector, void *handler);
 extern void *mcf548x_ac97_playback_resample(long play_frequency, int play_res, int num_frames, void *source, long *target);
 extern void *mcf548x_ac97_record_resample(long record_frequency, int record_res, int num_samples, void *target, long *source);
-#if defined(COLDFIRE) && defined(NETWORK) && defined(LWIP) 
+#if defined(COLDFIRE) && defined(LWIP) 
 extern void board_printf(const char *fmt, ...);
 #endif
 
@@ -1533,7 +1533,7 @@ static int mcf548x_ac97_bdinit(struct mcf548x_ac97_priv *priv)
 #ifdef DEBUG
 	display_string("mcf548x_ac97_bdinit\r\n");
 #endif
-#if (defined(CONFIG_USB_UHCI) || defined(CONFIG_USB_OHCI) || defined(CONFIG_USB_EHCI)) && defined(CONFIG_USB_MEM_NO_CACHE)
+#if defined(CONFIG_USB_UHCI) || defined(CONFIG_USB_OHCI) || defined(CONFIG_USB_EHCI)
 	usb_mem_init();
 	priv->buffer = (void *)usb_malloc((AC97_DMA_SIZE * (AC97_TX_NUM_BD + AC97_RX_NUM_BD)) + 15);
 #else
@@ -1983,9 +1983,9 @@ static void mcf548x_ac97_write(struct mcf548x_ac97_priv *priv, unsigned short re
 		count++;
 	}
 #ifdef EMUL_DME_STE
-	while(!priv->timer && (priv->ctrl_data != priv->status_data) && (count < AC97_RETRY_WRITE));
+	while(!priv->timer && (priv->ctrl_data != priv->status_data) && (count < AC97_RETRY_WRITE) && (reg != AC97_RESET));
 #else
-	while((priv->ctrl_data != priv->status_data) && (count < AC97_RETRY_WRITE));
+	while((priv->ctrl_data != priv->status_data) && (count < AC97_RETRY_WRITE) && (reg != AC97_RESET));
 #endif
 #ifdef DEBUG
 	{
@@ -2009,6 +2009,8 @@ static void mcf548x_ac97_write(struct mcf548x_ac97_priv *priv, unsigned short re
 #endif
 }
 
+#ifdef USE_DMA
+
 static void mcf548x_ac97_powerdown(struct mcf548x_ac97_priv *priv)
 {
  	priv->ctrl_address = AC97_POWERDOWN;
@@ -2021,7 +2023,9 @@ static void mcf548x_ac97_powerdown(struct mcf548x_ac97_priv *priv)
 	priv->timeout_shutdown = 0;
 }
 
- /* seems works only with dma else sync is lost after a warnreset from an AC-link powerdown */
+#endif /* USE_DMA */
+
+/* seems works only with dma else sync is lost after a warnreset from an AC-link powerdown */
 static void mcf548x_ac97_warnreset(struct mcf548x_ac97_priv *priv)
 {
 	int i;
@@ -2200,10 +2204,7 @@ void mcf548x_ac97_timer_interrupt(void)
 
 static void mcf548x_ac97_hwstop(struct mcf548x_ac97_priv *priv)
 {
-	int level;
-	if(!priv->aclink_stopped)
-		mcf548x_ac97_powerdown(priv);
-	level = asm_set_ipl(7); /* mask interrupts */
+	int level = asm_set_ipl(7); /* mask interrupts */
 	/* Stop the PSC */
 	MCF_PSC_CR(priv->psc_channel) = MCF_PSC_CR_RESET_RX;
 	MCF_PSC_CR(priv->psc_channel) = MCF_PSC_CR_RESET_TX;	
@@ -3380,7 +3381,7 @@ int mcf548x_ac97_install(long psc_channel)
 	else
 	{
 		struct mcf548x_ac97_priv *priv;
-#if defined(COLDFIRE) && defined(NETWORK) && defined(LWIP) && defined(CONFIG_USB_MEM_NO_CACHE) && (defined(CONFIG_USB_UHCI) || defined(CONFIG_USB_OHCI) || defined(CONFIG_USB_EHCI))
+#if defined(COLDFIRE) && defined(LWIP) && (defined(CONFIG_USB_UHCI) || defined(CONFIG_USB_OHCI) || defined(CONFIG_USB_EHCI))
 		extern unsigned long pxCurrentTCB, tid_TOS;
 		extern void *usb_malloc(long amount);
 		extern int usb_free(void *addr);
@@ -3408,7 +3409,7 @@ int mcf548x_ac97_install(long psc_channel)
 #ifdef DEBUG
 					display_string("mcf548x_ac97_install timeout for read codec ID\r\n");
 #else
-#if defined(COLDFIRE) && defined(NETWORK) && defined(LWIP) 
+#if defined(COLDFIRE) && defined(LWIP) 
 					board_printf("CODEC ID read timeout, please try again with TOS started with dBUG\r\n");
 #endif
 #endif /* DEBUG */
@@ -3421,7 +3422,7 @@ int mcf548x_ac97_install(long psc_channel)
 #ifdef DEBUG
 					display_string("mcf548x_ac97_install bad codec ID\r\n");
 #else
-#if defined(COLDFIRE) && defined(NETWORK) && defined(LWIP) 
+#if defined(COLDFIRE) && defined(LWIP) 
 					board_printf("BAD CODEC ID (0x%04X)\r\n", priv->id);
 #endif
 #endif /* DEBUG */
@@ -3448,7 +3449,7 @@ int mcf548x_ac97_install(long psc_channel)
 				priv->powerdown = mcf548x_ac97_read(priv, AC97_POWERDOWN);
 				if(!old_timer_vector)
 				{
-#if defined(COLDFIRE) && defined(NETWORK) && defined(LWIP) && defined(CONFIG_USB_MEM_NO_CACHE) && (defined(CONFIG_USB_UHCI) || defined(CONFIG_USB_OHCI) || defined(CONFIG_USB_EHCI))
+#if defined(COLDFIRE) && defined(LWIP) && (defined(CONFIG_USB_UHCI) || defined(CONFIG_USB_OHCI) || defined(CONFIG_USB_EHCI))
 					if(pxCurrentTCB != tid_TOS)
 					{
 						old_timer_vector = *(long *)(69 * 4);
@@ -3479,7 +3480,7 @@ int mcf548x_ac97_install(long psc_channel)
 		}
 		if(priv != NULL)
 		{
-#if defined(COLDFIRE) && defined(NETWORK) && defined(LWIP) && defined(CONFIG_USB_MEM_NO_CACHE) && (defined(CONFIG_USB_UHCI) || defined(CONFIG_USB_OHCI) || defined(CONFIG_USB_EHCI))
+#if defined(COLDFIRE) && defined(LWIP) && (defined(CONFIG_USB_UHCI) || defined(CONFIG_USB_OHCI) || defined(CONFIG_USB_EHCI))
 			if(pxCurrentTCB != tid_TOS)
 				usb_free(priv);
 			else
@@ -3493,7 +3494,7 @@ int mcf548x_ac97_install(long psc_channel)
 int mcf548x_ac97_uninstall(long psc_channel, int free)
 {
 	struct mcf548x_ac97_priv *priv;
-#if defined(COLDFIRE) && defined(NETWORK) && defined(LWIP) && defined(CONFIG_USB_MEM_NO_CACHE) && (defined(CONFIG_USB_UHCI) || defined(CONFIG_USB_OHCI) || defined(CONFIG_USB_EHCI))
+#if defined(COLDFIRE) && defined(LWIP) && (defined(CONFIG_USB_UHCI) || defined(CONFIG_USB_OHCI) || defined(CONFIG_USB_EHCI))
 	extern unsigned long pxCurrentTCB, tid_TOS;
 	extern int usb_free(void *addr);
 #endif
@@ -3502,6 +3503,7 @@ int mcf548x_ac97_uninstall(long psc_channel, int free)
 	priv = Devices[psc_channel];
 	if(priv == NULL)
 		return(-1); // error
+	mcf548x_ac97_write(priv, AC97_RESET, 0);
 	mcf548x_ac97_hwstop(priv);
 	if(free)
 	{
@@ -3514,7 +3516,7 @@ int mcf548x_ac97_uninstall(long psc_channel, int free)
 #endif
 #endif /* USE_DMA */
 		Devices[psc_channel] = NULL;
-#if defined(COLDFIRE) && defined(NETWORK) && defined(LWIP) && defined(CONFIG_USB_MEM_NO_CACHE) && (defined(CONFIG_USB_UHCI) || defined(CONFIG_USB_OHCI) || defined(CONFIG_USB_EHCI))
+#if defined(COLDFIRE) && defined(LWIP) && (defined(CONFIG_USB_UHCI) || defined(CONFIG_USB_OHCI) || defined(CONFIG_USB_EHCI))
 		if(pxCurrentTCB != tid_TOS)
 			usb_free(priv);
 		else
@@ -3524,5 +3526,5 @@ int mcf548x_ac97_uninstall(long psc_channel, int free)
 	return(0);
 }
 
-#endif /* NETWORK */
+#endif /* LWIP */
 #endif /* SOUND_AC97 */

@@ -670,7 +670,7 @@ Added another boot menu and rescue features on the Fireebee target:
 2011 July - 1.01
 ----------------
 Coldfire targets:
-- Rewrited in native code vr_trn_fm (blit.S).
+- Rewrited in native code of the fVDI function vr_trnfm (blit.S).
 - Added CF instructions to the 68K disassembler. Now pulse, tfp, wddata, 
 wdebug, intouch, halt, mvs, mvz, mov3q, movec, sat and all mac group 
 are supported.   
@@ -679,7 +679,7 @@ started, so the previous malloc from TOS (PCI BIOS structure) was
 dead, and bug and play crashed under MiNT.  
 - Fixed VDI function v_show_c without graphic card (detvdi.S).
 - Increased BDOS buffers limits (fsbuf.c).
-- Added Pexec patch for Pure C programs bdos\rwa.S):
+- Added Pexec patch for Pure C programs (bdos\rwa.S):
   * Some case for Line A 0xA000 replaced by opcode 0xA920.
   * move.b DX,-(SP) replaced by opcode 0xA910-0xA917.
   * move.b (SP)+,DX replaced by opcode 0xA918-0xA91F.
@@ -692,3 +692,50 @@ dead, and bug and play crashed under MiNT.
   * move.b (SP)+,abs.l replaced by opcode 0xA9F9.
   * mulu/s.l ea,dh:dl replaced by opcode 0xABC0-0xABFF.
   * divu/s.l ea:dr:dq replaced by opcode 0xAFC0-0xAFFF.
+  
+2011 August
+-----------
+Fixed offscreen_free (offscreen.c).
+Fixed port 5 change on USB EHCI controller (ehci-hcd.c).
+Added alert message from USB (init.c, usb.c, usb_storage.c).
+On Coldfire V4e targets, added 'DMAC' cookie for external usage of the 
+DMA.
+AC97 driver started again a 2nd time (2nd warn reset) if there are an 
+error.
+Added MiNT patch for his TOS < 2.0 IKBD interrupt routine for get 
+compatibility with TOS 4.04 for USB2 using Kbdvbase()[-1] (detxbios.S);
+On the Firebee target and TOS started from 'TOS404 for MiNT' boot menu 
+entry, the FEC driver is stopped and his task killed when 'MiNT' 
+cookie detected (lwip/init.c).
+
+2011 November
+-------------
+Added SCSI cd driver for boot with Extendos CD-backups (scsi 
+directory) and ISO9660 cd driver for restore features with a popup 
+menu during boot when a CD/DVD is found (cd directory).
+Added LZMA encoder for a better compression (tools directory).
+
+2011 December
+-------------
+Firebee target:
+- Added 'PEXE' cookie, this value is a pointer who use a basepage as 
+parameter on stack for try to patch Pure C program with an external 
+OS.
+
+2012 February
+-------------
+Added FreeRTOS on CT60/CTPCI target:
+- USB HUB task.
+- Ethernet PCI interrupt task (via CPX setting and flash CTPCI parameter).
+
+2012 March
+----------
+CT60/CTPCI target:
+- MagiC USB drivers enabled (Mouse / Keyboard / Mass Storage).
+- Added LwIP / gluestick support for TOS (IP via CPX setting and flash CTPCI parameter).
+
+2012 May
+--------
+Telnetd fixes, added on CT60/CTPCI target.
+
+

@@ -7,7 +7,6 @@
 #include "msc.h"
 
 #ifdef USB_DEVICE
-#ifdef NETWORK
 #ifdef LWIP
 
 /* Structure for Mass Storage Interface Type */
@@ -313,5 +312,4 @@ uint32 usb_get_desc_size(void)
 }
 
 #endif /* LWIP */
-#endif /* NETWORK */
 #endif /* USB_DEVICE */

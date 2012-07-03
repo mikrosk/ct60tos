@@ -80,12 +80,13 @@
 #define CT60_SAVE_NVRAM_2 8
 #define CT60_SAVE_NVRAM_3 9
 #define CT60_PARAM_OFFSET_TLV 10
-#define CT60_MAC_ADDRESS 10
-#define CT60_SERIAL_SPEED 11
+#define CT60_MAC_ADDRESS 10  /* Firebee */
+#define CT60_IP_ADDRESS2 11
+#define CT60_SERIAL_SPEED 11 /* Firebee */
 #define CT60_USER_DIV_CLOCK 12
-#define CT60_IP_ADDRESS 12
+#define CT60_IP_ADDRESS 12   /* Firebee */
 #define CT60_CLOCK 13
-#define CT60_SERVER_IP_ADDRESS 13
+#define CT60_SERVER_IP_ADDRESS 13 /* Firebee */
 #define CT60_PARAM_CTPCI 14
 /* 15 is reserved - do not use */
 

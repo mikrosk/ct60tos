@@ -1,5 +1,5 @@
 /* TOS 4.04 VDI for the CT60/CTPCI and Coldfire boards
- * Didier Mequignon 2005-2011, e-mail: aniplay@wanadoo.fr
+ * Didier Mequignon 2005-2012, e-mail: aniplay@wanadoo.fr
  *
  * This file is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -274,25 +274,6 @@ _init_det_vdi:
 	move.l A0,adr_var_vdi
 	move.l A1,adr_linea_fonts
 	move.l A2,adr_linea_atab
-#if 0
-	tst.w _os_magic
-	beq.s .not_os_magic
-	move.l _sysbase,A1
-	move.l 0x18(A1),D0       // date
-	swap D0
-	cmp.l #0x20010000,D0     // MagiC 6.20
-	bcs.s .not_os_magic
-	lea var_vdi,A1
-	move.l a1,adr_var_vdi
-	lea CUR_FONT(A0),A0
-	lea CUR_FONT(A1),A1
-	move.l #(-(CUR_FONT)+PAL_MAP+(256*4))/2,D0
-.copy_var_vdi:
-		move.w (A0)+,(A1)+
-	subq.l #1,D0
-	bgt.s .copy_var_vdi
-.not_os_magic:
-#endif
 #ifdef COLDFIRE
 	movem.l (SP),D0-D2/A0-A2
 	lea 24(SP),SP
@@ -391,7 +372,7 @@ display_char:
 	move.l (SP)+,D1
 	rts
 
-#else
+#else  /* !COLDFIRE */
 
 display_string:
 
@@ -441,7 +422,7 @@ hex_char:
 display_char:
 
 #ifndef COLDFIRE
-	jmp vdu
+	jmp vdu                  // debug.S
 #else
 #ifdef COLDFIRE
 	lea -24(SP),SP
@@ -522,9 +503,16 @@ wait_key:
 	lea 24(SP),SP
 #else
 	movem.l D0-D2/A0-A2,-(SP)
+#if 0
 	move.w #7,-(SP)          // Crawcin
 	trap #1
 	addq.l #2,SP
+#else
+	move.w #2,-(SP)          // CON
+	move.w #2,-(SP)          // Bconin
+	trap #13
+	addq.l #4,SP
+#endif
 	movem.l (SP)+,D0-D2/A0-A2
 #endif
 	rts
@@ -6527,52 +6515,6 @@ det_vsl_ends:
 	move.w D0,(A1)           // end line selected
 	rts
 
-#if 0
-aff_x:
-
-	move.l D0,-(SP)
-	move.w (A0),D0
-	bsr hex_word
-	moveq #0x20,D0
-	bsr display_char
-	move.w 2(A0),D0
-	bsr hex_word
-	moveq #0x20,D0
-	bsr display_char
-	move.w 4(A0),D0
-	bsr hex_word
-	moveq #0x20,D0
-	bsr display_char
-	move.w 6(A0),D0
-	bsr hex_word
-	moveq #0x20,D0
-	bsr display_char
-	move.w 8(A0),D0
-	bsr hex_word
-	moveq #0x20,D0
-	bsr display_char
-	move.w 10(A0),D0
-	bsr hex_word
-	moveq #0x20,D0
-	bsr display_char
-	move.w 12(A0),D0
-	bsr hex_word
-	moveq #0x20,D0
-	bsr display_char
-	move.w 14(A0),D0
-	bsr hex_word	
-	moveq #0x20,D0
-	bsr display_char
-	move.l D5,D0
-	bsr hex_long
-	moveq #13,D0
-	bsr display_char
-	moveq #10,D0
-	bsr display_char
-	move.l (SP)+,D0
-	rts
-#endif
-
 det_vro_cpyfm:
 
 #ifdef COLDFIRE
@@ -6624,7 +6566,6 @@ det_vro_cpyfm:
 	cmp.l D1,D6
 	ble.s .vrc13
 	move.l D1,D6             // fix X2 source if screen
-//	bsr aff_x
 .vrc13:
 	cmp.l D2,D7
 	ble.s .vrc14
@@ -9119,6 +9060,8 @@ vb_draw:	                         // VBL routine
 *-------*/
 	move.l wk_r_mouse(A1),D2
 	beq.s .vd3               // no accel
+	cmp.l #0x600,D2
+	bcs.s .vd3               // TO FIX: ugly bug under MagiC
 	move.l D2,A2
 	moveq #1,D2              // move hidden
 	move.w M_HID_CT(A0),wk_mouse_hide(A1)

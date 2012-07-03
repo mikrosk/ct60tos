@@ -106,6 +106,7 @@
 #define pinfo_cookptr 86  // 4 bytes
 #define pinfo_vernum  90  // 2 bytes
 #define pinfo_maxsiz  92  // 2 bytes
+// not inside AHDI
 #define pinfo_ptype   94  // 16 x 4 bytes
 #define pinfo_psize  158  // 16 x 4 bytes
 #define pinfo_flags  222  // 16 x 2 bytes, internal use: B15:swap, B7:change, B0:bootable
@@ -129,10 +130,18 @@
 #define RESERVE_MEM_FONTS   0x8000
 
 #define CTPCI_1ABCD         0x00000001
+#define CTPCI_1M            0x00000002
+#define CTPCI_1N            0x00000004
 #define ABE_SDR_7           0x00010000
 #define ETHERNAT            0x80000000
 #define SUPERVIDEL          0x40000000
 
+#define ScsiDrvID           (RESERVE_MEM_FONTS-134) // SCSIDRV
+#define Buffer1024          (RESERVE_MEM_FONTS-130) // SCSIDRV
+#define ReqData             (RESERVE_MEM_FONTS-126) // SCSIDRV (18 bytes)
+#define BusNumber           (RESERVE_MEM_FONTS-108) // SCSIDRV
+#define PacketDevice        (RESERVE_MEM_FONTS-104) // SCSIDRV
+#define Features            (RESERVE_MEM_FONTS-100) // SCSIDRV
 #define measure_clock       (RESERVE_MEM_FONTS-92)
 #define hardware_type       (RESERVE_MEM_FONTS-88)
 #define pci_io_size         (RESERVE_MEM_FONTS-84)
@@ -149,8 +158,10 @@
 #define save_source         (RESERVE_MEM_FONTS-40)
 #define save_target         (RESERVE_MEM_FONTS-36)
 #define save_contrl         (RESERVE_MEM_FONTS-32)
+#ifndef COLDFIRE /* for reduce boot size, blitter not exist */
 #define adr_source          (RESERVE_MEM_FONTS-28)
 #define adr_target          (RESERVE_MEM_FONTS-24)
 #define adr_fonts           (RESERVE_MEM_FONTS-20)   /* 5 longs */
+#endif
 
 #endif

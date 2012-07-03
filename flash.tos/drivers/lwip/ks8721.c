@@ -11,7 +11,6 @@
 #include "fec.h"
 #include "ks8721.h"
 
-#ifdef NETWORK
 #ifdef LWIP
 
 #undef DEBUG
@@ -190,4 +189,3 @@ int ks8721_init(uint8 fec_ch, uint8 phy_addr, uint8 speed, uint8 duplex)
 #endif
 
 #endif /* LWIP */
-#endif /* NETWORK */

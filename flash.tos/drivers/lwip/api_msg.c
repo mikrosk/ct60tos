@@ -38,7 +38,6 @@
 #include "sys.h"
 #include "tcpip.h"
 
-#ifdef NETWORK
 #ifdef LWIP
 
 #if LWIP_RAW
@@ -810,6 +809,5 @@ api_msg_post(struct api_msg *msg)
 }
 
 #endif /* LWIP */
-#endif /* NETWORK */
 
 

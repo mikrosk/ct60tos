@@ -26,10 +26,8 @@
 #define         _MINT_OSTRUCT_H
 #include        <osbind.h>
 #include        "config.h"
-#ifdef NETWORK
 #ifdef LWIP
 #include        "../../include/vars.h"
-#endif
 #endif
 #include        "portab.h"
 #include        "fs.h"
@@ -377,7 +375,6 @@ static void offree(DMD *d)
  */
 static BPB * MyGetbpb(WORD errdrv)
 {
-#ifdef NETWORK
 #ifdef LWIP
     extern long pxCurrentTCB, tid_TOS;
     if(pxCurrentTCB != tid_TOS)
@@ -387,7 +384,6 @@ static BPB * MyGetbpb(WORD errdrv)
         return((*p)(errdrv));
     }
 #endif
-#endif      
     return (BPB *) Getbpb(errdrv);
 }
 

@@ -45,15 +45,17 @@
  * For each transfer (except "Interrupt") we wait for completion.
  */
 
+#include <string.h>
+#include <stdarg.h>
 #include "config.h"
+#include "ct60.h"
 #include "usb.h"
 
-#if defined(COLDFIRE) && defined(NETWORK) && defined(LWIP)
+#if (defined(COLDFIRE) && defined(LWIP)) || defined (FREERTOS)
 #include "../freertos/FreeRTOS.h"
 #include "../freertos/task.h"
 #include "../freertos/queue.h"
 #include "../freertos/semphr.h"
-#define USB_POLL_HUB
 #ifdef CONFIG_USB_STORAGE
 extern int usb_stor_curr_dev;
 extern unsigned long usb_1st_disk_drive;
@@ -88,11 +90,24 @@ static int dev_index[USB_MAX_BUS];
 static struct hci *controller_priv[USB_MAX_BUS];
 #ifdef USB_POLL_HUB
 xQueueHandle queue_poll_hub;
+extern xTaskHandle pxCurrentTCB;
 #endif
 static int asynch_allowed;
 static struct devrequest *setup_packet;
 
 char usb_started; /* flag for the started/stopped USB status */
+
+char usb_error_str[256];
+
+typedef struct
+{
+    int dest;
+    void (*func)(char);
+    char *loc;
+} PRINTK_INFO;
+
+#define DEST_CONSOLE    (1)
+#define DEST_STRING     (2)
 
 /**********************************************************************
  * some forward declerations...
@@ -103,13 +118,96 @@ int usb_hub_probe(struct usb_device *dev, int ifnum);
 void usb_hub_reset(int index_bus);
 static int hub_port_reset(struct usb_device *dev, int port, unsigned short *portstat);
 
+extern int printk(PRINTK_INFO *info, const char *fmt, va_list ap);
+
 /***********************************************************************
  * wait_ms
  */
-inline void wait_ms(unsigned long ms)
+void wait_ms(unsigned long ms)
 {
 	while(ms-- > 0)
 		udelay(1000);
+}
+
+/***********************************************************************
+ * usb_get_cookie (without system call)
+ */
+USB_COOKIE *usb_get_cookie(long id)
+{
+	USB_COOKIE *p= *(USB_COOKIE **)0x5a0;
+	while(p)
+	{
+		if(p->ident == id)
+			return(p);
+		if(!p->ident)
+			return((USB_COOKIE *)0);
+		p++;
+	}
+	return((USB_COOKIE *)0);
+}
+
+/***********************************************************************
+ * usb_error_msg
+ */
+void usb_error_msg(const char *const fmt, ... )
+{
+#ifdef USB_POLL_HUB
+	extern xQueueHandle xQueueAlert;
+#if !defined(COLDFIRE) && defined(FREERTOS)
+	extern xTaskHandle pxCurrentTCB, tid_TOS;
+	extern short video_found;
+#endif
+#endif /* USB_POLL_HUB */
+	static char usb_str[256];
+	char *msg;
+	va_list ap;
+	PRINTK_INFO info;
+	if(*fmt == '\r') /* trick for just a message */
+		info.loc = msg = usb_str;
+	else             /* error message */
+	{
+		msg = usb_error_str;
+		strcpy(msg, "ERROR: ");
+		info.loc = &msg[strlen(msg)];
+	}
+	info.dest = DEST_STRING;
+	va_start(ap, fmt);
+	printk(&info, fmt, ap);
+	*info.loc = '\0';
+	va_end(ap);
+	strcat(msg, "\r\n");
+#if defined(DEBUG) || defined(USB_POLL_HUB)
+	if((*fmt != '\r')
+#if !defined(COLDFIRE) && defined(FREERTOS)
+	 && (pxCurrentTCB == tid_TOS) && !video_found
+#endif
+		 )
+		board_printf(msg);
+#else
+	if((*fmt != '\r')
+#if !defined(COLDFIRE) && defined(FREERTOS)
+	 && (pxCurrentTCB == tid_TOS) && !video_found
+#endif
+		 )
+		kprint(usb_error_str); 
+#endif /* defined(DEBUG) || defined(USB_POLL_HUB) */
+#ifdef USB_POLL_HUB
+	if(strstr(msg, "CTL:TIMEOUT") == NULL)
+	{
+#ifdef COLDFIRE
+		USB_COOKIE *p = usb_get_cookie('_CF_');
+#else
+		USB_COOKIE *p = usb_get_cookie(ID_CT60);
+#endif
+		if((p != NULL) && (p->v.l > 0x10000))
+		{
+			CT60_COOKIE *p2 = (CT60_COOKIE *)p->v.l;
+			p2->error_msg = msg;
+		}
+		if(xQueueAlert != NULL)
+			xQueueAltSend(xQueueAlert, (const void *)msg, 0);
+	}	
+#endif /* USB_POLL_HUB */
 }
 
 /***************************************************************************
@@ -155,7 +253,7 @@ int usb_init(long handle, const struct pci_device_id *ent)
 	}
 	usb_hub_reset(bus_index);
 	/* init low_level USB */
-	Cconws("USB: ");
+	kprint("USB: ");
 	switch(ent->class)
 	{
 #ifdef CONFIG_USB_UHCI
@@ -186,7 +284,7 @@ int usb_init(long handle, const struct pci_device_id *ent)
 			usb_started = 0;
 			return -1; /* out of memoy */
 		}
-		Cconws("Scanning bus for devices... ");
+		kprint("Scanning bus for devices... ");
 		controller_priv[bus_index] = (struct hci *)priv;
 		controller_priv[bus_index]->usbnum = bus_index;
 		usb_scan_devices(priv);
@@ -196,7 +294,7 @@ int usb_init(long handle, const struct pci_device_id *ent)
 	}
 	else
 	{
-		Cconws("Error, couldn't init Lowlevel part\r\n");
+		kprint("Error, couldn't init Lowlevel part\r\n");
 		usb_started = 0;
 		return -1;
 	}
@@ -1145,7 +1243,7 @@ void usb_scan_devices(void *priv)
 	dev = usb_alloc_new_device(bus_index, priv);
 	if(usb_new_device(dev))
 	{
-		Cconws("No USB Device found\r\n");
+		kprint("No USB Device found\r\n");
 		USB_PRINTF("No USB Device found\r\n");
 		if(dev != NULL)
 			dev_index[bus_index]--;
@@ -1155,21 +1253,24 @@ void usb_scan_devices(void *priv)
 		kprint("%d USB Device(s) found\r\n", dev_index[bus_index]);
 		USB_PRINTF("%d USB Device(s) found\r\n", dev_index[bus_index]);
 	}
-#ifndef USB_POLL_HUB
-	/* insert "driver" if possible */
+#ifdef USB_POLL_HUB
+	if(pxCurrentTCB == NULL)
+#endif
+	{
+		/* insert "driver" if possible */
 #ifdef CONFIG_USB_KEYBOARD
-	if(drv_usb_kbd_init() < 0)
-		USB_PRINTF("No USB keyboard found\r\n");	
-	else
-		Cconws("USB HID keyboard driver installed\r\n");
+		if(drv_usb_kbd_init() < 0)
+			USB_PRINTF("No USB keyboard found\r\n");	
+		else
+			kprint("USB HID keyboard driver installed\r\n");
 #endif /* CONFIG_USB_KEYBOARD */
 #ifdef CONFIG_USB_MOUSE
-	if(drv_usb_mouse_init() < 0)
-		USB_PRINTF("No USB mouse found\r\n");	
-	else
-		Cconws("USB HID mouse driver installed\r\n");
+		if(drv_usb_mouse_init() < 0)
+			USB_PRINTF("No USB mouse found\r\n");	
+		else
+			kprint("USB HID mouse driver installed\r\n");
 #endif /* CONFIG_USB_MOUSE */
-#endif
+	}
 	USB_PRINTF("Scan end\r\n");
 }
 
@@ -1181,18 +1282,13 @@ void usb_scan_devices(void *priv)
 #undef USB_HUB_DEBUG
 
 #ifdef USB_HUB_DEBUG
-#ifdef COLDFIRE
 #define	USB_HUB_PRINTF(fmt, args...)	board_printf(fmt , ##args)
-#else
-#define	USB_HUB_PRINTF(fmt, args...)	board_printf(fmt , ##args); Crawcin()
-#endif /* COLDFIRE */
 #else
 #define USB_HUB_PRINTF(fmt, args...)
 #endif
 
 static struct usb_hub_device hub_dev[USB_MAX_BUS][USB_MAX_HUB];
 static int usb_hub_index[USB_MAX_BUS];
-char usb_error_str[256];
 
 int usb_get_hub_descriptor(struct usb_device *dev, void *data, int size)
 {
@@ -1280,10 +1376,11 @@ static int hub_port_reset(struct usb_device *dev, int port, unsigned short *port
 	{
 		usb_set_port_feature(dev, port + 1, USB_PORT_FEAT_RESET);
 #ifdef USB_POLL_HUB
-		vTaskDelay((200*configTICK_RATE_HZ)/1000);
-#else
-		wait_ms(200);
+		if(pxCurrentTCB != NULL)
+			vTaskDelay((200*configTICK_RATE_HZ)/1000);
+		else
 #endif
+			wait_ms(200);
 		if(usb_get_port_status(dev, port + 1, &portsts) < 0)
 		{
 			USB_HUB_PRINTF("get_port_status failed status %lX\r\n", dev->status);
@@ -1299,10 +1396,11 @@ static int hub_port_reset(struct usb_device *dev, int port, unsigned short *port
 		if(portstatus & USB_PORT_STAT_ENABLE)
 			break;
 #ifdef USB_POLL_HUB
-		vTaskDelay((200*configTICK_RATE_HZ)/1000);
-#else
-		wait_ms(200);
+		if(pxCurrentTCB != NULL)
+			vTaskDelay((200*configTICK_RATE_HZ)/1000);
+		else
 #endif
+			wait_ms(200);
 	}
 	if(tries == MAX_TRIES)
 	{
@@ -1342,21 +1440,23 @@ void usb_hub_port_connect_change(struct usb_device *dev, int port)
 			return;
 	}
 #ifdef USB_POLL_HUB
-	vTaskDelay((200*configTICK_RATE_HZ)/1000);
-#else
-	wait_ms(200);
+	if(pxCurrentTCB != NULL)
+		vTaskDelay((200*configTICK_RATE_HZ)/1000);
+	else
 #endif
+		wait_ms(200);
 	/* Reset the port */
 	if(hub_port_reset(dev, port, &portstatus) < 0)
 	{
-		board_printf("USB %d cannot reset port %i!?\r\n", dev->usbnum, port + 1);
+		USB_HUB_PRINTF("USB %d cannot reset port %i!?\r\n", dev->usbnum, port + 1);
 		return;
 	}
 #ifdef USB_POLL_HUB
-	vTaskDelay((200*configTICK_RATE_HZ)/1000);
-#else
-	wait_ms(200);
+	if(pxCurrentTCB != NULL)
+		vTaskDelay((200*configTICK_RATE_HZ)/1000);
+	else
 #endif
+		wait_ms(200);
 	/* Allocate a new device struct for it */
 	usb = usb_alloc_new_device(dev->usbnum, dev->priv_hcd);
 	if(portstatus & USB_PORT_STAT_HIGH_SPEED)
@@ -1375,7 +1475,7 @@ void usb_hub_port_connect_change(struct usb_device *dev, int port)
 		usb_clear_port_feature(dev, port + 1, USB_PORT_FEAT_ENABLE);
 	}
 #ifdef USB_POLL_HUB
-	else
+	else if(pxCurrentTCB != NULL)
 	{
 #ifdef CONFIG_USB_KEYBOARD
 		usb_kbd_register(usb);
@@ -1592,7 +1692,7 @@ int usb_hub_configure(struct usb_device *dev)
 	USB_HUB_PRINTF("%sover-current condition exists\r\n", (le16_to_cpu(hubsts->wHubStatus) & HUB_STATUS_OVERCURRENT) ? "" : "no ");
 	usb_hub_power_on(hub);
 #ifdef USB_POLL_HUB
-	if(queue_poll_hub == NULL)
+	if((queue_poll_hub == NULL) && (pxCurrentTCB != NULL))
 	{
 		queue_poll_hub = xQueueCreate(64, sizeof(int));
 		if(queue_poll_hub != NULL)

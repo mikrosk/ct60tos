@@ -1985,13 +1985,13 @@ static int radeon_vid_init_video(vidix_playback_t *config)
 				DisallowFourTapVertFiltering = 1;
 			if((long)((ceil(SourceUVWidthInMemWords/2.0)-1) * 4 + 1) > (long)(OV0LB_Rows-1))
 			{
-//				DPRINT("VIDIX: Image U plane width spans more octwords than supported by hardware\r\n")
+//				DPRINT("VIDIX: Image U plane width spans more octwords than supported by hardware\r\n");
 			}
 			else if((SourceUVWidthInMemWords-1) * 4 + 1 > OV0LB_Rows-1)
 				DisallowFourTapUVVertFiltering = 1;
 			if((long)((ceil(SourceUVWidthInMemWords/2.0)-1) * 4 + 3) > (long)(OV0LB_Rows-1))
 			{
-//				DPRINT("VIDIX: Image V plane width spans more octwords than supported by hardware\r\n")
+//				DPRINT("VIDIX: Image V plane width spans more octwords than supported by hardware\r\n");
 			}
 			else if((SourceUVWidthInMemWords-1) * 4 + 3 > OV0LB_Rows-1)
 				DisallowFourTapUVVertFiltering = 1;
@@ -2006,7 +2006,7 @@ static int radeon_vid_init_video(vidix_playback_t *config)
 				DisallowFourTapVertFiltering = 1;
 			if((long)((ceil(SourceUVWidthInMemWords/2.0)-1) * 2) + 1 > (long)(OV0LB_Rows-1))
 			{
-//				DPRINT("VIDIX: Image UV plane width spans more octwords than supported by hardware.") */
+//				DPRINT("VIDIX: Image UV plane width spans more octwords than supported by hardware\r\n");
 			}
 			else if((SourceUVWidthInMemWords-1) * 2 + 1 > OV0LB_Rows-1)
 				DisallowFourTapUVVertFiltering = 1;
@@ -2018,7 +2018,7 @@ static int radeon_vid_init_video(vidix_playback_t *config)
 		case 12:
 			if((ceil(SourceWidthInMemWords/2)-1) > OV0LB_Rows-1)
 			{
-//				DPRINT("VIDIX: ceil(SourceWidthInMemWords/2)-1) > OV0LB_Rows-1\r\n")
+//				DPRINT("VIDIX: ceil(SourceWidthInMemWords/2)-1) > OV0LB_Rows-1\r\n");
 			}
 			else if((SourceWidthInMemWords-1) > OV0LB_Rows-1)
 				DisallowFourTapVertFiltering = 1;

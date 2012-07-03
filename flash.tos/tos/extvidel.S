@@ -1,4 +1,4 @@
-/*  Extended videl screens CT60
+/*  Extended videl screens CT60 (for ataboot)
  * 
  * Didier Mequignon May 2004, e-mail: aniplay@wanadoo.fr
  *

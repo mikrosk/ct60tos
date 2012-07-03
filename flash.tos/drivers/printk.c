@@ -13,7 +13,6 @@
 
 #define FALSE       (0)
 #define TRUE        (1)
-#define NULL        (0)
 
 /********************************************************************/
 
@@ -69,7 +68,7 @@ typedef struct
 
 extern void direct_conout(char c);
 
-#if defined(COLDFIRE) && defined(NETWORK) && defined(LWIP)
+#if defined(COLDFIRE) && defined(LWIP)
 
 extern void board_putchar(char c);
 
@@ -80,7 +79,7 @@ static void board_putchar(char c)
     direct_conout(c);
 }
 
-#endif /* defined(COLDFIRE) && defined(NETWORK) && defined(LWIP) */
+#endif /* defined(COLDFIRE) && defined(LWIP) */
 
 /********************************************************************/
 static void printk_putc(char c, int *count, PRINTK_INFO *info)

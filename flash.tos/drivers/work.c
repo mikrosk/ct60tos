@@ -248,6 +248,9 @@ ATTRIBUTE virt_work;
 Virtual virt_work_fvdi;
 char deftxbu[276]; /* stratch buf */
 extern short video_found, video_log;
+#ifdef USE_RADEON_MEMORY
+extern short lock_video;
+#endif
 extern char buf_log[];
 extern short LINE_STYLE[];
 short ROM_UD_PATRN[16] = { 0x0000,0x05A0,0x05A0,0x05A0,0x05A0,0x0DB0,0x0DB0,0x1DB8, 0x399C,0x799E,0x718E,0x718E,0x6186,0x4182,0x0000,0x0000 }; /* fuji */
@@ -346,10 +349,18 @@ short V_OPNWK(char *adr_var_vdi, short *INTIN, short *INTOUT, short *PTSOUT)
 			break;
 		case SETMODEFLAG:
 			modecode = Vsetmode(-1); /* get current video mode    */
+#ifdef USE_RADEON_MEMORY
+			if(lock_video)
+				break;
+#endif
 			if(modecode != PTSOUT[0]) /* see if cur mode != desired  */
 				(void)Vsetscreen(0, 0, 3, PTSOUT[0]); /* set the video to new mode */
 			break;
 		default:
+#ifdef USE_RADEON_MEMORY
+			if(lock_video)
+				return(0);
+#endif
 			if(INTIN[0] < SETMODEFLAG)
 				(void)Vsetscreen(-1, -1, INTIN[0] - 2, -1); /* ST modes */
 			else

@@ -42,7 +42,6 @@
 
 #include "perf.h"
 
-#ifdef NETWORK
 #ifdef LWIP
 
 struct perf lwip_perfs[PERFS_MAX];
@@ -60,6 +59,8 @@ stats_init(void)
   memset(&lwip_stats, 0, sizeof(struct stats_));
   memset(lwip_perfs, 0, sizeof(struct perf) * PERFS_MAX);
 }
+
+#ifdef COLDFIRE
 #if LWIP_STATS_DISPLAY
 void
 stats_display_proto(struct stats_proto *proto, char *name)
@@ -148,8 +149,9 @@ stats_display(void)
   }
 }
 #endif /* LWIP_STATS_DISPLAY */
+#endif /* COLDFIRE */
+
 #endif /* LWIP_STATS */
 
 #endif /* LWIP */
-#endif /* NETWORK */
 

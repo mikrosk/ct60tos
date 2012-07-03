@@ -358,7 +358,7 @@ programs (cf68klib.S):
   * fabs/fadd/fcmp/fdiv/fint/fintrz/fmove/fmul/fneg/fsqrt/fsub/ftst #.
   * cinva/cpushl/cpusha.
 
-2011-09-17 2.02
+2012-06-23 2.02
 ---------------
 - On M5484LITE/FIREBEE enabled XLB PCI interrupt (boot.S).
 - Inside the CF68KLIB, removed fix_predecrement/fix_postincrement when 
@@ -379,10 +379,9 @@ crash). This bug is very old, but since the CTPCI, the IDE routine is
 ready for a 2nd port and this 2nd port is not implemented in the 
 current hardware so t's possible to get a crash (invalid access to a 
 2nd CTPCI IDE port).
-- On all targets, added ATAPI devices to SCSIDRV (ide_scsi.S), removed 
-IDE devices to SCSIDRV excepted Inquiry command for scan (tested on 
-FALCON/CT60 and Extendos). SCSI cookie added after hard disk driver 
-boot (if not found).
+- On all targets, added ATAPI devices to SCSIDRV (ide_scsi.S). 
+FIREBEE and FALCON with CT60/CTPCI has IDE and IDE2 (IDE not 
+compatible). SCSI cookie added before hard disk driver boot.
 - Added LZMA decoder for a better compression of PCI drivers 
 (LzmaDecode.c).
 - On CTPCI fixed PEND register bits test inverted, and finnally 
@@ -391,3 +390,11 @@ revoved this test who can caused loop inside interrupt.
 - Try to fix CT60 flash boot problems by reading until 16 times the TOS in 
 flash if the CRC is bad before apply the patches in SDRAM (boot2.S).
 - Changed boot order for 4 IDE devices with a CTPCI (boot2.S).
+- Rewrited conout routines in C for Videl or graphic card (planes or 
+without planes, with or without accel routines from drivers part. 
+TOS404 VT52 routines table at 0xE13268 used, theses routines use the A4 
+register as Line A pointer (bios.S, bios2.S, and conout.c). Not used 
+on Coldfire targets, there are a crash when screen changed.
+- Added 5 retry loops to boot keyboard test, sometimes Eiffel 
+characters are lost on the FIREBEE (boot2.S).
+

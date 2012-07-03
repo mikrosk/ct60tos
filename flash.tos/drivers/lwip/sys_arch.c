@@ -39,7 +39,6 @@
 #include <stdarg.h>
 #include "config.h"
 
-#ifdef NETWORK
 #ifdef LWIP
 
 extern void ltoa(char *buf, long n, unsigned long base);
@@ -74,7 +73,11 @@ extern void ltoa(char *buf, long n, unsigned long base);
     ( portTickType )( ( portTickType ) ( ms ) / portTICK_RATE_MS )
 #define TICKS_TO_MS( ticks )        \
     ( unsigned portLONG )( ( portTickType ) ( ticks ) * portTICK_RATE_MS )
+#ifdef COLDFIRE
 #define THREAD_STACK_SIZE           ( 4096 )
+#else
+#define THREAD_STACK_SIZE           ( 2048 )
+#endif
 #define THREAD_NAME                 "lwIP"
 
 #define THREAD_INIT( tcb ) \
@@ -170,7 +173,8 @@ extern void board_printf(const char *fmt, ...);
 void
 sys_assert( const char *msg )
 {
-    board_printf("%s\r\n");
+    board_printf(msg);
+    board_printf("\r\n");
 //    vPortEnterCritical(  );
 //    while(1)
 //      asm volatile(" nop\n\t");
@@ -201,8 +205,8 @@ sys_debug( const char *const fmt, ... )
     printk(&info, fmt, ap);
     *info.loc = '\0';
     board_printf(buf);
-//    board_putchar('\r\n');
     va_end(ap);
+    if(fmt);
 }
 
 /* ------------------------ Start implementation ( Threads ) -------------- */
@@ -577,12 +581,15 @@ sys_jiffies( void )
 u32_t
 sys_read_timer( void )
 {
+#ifdef COLDFIRE
 #ifdef MCF5445X
 	return(MCF_DTIM_DTCN(1));
 #else
 	return(MCF_SLT_SCNT(1));
 #endif /* MCF5445X */
+#else /* !COLDFIRE */
+  return(0);
+#endif /* COLDFIRE */
 }
 
 #endif /* LWIP */
-#endif /* NETWORK */

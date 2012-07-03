@@ -45,7 +45,7 @@
 #include "config.h"
 #include "MCD_dma.h"
 
-#ifdef NETWORK
+#ifdef LWIP
 
 extern dmaRegs *MCD_dmaBar;
 
@@ -288,4 +288,4 @@ void  MCD_startDmaENetXmit(char *bDBase, char *currBD, char *xmitFifoPtr, volati
 
 }
 
-#endif /* NETWORK */
+#endif /* LWIP */

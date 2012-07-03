@@ -65,7 +65,7 @@
 #define DIRECT_ACCESS
 #endif
 #ifndef PCI_XBIOS
-#define PCI_XBIOS // else sometimes system is locked ???
+//#define PCI_XBIOS // else sometimes system is locked ???
 #endif
 #else /* !COLDFIRE */
 #ifdef LITTLE_ENDIAN_LANE_SWAPPED /* PCI BIOS */
