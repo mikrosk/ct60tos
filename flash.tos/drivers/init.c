@@ -221,6 +221,9 @@ short video_found, usb_found, ethernet_found;
 short lock_video;
 #endif
 short use_dma, restart, redirect, os_magic, memory_ok, drive_ok, video_log, swi;
+#ifndef COLDFIRE
+short use_xhdi;
+#endif
 #if defined(COLDFIRE) && defined(MCF547X) && defined(LWIP)
 short boot_os;
 #endif
@@ -864,10 +867,18 @@ int init_devices(int no_reset, unsigned long flags) /* after the original setscr
 			int mlayout = (int)((use_dma >> 2) & 0x1F) - 1;
 			if((mlayout >= 0) && (mlayout < 5))
 				strcpy(monitor_layout, spec_monitor_layout[mlayout]);
+#ifndef COLDFIRE
+			use_xhdi = (use_dma >> 6) & 1;
+#endif
 			use_dma = (use_dma >> 1) & 1;
 		}
 		else
+		{
+#ifndef COLDFIRE
+			use_xhdi = 0;
+#endif
 			use_dma = 0;
+		}
 		default_dynclk = -2;
 		ignore_edid = 0;
 		mirror = 1;

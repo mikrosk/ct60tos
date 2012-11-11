@@ -2005,6 +2005,10 @@ install_pun_drive:
 	move.w #hdv_mediach,D0
 	bsr install_xbra
 	move.l D0,old_hdv_mediach_usb
+#ifndef COLDFIRE
+	tst.w _use_xhdi          // XHDI/SCSI enabled in the CTPCI parameter
+	beq .no_cookie_jar
+#endif
 	move.l cookie,D0
 	beq .no_cookie_jar
 	move.l D0,A0

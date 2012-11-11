@@ -179,6 +179,77 @@ static int rtl8139_read_eeprom(void *ioaddr, int location, int addr_len);
 static int rtl8139_mdio_read(struct rtl8139_private *rtl_8139, int phy_id, int location);
 static void rtl8139_mdio_write(struct rtl8139_private *rtl_8139, int phy_id, int location, int val);
 
+/* CTPCI DMA freeze workaround, registers accessed through the TOS with DMA locked */
+
+static void rtl_w8_f(void *addr, unsigned char val, long (*lock)(long mode, void *addr, long data))
+{
+  if(lock != NULL)
+  {
+    lock(5, addr, (long)val);
+    lock(2, addr, 0);
+  }
+  else
+  {
+    writeb(val, addr);
+    (void)readb(addr);
+  }
+}
+
+static void rtl_w16_f(void *addr, unsigned short val, long (*lock)(long mode, void *addr, long data))
+{
+  if(lock != NULL)
+  {
+    lock(6, addr, (long)swap_short(val));
+    lock(3, addr, 0);
+  }
+  else
+  {
+    writew(val, addr);
+    (void)readw(addr);
+  }
+}
+
+static void rtl_w32_f(void *addr, unsigned long val, long (*lock)(long mode, void *addr, long data))
+{
+  if(lock != NULL)
+  {
+    lock(7, addr, (long)swap_long(val));
+    lock(4, addr, 0);
+  }
+  else
+  {
+    writel(val, addr);
+    (void)readl(addr);
+  }
+}
+
+static unsigned char rtl_r8(void *addr, long (*lock)(long mode, void *addr, long data))
+{
+  if(lock != NULL)
+    return((unsigned char)lock(2, addr, 0));
+  return(readb(addr));
+}
+
+static unsigned short rtl_r16(void *addr, long (*lock)(long mode, void *addr, long data))
+{
+  unsigned short val;
+  if(lock != NULL)
+    val = (unsigned short)lock(3, addr, 0);
+  else
+    val = *((volatile unsigned short *)addr);
+  return(swap_short(val));
+}
+
+static unsigned long rtl_r32(void *addr, long (*lock)(long mode, void *addr, long data))
+{
+  unsigned long val;
+  if(lock != NULL)
+    val = (unsigned long)lock(4, addr, 0);
+  else
+    val = *((volatile unsigned long *)addr);
+  return(swap_long(val));
+}
+
 /* Maximum events (Rx packets, etc.) to handle at each interrupt. */
 static int rtl8139_max_interrupt_work = 10;
 static unsigned char rtl8139_ip_addr[2][4];                     
@@ -285,6 +356,7 @@ static void rtl8139_rx_interrupt(struct rtl8139_private *rtl_8139_tp)
   unsigned short cur_rx;
   unsigned char mine = 1, multicast_packet= 1, arp_request_for_me = 1;
   void *ioaddr = rtl_8139_tp->mmio_addr;
+  long (*ctpci_dma_lock)(long mode, void *addr, long data) = rtl_8139_tp->ctpci_dma_lock;
   int i, j;
   rx_ring = rtl_8139_tp->rx_ring;
   cur_rx = rtl_8139_tp->cur_rx;
@@ -380,6 +452,7 @@ accept_frame:
 static void rtl8139_tx_interrupt(struct rtl8139_private *rtl_8139_tp)
 {
   void *ioaddr = rtl_8139_tp->mmio_addr;
+  long (*ctpci_dma_lock)(long mode, void *addr, long data) = rtl_8139_tp->ctpci_dma_lock;
   unsigned long dirty_tx, tx_left;
   dirty_tx = rtl_8139_tp->dirty_tx;
   tx_left = rtl_8139_tp->cur_tx - dirty_tx;
@@ -452,42 +525,24 @@ int rtl8139_interrupt(struct rtl8139_private *rtl_8139_tp)
 {
   int boguscnt = rtl8139_max_interrupt_work; 
   void *ioaddr = rtl_8139_tp->mmio_addr;
+  long (*ctpci_dma_lock)(long mode, void *addr, long data) = rtl_8139_tp->ctpci_dma_lock;
   int status = 0, link_changed = 0; /* avoid bogus "uninit" warning */
   do
   {
-    if(rtl_8139_tp->ctpci_dma_lock != NULL)
-    {
-      int i = 0;
-      while((i <= 100) && rtl_8139_tp->ctpci_dma_lock(1))
-      {
-        udelay(1); /* try to fix CTPCI freezes */
-        i++;
-      }
-    }
     status = RTL_R16(IntrStatus);
     /* h/w no longer present (hotplug?) or major error, bail */
     if(status == 0xFFFF)
-    {
-      if(rtl_8139_tp->ctpci_dma_lock != NULL)
-        rtl_8139_tp->ctpci_dma_lock(0);
       break;
-    }
     /* Acknowledge all of the current interrupt sources ASAP, but an first get an additional status bit from CSCR. */
     if(status & RxUnderrun)
       link_changed = RTL_R16 (CSCR) & CSCR_LinkChangeBit;
     RTL_W16_F(IntrStatus, (status & RxFIFOOver) ? (status | RxOverflow) : status);
     if((status & (PCIErr | PCSTimeout | RxUnderrun | RxOverflow | RxFIFOOver | TxErr | TxOK | RxErr | RxOK)) == 0)
-    {
-      if(rtl_8139_tp->ctpci_dma_lock != NULL)
-        rtl_8139_tp->ctpci_dma_lock(0);
       break;
-    }
     if(status & (RxOK | RxUnderrun | RxOverflow | RxFIFOOver))
       rtl8139_rx_interrupt(rtl_8139_tp);  
     if(status & (TxOK | TxErr))
       rtl8139_tx_interrupt(rtl_8139_tp);   
-    if(rtl_8139_tp->ctpci_dma_lock != NULL)
-      rtl_8139_tp->ctpci_dma_lock(0);
     boguscnt--;
   }
   while(boguscnt > 0);  
@@ -563,6 +618,7 @@ static void rtl8139_mdio_write(struct rtl8139_private *rtl_8139_tp, int phy_id, 
   if(phy_id > 31)
   {      /* Really a 8139.  Use internal registers. */
     void *ioaddr = rtl_8139_tp->mmio_addr;
+    long (*ctpci_dma_lock)(long mode, void *addr, long data) = rtl_8139_tp->ctpci_dma_lock;
     if(location == 0)
     {
       RTL_W8_F(Cfg9346, Cfg9346_Unlock);
@@ -662,6 +718,7 @@ static int rtl8139_read_eeprom(void *ioaddr, int location, int addr_len)
 /* Start the hardware at open or resume. */
 static void rtl8139_hw_start(struct rtl8139_private *rtl_8139_tp)
 {
+  long (*ctpci_dma_lock)(long mode, void *addr, long data) = rtl_8139_tp->ctpci_dma_lock;
   void *ioaddr = rtl_8139_tp->mmio_addr;
   unsigned long i;
   unsigned char tmp;
@@ -742,6 +799,7 @@ static void rtl8139_hw_start(struct rtl8139_private *rtl_8139_tp)
 static void rtl8129_tx_timeout(struct rtl8139_private *rtl_8139_tp)
 {
   void *ioaddr = rtl_8139_tp->mmio_addr;
+  long (*ctpci_dma_lock)(long mode, void *addr, long data) = rtl_8139_tp->ctpci_dma_lock;
   /* Disable interrupts by clearing the interrupt mask. */
   RTL_W16(IntrMask, 0x0000);
   rtl_8139_tp->dirty_tx = rtl_8139_tp->cur_tx = 0;
@@ -751,6 +809,7 @@ static void rtl8129_tx_timeout(struct rtl8139_private *rtl_8139_tp)
 static int rtl8139_send_packet(const char *buffer, size_t size)
 {
   void *ioaddr = rtl_8139_tp.mmio_addr;
+  long (*ctpci_dma_lock)(long mode, void *addr, long data) = rtl_8139_tp.ctpci_dma_lock;
   unsigned char *buff;
   int entry;
   if((rtl_8139_tp.cur_tx - rtl_8139_tp.dirty_tx) >= NUM_TX_DESC)
@@ -761,11 +820,6 @@ static int rtl8139_send_packet(const char *buffer, size_t size)
       return(0);
   }
   vPortEnterCritical();
-  if((rtl_8139_tp.ctpci_dma_lock != NULL) && rtl_8139_tp.ctpci_dma_lock(1))
-  {
-    vPortExitCritical();
-    return(0);
-  }
   /* Calculate the next Tx descriptor entry. */
   entry = rtl_8139_tp.cur_tx % NUM_TX_DESC;
   buff = rtl_8139_tp.tx_buf[entry];
@@ -776,8 +830,6 @@ static int rtl8139_send_packet(const char *buffer, size_t size)
   /* Note: the chip doesn't have auto-pad! */
   RTL_W32(TxStatus0 + (entry * sizeof(unsigned long)), rtl_8139_tp.tx_flag | (size >= ETH_ZLEN ? size : ETH_ZLEN));
   rtl_8139_tp.trans_start = jiffies;
-  if(rtl_8139_tp.ctpci_dma_lock != NULL)
-    rtl_8139_tp.ctpci_dma_lock(0);
   vPortExitCritical();
   return(size);                                                                                        
 }
@@ -785,6 +837,7 @@ static int rtl8139_send_packet(const char *buffer, size_t size)
 unsigned long rtl8139_read_timer(void)
 {
   void *ioaddr = rtl_8139_tp.mmio_addr;
+  long (*ctpci_dma_lock)(long mode, void *addr, long data) = rtl_8139_tp.ctpci_dma_lock;
   return(RTL_R32(Timer));
 }
 
@@ -816,6 +869,7 @@ err_t rtl8139_eth_start(long handle, const struct pci_device_id *ent)
   static int board_idx = 0;
   unsigned long tmp;
   void *ioaddr = NULL;
+  long (*ctpci_dma_lock)(long mode, void *addr, long data) = NULL;
 #ifdef PCI_XBIOS
   pci_rsc_desc = (PCI_RSC_DESC *)get_resource(handle);
 #else
@@ -878,7 +932,12 @@ err_t rtl8139_eth_start(long handle, const struct pci_device_id *ent)
 #endif
   tmp = dma_lock(-1); /* CTPCI */
   if((tmp == 0) || (tmp == 1))
-    rtl_8139_tp.ctpci_dma_lock = (void *)dma_lock(-2); /* function exist */
+  {
+    rtl_8139_tp.ctpci_dma_lock = ctpci_dma_lock = (void *)dma_lock(-2); /* function exist */
+    board_printf("RTL8139: CTPCI_1N DMA hardware workaround detected\r\n");
+  }
+  else
+    board_printf("RTL8139: CTPCI try to fix DMA bug by software\r\n");
   /* Soft reset the chip. */
   RTL_W8(ChipCmd, (RTL_R8(ChipCmd) & ChipCmdClear) | CmdReset);
   /* Check that the chip has finished the reset. */
@@ -1024,6 +1083,7 @@ err_t rtl8139_eth_start(long handle, const struct pci_device_id *ent)
 void rtl8139_eth_stop(void)
 {
   void *ioaddr = rtl_8139_tp.mmio_addr;
+  long (*ctpci_dma_lock)(long mode, void *addr, long data) = rtl_8139_tp.ctpci_dma_lock;
   vPortEnterCritical();
   /* Stop the chip's Tx and Rx DMA processes. */
   RTL_W8(ChipCmd, (RTL_R8(ChipCmd) & ChipCmdClear));

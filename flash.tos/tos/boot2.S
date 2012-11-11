@@ -179,6 +179,7 @@
 #else /* !COLDFIRE */
 	.globl init_060
 	.globl code_led
+	.globl led_floppy
 #endif /* COLDFIRE */
 	.globl _LZ_Uncompress
 	.globl _LzmaDecode

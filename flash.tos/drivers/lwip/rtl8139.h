@@ -161,9 +161,9 @@ static inline unsigned long cpu_to_le32(unsigned long val)
 
 /* write MMIO register, with flush */
 /* Flush avoids rtl8139 bug w/ posted MMIO writes */
-#define RTL_W8_F(reg, val8)     do { writeb((val8), (unsigned long)ioaddr + (reg)); (void)readb((unsigned long)ioaddr + (reg)); } while(0)
-#define RTL_W16_F(reg, val16)   do { writew((val16), (unsigned long)ioaddr + (reg)); (void)readw((unsigned long)ioaddr + (reg)); } while(0)
-#define RTL_W32_F(reg, val32)   do { writel((val32), (unsigned long)ioaddr + (reg)); (void)readl((unsigned long)ioaddr + (reg)); } while(0)
+#define RTL_W8_F(reg, val8)     rtl_w8_f((void *)((unsigned long)ioaddr + (reg)), (val8), ctpci_dma_lock)
+#define RTL_W16_F(reg, val16)   rtl_w16_f((void *)((unsigned long)ioaddr + (reg)), (val16), ctpci_dma_lock)
+#define RTL_W32_F(reg, val32)   rtl_w32_f((void *)((unsigned long)ioaddr + (reg)), (val32), ctpci_dma_lock)
  
 #if MMIO_FLUSH_AUDIT_COMPLETE
  
@@ -182,9 +182,9 @@ static inline unsigned long cpu_to_le32(unsigned long val)
 #endif /* MMIO_FLUSH_AUDIT_COMPLETE */
  
 /* read MMIO register */
-#define RTL_R8(reg)       readb((unsigned long)ioaddr + (reg))
-#define RTL_R16(reg)      readw((unsigned long)ioaddr + (reg))
-#define RTL_R32(reg)      readl((unsigned long)ioaddr + (reg))
+#define RTL_R8(reg)       rtl_r8((void *)((unsigned long)ioaddr + (reg)), ctpci_dma_lock)
+#define RTL_R16(reg)      rtl_r16((void *)((unsigned long)ioaddr + (reg)), ctpci_dma_lock)
+#define RTL_R32(reg)      rtl_r32((void *)((unsigned long)ioaddr + (reg)), ctpci_dma_lock)
  
 #define RTL8139_VENDOR_ID 0x10EC
 #define RTL8139_DEVICE_ID 0X8139
@@ -611,6 +611,6 @@ struct rtl8139_private
   xSemaphoreHandle tx_sem;    /* Control access to transmitter */
   sys_thread_t task;          /* RTL RX task */
 /* For CTPCI */
-  long (*ctpci_dma_lock)(long mode);    
+  long (*ctpci_dma_lock)(long mode, void *addr, long data);    
 };
 
