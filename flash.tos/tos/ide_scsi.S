@@ -128,6 +128,8 @@
 #if defined(MCF5445X) || defined(MCF547X)
       	.globl ide_reset
 #endif
+#else
+	.globl ide_reset
 #endif
 	.globl read_sectors
 	.globl write_sectors
@@ -4199,10 +4201,9 @@ ide_cmd: 	// D0.L: bytes, D1.L: timeout ATAPI, A0: IDE buffer, A1: cmd buffer
 	tst.l D0
 	rts
 
-#ifdef COLDFIRE
 ide_reset:
 
-#ifdef MCF547X
+#if !defined(COLDFIRE) || defined(MCF547X)
 	lea 0xFFFF8800,A0        // PSG (FPGA emulation)
 	lea 2(A0),A1
 	move.w SR,D1
@@ -4303,8 +4304,6 @@ piotms:
 	dc.w 30,  80, 30, 10, 20, 5, 10,  0, 35 /* PIO 3 */
 	dc.w 25,  70, 20, 10, 20, 5, 10,  0, 35 /* PIO 4 */
 #endif
-
-#endif /* COLDFIRE*/
 
 #ifndef COLDFIRE
 #define EBUG

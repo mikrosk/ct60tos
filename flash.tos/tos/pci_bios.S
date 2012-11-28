@@ -338,6 +338,7 @@ _install_pci_bios:
 	move.l phystop,A0
 	moveq #CTPCI_1M,D0
 	or.l D0,hardware_type(A0)
+#if 0 // forced to CTPCI_1N
 	move.w SR,-(SP)
 	or.w #0x700,SR               // no interrupts
 	bset #6,PCI_CTPCI_CONFIG_ENABI // CTPCI_1N test: bit 6 must read back
@@ -350,6 +351,7 @@ _install_pci_bios:
 	move.w (SP)+,SR
 	cmp.l #1,D0
 	bne.s .init_plx
+#endif
 	moveq #CTPCI_1N,D0
 	or.l D0,hardware_type(A0)
 .init_plx:
@@ -7216,6 +7218,10 @@ _dma_lock:  /* CTPCI DMA freeze workaround */
 	move.l A0,D0
 	rts
 .dl2:
+#if 1 // no hardware deadlock workaround
+	moveq #0,D0
+	rts
+#endif
 	tst.w D0
 	bmi.s .dl_status
 	bne.s .dl_lock

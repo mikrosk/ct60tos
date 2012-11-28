@@ -78,7 +78,6 @@ static struct lwip_socket sockets[NUM_SOCKETS];
 static struct lwip_select_cb *select_cb_list;
 
 static sys_sem_t socksem;
-static sys_sem_t selectsem;
 
 static void
 event_callback(struct netconn *conn, enum netconn_evt evt, u16_t len);
@@ -677,11 +676,21 @@ lwip_selscan(int maxfdp1, fd_set *readset, fd_set *writeset, fd_set *exceptset)
        currently match */
     for(i = 0; i < maxfdp1; i++)
     {
+        void *lastdata = NULL;
+        s16_t rcvevent = 0;
+        u16_t sendevent = 0;
+        p_sock = NULL;
+        if ((i < NUM_SOCKETS) && sockets[i].conn)
+        {
+            p_sock = &sockets[i];
+            lastdata = p_sock->lastdata;
+            rcvevent = p_sock->rcvevent;
+            sendevent = p_sock->sendevent;
+        }
         if (FD_ISSET(i, readset))
         {
             /* See if netconn of this socket is ready for read */
-            p_sock = get_socket(i);
-            if (p_sock && (p_sock->lastdata || p_sock->rcvevent))
+            if (p_sock && (lastdata || rcvevent))
             {
                 FD_SET(i, &lreadset);
                 LWIP_DEBUGF(SOCKETS_DEBUG, ("lwip_selscan: fd=%d ready for reading\n", i));
@@ -692,7 +701,7 @@ lwip_selscan(int maxfdp1, fd_set *readset, fd_set *writeset, fd_set *exceptset)
         {
             /* See if netconn of this socket is ready for write */
             p_sock = get_socket(i);
-            if (p_sock && p_sock->sendevent)
+            if (p_sock && sendevent)
             {
                 FD_SET(i, &lwriteset);
                 LWIP_DEBUGF(SOCKETS_DEBUG, ("lwip_selscan: fd=%d ready for writing\n", i));
@@ -719,6 +728,7 @@ lwip_select(int maxfdp1, fd_set *readset, fd_set *writeset, fd_set *exceptset,
     u32_t msectimeout;
     struct lwip_select_cb select_cb;
     struct lwip_select_cb *p_selcb;
+    SYS_ARCH_DECL_PROTECT(lev);
 
 #ifdef DEBUG
     if(pxCurrentTCB == tid_TOS)
@@ -734,9 +744,7 @@ lwip_select(int maxfdp1, fd_set *readset, fd_set *writeset, fd_set *exceptset,
     select_cb.sem_signalled = 0;
 
     /* Protect ourselves searching through the list */
-    if (!selectsem)
-        selectsem = sys_sem_new(1);
-    sys_sem_wait(selectsem);
+    SYS_ARCH_PROTECT(lev);
 
     if (readset)
         lreadset = *readset;
@@ -760,7 +768,7 @@ lwip_select(int maxfdp1, fd_set *readset, fd_set *writeset, fd_set *exceptset,
     {
         if (timeout && timeout->tv_sec == 0 && timeout->tv_usec == 0)
         {
-            sys_sem_signal(selectsem);
+            SYS_ARCH_UNPROTECT(lev);
             if (readset)
                 FD_ZERO(readset);
             if (writeset)
@@ -786,7 +794,7 @@ lwip_select(int maxfdp1, fd_set *readset, fd_set *writeset, fd_set *exceptset,
         select_cb_list = &select_cb;
 
         /* Now we can safely unprotect */
-        sys_sem_signal(selectsem);
+        SYS_ARCH_UNPROTECT(lev);
 
         /* Now just wait to be woken */
         if (timeout == 0)
@@ -798,7 +806,7 @@ lwip_select(int maxfdp1, fd_set *readset, fd_set *writeset, fd_set *exceptset,
         i = sys_sem_wait_timeout(select_cb.sem, msectimeout);
 
         /* Take us off the list */
-        sys_sem_wait(selectsem);
+        SYS_ARCH_PROTECT(lev);
         if (select_cb_list == &select_cb)
             select_cb_list = select_cb.next;
         else
@@ -809,7 +817,7 @@ lwip_select(int maxfdp1, fd_set *readset, fd_set *writeset, fd_set *exceptset,
                     break;
                 }
 
-        sys_sem_signal(selectsem);
+        SYS_ARCH_UNPROTECT(lev);
 
         sys_sem_free(select_cb.sem);
         if (i == 0)             /* Timeout */
@@ -844,7 +852,7 @@ lwip_select(int maxfdp1, fd_set *readset, fd_set *writeset, fd_set *exceptset,
         nready = lwip_selscan(maxfdp1, &lreadset, &lwriteset, &lexceptset);
     }
     else
-        sys_sem_signal(selectsem);
+        SYS_ARCH_UNPROTECT(lev);
 
     if (readset)
         *readset = lreadset;
@@ -866,6 +874,7 @@ event_callback(struct netconn *conn, enum netconn_evt evt, u16_t len)
     int s;
     struct lwip_socket *sock;
     struct lwip_select_cb *scb;
+    SYS_ARCH_DECL_PROTECT(lev);
 
     /* Get socket */
     if (conn)
@@ -890,10 +899,6 @@ event_callback(struct netconn *conn, enum netconn_evt evt, u16_t len)
     else
         return;
 
-    if (!selectsem)
-        selectsem = sys_sem_new(1);
-
-    sys_sem_wait(selectsem);
     /* Set event as required */
     switch (evt)
     {
@@ -910,7 +915,6 @@ event_callback(struct netconn *conn, enum netconn_evt evt, u16_t len)
         sock->sendevent = 0;
         break;
     }
-    sys_sem_signal(selectsem);
 
     /* Now decide if anyone is waiting for this socket */
     /* NOTE: This code is written this way to protect the select link list
@@ -921,7 +925,7 @@ event_callback(struct netconn *conn, enum netconn_evt evt, u16_t len)
        expected to be small. */
     while (1)
     {
-        sys_sem_wait(selectsem);
+        SYS_ARCH_PROTECT(lev);
         for (scb = select_cb_list; scb; scb = scb->next)
         {
             if (scb->sem_signalled == 0)
@@ -938,10 +942,10 @@ event_callback(struct netconn *conn, enum netconn_evt evt, u16_t len)
         if (scb)
         {
             scb->sem_signalled = 1;
-            sys_sem_signal(selectsem);
+            SYS_ARCH_UNPROTECT(lev);
             sys_sem_signal(scb->sem);
         } else {
-            sys_sem_signal(selectsem);
+            SYS_ARCH_UNPROTECT(lev);
             break;
         }
     }
@@ -1461,7 +1465,6 @@ void socket_init(void)
 {
   select_cb_list = 0;
   socksem = 0;
-  selectsem = 0;
 }
 
 

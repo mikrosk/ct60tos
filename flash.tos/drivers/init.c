@@ -46,7 +46,7 @@ long save_regs[16];
 #endif
 #endif
 
-#define BETA_VERSION "beta 11"
+#define BETA_VERSION "beta 12"
 
 #undef DEBUG
 
