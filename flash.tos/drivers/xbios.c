@@ -2011,6 +2011,18 @@ long vsetscreen(long logaddr, long physaddr, long rez, long modecode, long init_
 				if(var.yoffset < 8192)
 					fb_pan_display(info, &var);
 			}
+#ifdef COLDFIRE
+			else if(!video_found && (info->screen_mono == NULL)) /* Videl */
+			{
+				long addr;
+				if((physaddr < (long)info->screen_base)
+				 || ((unsigned long)physaddr >= (unsigned long)info->ram_base + info->ram_size - (resolution.width * resolution.height * (resolution.bpp >> 3))))
+					return(Mode);
+				addr = init_videl((long)resolution.width, (long)resolution.height, (long)resolution.bpp, (long)resolution.freq, physaddr);
+				if(addr)
+					*((char **)_v_bas_ad) = info->screen_base = (char *)addr;
+			}
+#endif
 			else if((info->screen_mono != NULL) && (physaddr < *phystop)) /* VBL mono emulation */
 				info->screen_mono = (char *)physaddr;
 		}

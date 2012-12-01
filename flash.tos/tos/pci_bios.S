@@ -8622,7 +8622,7 @@ tab_pci_device:
 	.byte 16                 // host bridge MCF547X
 	// AD17 is the USB Controller
 	// AD18 and more are slots ?
-	.byte 17,18,19,20,21,22,23,24,25,26,27,28,29,30 // device number n where AD[n] select IDSEL
+	.byte 17,18,19,20,21,22,23,24,25,26,27,28,29,30,31 // device number n where AD[n] select IDSEL
 #else /* MCF548X - M5484LITE/M5485EVB */
 	.byte 16                 // host bridge MCF548X
 	// on the Fire Engine AD17 is the USB Controller

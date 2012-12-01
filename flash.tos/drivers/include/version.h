@@ -1,3 +1,3 @@
 #define VERSION 0x0102
 #define DATE \
-28,11,2012,17,18
+ 1,12,2012,11, 6

@@ -1149,6 +1149,8 @@ int init_devices(int no_reset, unsigned long flags) /* after the original setscr
 		{
 #if defined(COLDFIRE) && defined(MCF547X)
 			extern void init_videl_i2c(void);
+			extern long get_videl_ram_base(void);
+			extern long get_videl_ram_size(void);
 			init_videl_i2c();
 //			use_dma = 0; /* not works on Flexbus - FPGA */
 #endif
@@ -1169,6 +1171,13 @@ int init_devices(int no_reset, unsigned long flags) /* after the original setscr
 			info_fvdi = framebuffer_alloc(0); /* => info_fvdi->par == NULL */
 			if(!info_fvdi)
 				continue;
+			info_fvdi->var.xres_virtual = info_fvdi->var.yres_virtual = 2048; /* offscreen size */
+			info_fvdi->var.bits_per_pixel = 32;
+			info_fvdi->screen_size = 0;
+			info_fvdi->screen_base = info_fvdi->ram_base = (char *)get_videl_ram_base();
+			info_fvdi->ram_size = get_videl_ram_size();
+			if(info_fvdi->ram_size)
+				offscreen_init(info_fvdi);
 			info_fvdi->var.xres = info_fvdi->var.xres_virtual = resolution.width;
 			info_fvdi->var.yres = info_fvdi->var.yres_virtual = resolution.height;
 			info_fvdi->var.bits_per_pixel = resolution.bpp;

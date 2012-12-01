@@ -81,7 +81,7 @@
 #ifdef COLDFIRE
 
 #ifdef MCF547X                         /* FIREBEE */
-#define PCI_MAX_SLOT             (7+1) /* 7 slots on the Firebee + host bridge MCF547X */
+#define PCI_MAX_SLOT             (15+1) /* 15 slots on the Firebee + host bridge MCF547X */
 #else /* MCF548X - MCF5445X */   
 #define PCI_MAX_SLOT             (4+1) /* 4 slots on the M5484LITE/M5485EVB/M54455EVB + host bridge MCF548X/MCF5445X */
 #endif /* MCF547X */

@@ -58,11 +58,11 @@
 #define ZONE1_SRAM 0xFFF00000     /* MCF5445X */
 #define ZONE2_SRAM 0xFFFFE000     /* MCF5445X */
 
-#define VIDEO_RAM          0x00D00000 /* FIREBEE */
+#define VIDEO_RAM          0x00100000 /* FIREBEE */
 #define END_VIDEO_RAM      0x00E00000 /* FIREBEE */
-#define VIDEO_RAM2         0x60000000 /* FIREBEE */
-#define END_VIDEO_RAM2     0x80000000 /* FIREBEE */
-#define FPGA_VIDEO_RAM     0x60D00000 /* FIREBEE */
+#define VIDEO_RAM2         0x60E00000 /* FIREBEE */
+#define END_VIDEO_RAM2     0x68000000 /* FIREBEE */
+#define FPGA_VIDEO_RAM     0x60100000 /* FIREBEE */
 #define END_FPGA_VIDEO_RAM 0x60E00000 /* FIREBEE */
 #define FPGA_ACP_IO        0xF0000000 /* FIREBEE */
 #define END_FPGA_ACP_IO    0xF8000000 /* FIREBEE */
@@ -504,7 +504,7 @@ void init_mmu(unsigned long base_pci_drivers, unsigned long size_pci_drivers)
 		if((addr>=VIDEO_RAM) && (addr<END_VIDEO_RAM))
 		{
 			mmu_map(addr,addr-VIDEO_RAM+FPGA_VIDEO_RAM,MMUOR_ITLB,MMUTR_SG,MMUDR_SZ1M+MMUDR_WRITETHROUGH+MMUDR_X+MMUDR_LK);
-			mmu_remap(addr,addr-VIDEO_RAM+FPGA_VIDEO_RAM,0,MMUTR_SG,MMUDR_SZ1M+MMUDR_WRITETHROUGH+MMUDR_R+MMUDR_W);
+			mmu_map(addr,addr-VIDEO_RAM+FPGA_VIDEO_RAM,0,MMUTR_SG,MMUDR_SZ1M+MMUDR_WRITETHROUGH+MMUDR_R+MMUDR_W);
 		}
 		else
 #endif /* MCF547X */
@@ -556,6 +556,13 @@ void init_mmu(unsigned long base_pci_drivers, unsigned long size_pci_drivers)
 		" MOVEC.L D0,ACR0\n\t"              /* data */
 		" MOVE.L #0x0100E020,D0\n\t"
 		" MOVEC.L D0,ACR1" : : : "d0" );    /* data */
+#ifdef MCF547X /* FIREBEE */
+	asm volatile (
+		" MOVE.L #0x0201E000,D0\n\t"
+		" MOVEC.L D0,ACR2\n\t"              /* instruction */
+		" MOVE.L #0x0100E000,D0\n\t"
+		" MOVEC.L D0,ACR3" : : : "d0" );    /* instruction */
+#else /* MCF548X */
   /* SDRAM is cacheable */
 	{
 		unsigned long ACR_SDRAM = (SDRAM_BASE & 0xFF000000) + (((SDRAM_SIZE-1) >> 8) & 0xFF0000) + 0xE000;
@@ -566,6 +573,7 @@ void init_mmu(unsigned long base_pci_drivers, unsigned long size_pci_drivers)
 	asm volatile (
 		" MOVEQ #0,D0\n\t"
 		" MOVEC.L D0,ACR3" : : : "d0");     /* instruction */
+#endif /* MCF547X */
 #endif
 	asm volatile (" NOP");
 	MMUCR = MMUCR_EN;                     /* enable */

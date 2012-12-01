@@ -28,7 +28,7 @@
 #include "config.h"
 #include "usb.h"
 
-#undef USB_KBD_DEBUG
+#define USB_KBD_DEBUG
 
 #undef USE_COUNTRYCODE
 
@@ -641,9 +641,9 @@ static int usb_kbd_translate(unsigned char scancode, unsigned char modifier, int
 		else
 		{
 			unsigned char *unshift_table = NULL;
-			unsigned char *shift_table = NULL;
 			unsigned char *altgr_table = NULL;
 			unsigned char *modifier_table = NULL;
+			unsigned char *shift_table = NULL;
 			unsigned long lang = USA;
 			USB_COOKIE *p = usb_get_cookie('_AKP');
 			if(p != NULL)

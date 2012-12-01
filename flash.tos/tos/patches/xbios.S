@@ -397,6 +397,13 @@ begin32:
 	nop
 end32:
 
+	.align	2
+	.long	0x94F0
+	.long	end33-begin33
+begin33:	// Line A dispatcher
+	and.w	#0x1F,D2
+end33:
+
 #endif /* MCF547X */
 
 #endif /* COLDFIRE */

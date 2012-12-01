@@ -2024,6 +2024,10 @@ init_stram:
 	move.l D0,A4
 .started_from_flash:
 	move.l A4,D7             // end pseudo STRAM
+#ifdef MCF547X
+	lea 0x60000000,A5        // STRAM in the FPGA video RAM
+	add.l D7,A5
+#endif
 	sub.l #0x400,D7
 	moveq #0,D0
 	move.l D0,D1
@@ -2039,6 +2043,12 @@ init_stram:
 		movem.l D0-D3/A0-A3,(A4)
 		lea -32(A4),A4
 		movem.l D0-D3/A0-A3,(A4)
+#ifdef MCF547X
+		lea -32(A5),A5
+		movem.l D0-D3/A0-A3,(A5)
+		lea -32(A5),A5
+		movem.l D0-D3/A0-A3,(A5)
+#endif
 	subq.l #1,D7
 	bgt.s .loop_init_stram
 	lea FLASH_ADR,A0         // TOS404

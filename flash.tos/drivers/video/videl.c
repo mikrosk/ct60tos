@@ -37,6 +37,8 @@ extern void board_printf(const char *fmt, ...);
 
 #if defined(COLDFIRE) && defined(MCF547X)
 #define ACP_MODES_ONLY
+#define ACP_SCREEN_RAM (ACP_VIDEO_CFG + 0x01000000) /* the first 16 MB hold the ST-RAM */
+#define ACP_SCREEN_RAM_SIZE 0x07000000
 #endif
 
 #define MT_DFP 1
@@ -746,6 +748,20 @@ void *get_videl_palette(void)
 #endif
 }
 
+#if defined(COLDFIRE) && defined(MCF547X)
+
+long get_videl_ram_base(void)
+{
+	return(ACP_SCREEN_RAM);
+}
+
+long get_videl_ram_size(void)
+{
+	return(ACP_SCREEN_RAM_SIZE);
+}
+
+#endif /* defined(COLDFIRE) && defined(MCF547X) */
+
 void videl_blank(long blank)
 {
 #if defined(COLDFIRE) && defined(MCF547X)
@@ -835,11 +851,16 @@ long init_videl(long width, long height, long bpp, long refresh, long extended)
 	if(!width || !height || !bpp || !refresh)
 		return(0);		
 #if defined(COLDFIRE) && defined(MCF547X)
-	if(extended >= 0xD00000)
+	if((extended >= 0x100000) && (extended < 0xE00000))
 	{
 		addr = extended;
 		extended = 0;
-	}		
+	}
+	else if((extended >= ACP_SCREEN_RAM) && (extended < (ACP_SCREEN_RAM + ACP_SCREEN_RAM_SIZE)))
+	{
+		addr = extended;
+		extended = 1;
+	}
 //	init_videl_i2c();
 #else
 	if((width > 640) || (height > 480) || (bpp > 16))
@@ -1068,7 +1089,7 @@ long init_videl(long width, long height, long bpp, long refresh, long extended)
 	}
 	if(!addr && !acp_mode)
 	{
-#define MIN_VIDEO_RAM 0xD00000
+#define MIN_VIDEO_RAM 0x100000
 #define BLOCK_STEP_RAM 0x10000
 #define NUM_BLOCKS_RAM (MIN_VIDEO_RAM/BLOCK_STEP_RAM)
 		long *tab = (long *)Mxalloc(NUM_BLOCKS_RAM * sizeof(long), 2);
@@ -1109,8 +1130,8 @@ long init_videl(long width, long height, long bpp, long refresh, long extended)
 			return(0);
 	}
 #if defined(COLDFIRE) && defined(MCF547X)
-	else if(acp_mode)
-		addr = ACP_VIDEO_CFG; // ACP_VIDEO_RAM;
+	else if(!addr && acp_mode)
+		addr = ACP_SCREEN_RAM; // ACP_VIDEO_RAM;
 	else if(!acp_mode)
 	{
 		volatile unsigned long *p = (unsigned long *)ACP_ST_MODES;
@@ -1156,6 +1177,7 @@ long init_videl(long width, long height, long bpp, long refresh, long extended)
 #if defined(COLDFIRE) && defined(MCF547X)
 	if(!acp_mode)
 	{
+		SCREEN_POS_ACP = 0;
 #endif
 		OFF_NEXT_LINE = 0; // offset for next line (in words)
 		VIDEO_SYNC &= ~1; // internal clock
