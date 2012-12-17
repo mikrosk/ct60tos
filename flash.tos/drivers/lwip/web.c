@@ -89,7 +89,7 @@
 #define CODE_STOP         -3
 
 /* The port on which we listen. */
-#define webHTTP_PORT            80
+#define webHTTP_PORT            8080
 
 /* the http versions we support */
 enum http_version {VERSION_UNKNOWN, VERSION_10, VERSION_11};

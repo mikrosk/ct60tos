@@ -993,6 +993,7 @@ InquireSCSI:
 	move.l phystop,A1
 	tst.w 4+8(SP)            // what 
 	bne.s .is2               // cInqNext
+	clr.w InquireSCSICount(A1)
 	clr.l (A0)+              // Private.BusIds
 	clr.l (A0)+              // Private.resrvd
 	clr.l (A0)+
@@ -1025,8 +1026,10 @@ InquireSCSI:
 	bsr get_ide2_address
 	beq.s .is1               // not found, no 2nd IDE
 #endif
-	tst.w BusNumber(A1)
+	move.w InquireSCSICount(A1),D0
 	bne.s .is1
+	addq.l #1,D0
+	move.w D0,InquireSCSICount(A1)
 	clr.l (A0)+              // Private.BusIds
 	clr.l (A0)+              // Private.resrvd
 	clr.l (A0)+
@@ -1049,7 +1052,7 @@ InquireSCSI:
 	move.w #3,(A0)+          // BusNo, IDE not compatible
 	moveq #1,D0
 	move.w D0,BusNumber(A1)
-	move.w Features+2(A1),(A0)+
+	move.w Features+4(A1),(A0)+
 	bra.s .is3
 .is1:
 #endif /* SECOND_IDE_BUS */
@@ -1105,14 +1108,18 @@ InquireBus:
 	clr.l (A0)+
 	clr.l (A0)+
 	clr.l (A0)+              // SCSIId		
+	move.l phystop,A1
 	tst.w 4+4(SP)            // what 
 	bne.s .ib2               // cInqNext
+	clr.w InquireBusCount(A1)
 	clr.l (A0)+
 	bra.s .ib3
 .ib2:
-	tst.l (A0)
+	moveq #0,D0
+	move.w InquireBusCount(A1),D0
 	bne.s .ib1
-	moveq #1,D0
+	addq.l #1,D0
+	move.w D0,InquireBusCount(A1)
 	move.l D0,(A0)+
 .ib3:
 	moveq #0,D0

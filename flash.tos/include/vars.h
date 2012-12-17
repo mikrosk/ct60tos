@@ -136,6 +136,8 @@
 #define ETHERNAT            0x80000000
 #define SUPERVIDEL          0x40000000
 
+#define InquireSCSICount    (RESERVE_MEM_FONTS-138) // SCSIDRV
+#define InquireBusCount     (RESERVE_MEM_FONTS-136) // SCSIDRV
 #define ScsiDrvID           (RESERVE_MEM_FONTS-134) // SCSIDRV
 #define Buffer1024          (RESERVE_MEM_FONTS-130) // SCSIDRV
 #define ReqData             (RESERVE_MEM_FONTS-126) // SCSIDRV (18 bytes)

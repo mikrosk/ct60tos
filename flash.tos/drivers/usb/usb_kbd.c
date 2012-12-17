@@ -630,8 +630,8 @@ static int usb_kbd_translate(unsigned char scancode, unsigned char modifier, int
 #ifdef CONFIG_USB_INTERRUPT_POLLING
 	int level;
 #endif
-	unsigned char *unshift_table = NULL;
 	int type = USA;
+	unsigned char *unshift_table = NULL;
 	USB_KBD_PRINTF("USB KBD scancode: 0x%02x, modifier:0x%02x, pressed: %d\r\n", scancode, modifier, pressed);
 	flags.b.force_alt_shift = 0;
 	switch(scancode) /* modifiers keys */
@@ -804,7 +804,7 @@ static int usb_kbd_translate(unsigned char scancode, unsigned char modifier, int
 					atari_modifier = 0;
 				if(flags.b.altgr_usb_break)
 				{
-					if(altgr_table[scancode])
+					if((altgr_table != NULL) && altgr_table[scancode])
 					{
 						keycode = altgr_table[scancode];
 						if((atari_modifier & (1 << 6)) != 0)
@@ -815,7 +815,7 @@ static int usb_kbd_translate(unsigned char scancode, unsigned char modifier, int
 				}
 			  else if(flags.b.shift_usb_break)
 			  {
-					if(shift_table[scancode])
+					if((shift_table != NULL) && shift_table[scancode])
 					{
 						keycode = shift_table[scancode];
 						if((atari_modifier & (1 << 6)) != 0)
