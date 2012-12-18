@@ -358,7 +358,7 @@ programs (cf68klib.S):
   * fabs/fadd/fcmp/fdiv/fint/fintrz/fmove/fmul/fneg/fsqrt/fsub/ftst #.
   * cinva/cpushl/cpusha.
 
-2012-06-23 2.02
+2012 2.02
 ---------------
 - On M5484LITE/FIREBEE enabled XLB PCI interrupt (boot.S).
 - Inside the CF68KLIB, removed fix_predecrement/fix_postincrement when 
@@ -367,8 +367,12 @@ address error arrives with MOVE.B/W/L (An)+,<ea> and  MOVE.B/W/L
 - On the Firebee target (boot.S), added SCSI/IDE device unselection using 
 CT60_BOOT_ORDER parameter unused bits (B27-B24 for IDE and B23-B16 for 
 SCSI).
-- On the Firebee target added fix for Device Errata 26, now USB MASS 
+- On the Firebee target, added fix for Device Errata 26, now USB MASS 
 STORAGE works fine (PCI <=> Flexbus).
+- On the Firebee target, enabled XLB PCI interrupt, now abort create a 
+level 7 interrupt redirected on access fault. So now access on unused 
+spaces on PCI bus IO and MEM create an access fault, not on the 
+instruction who caused fault but just later because it's an interrupt.
 - Added bus support inside the PCI BIOS (pci_bios.S), limits now are:
  * 4 bus.
  * 32 devices by bus.
@@ -377,18 +381,23 @@ STORAGE works fine (PCI <=> Flexbus).
 (boot2.S) after SCSI drives detection (for example with ALT key I got 
 crash). This bug is very old, but since the CTPCI, the IDE routine is 
 ready for a 2nd port and this 2nd port is not implemented in the 
-current hardware so t's possible to get a crash (invalid access to a 
+current hardware so it's possible to get a crash (invalid access to a 
 2nd CTPCI IDE port).
 - On all targets, added ATAPI devices to SCSIDRV (ide_scsi.S). 
 FIREBEE and FALCON with CT60/CTPCI has IDE and IDE2 (IDE not 
-compatible). SCSI cookie added before hard disk driver boot.
+compatible). SCSI cookie added before hard disk driver boot sequence.
 - Added LZMA decoder for a better compression of PCI drivers 
 (LzmaDecode.c).
-- On CTPCI fixed PEND register bits test inverted, and finnally 
-revoved this test who can caused loop inside interrupt.
+- On CTPCI fixed PEND register bits test inverted, and finally 
+revoved this test who can caused loop inside a PCI interrupt.
 - Added boot order entry for CTPCI IDE (boot.S).
-- Try to fix CT60 flash boot problems by reading until 16 times the TOS in 
-flash if the CRC is bad before apply the patches in SDRAM (boot2.S).
+- Try to fix CT60 flash boot problems by reading until 16 times the TOS 
+in flash if the CRC is bad before apply the patches in SDRAM. Added a 
+blink code for try to help black screens (boot2.S), codes used:
+  * 1: SDRAM refresh error.
+  * 3: SDRAM read/write error.
+  * 7: Exception error.
+  * 9: Checksum error.
 - Changed boot order for 4 IDE devices with a CTPCI (boot2.S).
 - Rewrited conout routines in C for Videl or graphic card (planes or 
 without planes, with or without accel routines from drivers part. 
@@ -397,4 +406,8 @@ register as Line A pointer (bios.S, bios2.S, and conout.c). Not used
 on Coldfire targets, there are a crash when screen changed.
 - Added 5 retry loops to boot keyboard test, sometimes Eiffel 
 characters are lost on the FIREBEE (boot2.S).
-
+- Added IDE LBA 48 support (reduced to 32 bits for the XBIOS, file 
+ide_scsi.S).
+- On CT60/CTPCI target, added option for disable XHDI/SCSIDRV (ide_scsi.S).
+- On CT60 Fixed boot without SDRAM (pmmu2.c).
+- On Firebee target, STRAM above the first megabyte now use the FPGA video ram (pmmu2.c).

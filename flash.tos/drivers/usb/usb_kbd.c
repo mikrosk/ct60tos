@@ -28,7 +28,7 @@
 #include "config.h"
 #include "usb.h"
 
-#define USB_KBD_DEBUG
+#undef USB_KBD_DEBUG
 
 #define USE_COUNTRYCODE
 
@@ -631,7 +631,6 @@ static int usb_kbd_translate(unsigned char scancode, unsigned char modifier, int
 	int level;
 #endif
 	int type = USA;
-	unsigned char *unshift_table = NULL;
 	USB_KBD_PRINTF("USB KBD scancode: 0x%02x, modifier:0x%02x, pressed: %d\r\n", scancode, modifier, pressed);
 	flags.b.force_alt_shift = 0;
 	switch(scancode) /* modifiers keys */
@@ -702,6 +701,7 @@ static int usb_kbd_translate(unsigned char scancode, unsigned char modifier, int
 			keycode = 0x38; /* Alt Atari */
 		else
 		{
+			unsigned char *unshift_table = NULL;
 			unsigned char *shift_table = NULL;
 			unsigned char *altgr_table = NULL;
 			unsigned char *modifier_table = NULL;
