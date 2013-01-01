@@ -21,6 +21,7 @@
 #include "pcixbios.h"
 
 #ifdef COLDFIRE
+#include <mint/sysvars.h>
 #ifdef LWIP
 #include "../../include/ramcf68k.h"
 #undef Setexc
@@ -261,6 +262,8 @@ int dma_transfer(char *src, char *dest, int size, int width, int src_incr, int d
 #endif
 #endif /* CHAINED_DMA */
 #ifdef MCF547X
+	if(((unsigned long)src < *(unsigned long *)ramtop) && ((unsigned long)dest < *(unsigned long *)ramtop))
+		return(-1);
 	if(((unsigned long)src >= 0x40000000) && ((unsigned long)src < 0x80000000)) /* from FPGA Video RAM memory */
 		flexbus |= 1;
 	if(((unsigned long)dest >= 0x40000000) && ((unsigned long)dest < 0x80000000)) /* to FPGA Video RAM memory */

@@ -1771,6 +1771,7 @@ long vsetscreen(long logaddr, long physaddr, long rez, long modecode, long init_
      	if(addr)
      	{
 				*((char **)_v_bas_ad) = info->screen_base = (char *)addr;
+				log_addr = addr;
 				info->var.xres = info->var.xres_virtual = (int)resolution.width;
 				info->var.yres = info->var.yres_virtual = (int)resolution.height;
 				info->var.bits_per_pixel = (int)resolution.bpp;
@@ -1813,6 +1814,7 @@ long vsetscreen(long logaddr, long physaddr, long rez, long modecode, long init_
 	     	if(addr)
 	     	{
 					*((char **)_v_bas_ad) = info->screen_base = (char *)addr;
+					log_addr = addr;
 					info->var.xres = info->var.xres_virtual = (int)resolution.width;
 					info->var.yres = info->var.yres_virtual = (int)resolution.height;
 					info->var.bits_per_pixel = (int)resolution.bpp;
@@ -2020,7 +2022,7 @@ long vsetscreen(long logaddr, long physaddr, long rez, long modecode, long init_
 					return(Mode);
 				addr = init_videl((long)resolution.width, (long)resolution.height, (long)resolution.bpp, (long)resolution.freq, physaddr);
 				if(addr)
-					*((char **)_v_bas_ad) = info->screen_base = (char *)addr;
+					log_addr = (long)(*((char **)_v_bas_ad) = info->screen_base = (char *)addr);
 			}
 #endif
 			else if((info->screen_mono != NULL) && (physaddr < *phystop)) /* VBL mono emulation */

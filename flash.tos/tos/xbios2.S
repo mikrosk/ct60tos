@@ -358,16 +358,17 @@ replace_mfp:
 	lea int6_mfp(PC),A0
 	move.l A0,(64+6+OFFSET_INT_CF68KLIB)*4 // IRQ6 EPORT
 	clr.l ACP_INTERRUPT_CLEAR
-	move.l #ACP_INT_MFP_IRQ6 + ACP_INT_VSYNC_IRQ4 + ACP_INT_HSYNC_IRQ2,D0
+	move.l #ACP_INT_MFP_IRQ6 + ACP_INT_VSYNC_IRQ4 + ACP_INT_HSYNC_IRQ2 + ACP_INT_HSYNC + ACP_INT_VSYNC,D0
 	or.l D0,ACP_INTERRUPT_ENABLE     
 	move.b MCF_EPORT_EPIER,D0
-	or.l #MCF_EPORT_EPIER_EPIE6,D0
+	or.l #MCF_EPORT_EPIER_EPIE6 + MCF_EPORT_EPIER_EPIE4,D0
 	move.b D0,MCF_EPORT_EPIER
-	move.l #~(MCF_INTC_IMRL_INT_MASK6 + MCF_INTC_IMRL_MASKALL),D0
+	move.l #~(MCF_INTC_IMRL_INT_MASK6 + MCF_INTC_IMRL_INT_MASK4 + MCF_INTC_IMRL_MASKALL),D0
 	and.l D0,MCF_INTC_IMRL
 #endif /* MCF5474X */
 	lea new_vbl(PC),A0       // for rtos
 	move.l A0,(64+4+OFFSET_INT_CF68KLIB)*4
+#ifndef MCF547X /* FIREBEE VBL from FPGA (IRQ4 EPORT) */
 	tst.l tid_tos
 	bne.s .use_rtos_timer2
 	move.l #SYSTEM_CLOCK*1000,D0 // 1mS
@@ -379,6 +380,7 @@ replace_mfp:
 	move.b D0,MCF_INTC_ICR54
 	move.l #~MCF_INTC_IMRH_INT_MASK54,D0
 	and.l D0,MCF_INTC_IMRH
+#endif /* MCF547X */
 .use_rtos_timer2:
 	moveq #-1,D0
 	move.l D0,MCF_SLT_SLTCNT1
@@ -1047,16 +1049,50 @@ new_vbl:
 	addq.l #1,D0
 	move.b D0,0xFFFFFA23     // TCDR MFP emulation
 #endif /* !(defined(MCF547X) && defined(USE_MFP)) */
+#ifdef MCF547X /* FIREBEE */
+	tst.l tid_tos
+	beq .not_use_rtos_vbl
+	move.l MCF_INTC_INTFRCL,D0
+	and.l #MCF_INTC_INTFRCL_INTFRC4,D0
+	bne.s .forced_vbl
+	// true VBL
+	move.l _frclock,D0
+	addq.l #1,D0
+	move.l D0,_frclock
+	move.l #ACP_INT_VSYNC_IRQ4 + ACP_INT_VSYNC,D0
+	move.l D0,ACP_INTERRUPT_CLEAR
+	moveq #4,D0
+	bset.b D0,MCF_EPORT_EPFR // clear interrupt
+	bra.s .not_vbl_tos
+.forced_vbl:
+	move.l #ACP_INT_VSYNC_IRQ4 + ACP_INT_VSYNC,D0
+	and.l ACP_INTERRUPT_PENDING,D0
+	bne.s .vbl_pending
+	move.l _frclock,D0
+	subq.l #1,D0
+	move.l D0,_frclock
+	bra.s .use_rtos_vbl
+.vbl_pending:
+	move.l D0,ACP_INTERRUPT_CLEAR
+	bra.s .use_rtos_vbl
+.not_use_rtos_vbl:
+	moveq #4,D0
+	bset.b D0,MCF_EPORT_EPFR // clear interrupt
+	bra.s .vbl_ok
+#else /* MCF548X */
 	tst.l tid_tos
 	bne.s .use_rtos_vbl
 	move.l #MCF_SLT_SSR_ST,D0
 	or.l D0,MCF_SLT_SSR0     // clear interrupt
+#endif /* MCF547X */
 #endif /* MCF5445X */
+#ifndef MCF547X
 	move.l counter_1ms,D0
 	addq.l #1,D0
 	cmp.l #20,D0
 	bcc.s .vbl_ok
 	move.l D0,counter_1ms
+#endif
 .not_vbl_tos:
 	move.l (SP)+,D0
 	rte
@@ -1072,7 +1108,9 @@ new_vbl:
 	move.l current_tcb,D0
 	cmp.l tid_tos,D0
 	bne.s .not_vbl_tos
+#ifndef MCF547X
 	clr.l counter_1ms
+#endif
 	move.l _frclock,D0
 	lsr.l #2,D0
 	bsr led
