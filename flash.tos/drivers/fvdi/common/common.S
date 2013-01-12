@@ -60,8 +60,12 @@
 *-------*/
 _set_pixel:
 set_pixel:
-#ifndef COLDFIRE
+#ifdef COLDFIRE
+	lea		-60(a7),a7
+	movem.l		d0-d7/a0-a6,(a7)
+#else
 	movem.l		d0-d7/a0-a6,-(a7)	// Used to have -3/4/6 for normal/both/upto8
+#endif
 
 	move.l		a0,a1
 
@@ -96,11 +100,25 @@ set_pixel:
 #else
 	ijsr		_write_pixel_r
 #endif
+#ifdef COLDFIRE
+	move.w		(a7),d0
+	subq.l		#1,d0
+	move.w		d0,(a7)
+#else
 	subq.w		#1,(a7)
+#endif
 	bne		.write_loop
+#ifdef COLDFIRE
+	lea		10(a7),a7
+#else
 	add.w		#10,a7
+#endif
 .write_done:
 
+#ifdef COLDFIRE
+	movem.l		(a7),d0-d7/a0-a6
+	lea		60(a7),a7
+#else
 	movem.l		(a7)+,d0-d7/a0-a6
 #endif
 	rts
@@ -120,8 +138,12 @@ set_pixel:
 *-------*/
 _get_pixel:
 get_pixel:
-#ifndef COLDFIRE
+#ifdef COLDFIRE
+	lea		-60(a7),a7
+	movem.l		d0-d7/a0-a6,(a7)
+#else
 	movem.l		d1-d7/a0-a6,-(a7)	// Used to have -3/4/6 for normal/both/upto8
+#endif
 
 	move.l		a0,a1
 	
@@ -133,6 +155,10 @@ get_pixel:
 	ijsr		_read_pixel_r
 #endif
 
+#ifdef COLDFIRE
+	movem.l		(a7),d0-d7/a0-a6
+	lea		60(a7),a7
+#else
 	movem.l		(a7)+,d1-d7/a0-a6
 #endif
 	rts
@@ -161,11 +187,21 @@ get_pixel:
 *-------*/
 _line:
 line:
-#ifndef COLDFIRE
+#ifdef COLDFIRE
+	lea		-60(a7),a7
+	movem.l		d0-d7/a0-a6,(a7)
+#else
 	movem.l		d0-d7/a0-a6,-(a7)	// Used to have -3/4/6 for normal/both/upto8
+#endif
 
 	move.l		a0,a1
+#ifdef COLDFIRE
+	move.l		d0,-(a7)
+	move.l		d6,d0
+	move.l		(a7)+,d6
+#else
 	exg		d0,d6
+#endif
 
 #ifdef COLDFIRE
 	.chip		68060
@@ -182,13 +218,25 @@ line:
 
 .line1:
 	jsr		_update_mono
+#ifdef COLDFIRE
+	movem.l		(a7),d0-d7/a0-a6
+	lea		60(a7),a7
+#else
 	movem.l		(a7)+,d0-d7/a0-a6
+#endif
 	rts
 
 .line2:					// Transform multiline to single ones
+#ifdef COLDFIRE
+	move.w		d3,d7
+	moveq		#0,d0
+	move.w		8+2(a7),d0
+	cmp.l		#1,d0
+#else
 	move.w		8+2(a7),d0
 	move.w		d3,d7
 	cmp.w		#1,d0
+#endif
 	bhi		.line_done		// Only coordinate pairs and pairs+marks available so far
 	beq		.use_marks
 	moveq		#0,d7			// Move count
@@ -205,29 +253,76 @@ line:
 	move.l		d4,a6
 	tst.w		d7
 	beq		.no_start_move
+#ifdef COLDFIRE
+	move.w		d7,d0
+	ext.l		d0
+	add.l		d0,a6
+	add.l		d0,a6
+#else
 	add.w		d7,a6
 	add.w		d7,a6
+#endif
 	subq.l		#2,a6
+#ifdef COLDFIRE
+	move.w		(a6),d0
+	ext.l		d0
+	cmp.l		#-4,d0
+#else
 	cmp.w		#-4,(a6)
+#endif
 	bne		.no_start_movex
 	subq.l		#2,a6
+#ifdef COLDFIRE
+	move.w		d7,d0
+	subq.l		#1,d0
+	move.w		d0,d7
+#else
 	subq.w		#1,d7
+#endif
 .no_start_movex:
+#ifdef COLDFIRE
+	move.w		(a6),d0
+	ext.l		d0
+	cmp.l		#-2,d0
+#else
 	cmp.w		#-2,(a6)
+#endif
 	bne		.no_start_move
 	subq.l		#2,a6
+#ifdef COLDFIRE
+	move.w		d7,d0
+	subq.l		#1,d0
+	move.w		d0,d7
+#else
 	subq.w		#1,d7
+#endif
 .no_start_move:
 	bra		.loop_end
 .line_loop:
+#ifdef COLDFIRE
+	move.w		(a2),d1
+	move.w		2(a2),d2
+	move.w		4(a2),d3
+	move.w		6(a2),d4
+	ext.l		d1
+	ext.l		d2
+	ext.l		d3
+	ext.l		d4
+#else
 	movem.w		(a2),d1-d4
+#endif
 	move.l		a1,a0
 	bsr		clip_line
 	bvs		.no_draw
 	move.l		0(a7),d6		// Colour
 	move.l		5*4(a7),d5		// Pattern
 	move.l		6*4(a7),d0		// Mode
+#ifdef COLDFIRE
+	lea		-16(a7),a7
+	movem.l		d7/a1-a2/a6,(a7)
+#else
 	movem.l		d7/a1-a2/a6,-(a7)
+#endif
 #ifdef COLDFIRE
 	.chip		68060
 	jsr		([_line_draw_r])
@@ -235,33 +330,78 @@ line:
 #else
 	ijsr		_line_draw_r
 #endif
+#ifdef COLDFIRE
+	movem.l		(a7),d7/a1-a2/a6
+	lea		16(a7),a7
+#else
 	movem.l		(a7)+,d7/a1-a2/a6
+#endif
 .no_draw:
 	tst.w		d7
 	beq		.no_marks
 	swap		d7
+#ifdef COLDFIRE
+	move.w		d7,d0
+	addq.l		#1,d0
+	move.w		d0,d7
+	move.w		d7,d4
+	ext.l		d4
+	add.l		d4,d4
+	subq.l		#4,d4
+	move.w		(a6),d0
+	ext.l		d0
+	cmp.l		d0,d4
+#else
 	addq.w		#1,d7
 	move.w		d7,d4
 	add.w		d4,d4
 	subq.w		#4,d4
 	cmp.w		(a6),d4
+#endif
 	bne		.no_move
 	subq.l		#2,a6
+#ifdef COLDFIRE
+	move.w		d7,d0
+	addq.l		#1,d0
+	move.w		d0,d7
+	swap		d7
+	move.w		d7,d0
+	subq.l		#1,d0
+	move.w		d0,d7
+	swap		d7
+#else
 	addq.w		#1,d7
 	swap		d7
 	subq.w		#1,d7
 	swap		d7
+#endif
 	addq.l		#4,a2
+#ifdef COLDFIRE
+	move.w		2*4(a7),d0
+	subq.l		#1,d0
+	move.w		d0,2*4(a7)
+#else
 	subq.w		#1,2*4(a7)
+#endif
 .no_move:
 	swap		d7
 .no_marks:
 	addq.l		#4,a2
 .loop_end:
+#ifdef COLDFIRE
+	move.w		2*4(a7),d0
+	subq.l		#1,d0
+	move.w		d0,2*4(a7)
+#else
 	subq.w		#1,2*4(a7)
+#endif
 	bgt		.line_loop
 .line_done:
 	jsr		_update_mono
+#ifdef COLDFIRE
+	movem.l		(a7),d0-d7/a0-a6
+	lea		60(a7),a7
+#else
 	movem.l		(a7)+,d0-d7/a0-a6
 #endif
 	rts
@@ -284,11 +424,32 @@ line:
 *-------*/
 _expand:
 expand:
-#ifndef COLDFIRE
+#ifdef COLDFIRE
+	lea		-60(a7),a7
+	movem.l		d0-d7/a0-a6,(a7)
+#else
 	movem.l		d0-d7/a0-a6,-(a7)	// Used to have -3(/6)/4(/6)/6 for normal/both/upto8
+#endif
 
 	move.l		a0,a1
 
+#ifdef COLDFIRE
+	move.l		d0,-(a7)
+	move.w		d5,d0
+	ext.l		d0
+	ext.l		d3
+	sub.l		d3,d0
+	addq.l		#1,d0
+	move.w		d0,-(a7)
+	move.w		d6,d0
+	ext.l		d0
+	ext.l		d4
+	sub.l		d4,d0
+	addq.l		#1,d0
+	swap		d0
+	move.w		(a7)+,d0
+	move.l		(a7)+,d6
+#else
 	exg		d0,d6
 	sub.w		d4,d0
 	addq.w		#1,d0
@@ -296,6 +457,7 @@ expand:
 	move.w		d5,d0
 	sub.w		d3,d0
 	addq.w		#1,d0
+#endif
 
 #ifdef COLDFIRE
 	.chip		68060
@@ -310,6 +472,10 @@ expand:
 	bra		give_up
 
 .expand1:
+#ifdef COLDFIRE
+	movem.l		(a7),d0-d7/a0-a6
+	lea		60(a7),a7
+#else
 	movem.l		(a7)+,d0-d7/a0-a6
 #endif
 	rts
@@ -339,8 +505,12 @@ expand:
 *-------*/
 _fill:
 fill:
-#ifndef COLDFIRE
+#ifdef COLDFIRE
+	lea		-60(a7),a7
+	movem.l		d0-d7/a0-a6,(a7)
+#else
 	movem.l		d0-d7/a0-a6,-(a7)	// Used to have -3/4/6 for normal/both/upto8
+#endif
 
 	move.l		a0,a1
 
@@ -380,6 +550,23 @@ fill:
 	move.l		4(a3,d0.w),a3
   .endc
 
+#ifdef COLDFIRE
+	move.l		d0,-(a7)
+	move.w		d3,d0
+	ext.l		d0
+	ext.l		d1
+	sub.l		d1,d0
+	addq.l		#1,d0
+	move.w		d0,-(a7)
+	move.w		d4,d0
+	ext.l		d0
+	ext.l		d2
+	sub.l		d2,d0
+	addq.l		#1,d0
+	swap		d0
+	move.w		(a7)+,d0
+	move.l		(a7)+,d4
+#else
 	exg		d4,d0
 //	move.w		d4,d0
 	sub.w		d2,d0
@@ -388,6 +575,7 @@ fill:
 	move.w		d3,d0
 	sub.w		d1,d0
 	addq.w		#1,d0
+#endif
 
 	move.l		d5,d3
 
@@ -422,7 +610,12 @@ fill:
     .endc
   .endc
 	jsr		_update_mono
+#ifdef COLDFIRE
+	movem.l		(a7),d0-d7/a0-a6
+	lea		60(a7),a7
+#else
 	movem.l		(a7)+,d0-d7/a0-a6
+#endif
 	rts
 
 .fill2:
@@ -438,14 +631,29 @@ fill:
 	move.w		(a2)+,d2
 	moveq		#0,d1
 	move.w		(a2)+,d1
+#ifdef COLDFIRE
+	moveq		#0,d0
+	move.w		(a2)+,d0
+	sub.l		d1,d0
+	addq.l		#1,d0
+	swap		d0
+	move.w		#1,d0
+	swap		d0
+#else
 	moveq		#1,d0
 	swap		d0
 	move.w		(a2)+,d0
 	sub.w		d1,d0
 	addq.w		#1,d0
+#endif
 	move.l		5*4(a7),d3
 	move.l		0(a7),d4
+#ifdef COLDFIRE
+	subq.l		#8,a7
+	movem.l		a1-a2,(a7)
+#else
 	movem.l		a1-a2,-(a7)
+#endif
 #ifdef COLDFIRE
 	.chip		68060
 	jsr		([_fill_area_r])
@@ -453,11 +661,26 @@ fill:
 #else
 	ijsr		_fill_area_r
 #endif
+#ifdef COLDFIRE
+	movem.l		(a7),a1-a2
+	addq.l		#8,a7
+#else
 	movem.l		(a7)+,a1-a2
+#endif
+#ifdef COLDFIRE
+	move.w		2*4(a7),d0
+	subq.l		#1,d0
+	move.w		d0,2*4(a7)
+#else
 	subq.w		#1,2*4(a7)
+#endif
 	bne		.fill_loop
 .fill_done:
 	jsr		_update_mono
+#ifdef COLDFIRE
+	movem.l		(a7),d0-d7/a0-a6
+	lea		60(a7),a7
+#else
 	movem.l		(a7)+,d0-d7/a0-a6
 #endif
 	rts
@@ -488,8 +711,12 @@ fill:
 *-------*/
 _fillpoly:
 fillpoly:
-#ifndef COLDFIRE
+#ifdef COLDFIRE
+	lea		-60(a7),a7
+	movem.l		d0-d7/a0-a6,(a7)
+#else
 	movem.l		d0-d7/a0-a6,-(a7)	// Used to have -3/4/6 for normal/both/upto8
+#endif
 
 	move.l		a0,a1
 
@@ -566,6 +793,10 @@ fillpoly:
 	addq.l		#8,a7
     .endc
   .endc
+#ifdef COLDFIRE
+	movem.l		(a7),d0-d7/a0-a6
+	lea		60(a7),a7
+#else
 	movem.l		(a7)+,d0-d7/a0-a6
 #endif
 	rts
@@ -587,13 +818,32 @@ fillpoly:
 *-------*/
 _blit:
 blit:
-#ifndef COLDFIRE
+#ifdef COLDFIRE
+	lea		-60(a7),a7
+	movem.l		d0-d7/a0-a6,(a7)
+#else
 	movem.l		d0-d7/a0-a6,-(a7)	// Used to have -3/4/6 for normal/both/upto8
+#endif
 
 	move.l		a0,a1
 
 	move.l		d0,d7
 
+#ifdef COLDFIRE
+	move.l		d5,d0
+	ext.l		d0
+	ext.l		d3
+	sub.l		d3,d0
+	addq.l		#1,d0
+	move.w		d0,-(a7)
+	move.w		d6,d0
+	ext.l		d0
+	ext.l		d4
+	sub.l		d4,d0
+	addq.l		#1,d0
+	swap		d0
+	move.w		(a7)+,d0
+#else
 	move.w		d6,d0
 	sub.w		d4,d0
 	addq.w		#1,d0
@@ -601,6 +851,7 @@ blit:
 	move.w		d5,d0
 	sub.w		d3,d0
 	addq.w		#1,d0
+#endif
 
 #ifdef COLDFIRE
 	.chip		68060
@@ -615,6 +866,10 @@ blit:
 	bra		give_up
 
 .blit1:
+#ifdef COLDFIRE
+	movem.l		(a7),d0-d7/a0-a6
+	lea		60(a7),a7
+#else
 	movem.l		(a7)+,d0-d7/a0-a6
 #endif
 	rts
@@ -637,8 +892,12 @@ blit:
 *-------*/
 _text:
 text:
-#ifndef COLDFIRE
+#ifdef COLDFIRE
+	lea		-60(a7),a7
+	movem.l		d0-d7/a0-a6,(a7)
+#else
 	movem.l		d0-d7/a0-a6,-(a7)	// Was d2-d7/a3-a6
+#endif
 
 	move.l		a1,a4
 	move.l		a0,a1
@@ -660,6 +919,10 @@ text:
 	bra		give_up
 
 .text1:
+#ifdef COLDFIRE
+	movem.l		(a7),d0-d7/a0-a6
+	lea		60(a7),a7
+#else
 	movem.l		(a7)+,d0-d7/a0-a6
 #endif
 	rts
@@ -702,8 +965,12 @@ mouse:
 *-------*/
 _set_palette:
 set_palette:
-#ifndef COLDFIRE
+#ifdef COLDFIRE
+	lea		-60(a7),a7
+	movem.l		d0-d7/a0-a6,(a7)
+#else
 	movem.l		d0-d7/a0-a6,-(a7)	// Overkill
+#endif
 
 #ifdef COLDFIRE
 	.chip		68060
@@ -713,6 +980,10 @@ set_palette:
 	ijsr		_set_colours_r
 #endif
 
+#ifdef COLDFIRE
+	movem.l		(a7),d0-d7/a0-a6
+	lea		60(a7),a7
+#else
 	movem.l		(a7)+,d0-d7/a0-a6
 #endif
 	rts
@@ -728,8 +999,12 @@ set_palette:
 *-------*/
 _colour:
 colour:
-#ifndef COLDFIRE
+#ifdef COLDFIRE
+	lea		-56(a7),a7
+	movem.l		d1-d7/a0-a6,(a7)
+#else
 	movem.l		d1-d7/a0-a6,-(a7)
+#endif
 
 #ifdef COLDFIRE
 	.chip		68060
@@ -739,6 +1014,10 @@ colour:
 	ijsr		_get_colour_r
 #endif
 
+#ifdef COLDFIRE
+	movem.l		(a7),d1-d7/a0-a6
+	lea		56(a7),a7
+#else
 	movem.l		(a7)+,d1-d7/a0-a6
 #endif
 	rts
@@ -752,8 +1031,12 @@ colour:
 * To be called from C
 *-------*/
 _initialize_palette:
-#ifndef COLDFIRE
+#ifdef COLDFIRE
+	lea		-60(a7),a7
+	movem.l		d0-d7/a0-a6,(a7)
+#else
 	movem.l		d0-d7/a0-a6,-(a7)	// Overkill
+#endif
 
 	move.l		15*4+4(a7),a0
 	move.l		15*4+8(a7),d1
@@ -771,6 +1054,10 @@ _initialize_palette:
 	ijsr		_set_colours_r
 #endif
 
+#ifdef COLDFIRE
+	movem.l		(a7),d0-d7/a0-a6
+	lea		60(a7),a7
+#else
 	movem.l		(a7)+,d0-d7/a0-a6
 #endif
 	rts
@@ -787,7 +1074,21 @@ _initialize_palette:
 * XXX:	d0
 *-------*/
 get_colour_masks:
-#ifndef COLDFIRE
+#ifdef COLDFIRE
+	move.l		d1,-(a7)
+	lea		_mask,a3
+	and.l		#0x000f000f,d0
+	lsl.l		#3,d0
+	moveq		#0,d1
+	move.w		d0,d1
+	clr.w		d0
+	swap		d0
+	pea		0(a3,d0.l)
+	move.l		0(a3,d1.l),a2
+	move.l		4(a3,d1.l),a3
+	move.l		(a7)+,d0
+	move.l		(a7)+,d1
+#else
 	lea		_mask,a3
   .ifne	upto8
 	move.w		d0,a2
@@ -808,7 +1109,6 @@ get_colour_masks:
 #endif
 	rts
 
-#ifndef COLDFIRE
 /*---------
 * Give up and try other function
 * This routine should only be branched to, it's not a subroutine!
@@ -821,6 +1121,10 @@ give_up:
 	movem.l	8(a7),d0-d7/a0-a6
 	rts
 .return:
+#ifdef COLDFIRE
+	movem.l	(a7),d0-d7/a0-a6
+	lea	60(a7),a7
+#else
 	movem.l	(a7)+,d0-d7/a0-a6
-	rts
 #endif
+	rts

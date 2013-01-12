@@ -205,6 +205,7 @@ OBJSDRIVERFVDICF3=	\
 		$(OBJDIRCF)/video/fbmem.o \
 		$(OBJDIRCF)/video/fbmon.o \
 		$(OBJDIRCF)/video/offscreen.o \
+		$(OBJDIRCF)/video/1b_pal.o \
 		$(OBJDIRCF)/video/8b_pal.o \
 		$(OBJDIRCF)/video/16b_pal.o \
 		$(OBJDIRCF)/video/32b_pal.o \
@@ -217,6 +218,8 @@ OBJSDRIVERFVDICF3=	\
 		$(OBJDIRCF)/fvdi/common/lineachk.o \
 		$(OBJDIRCF)/fvdi/common/colours.o \
 		$(OBJDIRCF)/fvdi/common/falc_pal.o \
+		$(OBJDIR)/fvdi/1_plane/1_line.o \
+		$(OBJDIR)/fvdi/1_plane/1_fill.o \
 		$(OBJDIRCF)/gcc.o
 
 OBJSLWIP=	\

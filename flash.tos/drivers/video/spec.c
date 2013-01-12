@@ -147,6 +147,8 @@ extern void *c_fill_polygon;
 extern void *c_text_area;
 extern void *mouse_draw, *c_mouse_draw;
 extern void *c_set_colours_8, *c_set_colours_16, *c_set_colours_32;
+extern void *line, *c_line, *fill, *c_fill, *c_fillpoly, *c_text;
+extern void *default_line, *default_fill, *default_text;
 extern void *c_get_colours_1, *c_get_colours_8, *c_get_colours_16, *c_get_colours_32;
 extern void *c_get_colour_1, *c_get_colour_8, *c_get_colour_16, *c_get_colour_32;
 
@@ -251,7 +253,6 @@ int set_bpp(int bpp)
 	{
 		/* indexed color modes */
 #ifdef DRIVER_IN_ROM
-#ifndef COLDFIRE
 		case 1:
 			graphics_mode = &mode[0];
 			read_pixel_r  = &c_read_pixel_1;
@@ -263,7 +264,6 @@ int set_bpp(int bpp)
 			fill_area_r   = &fill_area_1;
 			Funcs_cat("(mono)",driver_name);
 			break;
-#endif
 #endif /* DRIVER_IN_ROM */
 		case 8:
 			graphics_mode = &mode[1];
@@ -403,6 +403,44 @@ long check_token(char *token, const char **ptr)
 static void setup_wk(Virtual *vwk)
 {
 	Workstation *wk = vwk->real_address;
+#ifdef DRIVER_IN_ROM
+	extern short video_found;
+#ifdef COLDFIRE
+	if(!video_found) /* Videl driver */
+	{
+		if(resolution.bpp == 1)
+		{
+			wk->r.line = &line;
+			wk->r.fill = &fill;
+			wk->r.text = &default_text;
+		}
+		else
+		{
+			wk->r.line = &default_line;
+			wk->r.fill = &default_fill;
+			wk->r.text = &c_text;
+		}
+	}
+#endif
+	if(video_found)
+	{
+		Workstation *wk = vwk->real_address;
+		if(resolution.flags & MODE_EMUL_MONO_FLAG)
+		{
+			wk->r.line = &line;
+			wk->r.fill = &fill;
+			wk->r.fillpoly = NULL;
+			wk->r.text = &default_text;
+		}
+		else
+		{
+			wk->r.line = &c_line;
+			wk->r.fill = &c_fill;
+			wk->r.fillpoly = &c_fillpoly;
+			wk->r.text = &c_text;
+		}
+	}
+#endif /* DRIVER_IN_ROM */
 	/* update the settings */
 	wk->screen.mfdb.width = resolution.width;
 	wk->screen.mfdb.height = resolution.height;

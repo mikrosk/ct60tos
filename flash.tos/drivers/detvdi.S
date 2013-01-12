@@ -2166,6 +2166,10 @@ y_clipped:
 	mulu V_CEL_HT(A0),D2
 	mulu V_LIN_WR(A0),D2     // offset to row Y	
 	add.l D2,A1
+	moveq #0,D2
+	move.w V_PLANES(A0),D2
+	cmp.l #1,D2              // monochrome
+	beq.s mono_x_offset
 	move.w D0,D2             // clipped X
 	cmp.l #0x01000000,A1
 	bcc.s graphic_card_x_offset
@@ -2176,6 +2180,8 @@ graphic_card_x_offset:
 	mulu 2(A2),D2            // # of pixels into line
 	mulu BYT_PER_PIX(A0),D2  // # of bytes into line
 	bra.s end_cell_addr	
+mono_x_offset:
+	move.w D0,D2             // clipped X
 videl_x_offset:
 	bclr #0,D2               // even(X)
 	mulu V_PLANES(A0),D2     // planes * even(X)
@@ -2323,6 +2329,10 @@ no_scroll:
 	bra.s disp_cur
 next_cell:                            // increment cell ptr
 	addq.l #1,D0             // X cell of next cell to right
+	moveq #0,D2
+	move.w V_PLANES(A0),D2
+	cmp.l #1,D2              // monochrome
+	beq.s videl_next_cell
 	cmp.l #0x01000000,A1
 	bcc.s graphic_card_next_cell
 	tst.b use_videl
@@ -2403,6 +2413,8 @@ cell_xfer:
 	move.w V_PLANES(A0),D6
 	move.w V_LIN_WR(A0),A3   // number of bytes/video line
 	move.l _v_bas_ad,D5
+	cmp.l #1,D6              // monochrome
+	beq.s p_lp0
 	cmp.l #0x01000000,D5
 	bcc cell_xfer_no_planes
 	cmp.l #8,D6              // # of planes  
@@ -2604,10 +2616,13 @@ videl_blnk_blt:
 	add.l D3,A1
 	moveq #0,D3
 	move.w V_PLANES(A0),D3   // # of planes
+	cmp.l #1,D3              // monochrome
+	beq.s blnk_blt_planes
 	cmp.l #0x01000000,A1
 	bcc blnk_blt_no_planes
 	cmp.l #8,D3              // # of planes  
 	bhi blnk_blt_no_planes   // 65K colors
+blnk_blt_planes:
 	move.w D0,D3             // cell x
 	bclr #0,D3               // even(X)
 	mulu V_PLANES(A0),D3     // planes * even(X)
@@ -2858,6 +2873,8 @@ int_neg_cell:
 	lsr.l #3,D2
 	move.w V_CEL_HT(A0),D1
 	move.w V_PLANES(A0),D0
+	cmp.l #1,D0              // monochrome
+	beq.s videl_neg_cell
 	cmp.l #16,D0
 	bhi.s loop_line_32
 	beq.s loop_line_16

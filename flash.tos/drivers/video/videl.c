@@ -127,8 +127,10 @@ static struct videl_table table_rez[] = {
 	{ 640, 240, 60, 25,  4, 0, 0x0C6, 0x08D, 0x015, 0x2A3, 0x07C, 0x096, 0x419, 0x3FF, 0x03F, 0x03F, 0x3FF, 0x415, 9, 0x186 }, // 25 MHz
 	{ 640, 240, 60, 25,  8, 0, 0x0C6, 0x08D, 0x015, 0x2AB, 0x084, 0x096, 0x419, 0x3FF, 0x03F, 0x03F, 0x3FF, 0x415, 9, 0x186 }, // 25 MHz
 	{ 640, 240, 60, 25, 16, 0, 0x0C6, 0x08D, 0x015, 0x2AC, 0x091, 0x096, 0x419, 0x3FF, 0x03F, 0x03F, 0x3FF, 0x415, 9, 0x186 }, // 25 MHz
-	{ 640, 480, 60, 25,  1, 0, 0x0C6, 0x08D, 0x015, 0x273, 0x050, 0x096, 0x419, 0x3FF, 0x03F, 0x03F, 0x3FF, 0x415, 8, 0x186 }, // 25 MHz
 	{ 640, 480, 60, 25,  2, 0, 0x017, 0x012, 0x001, 0x20E, 0x00D, 0x011, 0x419, 0x3FF, 0x03F, 0x03F, 0x3FF, 0x415, 8, 0x186 }, // 25 MHz
+#endif
+#if defined(COLDFIRE) && defined(MCF547X)
+	{ 640, 480, 60, 25,  1, 0, 0x0C6, 0x08D, 0x015, 0x273, 0x050, 0x096, 0x419, 0x3FF, 0x03F, 0x03F, 0x3FF, 0x415, 8, 0x186 }, // 25 MHz
 #endif
 	{ 640, 480, 60, 25,  4, 0, 0x0C6, 0x08D, 0x015, 0x2A3, 0x07C, 0x096, 0x419, 0x3FF, 0x03F, 0x03F, 0x3FF, 0x415, 8, 0x186 }, // 25 MHz
 	{ 640, 480, 60, 25,  8, 0, 0x0C6, 0x08D, 0x015, 0x2AB, 0x084, 0x096, 0x419, 0x3FF, 0x03F, 0x03F, 0x3FF, 0x415, 8, 0x186 }, // 25 MHz
@@ -669,7 +671,7 @@ long get_videl_base(void) /* return 0 for an ACP mode */
 	ret <<= 8;
 	ret |= (unsigned long)SCREEN_POS_LOW;
 #if defined(COLDFIRE) && defined(MCF547X)
-	if(*(volatile unsigned long *)ACP_VIDEO_CONTROL & (ACP_COLOR_8 | ACP_COLOR_16 | ACP_COLOR_24 | ACP_VIDEO_ON))
+	if(*(volatile unsigned long *)ACP_VIDEO_CONTROL & (ACP_COLOR_1 | ACP_COLOR_8 | ACP_COLOR_16 | ACP_COLOR_24 | ACP_VIDEO_ON))
 		ret = 0;
   if(!(*(volatile unsigned long *)ACP_VIDEO_CONTROL & (ACP_ST_SHIFT_MODE | ACP_FALCON_SHIFT)))
 		ret = 0;
@@ -737,9 +739,14 @@ void *get_videl_palette(void)
 	long bpp = get_videl_bpp();
 	switch(bpp)
 	{
+#if !(defined(COLDFIRE) && defined(MCF547X))
 		case 1:
+#endif
 		case 2:
 		case 4: return((void *)CLUT);
+#if defined(COLDFIRE) && defined(MCF547X)
+		case 1:
+#endif
 		case 8: return((void *)VCLUT); /* to fix acp palette */
 		default: return(NULL);
 	}
@@ -1197,8 +1204,11 @@ long init_videl(long width, long height, long bpp, long refresh, long extended)
 	switch(bpp)
 	{
 		case 1: /* 2 colors => FALCON palette */
-			if(!acp_mode)
-				SPSHIFT = 0x400;
+			SPSHIFT = 0x400;
+#if defined(COLDFIRE) && defined(MCF547X)
+			if(acp_mode)
+				*(volatile unsigned long *)ACP_VIDEO_CONTROL = (acp_video_control |= ACP_COLOR_1);
+#endif
 			break;	
 		case 2: /* 4 colors => ST palette */
 			if(!acp_mode)

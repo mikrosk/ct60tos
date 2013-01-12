@@ -435,7 +435,7 @@ void display_atari_logo(void)
 	unsigned long color2 = 0, r, g, b;
 	unsigned long incr = mul32(info->var.xres_virtual, bpp >> 3); // line above not works on CF ?!?!
 //	unsigned long incr = (unsigned long)(info->var.xres_virtual * (bpp >> 3));
-	if(info->screen_mono != NULL) /* VBL monochrome emulation */
+	if((info->screen_mono != NULL) || (bpp == 1)) /* VBL monochrome emulation */
 	{
 		bpp = 1;
 		incr = (unsigned long)(info->var.xres_virtual >> 3);
@@ -715,14 +715,13 @@ long get_modecode_from_screeninfo(struct fb_var_screeninfo *var)
 {
 	const struct fb_videomode *db = NULL;
 	long modecode, i, nb = 0;
-#ifndef COLDFIRE
 	if(info_fvdi->screen_mono)
 		modecode = BPS1; /* VBL mono emulation */
 	else
-#endif
 	{
 		switch(var->bits_per_pixel)
 		{
+			case 1: modecode = BPS1; break;
 			case 16: modecode = BPS16; break;
 			case 32: modecode = BPS32; break;
 			default: modecode = BPS8; break;
@@ -785,14 +784,12 @@ void init_screen_info(SCREENINFO *si, long modecode)
 		return;
 	switch(modecode & NUMCOLS)
 	{
-#ifndef COLDFIRE
 		case BPS1: /* VBL mono emulation */
 			si->scrPlanes = 1;
 			si->scrColors = 2;
 			si->redBits = si->greenBits = si->blueBits = 255;
 			si->unusedBits = 0;
 			break;
-#endif
 		case BPS8:
 			si->scrPlanes = 8;
 			si->scrColors = 256;
@@ -896,7 +893,7 @@ void init_screen_info(SCREENINFO *si, long modecode)
 		flags = (long)db->flag;
 	}
 	if((si->scrPlanes == 1)
-	 && ((os_magic == 1) || (si->scrWidth > MAX_WIDTH_EMU_MONO) || (si->scrHeight > MAX_HEIGHT_EMU_MONO)
+	 && ((os_magic == 1) || (video_found && ((si->scrWidth > MAX_WIDTH_EMU_MONO) || (si->scrHeight > MAX_HEIGHT_EMU_MONO)))
 	  || (modecode & VIRTUAL_SCREEN))) /* limit size for the VBL mono emulation */
 	{
 		si->scrFlags = 0;
@@ -1004,9 +1001,11 @@ void init_resolution(long modecode)
 	switch(modecode & NUMCOLS)
 	{
 		case BPS1: 
-			if(os_magic == 1)
-				break;
-			resolution.flags = MODE_EMUL_MONO_FLAG; resolution.bpp = 1; break;
+			if(video_found && (os_magic != 1))
+				resolution.flags = MODE_EMUL_MONO_FLAG;
+			else
+				resolution.flags = 0;
+			resolution.bpp = 1; break;
 		case BPS16: resolution.flags = 0; resolution.bpp = 16; break;
 		case BPS32: resolution.flags = 0; resolution.bpp = 32; break;
 		default: resolution.flags = 0; resolution.bpp = 8; break;
@@ -1262,7 +1261,7 @@ long vsetscreen(long logaddr, long physaddr, long rez, long modecode, long init_
 	struct fb_info *info = info_fvdi;
 	struct fb_var_screeninfo var;
 	int milan_mode = 0;
-	short dup_handle = -1, log_handle = -1, save_debug = debug;
+	short log_handle = -1, dup_handle = -1, save_debug = debug;
 	long Mode;
 	if(os_magic == 1)
 		Mode = (long)modecode_magic & 0xFFFF;
@@ -1289,15 +1288,13 @@ long vsetscreen(long logaddr, long physaddr, long rez, long modecode, long init_
 #endif
 					switch(modecode & NUMCOLS)
 					{
-#ifndef COLDFIRE
 						case BPS1:
 							if(os_magic == 1)
 								return(0);
 							init_resolution(modecode);
-							if((resolution.width > MAX_WIDTH_EMU_MONO) || (resolution.height > MAX_HEIGHT_EMU_MONO))
+							if(video_found && ((resolution.width > MAX_WIDTH_EMU_MONO) || (resolution.height > MAX_HEIGHT_EMU_MONO)))
 								return(0);
 							break;
-#endif
 						case BPS8:
 						case BPS16:
 						case BPS32:
@@ -1440,15 +1437,20 @@ long vsetscreen(long logaddr, long physaddr, long rez, long modecode, long init_
 					{
 						if(video_found)
 						{
-							if((logaddr < (long)info->screen_base)
-							 || ((logaddr - (long)info->screen_base) >= (info->var.xres_virtual * 8192 * (info->var.bits_per_pixel >> 3))))
-								return(0);
+							if((logaddr >= (long)info->screen_base)
+							 && ((logaddr - (long)info->screen_base) < (info->var.xres_virtual * 8192 * (info->var.bits_per_pixel >> 3))))
+							{
+								physaddr = logaddr;
+								rez = -1;
+								break;
+							}
 						}
-						else if((logaddr < (long)info->ram_base) || (logaddr >= (long)info->ram_base + info->ram_size))
-							return(0);
-						physaddr = logaddr;
-						rez = -1;
-						break;
+						else if((logaddr >= (long)info->ram_base) && (logaddr < (long)info->ram_base + info->ram_size))
+						{
+							physaddr = logaddr;
+							rez = -1;
+							break;
+						}
 					}
 					return(0);
 				case CMD_ENUMMODES:
@@ -1507,15 +1509,13 @@ long vsetscreen(long logaddr, long physaddr, long rez, long modecode, long init_
 					test = 1;
 					switch(modecode & NUMCOLS)
 					{
-#ifndef COLDFIRE
 						case BPS1:
 							if(os_magic == 1)
 								return(0);
 							init_resolution(modecode);
-							if((resolution.width > MAX_WIDTH_EMU_MONO) || (resolution.height > MAX_HEIGHT_EMU_MONO))
+							if(video_found && ((resolution.width > MAX_WIDTH_EMU_MONO) || (resolution.height > MAX_HEIGHT_EMU_MONO)))
 								return(0);
 							break;
-#endif
 						case BPS8:
 						case BPS16:
 						case BPS32:
@@ -1690,7 +1690,6 @@ long vsetscreen(long logaddr, long physaddr, long rez, long modecode, long init_
 			}
 			return(Mode);
 #endif
-#ifndef COLDFIRE
 		case 2: /* ST-HIG */
 			if(os_magic == 1)
 				return(Mode);
@@ -1702,11 +1701,13 @@ long vsetscreen(long logaddr, long physaddr, long rez, long modecode, long init_
 			resolution.height = 400;
 			resolution.bpp = 1;
 			resolution.freq = 60;
-			resolution.flags = MODE_EMUL_MONO_FLAG;
+			if(video_found)
+				resolution.flags = MODE_EMUL_MONO_FLAG;
+			else
+				resolution.flags = 0;
 			modecode = STMODES|PAL|VGA|COL80|BPS1;
 			Mode = update_modecode(modecode);
 			break;
-#endif
 		case 3:
 #ifdef USE_RADEON_MEMORY
 			if(lock_video)
@@ -1721,13 +1722,11 @@ long vsetscreen(long logaddr, long physaddr, long rez, long modecode, long init_
 #endif
 			switch(modecode & NUMCOLS)
 			{
-#ifndef COLDFIRE
 				case BPS1:
 					init_resolution(modecode);
-					if((resolution.width > MAX_WIDTH_EMU_MONO) || (resolution.height > MAX_HEIGHT_EMU_MONO))
+					if(video_found && ((resolution.width > MAX_WIDTH_EMU_MONO) || (resolution.height > MAX_HEIGHT_EMU_MONO)))
 						return(Mode);
 					break;
-#endif
 				case BPS8:
 				case BPS16:
 				case BPS32:
@@ -1775,7 +1774,12 @@ long vsetscreen(long logaddr, long physaddr, long rez, long modecode, long init_
 				info->var.xres = info->var.xres_virtual = (int)resolution.width;
 				info->var.yres = info->var.yres_virtual = (int)resolution.height;
 				info->var.bits_per_pixel = (int)resolution.bpp;
-				if(info->var.bits_per_pixel == 8)
+				if(info->var.bits_per_pixel == 1)
+				{
+					long tab_mono[2] = { 0xFFFFFF, 0x000000 };
+					vsetrgb(0, 2, tab_mono);
+				}
+				else if(info->var.bits_per_pixel == 8)
 					vsetrgb(0, 256, (long *)0xE1106A); /* default TOS 4.04 palette */
 				if(init_vdi)
 				{
@@ -1785,17 +1789,20 @@ long vsetscreen(long logaddr, long physaddr, long rez, long modecode, long init_
 				else if(test)
 				{
 					int color = 0;
+					if(info->var.bits_per_pixel >= 16)
+						color = -0x11;
 					for(y = 0; y < info->var.yres_virtual; y += 16)
 					{
 						long size = ((info->var.bits_per_pixel * info->var.xres_virtual) >> 3) << 4;
-						memset((void *)addr, color, size); 
-						addr += size;
 						switch(info->var.bits_per_pixel)
 						{
 							case 16: 
 							case 32: color += 0x11; break;
+							case 1: color = (y >> 4) & 1 ? -1 : 0; break;
 							default: color = (y >> 4) & 15; break;
 						}
+						memset((void *)addr, color, size); 
+						addr += size;
 					}
 				}
 			}
@@ -1818,7 +1825,12 @@ long vsetscreen(long logaddr, long physaddr, long rez, long modecode, long init_
 					info->var.xres = info->var.xres_virtual = (int)resolution.width;
 					info->var.yres = info->var.yres_virtual = (int)resolution.height;
 					info->var.bits_per_pixel = (int)resolution.bpp;
-					if(info->var.bits_per_pixel == 8)
+					if(info->var.bits_per_pixel == 1)
+					{
+						long tab_mono[2] = { 0xFFFFFF, 0x000000 };
+						vsetrgb(0, 2, tab_mono);
+					}
+					else if(info->var.bits_per_pixel == 8)
 						vsetrgb(0, 256, (long *)0xE1106A); /* default TOS 4.04 palette */
 					if(init_vdi)
 					{
@@ -1927,16 +1939,20 @@ long vsetscreen(long logaddr, long physaddr, long rez, long modecode, long init_
 			}
 			else if(info->screen_mono != NULL)  /* VBL nono emulation to normal => update fVDI accel functions */
 			{
+#ifndef COLDFIRE
 					extern Driver *me;
 					extern void *c_line, *c_text, *c_fill, *c_fillpoly;
 					Virtual *vwk = me->default_vwk;
 					Workstation *wk = vwk->real_address;
+#endif
 					info->update_mono = 0; /* stop VBL redraw */
 					info->screen_mono = NULL;
+#ifndef COLDFIRE
 					wk->r.line = &c_line;
 					wk->r.fill = &c_fill;
 					wk->r.fillpoly = &c_fillpoly; 
 					wk->r.text = &c_text;
+#endif
 			}
 			if(info->screen_mono != NULL)
 				*((char **)_v_bas_ad) = info->screen_mono;
@@ -2018,7 +2034,7 @@ long vsetscreen(long logaddr, long physaddr, long rez, long modecode, long init_
 			{
 				long addr;
 				if((physaddr < (long)info->screen_base)
-				 || ((unsigned long)physaddr >= (unsigned long)info->ram_base + info->ram_size - (resolution.width * resolution.height * (resolution.bpp >> 3))))
+				 || ((unsigned long)physaddr >= (unsigned long)info->ram_base + info->ram_size - ((resolution.width * resolution.height * resolution.bpp) >> 3)))
 					return(Mode);
 				addr = init_videl((long)resolution.width, (long)resolution.height, (long)resolution.bpp, (long)resolution.freq, physaddr);
 				if(addr)
@@ -2238,11 +2254,9 @@ long validmode(long modecode)
 //	board_printf("validmode modecode %04X fix %d\r\n", modecode, fix_modecode);
 	if((unsigned short)modecode != 0xFFFF)
 	{
-#ifndef COLDFIRE
 		if((os_magic != 1) && ((modecode & NUMCOLS) == BPS1)) /* VBL mono emulation */
 			modecode &= ~VIRTUAL_SCREEN; /* limit size */
 		else
-#endif
 		if(((modecode & NUMCOLS) < BPS8) || ((modecode & NUMCOLS) > BPS32))
 		{
 			modecode &= ~NUMCOLS;

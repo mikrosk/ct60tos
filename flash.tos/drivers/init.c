@@ -46,7 +46,7 @@ long save_regs[16];
 #endif
 #endif
 
-#define BETA_VERSION "beta 12"
+#define BETA_VERSION "beta 13"
 
 #undef DEBUG
 
@@ -522,7 +522,11 @@ static short fix_boot_modecode(short vmode)
 					break;
 			}
 		}
+#if defined(COLDFIRE) && defined(MCF547X)
+		else if(((vmode & NUMCOLS) < BPS8 || ((vmode & NUMCOLS) > BPS32)) && ((vmode & NUMCOLS) != BPS1))
+#else
 		else if((vmode & NUMCOLS) < BPS8 || ((vmode & NUMCOLS) > BPS32))
+#endif
 		{
 			if(!video_found)
 				vmode = PAL | VGA | COL80 | BPS16; /* 640 x 480 * 16 */
@@ -654,16 +658,17 @@ int boot_menu(int index, int nb_lines, char *title, char *lines[], int delay_sec
 
 #if defined(COLDFIRE) && defined(MCF547X) && defined(LWIP)
 
-void boot_os_menu(void)
+void boot_os_menu(short colors)
 {
 	static char atari[] = { 0x1B,0x62,0x34,0x41,0x1B,0x62,0x32,0x54,0x1B,0x62,0x33,0x41,0x1B,0x62,0x31,0x52,0x1B,0x62,0x35,0x49,0x20,0x1B,0x62,0x3F };
+	static char atari_mono[] = "ATARI ";
 	static char title[] = "Start with...\r\n";
 	static char title_fr[] = "D‚marrer avec...\r\n";
 	static char *menu[] = {" TOS404 "," EMUTOS "};
 	static char *menu2[] = {" TOS404 for MiNT "," EMUTOS          "," TOS404 full     "};
 	static char *menu2_fr[] = {" TOS404 pour MiNT "," EMUTOS           "," TOS404 complet   "};
 	static char *menu3[] = {" TOS404 (at 0xE0000000 - boot)   "," EMUTOS (at 0xE0600000)          "," TOS404 (at 0xE0400000 - normal) "};
-	Cconws(atari);
+	Cconws(!colors ? atari_mono : atari);
 	Cconws("FIREBEE\r\n\n");
 	if(!(swi & 0x40) || !(swi & 1)) /* !SW5 (UP) */
 	{
@@ -1136,7 +1141,7 @@ int init_devices(int no_reset, unsigned long flags) /* after the original setscr
 			if(!os_magic)
 			{
 #if defined(COLDFIRE) && defined(MCF547X) && defined(LWIP)
-				boot_os_menu();
+				boot_os_menu(vmode & NUMCOLS);
 #endif
 				display_atari_logo();
 				if(vmode & (DEVID|VERTFLAG2|VESA_768|VESA_600|HORFLAG2|HORFLAG)) 
@@ -1187,7 +1192,7 @@ int init_devices(int no_reset, unsigned long flags) /* after the original setscr
 			if(!os_magic)
 			{
 #if defined(COLDFIRE) && defined(MCF547X) && defined(LWIP)
-				boot_os_menu();
+				boot_os_menu(vmode & NUMCOLS);
 #endif
 				display_atari_logo();
 			}
