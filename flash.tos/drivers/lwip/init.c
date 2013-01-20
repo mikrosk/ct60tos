@@ -1821,7 +1821,7 @@ static portTASK_FUNCTION(vVBL, pvParmeters)
 #endif /* defined(CONFIG_USB_UHCI) || defined(CONFIG_USB_OHCI) || defined(CONFIG_USB_EHCI) */
   volatile unsigned char *rtc_reg = (volatile unsigned char *)0xFFFF8961; /* PFGA emulation */
   volatile unsigned char *rtc_data = (volatile unsigned char *)0xFFFF8963;
-  long count = 0;
+  long count = 0, physbase = get_videl_base();
   long date = 0, time = 0;
   *(unsigned long *)(((64+4) * 4) + coldfire_vector_base) = (unsigned long)new_vbl;
   MCF_GPIO_PODR_FEC1L &= ~MCF_GPIO_PODR_FEC1L_PODR_FEC1L4; /* led */
@@ -1889,6 +1889,31 @@ static portTASK_FUNCTION(vVBL, pvParmeters)
     while((*(unsigned long *)_hz_200 - start_timer) < 200UL)
     {
 		  start_timer = *(unsigned long *)_hz_200;
+      /* Videl screen change - FPGA memory */
+      long new_physbase = get_videl_base();
+      if(new_physbase != physbase)
+      {
+        long end_physbase = new_physbase + get_videl_size();
+        physbase = new_physbase;
+        new_physbase &= 0xf00000;
+        end_physbase &= 0xf00000;
+        if(new_physbase < 0xd00000)
+        {
+          int level = asm_set_ipl(7); /* disable interrupts */
+          flush_caches();
+          memcpy((void *)(new_physbase + 0x60000000), (void *)new_physbase, 0x100000);
+          mmu_map(new_physbase,(new_physbase + 0x60000000),MMUOR_ITLB,MMUDR_SZ1M+MMUDR_WRITETHROUGH+MMUDR_X+MMUDR_LK);
+          mmu_map(new_physbase,(new_physbase + 0x60000000),0,MMUDR_SZ1M+MMUDR_WRITETHROUGH+MMUDR_R+MMUDR_W);
+				  if((end_physbase != new_physbase) && (end_physbase < 0xd00000)) /* 2nd page */
+          {
+            memcpy((void *)(end_physbase + 0x60000000), (void *)new_physbase, 0x100000);
+            mmu_map(end_physbase,(end_physbase + 0x60000000),MMUOR_ITLB,MMUDR_SZ1M+MMUDR_WRITETHROUGH+MMUDR_X+MMUDR_LK);
+            mmu_map(end_physbase,(end_physbase + 0x60000000),0,MMUDR_SZ1M+MMUDR_WRITETHROUGH+MMUDR_R+MMUDR_W);
+          }
+          asm_set_ipl(level);
+//          board_printf("new videl screen at 0x%lX\r\n", physbase); 
+        }
+      }
       if(!(count % 50))
       {
 #define NVRAM_RTC_SECONDS 0
