@@ -1071,10 +1071,10 @@ new_vbl:
 	move.l _frclock,D0
 	subq.l #1,D0
 	move.l D0,_frclock
-	bra.s .use_rtos_vbl
+	bra.s .vbl_call_function
 .vbl_pending:
 	move.l D0,ACP_INTERRUPT_CLEAR
-	bra.s .use_rtos_vbl
+	bra.s .vbl_call_function
 .not_use_rtos_vbl:
 	moveq #4,D0
 	bset.b D0,MCF_EPORT_EPFR // clear interrupt
@@ -1096,6 +1096,30 @@ new_vbl:
 .not_vbl_tos:
 	move.l (SP)+,D0
 	rte
+#ifdef MCF547X
+.vbl_call_function:          // function installed by the drivers, called inside the VBL
+	tst.l vbl_function
+	beq.s .use_rtos_vbl
+	lea -56(SP),SP
+	movem.l D1-A6,(SP)
+	lea -32(SP),SP
+	lea vbl_function_args,A0
+	move.l (A0)+,(SP)
+	move.l (A0)+,4(SP)
+	move.l (A0)+,8(SP)
+	move.l (A0)+,12(SP)
+	move.l (A0)+,16(SP)
+	move.l (A0)+,20(SP)
+	move.l (A0)+,24(SP)
+	move.l (A0)+,28(SP)
+	move.l vbl_function,A0
+	jsr (A0)
+	move.l D0,vbl_function_ret
+	clr.l vbl_function
+	lea 32(SP),SP
+	movem.l (SP),D1-A6
+	lea 56(SP),SP
+#endif /* MCF547X */
 .use_rtos_vbl:
 #ifdef MCF5445X
 	move.l #~INTC_INTFRCL_INTFRC4,D0

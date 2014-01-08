@@ -86,6 +86,9 @@
 #define ip_address            RAM_BASE_CF68KLIB+0x598 // 4 bytes
 #define server_ip_address     RAM_BASE_CF68KLIB+0x59C // 4 bytes
 #define fpu_area              RAM_BASE_CF68KLIB+0x5A0 // 16 bytes
+#define vbl_function          RAM_BASE_CF68KLIB+0x5B0 // 4 bytes
+#define vbl_function_ret      RAM_BASE_CF68KLIB+0x5B4 // 4 bytes
+#define vbl_function_args     RAM_BASE_CF68KLIB+0x5B8 // 32 bytes
 
 #define access_fault_stack    RAM_BASE_CF68KLIB+0x800
 #define ustack_aes            RAM_BASE_CF68KLIB+0xC00 // top

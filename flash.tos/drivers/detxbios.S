@@ -2044,8 +2044,13 @@ install_pun_drive:
 #endif
 
 	move.l D0,old_xhdi
+#if defined(COLDFIRE) && defined(LWIP)
+	move.l _pxCurrentTCB,D0
+	cmp.l _tid_TOS,D0
+	bne.s .xhdi_version_from_vbl
+#endif
 	clr.l -(SP)              // XHGetVersion
-	move.l D0,A0
+	move.l old_xhdi,A0
 	jsr (A0)
 	addq.l #4,SP
 	move.l D0,old_xhdi_version
@@ -2063,6 +2068,7 @@ install_pun_drive:
 #else
 	move.l (SP)+,A0
 #endif
+.replace_xhdi_cookie:
 
 #ifdef DEBUG_XHDI
 	move.l D0,-(SP)
@@ -2089,6 +2095,22 @@ install_pun_drive:
 
 	move.l A1,4(A0)          // replace cookie			
 	bra.s .no_cookie_jar
+#if defined(COLDFIRE) && defined(LWIP)
+.xhdi_version_from_vbl:
+	move.w 4(SP),D0          // SR
+	move.w D0,SR
+	clr.l -(SP)              // XHGetVersion
+	lea .call_old_xhdi(PC),A0
+	bsr call_from_vbl
+	addq.l #4,SP
+	move.l D0,old_xhdi_version
+	lea xhdi(PC),A1
+	move.l (SP)+,A0
+	bra.s .replace_xhdi_cookie
+.call_old_xhdi:
+	move.l old_xhdi,A0
+	jmp (A0)
+#endif
 .cookie_slot_free:
 	move.l 4(A0),12(A0)      // copy size
 	move.l #0x58484449,(A0)+ // XHDI new cookie name
@@ -5294,6 +5316,36 @@ _install_magic_routine:
 	move.w D1,(A1)+
 	addq.l #4,SP
 	rts
+
+#if defined(COLDFIRE) && defined(LWIP)
+
+call_from_vbl: // A0: function called by the TOS VBL with 8 long parameters, return D0
+
+	pea (A0)
+	lea vbl_function_args,A0
+	move.l 8(SP),(A0)+
+	move.l 12(SP),(A0)+
+	move.l 16(SP),(A0)+
+	move.l 20(SP),(A0)+
+	move.l 24(SP),(A0)+
+	move.l 28(SP),(A0)+
+	move.l 32(SP),(A0)+
+	move.l 36(SP),(A0)+
+	move.l (SP)+,vbl_function
+	lea -16(SP),SP
+	movem.l D1-D2/A1-A2,(SP)
+.wait_vbl_function:
+		pea 1
+		jsr _vTaskDelay
+		addq.l #4,SP
+	tst.l vbl_function
+	bne.s .wait_vbl_function
+	movem.l (SP),D1-D2/A1-A2
+	lea 16(SP),SP
+	move.l vbl_function_ret,D0
+	rts
+
+#endif /* defined(COLDFIRE) && defined(LWIP) */
 
 #ifndef COLDFIRE
 _get_no_cache_memory:

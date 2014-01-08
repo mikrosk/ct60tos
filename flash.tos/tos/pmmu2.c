@@ -238,7 +238,8 @@ void update_mmu(void) // MMU access fault
 #ifdef MCF547X
 				if((addr >= ZONE_CART) && (addr < END_ZONE_CART))
 					mmu_remap(addr,(addr|FPGA_ZONE_IO),MMUOR_ITLB,MMUTR_SG,MMUDR_PAGE+MMUDR_WRITEBACK+MMUDR_X);
-				else if((addr >= ZONE_EPROM2) && (addr < END_ZONE_EPROM2))
+				else if(((addr >= ZONE_EPROM2) && (addr < END_ZONE_EPROM2))
+				 || ((addr >= NO_CACHE_MEMORY_BASE) && (addr < NO_CACHE_MEMORY_BASE+NO_CACHE_MEMORY_SIZE)))
 #else /* MCF548X */
 				if((addr >= ZONE_CART) && (addr < END_ZONE_EPROM2))
 #endif
