@@ -211,6 +211,7 @@ cf68klib:
 	clr.l user_triggered
 	clr.l current_tcb
 	clr.l tid_tos
+	clr.l vbl_function
 	bsr test_pci
 	bne.s .no_rtos
 	pea .no_rtos(PC)
