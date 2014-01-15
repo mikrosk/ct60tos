@@ -1145,8 +1145,9 @@ _check_sd_card:
 #ifdef SD_CARD_REPLACE_FLOPPY
 	moveq #-1,D0
 	move.l D0,_sd_disk_drive
-	bsr sd_card_init
-	bmi.s .error_found_sd_card
+	clr.b sd_card_removed
+	clr.b sd_card_lock
+	clr.b sd_task_created
 	// Floppy BIOS routines removed
 	lea error_loadable(PC),A0
 	move.l A0,hdv_boot
@@ -1182,16 +1183,12 @@ _install_sd_card:
 
 	lea -32(SP),SP
 	movem.l D1-D4/A0-A3,(SP)
-#ifdef SD_CARD_REPLACE_FLOPPY
-	moveq #-1,D0
-	move.l D0,_sd_disk_drive
-#endif
 	bsr sd_card_init
-	bmi .error_install_sd_card
+	bmi .no_sd_card
 	moveq #0,D0              // root sector / MBR
 	move.l _dskbufp,A0
 	bsr sd_card_sector_read
-	bmi .error_install_sd_card
+	bmi .no_sd_card
 	moveq #0,D2
 	move.l #256,D1
 .loop_sum_root_sd_card:
@@ -1224,7 +1221,7 @@ _install_sd_card:
 	moveq #0,D0
 	move.w 510(A0),D0
 	cmp.l #0x55AA,D0         // DOS magic
-	bne.s .error_install_sd_card
+	bne.s .no_sd_card
 	lea 0x1BE(A0),A0         // partition table
 	moveq #4,D4
 .loop_partitions_dos_sd_card:
@@ -1253,8 +1250,13 @@ _install_sd_card:
 	subq.l #1,D4
 	bgt.s .loop_partitions_dos_sd_card
 .error_install_sd_card:
-	moveq #0,D0              // nothing installed
-	bra.s .end_install_sd_card
+.no_sd_card:
+	moveq #-1,D0
+	move.b D0,sd_card_removed
+	clr.b name_sd_card
+	moveq #0,D3              // part_size
+	moveq #0,D2              // part_offset
+	moveq #4,D1              // part_type
 .install_partition_sd_card:
 	pea 512                  // block_size
 	pea 0                    // number_of_blocks
@@ -1268,8 +1270,99 @@ _install_sd_card:
 	bsr install_pun_drive
 	lea 36(SP),SP
 .end_install_sd_card:
+	tst.b sd_task_created
+	bne.s .sd_task_ok
+	lea -24(SP),SP
+	movem.l D0-D2/A0-A2,(SP)
+	pea 0                    // task handle
+	pea 6                    // priority
+	pea 0                    // parameters
+	pea 0x1000               // stack size
+	pea sd_task_name(PC)
+	pea sd_task(PC)
+	jsr _xTaskCreate
+	lea 24(SP),SP
+	movem.l (SP),D0-D2/A0-A2
+	lea 24(SP),SP
+	moveq #-1,D1
+	move.b D1,sd_task_created
+.sd_task_ok:
 	movem.l (SP),D1-D4/A0-A3
 	lea 32(SP),SP
+	rts
+
+sd_task: // check SD-Card insertion / removal
+
+	pea 200
+	jsr _vTaskDelay
+	addq.l #4,SP
+.loop_sd_task:
+	moveq #1,D0              // tick
+	tst.b sd_card_removed
+	beq.s .sd_task_card_present
+	lea sd_card_lock,A0
+	bset #7,(A0)
+	bne .sd_task_delay
+	bsr sd_card_init
+	bmi.s .sd_task_no_card
+	bsr _install_sd_card
+	bra .sd_task_unlock
+.sd_task_no_card:
+	clr.b sd_card_lock
+	move.l #2000,D0
+	bra .sd_task_delay
+.sd_task_card_present:
+	lea sd_card_lock,A0
+	bset #7,(A0)
+	bne .sd_task_delay
+	move.b #0xFF,D0           // clocks
+	bsr sd_com
+	moveq #0x7A,D0            // cmd 58, READ_OCR
+	bsr sd_com
+	moveq #0x00,D0
+	bsr sd_com
+	moveq #0x00,D0
+	bsr sd_com
+	moveq #0x00,D0
+	bsr sd_com
+	moveq #0x00,D0
+	bsr sd_com
+	moveq #0x01,D0
+	bsr sd_com
+	moveq #0,D0
+	bsr sd_get_status
+	bmi.s .sd_task_removed
+	move.l D0,-(SP)
+	move.b #0xFF,D0
+	bsr sd_com                // 4 bytes
+	move.b #0xFF,D0
+	bsr sd_com
+	move.b #0xFF,D0
+	bsr sd_com
+	move.b #0xFF,D0
+	bsr sd_com
+	move.l (SP)+,D0
+	bra.s .sd_task_unlock
+.sd_task_removed:
+	moveq #-1,D0
+	move.b D0,sd_card_removed
+.sd_task_unlock:
+	clr.b sd_card_lock
+	move.l #200,D0
+.sd_task_delay:
+	move.l D0,-(SP)
+	jsr _vTaskDelay
+	addq.l #4,SP
+	bra .loop_sd_task
+
+sd_lock:
+
+	move.l A0,-(SP)
+	lea sd_card_lock,A0
+.wait_sd_lock:
+		bset #7,(A0)
+	bne.s .wait_sd_lock
+	move.l (SP)+,A0
 	rts
 
 sd_card_init:
@@ -1340,6 +1433,7 @@ sd_card_init:
 			bsr sd_com
 			move.b #0x87,D0
 			bsr sd_com
+			moveq #0,D0
 			bsr sd_get_status
 			cmp.l #5,D0
 			beq.s .sd_v1
@@ -1371,6 +1465,7 @@ sd_card_init:
 			bsr sd_com
 			moveq #0x01,D0
 			bsr sd_com
+			moveq #0,D0
 			bsr sd_get_status
 			// Ver1
 		cmp.l #5,D0
@@ -1401,6 +1496,7 @@ sd_card_init:
 			bsr sd_com
 			move.b #0x95,D0
 			bsr sd_com
+			moveq #0,D0
 			bsr sd_get_status
 		cmp.l #0x05,D0
 		beq.s .wait_activity
@@ -1419,8 +1515,8 @@ sd_card_init:
 				bsr sd_com
 				move.b #0x95,D0
 				bsr sd_com
+				moveq #0,D0
 				bsr sd_get_status
-				tst.l D0
 				beq.s .sd_init_ok
 			cmp.l #0x05,D0
 			beq.s .wait_activity2	
@@ -1537,8 +1633,8 @@ sd_card_sector_read: // D0.L:sec_nr, A0:buf_addr
 	moveq #0x01,D0
 	bsr sd_com
 	moveq #0,D1               // status, no error
+	moveq #0,D0
 	bsr sd_get_status
-	tst.l D0
 	bne.s .sd_csr_end
 	bsr sd_rcv_sector         // sector read
 .sd_csr_end:
@@ -1578,8 +1674,8 @@ sd_card_sector_write: // D0.L:sec_nr, A0:buf_addr
 	moveq #0x01,D0
 	bsr sd_com
 	moveq #0,D1               // status, no error
+	moveq #0,D0
 	bsr sd_get_status
-	tst.l D0
 	bne.s .sd_csw_end
 	bsr sd_send_sector        // sector write
 .sd_csw_end:
@@ -1617,6 +1713,7 @@ sd_rcv_sector: // 1 sector data to A0 pointer
 
 	move.l A0,-(SP)
 	move.l D1,-(SP)
+	moveq #1,D0
 	bsr sd_get_status 
 	cmp.l #0xFE,D0
 	bne .sd_rs_end // error
@@ -1643,9 +1740,9 @@ sd_send_sector: // 1 sector data to A0 pointer
 
 	move.l A0,-(SP)
 	move.l D1,-(SP)
-	move.l #512,D1		
 	move.b #0xFE,D0 // start token
 	bsr sd_com // send
+	move.l #512,D1		
 .sd_send_wr_wb:
 		move.b (A0)+,D0 // data
 		bsr sd_com   // send
@@ -1656,6 +1753,7 @@ sd_send_sector: // 1 sector data to A0 pointer
 	bsr sd_com                // crc 1st byte
 	moveq #0x01,D0			
 	bsr sd_com                // crc 2nd byte
+	moveq #1,D0
 	bsr sd_get_status
 	and.l #0x1F,D0
 	moveq #0,D1               // status, no error
@@ -1678,7 +1776,7 @@ sd_rcv_info: // A0: data
 	movem.l D0-D1/A0,(SP)
 	moveq #18,D1             // 16 bytes + 2 bytes crc
 .sd_rcv_rb_w:		
-			move.b #0xFF,D0
+			moveq #0,D0
 			bsr sd_get_status 
 		cmp.l #0xFE,D0
 		bne.s .sd_rcv_rb_w
@@ -1692,12 +1790,32 @@ sd_rcv_info: // A0: data
 	lea 12(SP),SP
 	rts
 
-sd_get_status:
+sd_get_status: // D0: 0 for 10 mS timeout, else 250 mS
 
+	move.l D1,-(SP)
+	move.l D2,-(SP)
+	move.l #10000*SYSTEM_CLOCK,D2
+	move.l MCF_SLT_SCNT1,D1
+	tst.l D0
+	beq.s .sd_get_status_loop
+	move.l #250000*SYSTEM_CLOCK,D2
+.sd_get_status_loop:
+		move.l D1,D0
+		sub.l MCF_SLT_SCNT1,D0
+		cmp.l D2,D0
+		bcc.s .sd_get_status_timeout
 		move.b #0xFF,D0
 		bsr sd_com
 	cmp.l #0xFF,D0
-	beq.s sd_get_status
+	beq.s .sd_get_status_loop
+	move.l (SP)+,D2
+	move.l (SP)+,D1
+	tst.l D0
+	rts
+.sd_get_status_timeout:
+	move.l (SP)+,D2
+	move.l (SP)+,D1
+	moveq #-1,D0
 	rts
 
 sd_com:
@@ -1876,7 +1994,9 @@ install_pun_drive:
 	and.l D2,D0
 	bne.s .usb_pun
 	moveq #0,D4              // drive A
-	bra.s .drive_not_exist_usb
+	tst.l _sd_disk_drive
+	bmi.s .drive_not_exist_usb
+	bra.s .sd_drive_counted
 .usb_pun:	
 #endif /* defined(MCF547X) && defined(SD_CARD_REPLACE_FLOPPY) */
 	move.l _drvbits,D0
@@ -1895,6 +2015,9 @@ install_pun_drive:
 	move.w _pinfo_puns(A3),D0
 	addq.l #1,D0
 	move.w D0,_pinfo_puns(A3)
+#if defined(MCF547X) && defined(SD_CARD_REPLACE_FLOPPY)
+.sd_drive_counted:
+#endif
 	moveq #0,D0
 	bset #7,D0               // changed
 	lea _pinfo_flags(A3),A0
@@ -1975,10 +2098,14 @@ install_pun_drive:
 #ifdef MCF547X
 	bra.s .install_hdv_xbra
 .not_usb_pun:                                        
+	tst.l D3                 // part_size
+	beq.s .no_sd_card_sector
 	move.l D1,D0             // sector number
 	move.l _dskbufp,A0
 	bsr sd_card_sector_read  // read boot sector
 	bmi .end_usb_disk        // read error
+	clr.b sd_card_removed
+.no_sd_card_sector:
 	move.l _sd_disk_drive,D0
 #ifdef SD_CARD_REPLACE_FLOPPY
 	addq.l #1,D0
@@ -2132,6 +2259,8 @@ install_pun_drive:
 	move.l D4,D2             // logical drive
 	mulu #18,D2              // * 18
 	add.l D2,A1
+	tst.l D3                 // part_size
+	beq .no_bpb
 	move.l _pinfo_ptype(A3,D4.l*4),D2 // part_type
 	move.l D2,D1
 	and.l #0xFFFFFF,D1       // ID
@@ -2434,13 +2563,12 @@ det_hdv_bpb_usb:
 	move.w 4+4(SP),D0        // drive
 #ifdef MCF547X
 	tst.l _sd_disk_drive
-#ifdef SD_CARD_REPLACE_FLOPPY
 	bmi.s .dhbu5
-#else
-	beq.s .dhbu5
-#endif
 	cmp.l _sd_disk_drive,D0
+	bne.s .dhbu5
+	tst.b sd_card_removed
 	beq.s .dhbu4
+	bra.s .dhbu2
 .dhbu5:
 #endif
 #if (defined(CONFIG_USB_UHCI) || defined(CONFIG_USB_OHCI) || defined(CONFIG_USB_EHCI)) && defined(CONFIG_USB_STORAGE)
@@ -2526,13 +2654,12 @@ det_hdv_rw_usb:
 	move.w 14+28(SP),D0      // drive
 #ifdef MCF547X
 	tst.l _sd_disk_drive
-#ifdef SD_CARD_REPLACE_FLOPPY
 	bmi.s .dhru17
-#else
-	beq.s .dhru17
-#endif
 	cmp.l _sd_disk_drive,D0
+	bne.s .dhru17
+	tst.b sd_card_removed
 	beq.s .dhru9
+	bra.s .dhru19
 .dhru17:
 #endif
 #if (defined(CONFIG_USB_UHCI) || defined(CONFIG_USB_OHCI) || defined(CONFIG_USB_EHCI)) && defined(CONFIG_USB_STORAGE)
@@ -2652,7 +2779,7 @@ det_hdv_rw_usb:
 	add.l D3,D2              // start sector
 	move.l D1,D3             // count
 	btst #0,5+28(SP)         // rwflag
-	beq.s .dhru7             // read
+	beq .dhru7               // read
 	// write
 	tst.l D2                 // logical sector
 	beq.s .dhru2             // root sector
@@ -2662,18 +2789,24 @@ det_hdv_rw_usb:
 	bne.s .dhru14            // USB
 	move.l A0,A2
 .dhru11:
+		bsr sd_lock
 		move.l D2,D0  // sector number
 		move.l A2,A0
 		bsr sd_card_sector_write
+		clr.b sd_card_lock
+		tst.l D0
 		bmi.s .dhru2  // error
 #if 0 // #ifdef DEBUG
 		move.l A2,A1
 		bsr dump
 #endif
 #ifdef SD_CARD_VERIFY
+		bsr sd_lock
 		move.l D2,D0  // sector number
 		lea sd_buffer_verify,A0
 		bsr sd_card_sector_read
+		clr.b sd_card_lock
+		tst.l D0
 		bmi.s .dhru2  // error
 		move.l A2,A0
 		lea sd_buffer_verify,A1
@@ -2719,8 +2852,11 @@ det_hdv_rw_usb:
 	and.l D4,D0
 	bne.s .dhru12            // USB
 .dhru13:
+		bsr sd_lock
 		move.l D2,D0  // sector number
 		bsr sd_card_sector_read
+		clr.b sd_card_lock
+		tst.l D0
 		bmi.s .dhru2  // error
 #if 0 // #ifdef DEBUG
 		move.l A0,A1
@@ -2762,13 +2898,12 @@ det_hdv_mediach_usb:
 	move.w 4+4(SP),D0        // drive
 #ifdef MCF547X
 	tst.l _sd_disk_drive
-#ifdef SD_CARD_REPLACE_FLOPPY
 	bmi.s .dhmu4
-#else
-	beq.s .dhmu4
-#endif
 	cmp.l _sd_disk_drive,D0
+	bne.s .dhmu4
+	tst.b sd_card_removed
 	beq.s .dhmu3
+	bra.s .dhmu6
 .dhmu4:
 #endif
 #if (defined(CONFIG_USB_UHCI) || defined(CONFIG_USB_OHCI) || defined(CONFIG_USB_EHCI)) && defined(CONFIG_USB_STORAGE)
@@ -3001,6 +3136,13 @@ XHInqTarget2:
 	beq.s .xi9
 	move.l D1,A0             // device_flags
 	clr.l (A0)
+#ifdef MCF547X
+	tst.l D0
+	bne.s .xi17
+	move.l #2,(A0)           // removable
+	bra.s .xi9
+.xi17:
+#endif /* MCF547X */
 #if (defined(CONFIG_USB_UHCI) || defined(CONFIG_USB_OHCI) || defined(CONFIG_USB_EHCI)) && defined(CONFIG_USB_STORAGE)
 	cmp.l #PUN_USB,D0
 	bcs.s .xi9
@@ -3271,13 +3413,13 @@ XHInqDev:
 	move.w 10(A6),D0         // bios_device
 #ifdef MCF547X
 	tst.l _sd_disk_drive
-#ifdef SD_CARD_REPLACE_FLOPPY
 	bmi.s .xd10
-#else
-	beq.s .xd10
-#endif
 	cmp.l _sd_disk_drive,D0
+	bne.s .xd10
+	tst.b sd_card_removed
 	beq.s .xd8
+	moveq #-2,D0             // device not responding
+	rts
 .xd10:
 #endif /* MCF547X */
 #if (defined(CONFIG_USB_UHCI) || defined(CONFIG_USB_OHCI) || defined(CONFIG_USB_EHCI)) && defined(CONFIG_USB_STORAGE)
@@ -3373,13 +3515,13 @@ XHInqDriver:
 	move.w 10(A6),D0         // bios_device
 #ifdef MCF547X
 	tst.l _sd_disk_drive
-#ifdef SD_CARD_REPLACE_FLOPPY
 	bmi.s .xdr11
-#else
-	beq.s .xdr11
-#endif
 	cmp.l _sd_disk_drive,D0
+	bne.s .xdr11
+	tst.b sd_card_removed
 	beq.s .xdr9
+	moveq #-2,D0             // device not responding
+	rts
 .xdr11:
 #endif /* MCF547X */
 #if (defined(CONFIG_USB_UHCI) || defined(CONFIG_USB_OHCI) || defined(CONFIG_USB_EHCI)) && defined(CONFIG_USB_STORAGE)
@@ -3499,13 +3641,12 @@ XHReadWrite:                          // read / write physical sectors
 	move.w 10(A6),D4         // major
 #ifdef MCF547X
 	tst.l _sd_disk_drive
-#ifdef SD_CARD_REPLACE_FLOPPY
 	bmi.s .xr12
-#else
-	beq.s .xr12
-#endif
 	tst.l D4
+	bne.s .xr12
+	tst.b sd_card_removed
 	beq.s .xr1               // SD-card
+	bra.s .xr15
 .xr12:
 #endif /* MCF547X */
 #if (defined(CONFIG_USB_UHCI) || defined(CONFIG_USB_OHCI) || defined(CONFIG_USB_EHCI)) && defined(CONFIG_USB_STORAGE)
@@ -3561,8 +3702,11 @@ XHReadWrite:                          // read / write physical sectors
 	and.l D4,D0
 	bne.s .xr10              // USB
 .xr11:
+		bsr sd_lock
 		move.l D2,D0
 		bsr sd_card_sector_write
+		clr.b sd_card_lock
+		tst.l D0
 		bmi.s .xr2    // error
 		addq.l #1,D2  // blknr
 		add.l #512,A0 // buffer
@@ -3590,8 +3734,11 @@ XHReadWrite:                          // read / write physical sectors
 	and.l D4,D0
 	bne.s .xr8               // USB
 .xr9:
+		bsr sd_lock
 		move.l D2,D0
 		bsr sd_card_sector_read
+		clr.b sd_card_lock
+		tst.l D0
 		bmi.s .xr2    // error
 		addq.l #1,D2  // blknr
 		add.l #512,A0 // buffer
@@ -3636,18 +3783,18 @@ XHInqDev2:
 	move.w 10(A6),D0         // bios_device
 #ifdef MCF547X
 	tst.l _sd_disk_drive
-#ifdef SD_CARD_REPLACE_FLOPPY
 	bmi.s .xdd13
-#else
-	beq.s .xdd13
-#endif
 	cmp.l _sd_disk_drive,D0
+	bne.s .xdd13
+	tst.b sd_card_removed
 	beq.s .xdd12
+	moveq #-2,D0             // device not responding
+	rts
 .xdd13:
 #endif /* MCF547X */
 #if (defined(CONFIG_USB_UHCI) || defined(CONFIG_USB_OHCI) || defined(CONFIG_USB_EHCI)) && defined(CONFIG_USB_STORAGE)
 	tst.l _usb_1st_disk_drive
-	beq.s .xdd2              // error
+	beq.s .xdd2               // error
 	cmp.l _usb_1st_disk_drive,D0
 	bcs.s .xdd2
 	cmp.l #MAX_LOGICAL_DRIVE,D0
@@ -5500,6 +5647,9 @@ error4:	.ascii "partition type not supported"
 	.byte 13,10,0
 blue:	.byte 0x1B,0x62,0x34,0
 black:	.byte 0x1B,0x62,0x3F,0
+#ifdef MCF547X
+sd_task_name:	.asciz "SDd"
+#endif
 
 #ifdef DEBUG
 debug1:	.asciz "XBIOS #0x"
@@ -5570,6 +5720,9 @@ debug148:	.asciz "XHDI XHGetCapacity major 0x"
 	.lcomm sd_buffer_verify,512
 #endif
 	.lcomm _sd_disk_drive,4
+	.lcomm sd_card_removed,1
+	.lcomm sd_card_lock,1
+	.lcomm sd_task_created,1
 #endif
 	.lcomm _usb_1st_disk_drive,4
 	.lcomm old_hdv_bpb_usb,4

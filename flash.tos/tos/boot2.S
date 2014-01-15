@@ -4246,7 +4246,7 @@ message14:	.asciz " Mask E41J"      // revision 6
 #endif
 message15:	.byte 27 
 	.asciz "p Boot v"
-message15a:	.asciz " beta 14 " // additionnal information about version (alpha, beta...)
+message15a:	.asciz " beta 15 " // additionnal information about version (alpha, beta...)
 message15b:	.ascii " "
 	.byte 27
 	.ascii "q"
