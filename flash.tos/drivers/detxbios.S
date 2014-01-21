@@ -85,7 +85,7 @@
 	.global _usb_mem_init,_usb_malloc,_usb_free
 #endif
 #if (defined(CONFIG_USB_UHCI) || defined(CONFIG_USB_OHCI) || defined(CONFIG_USB_EHCI)) && defined(CONFIG_USB_STORAGE)
-	.global _install_usb_stor,_uninstall_usb_stor,_usb_stor_read,_usb_stor_write,_usb_1st_disk_drive
+	.global _install_usb_stor,_uninstall_usb_stor,_usb_stor_read,_usb_stor_write
 	.global _usb_error_msg
 #endif
 #ifdef LWIP
@@ -1143,11 +1143,6 @@ install_xbra:	// A0: handler, D0: vector, D1: ID
 _check_sd_card:
 
 #ifdef SD_CARD_REPLACE_FLOPPY
-	moveq #-1,D0
-	move.l D0,_sd_disk_drive
-	clr.b sd_card_removed
-	clr.b sd_card_lock
-	clr.b sd_task_created
 	// Floppy BIOS routines removed
 	lea error_loadable(PC),A0
 	move.l A0,hdv_boot
@@ -1181,12 +1176,14 @@ error_ok:
 
 _install_sd_card:
 
-	lea -32(SP),SP
-	movem.l D1-D4/A0-A3,(SP)
+	lea -36(SP),SP
+	movem.l D1-D5/A0-A3,(SP)
 	bsr sd_card_init
 	bmi .no_sd_card
+.reinstall_sd_card:
 	moveq #0,D0              // root sector / MBR
 	move.l _dskbufp,A0
+	lea 512(A0),A0
 	bsr sd_card_sector_read
 	bmi .no_sd_card
 	moveq #0,D2
@@ -1198,9 +1195,11 @@ _install_sd_card:
 	subq.l #1,D1
 	bgt.s .loop_sum_root_sd_card
 	move.l _dskbufp,A0
+	lea 512(A0),A0
 	and.l #0xFFFF,D2
 	cmp.l #0x1234,D2         // checksum
 	bne.s .check_partition_dos_sd_card
+	moveq #0,D5              // TOS partitions
 	lea 0x1C6(A0),A0         // partition table
 	moveq #4,D4
 .loop_partitions_tos_sd_card:
@@ -1211,13 +1210,14 @@ _install_sd_card:
 		beq.s .next_partition_tos_sd_card
 		move.l 4(A0),D2  // part_offset
 		move.l 8(A0),D3  // part_size
-		bra.s .install_partition_sd_card
+		bra .install_partition_sd_card
 .next_partition_tos_sd_card:
 		lea 12(A0),A0
 	subq.l #1,D4
 	bgt.s .loop_partitions_tos_sd_card
 	bra.s .error_install_sd_card
 .check_partition_dos_sd_card:
+	moveq #-1,D5             // DOS partitions
 	moveq #0,D0
 	move.w 510(A0),D0
 	cmp.l #0x55AA,D0         // DOS magic
@@ -1250,13 +1250,29 @@ _install_sd_card:
 	subq.l #1,D4
 	bgt.s .loop_partitions_dos_sd_card
 .error_install_sd_card:
+	moveq #0,D0              // nothing installed
+	tst.l sd_disk_drives
+	bne .end_install_sd_card
 .no_sd_card:
+	tst.l sd_disk_drives
+	bne .end_install_sd_card
 	moveq #-1,D0
 	move.b D0,sd_card_removed
 	clr.b name_sd_card
-	moveq #0,D3              // part_size
-	moveq #0,D2              // part_offset
-	moveq #4,D1              // part_type
+	pea 512                  // block_size
+	pea 0                    // number_of_blocks
+	pea name_sd_card         // product
+	pea 0                    // revision      
+	pea 0                    // vendor  
+	clr.l -(SP)              // part_size
+	clr.l -(SP)              // part_offset
+	move.l #4,-(SP)          // part_type	
+	clr.l -(SP)              // dev_num
+	bsr install_pun_drive
+	lea 36(SP),SP
+	clr.l sd_disk_drives
+	moveq #0,D0              // nothing installed
+	bra.s .end_install_sd_card
 .install_partition_sd_card:
 	pea 512                  // block_size
 	pea 0                    // number_of_blocks
@@ -1269,6 +1285,11 @@ _install_sd_card:
 	clr.l -(SP)              // dev_num
 	bsr install_pun_drive
 	lea 36(SP),SP
+	tst.b sd_card_removed
+	bne.s .end_install_sd_card
+	tst.l D5
+	beq .next_partition_tos_sd_card
+	bra .next_partition_dos_sd_card
 .end_install_sd_card:
 	tst.b sd_task_created
 	bne.s .sd_task_ok
@@ -1287,8 +1308,81 @@ _install_sd_card:
 	moveq #-1,D1
 	move.b D1,sd_task_created
 .sd_task_ok:
-	movem.l (SP),D1-D4/A0-A3
-	lea 32(SP),SP
+	movem.l (SP),D1-D5/A0-A3
+	lea 36(SP),SP
+	rts
+
+sd_test_drive: // D0: drive, return N flag if not a SD-Card drive
+
+	lea -8(SP),SP
+	movem.l D0-D1,(SP)
+	move.l sd_disk_drives,D1
+	bset #0,D1               // drive A
+	cmp.l #MAX_LOGICAL_DRIVE,D0
+	bcc.s .not_sd_drive
+	btst D0,D1
+	beq.s .not_sd_drive
+	moveq #0,D0
+	movem.l (SP),D0-D1
+	lea 8(SP),SP
+	rts
+.not_sd_drive:
+	moveq #-1,D0
+	movem.l (SP),D0-D1
+	lea 8(SP),SP
+	rts
+
+sd_card_reinstall:
+
+	lea -36(SP),SP
+	movem.l D1-D5/A0-A3,(SP)
+	bra .reinstall_sd_card
+
+sd_card_uninstall:
+
+	lea -24(SP),SP
+	movem.l D0-D3/A0-A1,(SP)
+	move.l pun_ptr,D1
+	beq.s .end_sd_uninstall
+	move.l D1,A1
+	move.l sd_disk_drives,D0
+	beq.s .end_sd_uninstall
+	bclr #0,D0               // drive A
+	beq.s .sd_uninstall_not_a
+	move.l D0,sd_disk_drives
+	move.w _pinfo_puns(A1),D0
+	subq.l #1,D0
+	move.w D0,_pinfo_puns(A1)
+.sd_uninstall_not_a:
+	moveq #0,D0              // dev_num
+	moveq #2,D2              // drive C
+.loop_uninstall_sd_part:
+		move.l sd_disk_drives,D1
+		bclr D2,D1
+		beq.s .not_this_sd_devnum
+		move.l D1,sd_disk_drives
+		moveq #0,D1
+		move.b _pinfo_pun(A1,D2.l),D1
+		cmp.l D1,D0
+		bne.s .not_this_sd_devnum
+		move.w _pinfo_puns(A1),D1
+		subq.l #1,D1
+		move.w D1,_pinfo_puns(A1)
+		moveq #-1,D1
+		move.b D1,_pinfo_pun(A1,D2.l)
+		clr.l _pinfo_pstart(A1,D2.l*4)
+		lea _pinfo_psize(A1),A0
+		clr.l (A0,D2.l*4) 
+		move.l _drvbits,D1
+		bclr D2,D1
+		move.l D1,_drvbits
+.not_this_sd_devnum:
+		addq.l #1,D2
+	cmp.l #MAX_LOGICAL_DRIVE,D2
+	bcs.s .loop_uninstall_sd_part
+.end_sd_uninstall:
+	movem.l (SP),D0-D3/A0-A1
+	lea 24(SP),SP
 	rts
 
 sd_task: // check SD-Card insertion / removal
@@ -1305,7 +1399,7 @@ sd_task: // check SD-Card insertion / removal
 	bne .sd_task_delay
 	bsr sd_card_init
 	bmi.s .sd_task_no_card
-	bsr _install_sd_card
+	bsr sd_card_reinstall
 	bra .sd_task_unlock
 .sd_task_no_card:
 	clr.b sd_card_lock
@@ -1332,7 +1426,6 @@ sd_task: // check SD-Card insertion / removal
 	moveq #0,D0
 	bsr sd_get_status
 	bmi.s .sd_task_removed
-	move.l D0,-(SP)
 	move.b #0xFF,D0
 	bsr sd_com                // 4 bytes
 	move.b #0xFF,D0
@@ -1341,11 +1434,11 @@ sd_task: // check SD-Card insertion / removal
 	bsr sd_com
 	move.b #0xFF,D0
 	bsr sd_com
-	move.l (SP)+,D0
 	bra.s .sd_task_unlock
 .sd_task_removed:
 	moveq #-1,D0
 	move.b D0,sd_card_removed
+	bsr sd_card_uninstall
 .sd_task_unlock:
 	clr.b sd_card_lock
 	move.l #200,D0
@@ -1382,6 +1475,7 @@ sd_card_init:
 	bsr wait_10ms
 	move.l #MCF_DSPI_DMCR_MSTR+MCF_DSPI_DMCR_CSIS5+MCF_DSPI_DMCR_CSIS3+MCF_DSPI_DMCR_CSIS2+MCF_DSPI_DMCR_CSIS0+MCF_DSPI_DMCR_DTXF+MCF_DSPI_DMCR_DRXF+MCF_DSPI_DMCR_CTXF+MCF_DSPI_DMCR_CRXF,D0
 	move.l D0,MCF_DSPI_DMCR   // clock off cs off
+	clr.b sd_card_hc
 	moveq #10,D1
 .loop_sd_com:
 		move.b #0xFF,D0
@@ -1474,12 +1568,24 @@ sd_card_init:
 		bne.s .read_ocr
 		move.b #0xFF,D0
 		bsr sd_com                // 4 bytes
+		move.b D0,D1
+		asl.l #8,D1
 		move.b #0xFF,D0
 		bsr sd_com
+		move.b D0,D1
+		asl.l #8,D1
 		move.b #0xFF,D0
 		bsr sd_com
+		move.b D0,D1
+		asl.l #8,D1
 		move.b #0xFF,D0
 		bsr sd_com
+		move.b D0,D1
+		btst #30,D1               // CCS
+		beq.s .sd_not_hc
+		moveq #-1,D0
+		move.b D0,sd_card_hc
+.sd_not_hc:
 		move.l #20000,D1          // timeout
 .wait_activity:
 			move.b #0xFF,D0 // clocks
@@ -1602,19 +1708,66 @@ read_cid:
 	swap D1
 	move.l D1,D0
 	lsr.l #6,D0               // x 65636 / 64 -> total sectors
+	tst.b sd_card_hc
+	bne.s .sd_block_len
+	cmp.l #0x800000,D0        // 4GB
+	bcs.s .sd_init_end
+.sd_block_len:
+	move.l D0,-(SP)
+	moveq #-1,D0
+	move.b D0,sd_card_hc
+	move.l #512,D0
+	bsr sd_card_set_block_len
+	beq.s .sd_block_len_ok
+	clr.b sd_card_hc
+.sd_block_len_ok:
+	move.l (SP)+,D0
 .sd_init_end:
+	tst.l D0
 	movem.l (SP),D1-D3/A0-A1
 	lea 20(SP),SP
+	rts
+
+sd_card_set_block_len: // D0.L:block_len
+
+	lea -12(SP),SP
+	movem.l D1-D2/A0,(SP)
+	move.l D0,D1
+	move.l D0,D2
+	swap D1
+	move.b #0xFF,D0           // clocks
+	bsr sd_com	
+	moveq #0x50,D0            // cmd 16, SET_BLOCKLEN
+	bsr sd_com	
+	move.l D1,D0
+	lsr.l #8,D0
+	bsr sd_com	
+	move.b D1,D0
+	bsr sd_com
+	move.l D2,D0
+	lsr.l #8,D0
+	bsr sd_com	
+	move.b D2,D0
+	bsr sd_com	
+	moveq #0x01,D0
+	bsr sd_com
+	moveq #0,D0
+	bsr sd_get_status
+	movem.l (SP),D1-D2/A0
+	lea 12(SP),SP
 	rts
 
 sd_card_sector_read: // D0.L:sec_nr, A0:buf_addr
 
 	lea -12(SP),SP
 	movem.l D1-D2/A0,(SP)
-	asl.l #8,D0
-	add.l D0,D0               // x 512 !
-	move.l D0,D1	             // bytes
-	move.l D0,D2
+	move.l D0,D1
+	tst.b sd_card_hc
+	bne.s .sd_csr_hc          // block address
+	add.l D1,D1
+	asl.l #8,D1               // x 512 !
+.sd_csr_hc:
+	move.l D1,D2	             // bytes
 	swap D1
 	move.b #0xFF,D0           // clocks
 	bsr sd_com	
@@ -1652,10 +1805,13 @@ sd_card_sector_write: // D0.L:sec_nr, A0:buf_addr
 
 	lea -12(SP),SP
 	movem.l D1-D2/A0,(SP)
-	asl.l #8,D0
-	add.l D0,D0               // x 512 !
-	move.l D0,D1	             // bytes
-	move.l D0,D2
+	move.l D0,D1
+	tst.b sd_card_hc
+	bne.s .sd_csw_hc          // block address
+	add.l D1,D1
+	asl.l #8,D1               // x 512 !
+.sd_csw_hc:
+	move.l D1,D2	             // bytes
 	swap D1
 	move.b #0xFF,D0           // clocks
 	bsr sd_com	
@@ -1893,13 +2049,18 @@ _uninstall_usb_stor:
 	move.l 28(SP),D0         // dev_num
 	cmp.l #PUN_DEV,D0
 	bhi .error_usb_uninstall // error
-	move.l _usb_1st_disk_drive,D2
+	tst.l usb_disk_drives
 	beq .error_usb_uninstall
 	or.l #PUN_USB,D0
 	move.l pun_ptr,D1
-	beq.s .error_usb_uninstall
+	beq .error_usb_uninstall
 	move.l D1,A1
+	moveq #2,D2              // drive C
 .loop_uninstall_usb_part:
+		move.l usb_disk_drives,D1
+		bclr D2,D1
+		beq.s .not_this_usb_devnum
+		move.l D1,usb_disk_drives
 		moveq #0,D1
 		move.b _pinfo_pun(A1,D2.l),D1
 		cmp.l D1,D0
@@ -1946,6 +2107,26 @@ _uninstall_usb_stor:
 	lea 24(SP),SP
 	rts
 
+usb_test_drive: // D0: drive, return N flag if not an USB drive
+
+	lea -8(SP),SP
+	movem.l D0-D1,(SP)
+	move.l usb_disk_drives,D1
+	beq.s .not_usb_drive
+	cmp.l #MAX_LOGICAL_DRIVE,D0
+	bcc.s .not_usb_drive
+	btst D0,D1
+	beq.s .not_usb_drive
+	moveq #0,D0
+	movem.l (SP),D0-D1
+	lea 8(SP),SP
+	rts
+.not_usb_drive:
+	moveq #-1,D0
+	movem.l (SP),D0-D1
+	lea 8(SP),SP
+	rts
+
 #endif /* (defined(CONFIG_USB_UHCI) || defined(CONFIG_USB_OHCI) || defined(CONFIG_USB_EHCI)) && defined(CONFIG_USB_STORAGE) */
 
 #if ((defined(CONFIG_USB_UHCI) || defined(CONFIG_USB_OHCI) || defined(CONFIG_USB_EHCI)) && defined(CONFIG_USB_STORAGE)) || defined(MCF547X)
@@ -1962,7 +2143,7 @@ install_pun_drive:
 	trap #1 
 	addq.l #8,SP
 	move.l D0,pun_ptr
-	beq.s .no_pinfo
+	beq .no_pinfo
 	move.l D0,A3
 	clr.w _pinfo_puns(A3)
 	lea _pinfo_pun(A3),A0
@@ -1994,9 +2175,8 @@ install_pun_drive:
 	and.l D2,D0
 	bne.s .usb_pun
 	moveq #0,D4              // drive A
-	tst.l _sd_disk_drive
-	bmi.s .drive_not_exist_usb
-	bra.s .sd_drive_counted
+	move.l sd_disk_drives,D0
+	beq.s .drive_not_exist_usb
 .usb_pun:	
 #endif /* defined(MCF547X) && defined(SD_CARD_REPLACE_FLOPPY) */
 	move.l _drvbits,D0
@@ -2015,9 +2195,6 @@ install_pun_drive:
 	move.w _pinfo_puns(A3),D0
 	addq.l #1,D0
 	move.w D0,_pinfo_puns(A3)
-#if defined(MCF547X) && defined(SD_CARD_REPLACE_FLOPPY)
-.sd_drive_counted:
-#endif
 	moveq #0,D0
 	bset #7,D0               // changed
 	lea _pinfo_flags(A3),A0
@@ -2085,15 +2262,10 @@ install_pun_drive:
 	lea 16(SP),SP
 	tst.l D0
 	ble .end_usb_disk        // read error
-#ifdef MCF547X
-	move.l _sd_disk_drive,D0
-#ifdef SD_CARD_REPLACE_FLOPPY
-	addq.l #1,D0
-#endif
-	or.l _usb_1st_disk_drive,D0
-#else /* !MCF547X */
-	tst.l _usb_1st_disk_drive
-#endif /* MCF547X */
+	move.l usb_disk_drives,D0
+	bset D4,D0
+	move.l D0,usb_disk_drives
+	tst.b hdv_usb_installed
 	bne .usb_1st_drive_ok    // hdv vectors installed
 #ifdef MCF547X
 	bra.s .install_hdv_xbra
@@ -2106,13 +2278,11 @@ install_pun_drive:
 	bmi .end_usb_disk        // read error
 	clr.b sd_card_removed
 .no_sd_card_sector:
-	move.l _sd_disk_drive,D0
-#ifdef SD_CARD_REPLACE_FLOPPY
-	addq.l #1,D0
-#endif
-	move.l D4,_sd_disk_drive
-	or.l _usb_1st_disk_drive,D0
-	bne .sd_1st_drive_ok    // hdv vectors installed
+	move.l sd_disk_drives,D0
+	bset D4,D0
+	move.l D0,sd_disk_drives
+	tst.b hdv_usb_installed
+	bne .usb_1st_drive_ok    // hdv vectors installed
 .install_hdv_xbra:
 #endif /* MCF547X */
 	move.w SR,D0
@@ -2247,13 +2417,11 @@ install_pun_drive:
 	clr.l old_xhdi
 	clr.l old_xhdi_version   //  protocol version
 .no_cookie_jar:
+	moveq #-1,D0
+	move.b D0,hdv_usb_installed
 	move.w (SP)+,D0
 	move.w D0,SR
 .usb_1st_drive_ok:
-	tst.l _usb_1st_disk_drive
-	bne.s .sd_1st_drive_ok
-	move.l D4,_usb_1st_disk_drive
-.sd_1st_drive_ok:
 	move.l _dskbufp,A0       // boot sector
 	lea _pinfo_bpb(A3),A1
 	move.l D4,D2             // logical drive
@@ -2562,22 +2730,16 @@ det_hdv_bpb_usb:
  	moveq #0,D0
 	move.w 4+4(SP),D0        // drive
 #ifdef MCF547X
-	tst.l _sd_disk_drive
+	bsr sd_test_drive
 	bmi.s .dhbu5
-	cmp.l _sd_disk_drive,D0
-	bne.s .dhbu5
 	tst.b sd_card_removed
 	beq.s .dhbu4
 	bra.s .dhbu2
 .dhbu5:
 #endif
 #if (defined(CONFIG_USB_UHCI) || defined(CONFIG_USB_OHCI) || defined(CONFIG_USB_EHCI)) && defined(CONFIG_USB_STORAGE)
-	tst.l _usb_1st_disk_drive
-	beq.s .dhbu2             // error
-	cmp.l _usb_1st_disk_drive,D0
-	bcs.s .dhbu2
-	cmp.l #MAX_LOGICAL_DRIVE,D0
-	bcs.s .dhbu4
+	bsr usb_test_drive
+	bpl.s .dhbu4
 #endif
 	bra.s .dhbu2             // error
 .dhbu4:
@@ -2653,22 +2815,16 @@ det_hdv_rw_usb:
  	moveq #0,D0
 	move.w 14+28(SP),D0      // drive
 #ifdef MCF547X
-	tst.l _sd_disk_drive
+	bsr sd_test_drive
 	bmi.s .dhru17
-	cmp.l _sd_disk_drive,D0
-	bne.s .dhru17
 	tst.b sd_card_removed
 	beq.s .dhru9
 	bra.s .dhru19
 .dhru17:
 #endif
 #if (defined(CONFIG_USB_UHCI) || defined(CONFIG_USB_OHCI) || defined(CONFIG_USB_EHCI)) && defined(CONFIG_USB_STORAGE)
-	tst.l _usb_1st_disk_drive
-	beq.s .dhru8             // error
-	cmp.l _usb_1st_disk_drive,D0
-	bcs.s .dhru8
-	cmp.l #MAX_LOGICAL_DRIVE,D0
-	bcs.s .dhru9
+	bsr usb_test_drive
+	bpl.s .dhru9
 #endif
 	bra.s .dhru8             // error
 .dhru9:
@@ -2740,7 +2896,7 @@ det_hdv_rw_usb:
 	btst #6,(A1)            // stop
 	bne .dhru19
 #ifdef MCF547X
-	move.l D4,D2
+	tst.l D4
 	beq.s .dhru10
 #endif	
 #if (defined(CONFIG_USB_UHCI) || defined(CONFIG_USB_OHCI) || defined(CONFIG_USB_EHCI)) && defined(CONFIG_USB_STORAGE)
@@ -2897,22 +3053,16 @@ det_hdv_mediach_usb:
  	moveq #0,D0
 	move.w 4+4(SP),D0        // drive
 #ifdef MCF547X
-	tst.l _sd_disk_drive
+	bsr sd_test_drive
 	bmi.s .dhmu4
-	cmp.l _sd_disk_drive,D0
-	bne.s .dhmu4
 	tst.b sd_card_removed
 	beq.s .dhmu3
 	bra.s .dhmu6
 .dhmu4:
 #endif
 #if (defined(CONFIG_USB_UHCI) || defined(CONFIG_USB_OHCI) || defined(CONFIG_USB_EHCI)) && defined(CONFIG_USB_STORAGE)
-	tst.l _usb_1st_disk_drive
-	beq.s .dhmu2             // error
-	cmp.l _usb_1st_disk_drive,D0
-	bcs.s .dhmu2
-	cmp.l #MAX_LOGICAL_DRIVE,D0
-	bcs.s .dhmu3
+	bsr usb_test_drive
+	bpl.s .dhmu3
 #endif
 	bra.s .dhmu2             // error
 .dhmu3:
@@ -3100,23 +3250,22 @@ XHInqTarget2:
 	moveq #0,D0
 	move.w 10(A6),D0         // major
 #ifdef MCF547X
-	tst.l _sd_disk_drive
-#ifdef SD_CARD_REPLACE_FLOPPY
-	bmi.s .xi10
-#else
-	beq.s .xi10
-#endif
-	tst.l D0
+	bne.s .xi10
+	tst.l sd_disk_drives
+	beq.s .xi2               // error
+	tst.b sd_card_removed
 	beq.s .xi3               // OK
+	moveq #-2,D0             // device not responding
+	rts
 .xi10:
 #endif /* MCF547X */
 #if (defined(CONFIG_USB_UHCI) || defined(CONFIG_USB_OHCI) || defined(CONFIG_USB_EHCI)) && defined(CONFIG_USB_STORAGE)
-	tst.l _usb_1st_disk_drive
-	beq.s .xi2               // error
 	cmp.l #PUN_USB,D0
 	bcs.s .xi2
 	cmp.l #PUN_USB+PUN_DEV,D0
-	bls.s .xi3               // OK
+	bhi.s .xi2
+	tst.l usb_disk_drives
+	bne.s .xi3               // OK
 #endif /* (defined(CONFIG_USB_UHCI) || defined(CONFIG_USB_OHCI) || defined(CONFIG_USB_EHCI)) && defined(CONFIG_USB_STORAGE) */
 .xi2:
 	tst.l old_xhdi
@@ -3230,12 +3379,12 @@ XHLock:
 #if (defined(CONFIG_USB_UHCI) || defined(CONFIG_USB_OHCI) || defined(CONFIG_USB_EHCI)) && defined(CONFIG_USB_STORAGE)
 	moveq #0,D0
 	move.w 10(A6),D0         // major
-	tst.l _usb_1st_disk_drive
-	beq.s .xlr2              // error
 	cmp.l #PUN_USB,D0
 	bcs.s .xlr2
 	cmp.l #PUN_USB+PUN_DEV,D0
 	bhi.s .xlr2
+	tst.l usb_disk_drives
+	beq.s .xlr2              // error
 #endif /* (defined(CONFIG_USB_UHCI) || defined(CONFIG_USB_OHCI) || defined(CONFIG_USB_EHCI)) && defined(CONFIG_USB_STORAGE) */
 	moveq #0,D0
 	rts
@@ -3270,12 +3419,12 @@ XHEject:
 	moveq #0,D0
 	move.w 10(A6),D0         // major
 #if (defined(CONFIG_USB_UHCI) || defined(CONFIG_USB_OHCI) || defined(CONFIG_USB_EHCI)) && defined(CONFIG_USB_STORAGE)
-	tst.l _usb_1st_disk_drive
-	beq.s .xlr2              // error
 	cmp.l #PUN_USB,D0
 	bcs.s .xlr2
 	cmp.l #PUN_USB+PUN_DEV,D0
 	bhi.s .xlr2
+	tst.l usb_disk_drives
+	beq.s .xlr2              // error
 	tst.w 14(A6)             // do_eject
 	beq.s .xlr2
 	move.l pun_ptr,D1
@@ -3347,18 +3496,17 @@ XHDrvMap:
 		move.b _pinfo_pun(A0,D1.l),D2
 		bmi.s .xdm4 // nothing
 #ifdef MCF547X
-		tst.l _sd_disk_drive
-#ifdef SD_CARD_REPLACE_FLOPPY
+		bsr sd_test_drive
 		bmi.s .xdm5
-#else
-		beq.s .xdm5
-#endif
+		move.l _drvbits,D0
+		bra.s .xdm2 // OK
+.xdm5:
+		move.l _drvbits,D0
 		tst.l D2
 		beq.s .xdm2 // OK
-.xdm5:
 #endif /* MCF547X */
 #if (defined(CONFIG_USB_UHCI) || defined(CONFIG_USB_OHCI) || defined(CONFIG_USB_EHCI)) && defined(CONFIG_USB_STORAGE)
-		tst.l _usb_1st_disk_drive
+		tst.l usb_disk_drives
 		beq.s .xdm4 // error
 		cmp.l #PUN_USB,D2
 		bcs.s .xdm4
@@ -3412,23 +3560,12 @@ XHInqDev:
  	moveq #0,D0
 	move.w 10(A6),D0         // bios_device
 #ifdef MCF547X
-	tst.l _sd_disk_drive
-	bmi.s .xd10
-	cmp.l _sd_disk_drive,D0
-	bne.s .xd10
-	tst.b sd_card_removed
-	beq.s .xd8
-	moveq #-2,D0             // device not responding
-	rts
-.xd10:
+	bsr sd_test_drive
+	bpl.s .xd8
 #endif /* MCF547X */
 #if (defined(CONFIG_USB_UHCI) || defined(CONFIG_USB_OHCI) || defined(CONFIG_USB_EHCI)) && defined(CONFIG_USB_STORAGE)
-	tst.l _usb_1st_disk_drive
-	beq.s .xd2               // error
-	cmp.l _usb_1st_disk_drive,D0
-	bcs.s .xd2
-	cmp.l #MAX_LOGICAL_DRIVE,D0
-	bcs.s .xd8
+	bsr usb_test_drive
+	bpl.s .xd8
 #endif /* (defined(CONFIG_USB_UHCI) || defined(CONFIG_USB_OHCI) || defined(CONFIG_USB_EHCI)) && defined(CONFIG_USB_STORAGE) */
 	bra.s .xd2               // error
 .xd8:
@@ -3514,10 +3651,8 @@ XHInqDriver:
  	moveq #0,D0
 	move.w 10(A6),D0         // bios_device
 #ifdef MCF547X
-	tst.l _sd_disk_drive
+	bsr sd_test_drive
 	bmi.s .xdr11
-	cmp.l _sd_disk_drive,D0
-	bne.s .xdr11
 	tst.b sd_card_removed
 	beq.s .xdr9
 	moveq #-2,D0             // device not responding
@@ -3525,12 +3660,8 @@ XHInqDriver:
 .xdr11:
 #endif /* MCF547X */
 #if (defined(CONFIG_USB_UHCI) || defined(CONFIG_USB_OHCI) || defined(CONFIG_USB_EHCI)) && defined(CONFIG_USB_STORAGE)
-	tst.l _usb_1st_disk_drive
-	beq.s .xdr2              // error
-	cmp.l _usb_1st_disk_drive,D0
-	bcs.s .xdr2
-	cmp.l #MAX_LOGICAL_DRIVE,D0
-	bcs.s .xdr9
+	bsr usb_test_drive
+	bpl.s .xdr9
 #endif /* (defined(CONFIG_USB_UHCI) || defined(CONFIG_USB_OHCI) || defined(CONFIG_USB_EHCI)) && defined(CONFIG_USB_STORAGE) */
 	bra.s .xdr2              // error
 .xdr9:
@@ -3640,22 +3771,21 @@ XHReadWrite:                          // read / write physical sectors
 	moveq #0,D4
 	move.w 10(A6),D4         // major
 #ifdef MCF547X
-	tst.l _sd_disk_drive
-	bmi.s .xr12
-	tst.l D4
 	bne.s .xr12
+	tst.l sd_disk_drives
+	beq.s .xr4               // error
 	tst.b sd_card_removed
 	beq.s .xr1               // SD-card
 	bra.s .xr15
 .xr12:
 #endif /* MCF547X */
 #if (defined(CONFIG_USB_UHCI) || defined(CONFIG_USB_OHCI) || defined(CONFIG_USB_EHCI)) && defined(CONFIG_USB_STORAGE)
-	tst.l _usb_1st_disk_drive
-	beq.s .xr4               // error
 	cmp.l #PUN_USB,D4
 	bcs.s .xr4
 	cmp.l #PUN_USB+PUN_DEV,D4
-	bls.s .xr1               // OK
+	bhi.s .xr4
+	tst.l usb_disk_drives
+	bne.s .xr1               // OK
 #endif /* (defined(CONFIG_USB_UHCI) || defined(CONFIG_USB_OHCI) || defined(CONFIG_USB_EHCI)) && defined(CONFIG_USB_STORAGE) */
 .xr4:
 	tst.l old_xhdi
@@ -3782,23 +3912,12 @@ XHInqDev2:
  	moveq #0,D0
 	move.w 10(A6),D0         // bios_device
 #ifdef MCF547X
-	tst.l _sd_disk_drive
-	bmi.s .xdd13
-	cmp.l _sd_disk_drive,D0
-	bne.s .xdd13
-	tst.b sd_card_removed
-	beq.s .xdd12
-	moveq #-2,D0             // device not responding
-	rts
-.xdd13:
+	bsr sd_test_drive
+	bpl.s .xdd12
 #endif /* MCF547X */
 #if (defined(CONFIG_USB_UHCI) || defined(CONFIG_USB_OHCI) || defined(CONFIG_USB_EHCI)) && defined(CONFIG_USB_STORAGE)
-	tst.l _usb_1st_disk_drive
-	beq.s .xdd2               // error
-	cmp.l _usb_1st_disk_drive,D0
-	bcs.s .xdd2
-	cmp.l #MAX_LOGICAL_DRIVE,D0
-	bcs.s .xdd12
+	bsr usb_test_drive
+	bpl.s .xdd12
 #endif /* (defined(CONFIG_USB_UHCI) || defined(CONFIG_USB_OHCI) || defined(CONFIG_USB_EHCI)) && defined(CONFIG_USB_STORAGE) */
 	bra.s .xdd2              // error
 .xdd12:
@@ -3904,7 +4023,7 @@ XHGetCapacity:
 	moveq #0,D0
 	move.w 10(A6),D0         // major
 #if (defined(CONFIG_USB_UHCI) || defined(CONFIG_USB_OHCI) || defined(CONFIG_USB_EHCI)) && defined(CONFIG_USB_STORAGE)
-	tst.l _usb_1st_disk_drive
+	tst.l usb_disk_drives
 	beq.s .xgc2              // error
 	cmp.l #PUN_USB,D0
 	bcs.s .xgc2
@@ -5719,12 +5838,14 @@ debug148:	.asciz "XHDI XHGetCapacity major 0x"
 #ifdef SD_CARD_VERIFY
 	.lcomm sd_buffer_verify,512
 #endif
-	.lcomm _sd_disk_drive,4
+	.lcomm sd_disk_drives,4
+	.lcomm sd_card_hc,4
 	.lcomm sd_card_removed,1
 	.lcomm sd_card_lock,1
 	.lcomm sd_task_created,1
 #endif
-	.lcomm _usb_1st_disk_drive,4
+	.lcomm usb_disk_drives,4
+	.lcomm hdv_usb_installed,1
 	.lcomm old_hdv_bpb_usb,4
 	.lcomm old_hdv_rw_usb,4
 	.lcomm old_hdv_mediach_usb,4
