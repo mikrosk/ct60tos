@@ -7833,6 +7833,7 @@ test_keyboard:
 	trap #14
 	lea 12(SP),SP
 	swap D0
+	moveq #5,D4              // retry counter
 	cmp.w #0x4E56,D0         // NV magic code
 	beq .rtc_bypass
 	move.l D7,-(SP)          // => Gettime
