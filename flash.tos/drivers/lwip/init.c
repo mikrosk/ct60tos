@@ -2029,6 +2029,11 @@ void emutos_stopped(unsigned long *stack)
   vTaskSuspend(tid_ETOS);
 }
 
+static void emutos_halt(void)
+{
+  vTaskDelete(0);
+}
+
 static void emutos_enable_interrupts(void)
 {
   static long msg;
@@ -2122,7 +2127,7 @@ static void go_emutos(unsigned long source)
         " move.l #0x0000E040,D0\n\t" /* zone at $00000000 to $00FFFFFF in cache inhibit */
         " movec.l D0,ACR0\n\t" );
   memcpy((void *)0xE00000,(void *)source,0x80000); /* copy Emutos */
-  for(p = (unsigned short *)0xE00000; p < (unsigned short *)0xE80000; p++)
+  for(p = (unsigned short *)0xE00000; (unsigned long)p < 0xE80000; p++)
   {
     if(p[0] == 0x40C0) /* move.w SR,D0 */
     {
@@ -2140,6 +2145,12 @@ static void go_emutos(unsigned long source)
         p[0] = 0x4EB9; /* jsr */
         *(unsigned long *)&p[1] = (unsigned long)emutos_stop;
         board_printf("EMUTOS patch: found stop #0x2X00,SR move.w D0,SR at 0x%08lX\r\n", p);
+      }
+      else if((p[1] == 0x2700) && (p[2] == 0x60FA)) /* bra.s .stop */
+      {
+        p[0] = 0x4EB9; /* jsr */
+        *(unsigned long *)&p[1] = (unsigned long)emutos_halt;
+        board_printf("EMUTOS patch: found stop #0x2700,SR bra.s .stop at 0x%08lX\r\n", p);
       }
     }
   }
@@ -4842,7 +4853,7 @@ static void *test_debug_fault(unsigned long address, unsigned long vector, unsig
 		*(unsigned long *)memvalid = 0; /* force cold reset to next reset */
   }
 #ifdef MCF547X
-  else if((pxCurrentTCB == tid_ETOS) && (vector != 3) && (vector != 4)) /* rebuild return exception frame, EMUTOS not use the CF68KLIB */
+  else if(pxCurrentTCB == tid_ETOS) /* rebuild return exception frame, EMUTOS not use the CF68KLIB */
   {
     unsigned long ssp = (*(unsigned long *)&RegList[76]) + 8;
     unsigned long pc = *(unsigned long *)&RegList[64];
