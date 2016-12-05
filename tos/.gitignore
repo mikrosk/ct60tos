@@ -1,0 +1,5 @@
+version.h
+gentos
+obj/
+radeon.sys
+*.bin

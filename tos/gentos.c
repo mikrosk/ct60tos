@@ -18,6 +18,7 @@
 #include <string.h>
 #include <stdarg.h>
 #include <time.h>
+#include <stdint.h>
 
 #include "ct60_hw.h"
 #include "endianness.h"
@@ -138,8 +139,8 @@ static void patchTosDate( unsigned char* pTos )
 }
 
 // not very nice but comfortable ;)
-static unsigned long startAddress;
-static unsigned long endAddress;
+static uint32_t startAddress;
+static uint32_t endAddress;
 
 static void patchImage( unsigned char* pImage, const unsigned char* pPatches )
 {
@@ -152,13 +153,13 @@ static void patchImage( unsigned char* pImage, const unsigned char* pPatches )
 	do
 	{
 		unsigned char* p;
-		unsigned long len;
-		unsigned long addr;
+		uint32_t len;
+		uint32_t addr;
 
-		addr = BE32( *(unsigned long*)pPatches );
+		addr = BE32( *(uint32_t*)pPatches );
 		pPatches += sizeof( addr );
 
-		len = BE32( *(unsigned long*)pPatches );
+		len = BE32( *(uint32_t*)pPatches );
 		pPatches += sizeof( len );
 		
 		// check / set VMA ranges ...
@@ -181,12 +182,12 @@ static void patchImage( unsigned char* pImage, const unsigned char* pPatches )
 		p += len;
 		pPatches += len;
 
-		if( (unsigned long)pPatches & 3 )
+		if( (uintptr_t)pPatches & 3 )
 		{
-			pPatches = (unsigned char*)( ( (unsigned long)pPatches & 0xFFFFFFFC ) + 4 );
+			pPatches = (unsigned char*)( ( (uintptr_t)pPatches & ~3 ) + 4 );
 		}
 	}
-	while( *(unsigned long*)pPatches != 0xffffffff );
+	while( *(uint32_t*)pPatches != 0xffffffff );
 }
 
 static void createTosChecksum( unsigned char* pBuffer )
