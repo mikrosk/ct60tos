@@ -1,0 +1,388 @@
+<html>
+
+<head>
+<meta http-equiv="Content-Type"
+content="text/html; charset=iso-8859-1">
+<meta name="GENERATOR" content="Microsoft FrontPage 4.0">
+<title>CT60 Historical</title>
+</head>
+
+<body bgcolor="#000000" text="#FF0000" link="#FF0000"
+vlink="#800000" alink="#FF0000">
+
+<p align="center">&nbsp;</p>
+
+<p align="center"><font color="#FF0000" size="7" face="Arial"><strong>CT60
+Project Historical</strong></font></p>
+
+<p align="left">&nbsp;</p>
+
+<p align="left"><font color="#FFFF00" size="4" face="Arial"><strong>March 2005</strong></font></p>
+<blockquote>
+  <p align="left"><font color="#FFFFFF" size="3" face="Arial"><strong>New ABE 5M
+  for CT60 :</strong></font></p>
+  <p align="left"><font color="#FFFFFF" size="3" face="Arial"><strong>
+  Modification of I6 locking from the CT bus slot. This bug was discovered by
+  the developers of the EtherNAT card. The I6 was blocking the INT6 from F30
+  motherboard (MFP &amp; DSP).</strong></font></p>
+  <p align="left"><font color="#FFFFFF" size="3" face="Arial"><strong>The 5M is
+  successor of 5L. The 5K (F30 16 MHz only bus) is no more supported.</strong></font></p>
+  <p align="left"><font color="#FFFFFF" size="3" face="Arial"><strong><u>To use
+  a daughter card on CT60, the ABE 5M MUST be used. This update is not needed
+  for CT63 !</u></strong></font></p>
+</blockquote>
+
+<p align="left">&nbsp;</p>
+
+<p align="left"><font color="#FFFF00" size="4" face="Arial"><strong>November
+6th&nbsp; 2003</strong></font></p>
+<blockquote>
+  <p align="left"><font color="#FFFFFF" size="3" face="Arial"><strong>New SDR 5E
+  : solve the SPURIOUS INT (error #24) problem occuring with some 060. This
+  problem may occur indirectly as a BUS ERROR or an ACCESS FAULT.</strong></font></p>
+</blockquote>
+
+<p align="left">&nbsp;</p>
+
+<p align="left"><font color="#FFFF00" size="4" face="Arial"><strong>October
+1st&nbsp; 2003</strong></font></p>
+<blockquote>
+  <p align="left"><font color="#FFFFFF" size="3" face="Arial"><strong>Test of
+  the last mask of 68060 : 1E41J - Rev6 - 1999</strong></font></p>
+  <p align="left"><font color="#FFFFFF" size="3" face="Arial"><strong>The CT60
+  run at 100 MHz !&nbsp;</strong></font></p>
+  <p align="left"><font color="#FFFFFF" size="3" face="Arial"><strong>147 MIPS
+  &amp; 104 MB/s with SDRAM !&nbsp;</strong></font></p>
+  <p align="left">&nbsp;&nbsp;&nbsp;</p>
+</blockquote>
+
+<p align="left"><font color="#FFFF00" size="4" face="Arial"><strong>August 2003</strong></font></p>
+<blockquote>
+  <p align="left"><font color="#FFFFFF" size="3" face="Arial"><strong>New ABE (5K &amp;
+  5L) :</strong></font></p>
+  <p align="left">&nbsp;&nbsp;&nbsp;<font color="#FFFFFF" size="3" face="Arial"><strong>
+  - Modification of the UDS &amp; LDS generator for readings to correct a bug
+  that was discovered with HD Driver 8.13. <u>This bug can appear with some
+  other software ! Update your ABE !</u></strong></font></p>
+</blockquote>
+
+<p align="left">&nbsp;</p>
+
+<p align="left"><font color="#FFFF00" size="4" face="Arial"><strong>July 2003</strong></font></p>
+<blockquote>
+  <p align="left"><font color="#FFFFFF" size="3" face="Arial"><strong>New ABE (5I &amp;
+  5J) :&nbsp;</strong></font></p>
+  <p align="left">&nbsp;&nbsp;&nbsp;<font color="#FFFFFF" size="3" face="Arial"><strong>
+  - Modification of the BUS ERROR from the Falcon for the ECLIPSE board.</strong></font></p>
+  <p align="left"><font color="#FFFFFF" size="3" face="Arial"><strong>&nbsp;&nbsp;&nbsp;
+  - New Data Latch to solve timing problems with some IDE HDD and
+  some motherboards and with some Falcon daughter cards like Eclipse too.</strong></font></p>
+  <p align="left">&nbsp;&nbsp;&nbsp;<font color="#FFFFFF" size="3" face="Arial"><strong>
+  - New Watch Dog timer done with the new 15.36us clock from SDR (new refresh).
+  NEED TO CUT A TRACE ON ALL CT60 !</strong></font></p>
+  <p align="left">&nbsp;&nbsp;&nbsp;<font color="#FFFFFF" size="3" face="Arial"><strong>
+  - Modification of the Falcon DTACK sampling to solve a problem of reading
+  (sometimes) the MFP &amp; SDMA registers !&nbsp;</strong></font></p>
+  <p align="left"><font color="#FFFFFF" size="3" face="Arial"><strong>&nbsp;&nbsp;&nbsp;
+  - There are
+  now two version of ABE :</strong></font></p>
+  <blockquote>
+  <p align="left">&nbsp;&nbsp;&nbsp;<font color="#FFFFFF" size="3" face="Arial"><strong>
+  - First letter (ie 5I) is for the standard CT60 running the F30 bus at 16 &amp; 20
+  MHz.</strong></font></p>
+    <p align="left">&nbsp;&nbsp;&nbsp;<font color="#FFFFFF" size="3" face="Arial"><strong>
+  - Second letter (ie 5J) is for CT60 running the F30 bus at 25 MHz (40 MHz OSC
+  replaced by a 50 MHz). The ST-RAM Read&nbsp;&nbsp; accesses are done by 5 cycles instead
+  of 4. Works too on 16 &amp; 20 MHz bus.</strong></font></p>
+  </blockquote>
+  <p align="left">&nbsp;</p>
+  <p align="left"><font color="#FFFFFF" size="3" face="Arial"><strong>New SDR (5D)
+  :</strong></font></p>
+
+  <p align="left">&nbsp;&nbsp;&nbsp;<font color="#FFFFFF" size="3" face="Arial"><strong>
+  - The RESET OUT signal (reset instruction) is no more supported to avoid a
+  hardware dead lock at power on.</strong></font></p>
+
+  <p align="left">&nbsp;&nbsp;&nbsp;<font color="#FFFFFF" size="3" face="Arial"><strong>
+  - 2 pages each of 8 or 16 KB (depending of the chips on the DIMM).</strong></font></p>
+
+  <p align="left">&nbsp;&nbsp;&nbsp;<font color="#FFFFFF" size="3" face="Arial"><strong>
+  - Write access with 3-1-1-1 and Read access with 5-1-1-1 cycles to increase the
+  marge with higher temperature and more heavy loading of the 060 ADD bus if
+  connecting a future daughter board on the 060 slot.</strong></font></p>
+
+  <p align="left">&nbsp;&nbsp;&nbsp;<font color="#FFFFFF" size="3" face="Arial"><strong>
+  - NEW REFRESH Master clock (66.66 MHz) to refresh every 15.36 us or 7.68 us
+  (depending of the chips on the DIMM). NEED TO CUT A TRACE ON ALL CT60 !</strong></font></p>
+
+<p align="left">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</p>
+</blockquote>
+
+<p align="left"><font color="#FFFF00" size="4" face="Arial"><strong>June 2003</strong></font></p>
+<blockquote>
+  <p align="left"><font color="#FFFFFF" size="3" face="Arial"><strong>New data
+  latch into ABE (4H) to solve timing problems with 25 MHz F30 bus.</strong></font></p>
+  <p align="left"><font color="#FFFFFF" size="3" face="Arial"><strong>New SDR
+  (4F) :</strong></font></p>
+  <p align="left">&nbsp;&nbsp; <font color="#FFFFFF" size="3" face="Arial"><strong>-
+  interleaving of the two 32-bit physical banks of the DIMM : --&gt; hit page
+  size x 2 !</strong></font></p>
+  <p align="left">&nbsp;&nbsp; <font color="#FFFFFF" size="3" face="Arial"><strong>-
+  second address register to open simultaneously 2 pages at different addresses :&nbsp; --&gt; + 5 MB/s
+  !</strong></font></p>
+  <p align="left"><font color="#FFFFFF" size="3" face="Arial"><strong>Remove a
+  timing bug at 20/25 MHz on the bus arbiter (ABE).</strong></font></p>
+  <p align="left"><font color="#FFFFFF" size="3" face="Arial"><strong>Tests at
+  66/16 with and without the Atari clock patch (74F08).</strong></font></p>
+  <p align="left"><font color="#FFFFFF" size="3" face="Arial"><strong>Tests and
+  debug at 66/16, 66/20 &amp; 66/25 MHz for SDMA clock and SDMA data transfers
+  as master.</strong></font></p>
+  <p align="left"><font color="#FFFFFF" size="3" face="Arial"><strong>Typing of
+  the installation documentations and photos.&nbsp;</strong></font></p>
+  <p align="left"><font color="#FFFFFF" size="3" face="Arial"><strong>Shipping
+  of the first units for developers.</strong></font></p>
+</blockquote>
+
+<p align="left">&nbsp;</p>
+
+<p align="left"><font color="#FFFF00" size="4" face="Arial"><strong>May 2003</strong></font></p>
+<blockquote>
+  <p align="left"><font color="#FFFFFF" size="3" face="Arial"><strong>Bus
+  arbiter (into ABE60) modified to solve two consecutive bugs : Blitter &amp;
+  SDMA run fine at 66 &amp; 72 MHz (ABE version = 4B)</strong></font></p>
+  <p align="left"><font color="#FFFFFF" size="3" face="Arial"><strong>General tests
+  at 66/16 MHz &amp; 66/20 MHz (speed of CT60 / speed of F30 bus).</strong></font></p>
+  <p align="left"><font color="#FFFFFF" size="3" face="Arial"><strong>Test of
+  the 060 (model 60 MHz) at 72 MHz : no more supported.</strong></font></p>
+    <p align="left"><strong><font size="3" face="Arial" color="#FFFFFF"><u>ST-Ram
+    Write accesses increased by 25% (3 clock cycles instead of 4 ) !</u></font></strong></p>
+  <p align="left"><strong><font size="3" face="Arial" color="#FFFFFF">Optimization
+    of SDR60 :</font></strong></p>
+    <p align="left"><strong><font size="3" face="Arial" color="#FFFFFF">&nbsp;&nbsp;&nbsp;
+    - Remove 1 clock cycle on Page Miss accesses and adding the
+  capacity for the 512 MB DIMM (256 on each side).</font></strong></p>
+    <p align="left">&nbsp;&nbsp;&nbsp;<strong><font size="3" face="Arial" color="#FFFFFF">
+    - Remove 1 clock cycle on page HIT accesses : 4-1-1-1 for Reads &amp;&nbsp;
+    2-1-1-1 for Writes.</font></strong></p>
+</blockquote>
+<p align="left">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</p>
+<p align="left"><font color="#FFFF00" size="4" face="Arial"><strong>April 2003</strong></font></p>
+<blockquote>
+  <p align="left"><font color="#FFFFFF" size="3" face="Arial"><strong>Buying a
+  200MHz/16chanels logical analyser ! <a href="../../ct60/Analyse.jpg">Picture
+  of the CT60 + analyser (69KB)</a></strong></font></p>
+  <p align="left"><font color="#FFFFFF" size="3" face="Arial"><strong>The last
+  bug found on SDR60 : run fine with the page mode ! SDR60 version = 1. The
+  transfers rate are lower than the theorical ones and it is clear that the 060
+  is spending some time between each burst with SDRAM. So, we touch now the limit
+  of the 060...</strong></font><font color="#FFFFFF" size="3" face="Arial"><strong>SDRAM
+  bandwidth will never be 100% used.&nbsp;</strong></font></p>
+  <p align="left"><font color="#FFFFFF" size="3" face="Arial"><strong>The DSP
+  bug is solved : run fine !</strong></font></p>
+  <p align="left"><font color="#FFFFFF" size="3" face="Arial"><strong>The
+  problems with SCC and interupts are solved.</strong></font></p>
+</blockquote>
+
+<p align="left">&nbsp;</p>
+
+<p align="left"><font color="#FFFF00" size="4" face="Arial"><strong>December 2002</strong></font></p>
+
+<blockquote>
+    <p align="left"><font color="#FFFFFF" size="3" face="Arial"><strong>An
+    other bug found on SDR60, but the SINGLE accesses have yet a
+    problem. </strong></font></p>
+    <p align="left"><font color="#FFFFFF" size="3" face="Arial"><strong>It
+    stills a problem of timing when reading the Host of the DSP
+    and the INT vector of the SCC. This problem is immediat when
+    boosting the falcon motherboard to 20MHz. </strong></font></p>
+    <p align="left"><font color="#FFFFFF" size="3" face="Arial"><strong></strong></font>&nbsp;</p>
+</blockquote>
+
+<p align="left"><font color="#FFFF00" size="4" face="Arial"><strong>June 2002</strong></font></p>
+
+<blockquote>
+    <p align="left"><font color="#FFFFFF" size="3" face="Arial"><strong>A
+    bug found on SDR60. A bug on DSP transfers not yet found.</strong></font></p>
+    <p align="left"><font color="#FFFFFF" size="3" face="Arial"><strong>CT60/F030
+    Bus arbiter is near finished.</strong></font></p>
+</blockquote>
+
+<p align="left">&nbsp;</p>
+
+<p align="left"><font color="#FFFF00" size="4" face="Arial"><strong>April 2nd 2002</strong></font></p>
+
+<blockquote>
+    <p align="left"><font color="#FFFFFF" size="3" face="Arial"><strong>Manufacturing
+    of the board.</strong></font></p>
+</blockquote>
+
+<p align="left">&nbsp;</p>
+
+<p align="left"><font color="#FFFF00" size="4" face="Arial"><strong>February 13rd 2002</strong></font></p>
+
+<blockquote>
+    <p align="left"><font color="#FFFFFF" size="3" face="Arial"><strong>The
+    CT60 runs at 66 &amp; 80 MHz and </strong><strong><u>the
+    SDRAM controller is running at 66 and 80 MHz</u></strong><strong>.</strong></font></p>
+    <p align="left"><font color="#FFFFFF" size="3" face="Arial"><strong>The
+    CT60 runs at 100 MHz but the 060 crashed as soon as we
+    activate the internal CACHES because of internal timing
+    problems... The SDR60 controller doesn't run correctly at 100
+    MHz...</strong></font></p>
+    <p align="left"><font color="#FFFFFF" size="3" face="Arial"><strong>The
+    060 CPU labelled '50 MHz' crash at 80 MHz with the activated
+    caches ! Here is the Amiga world 060 limit of 72 MHz !</strong></font></p>
+    <p align="left"><font color="#FFFFFF" size="3" face="Arial"><strong>I
+    so decided to furnish the CT60 cards with a socketed
+    Oscillator that will be a 66.66 MHz for CT60 with a 060
+    labelled '50' and a 80 MHz for the CT60 with a 060 labelled
+    '60'. It's the user free decision to try to boost with a
+    higher value oscillator (if he finds it !).</strong></font></p>
+    <p align="left"><font color="#FFFFFF" size="3" face="Arial"><strong>The
+    CT60 will be furnished with a Heatsink + Fan bloc (a Pentium
+    I model) not noisly, necessary for a good running of the 060.</strong></font></p>
+    <p align="left"><font color="#FFFFFF" size="3" face="Arial"><strong>The
+    IDE LED of the towers is now connectable without solders on
+    the CT60...</strong></font></p>
+</blockquote>
+
+<p align="left">&nbsp;</p>
+
+<p align="left"><font color="#FFFF00" size="4" face="Arial"><strong>January 8th 2002</strong></font></p>
+
+<blockquote>
+    <p align="left"><font color="#FFFFFF" size="3" face="Arial"><strong>The
+    060 runs at 66 MHz &amp; 80 MHz (the model is a 60 MHz) and
+    correctly accesses to the Falcon mainboard running at 16 MHz
+    : the videl is correctly set.</strong></font></p>
+</blockquote>
+
+<p align="left">&nbsp;</p>
+
+<p align="left"><font color="#FFFF00" size="4" face="Arial"><strong>December 27th 2001</strong></font></p>
+
+<blockquote>
+    <p align="left"><font color="#FFFFFF" size="3" face="Arial"><strong>The
+    060 boots.</strong></font></p>
+</blockquote>
+
+<p align="left">&nbsp;</p>
+
+<p align="left"><font color="#FFFF00" size="4" face="Arial"><strong>November 29th 2001</strong></font></p>
+
+<blockquote>
+    <p align="left"><font color="#FFFFFF" size="3" face="Arial"><strong>Assembly
+    of the board for production validation : </strong></font><a
+    href="../../ct60/carte.jpg"><font
+    color="#FFFFFF" size="3" face="Arial"><strong><font face="Arial" size="3"></font></a><font face="Arial" size="3"><a href="../../ct60/prototype.jpg">prototype.jpg</a></font>
+    (98KB)</strong></font><font
+    color="#FFFFFF" size="3" face="Arial"><strong>.</strong></font></p>
+</blockquote>
+
+<p align="left">&nbsp;</p>
+
+<p align="left"><font color="#FFFF00" size="4" face="Arial"><strong>November 18th 2001</strong></font></p>
+
+<blockquote>
+    <p align="left"><font color="#FFFFFF" size="3" face="Arial"><strong>Manual
+    routing of the board is finished. Shematics were modified
+    (see below).</strong></font></p>
+    <p align="left">&nbsp;</p>
+</blockquote>
+
+<p align="left"><font color="#FFFF00" size="4" face="Arial"><strong>September 15th 2001</strong></font></p>
+
+<blockquote>
+    <p align="left"><font color="#FFFFFF" size="3" face="Arial"><strong>Schematics
+    are finished.</strong></font></p>
+    <p align="left">&nbsp;</p>
+</blockquote>
+
+<p align="left"><font color="#FFFF00" size="4" face="Arial"><strong>August 3rd 2001</strong></font></p>
+
+<blockquote>
+    <p align="left"><font color="#FFFFFF" size="3" face="Arial"><strong>The
+    logic design of RR-J is finished and I was able to work again
+    on CT60. The work's summary : </strong></font></p>
+    <p align="left"><font color="#FFFFFF" size="3" face="Arial"><strong>-
+    brainstorming on ABE-60.</strong></font></p>
+    <p align="left"><font color="#FFFFFF" size="3" face="Arial"><strong>-
+    modification of the 030 to Flash accesses (ABE-60).</strong></font></p>
+    <p align="left"><font color="#FFFFFF" size="3" face="Arial"><strong>-
+    several attempts to place &amp; lock the data &amp; add
+    signals on the pins of the ABE chip to facilitate the PCB
+    routing.</strong></font></p>
+</blockquote>
+
+<p align="left">&nbsp;</p>
+
+<p align="left"><font color="#FFFF00" size="4" face="Arial"><strong>March 7th 2001</strong></font></p>
+
+<blockquote>
+    <p align="left"><font color="#FFFFFF" size="3" face="Arial"><strong>The
+    BIOS for the CT60 boot is ready !<br>
+    The design of the logic is ready since February.<br>
+    <br>
+    The chip ABE-60 was optimised and the SDR-60 (SDRAM
+    controller) seems to be nice...<br>
+    The data transfers performances are the ones that are on my
+    web pages...They were calculated with the SDR60 capacities
+    and the MOVE.L instruction execution time of the 060.<br>
+    So,<br>
+    A BURST READ/WRITE into an OPENED PAGE (HIT) gives :<br>
+    - 8 / 7 cycles ---&gt; 128 / 146 MBytes/s at 64 MHz !<br>
+    A BURST READ/WRITE into a new page (MISS) gives :<br>
+    -13 / 11 cycles ---&gt; 79 / 93 MBytes/s at 64 MHz !<br>
+    This last test assumes that each access is into a new page
+    (CPU jumps over the page frontier).<br>
+    This test is commonly called 'RANDOM ACCESS'.<br>
+    <br>
+    Pages sizes are from 4 to 16 KBytes depending of the SDRAM
+    DIMM capacity &amp; model (see the table of 'SDRAM').<br>
+    <br>
+    The next phase will be the ROUTING of the board...<br>
+    Unfortunately, I have no more time to do that and it will not
+    done before April....<br>
+    My principle job since beginning of January is RIORED-J and
+    it has the biggest priority in a market (and financial)&nbsp;
+    point of view...<br>
+    <br>
+    Next (good) news will be in April...</strong></font><br>
+    </p>
+</blockquote>
+
+<p align="left"><font color="#FFFF00" size="4" face="Arial"><strong>December 00</strong></font></p>
+
+<blockquote>
+    <p align="left"><font color="#FFFFFF" size="3" face="Arial"><strong>Wonderfull
+    ! The CT60 will be able to furnish you the CPU temperature !</strong></font></p>
+    <p align="left"><font color="#FFFFFF" size="3" face="Arial"><strong>How
+    is it possible ? The 060 processor has two not known (because
+    not on the 040 !) pins THERM0 &amp; THERM1.</strong></font></p>
+    <p align="left"><font color="#FFFFFF" size="3" face="Arial"><strong>These
+    pins are connected to the CORE thermical resistor and can be
+    connected to a small Analog/Digital 8-Bit converter...</strong></font></p>
+    <p align="left"><font color="#FFFFFF" size="3" face="Arial"><strong>Boost
+    the 060 without danger : the software read the temperature
+    with a 2.8° C precision and gives you an ALARM at all moment
+    (multitasking compatible) !</strong></font></p>
+</blockquote>
+
+<blockquote>
+    <p align="left"><font color="#FFFFFF" size="3" face="Arial"><strong>Here
+    are the screens of the new software furnished with the CT60 !</strong></font></p>
+    <p align="left"><img src="Pictures/SNAP1.GIF" width="268"
+    height="202"> <img src="Pictures/SNAP2.GIF" width="268"
+    height="202"> <img src="Pictures/SNAP3.GIF" width="268"
+    height="202"></p>
+    <p align="left"><img src="Pictures/SNAP4.GIF" width="268"
+    height="202"> <img src="Pictures/SNAP5.GIF" width="268"
+    height="202"> <img src="Pictures/SNAP6.GIF" width="268"
+    height="202"></p>
+</blockquote>
+
+<p align="center"><a href="welcome.htm"><font size="4"><strong><tt><img
+src="../../com/back.gif" alt="Retour" border="0" width="80"
+height="60"></tt></strong></font></a><font size="4"><strong><tt> </tt></strong></font></p>
+</body>
+</html>

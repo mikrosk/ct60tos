@@ -1,0 +1,171 @@
+<html>
+
+<head>
+<meta http-equiv="Content-Type"
+content="text/html; charset=iso-8859-1">
+<meta name="GENERATOR" content="Microsoft FrontPage 4.0">
+<title>CT60 Mise à jour</title>
+</head>
+
+<body bgcolor="#000000" text="#FF0000" link="#FF0000"
+vlink="#800000" alink="#FF0000">
+
+<p align="center">&nbsp;</p>
+
+<p align="center"><strong><font color="#FF0000" face="Arial" size="7">Mise à
+jour</font></strong></p>
+
+<p align="center">&nbsp;</p>
+
+<blockquote>
+    <p align="left"><strong><font color="#FFFF00" face="Arial" size="4">FLASH
+    &amp; logiciels</font></strong></p>
+    <p align="left" style="text-indent: 0; line-height: 100%"><font color="#FFFFFF" size="3" face="Arial">PACK (FLASH,
+    CPX, Tools, Patchs, Docs &amp; Sources) sur le site de Didier Mequignon</font><font color="#FFFFFF" size="3" face="Arial">
+    : <a href="http://didierm.pagesperso-orange.fr/">http://didierm.pagesperso-orange.fr/</a></font></p>
+    <p align="left" style="text-indent: 0; line-height: 100%">&nbsp;</p>
+    <p style="text-indent: 0; line-height: 100%">&nbsp;</p>
+    <p style="text-indent: 0; line-height: 100%"><font color="#FFFF00" size="4" face="Arial"><strong>Chips ABE
+    &amp; SDR</strong></font></p>
+    <p><b><font color="#FFFFFF"><font face="Arial" size="3">Dernières versions
+    pour toutes CT60/63&nbsp; + CTPCI - Janvier&nbsp; 2012</font></font><font color="#ffffff" face="Arial" size="3">
+    </font></b><font color="#ffffff" face="Arial" size="3"><b><font face="Arial" color="#FFFFFF" size="3">:</font>
+    </b><a href="../../ct60/ABE_V7F.jed">ABE_V7F</a> ; </font><font face="Arial" size="3" color="#FFFFFF"><u><a href="../../ct60/SDR_V7D.jed">SDR_V7D</a></u></font></p>
+    <font color="#ffffff" face="Arial" size="3">
+    <blockquote>
+      <p style="line-height: 100%; word-spacing: 0; margin-top: 0; margin-bottom: 0">Remplacent
+    les ABE_V7A &amp; SDR_V7A avec les changements suivants :</p>
+      <p style="line-height: 100%; word-spacing: 0; margin-top: 0; margin-bottom: 0">-
+      Support de du port IDE de la CTPCI et du SWAP des 2 ports
+      (F030&lt;-&gt;CTPCI).</p>
+      <p style="line-height: 100%; word-spacing: 0; margin-top: 0; margin-bottom: 0">&nbsp;
+      <b>ATTENTION</b>, <b>voir la doc de montage car il faut connecter le fil
+      IRQ entre la CTPCI et le Falcon.</b></p>
+      <p style="line-height: 100%; word-spacing: 0; margin-top: 0; margin-bottom: 0">&nbsp;
+      <b>Il est déconseillé d'utiliser sur ce nouveau port des périphériques
+      IDE datant d'avant 1998, ne supportant pas les transferts en PIO mode 4.</b></p>
+      <p style="line-height: 100%; word-spacing: 0; margin-top: 0; margin-bottom: 0">-
+      Nouveau WatchDog avec délai = 80us à 100MHz et 120us à 66MHz.</p>
+      <p style="line-height: 100%; word-spacing: 0; margin-top: 0; margin-bottom: 0">
+    - Modification de l'arbitreur local (F030, 060, Bus Ext. (CTPCI, Supervidel))</p>
+      <p style="line-height: 100%; word-spacing: 0; margin-top: 0; margin-bottom: 0">&nbsp;
+      pour fonctionnement des cartes Radeon + NEC USB avec les SDMA + Blitter.</p>
+    <p style="line-height: 100%; word-spacing: 0; margin-top: 0; margin-bottom: 0">
+    &nbsp;</p>
+      <p style="line-height: 100%; word-spacing: 0; margin-top: 0; margin-bottom: 0">Remplacent
+      les ABE_V5M &amp; SDR_V5E avec les changements suivants :<br>
+      - TS (Transfer Start) retardé de 1 cycle d'horloge : plus de limite pour
+    aller au dela des 100 Mhz !&nbsp;<br>
+    - Remplace l'horloge du WatchDog (dans ABE) venant du SDR par celle du bus
+    Falcon 030 (16/25Mhz).</p>
+    <p style="line-height: 100%; word-spacing: 0; margin-top: 0; margin-bottom: 0">-
+    Nouveau delais du WatchDog pour les accès PCI MEM &amp; IO sur CTPCI :
+    64us.<br>
+    - Décodage du TBI (Transfer Burst Inhibit) modifié : le BURST avec le
+    MOVE16 est maintenant possible sur toutes les adresses du slot bus.<br>
+    - Nouvel arbitreur de bus 060 (l'ancien datait de 2003 et n'avait jamais
+    été testé !).&nbsp;<br>
+    - Décodage dans SDR vers ABE du signal de boot 060 sur la Flash : boitier
+    TOS plus nécessaire sur le falcon en mode 060 !</p>
+    </blockquote>
+    </font><p><font face="Arial" color="#FFFFFF" size="3"><b>Versions initiales
+    pour CT60 (compatible CT63) SANS CTPCI - 2006 </b>: </font><font color="#ffffff" face="Arial" size="3"><a href="../../ct60/AB5M.jed">ABE_V5M</a> ; </font><font face="Arial" size="3" color="#FFFFFF"><u><a href="../../ct60/SD5E.jed">SDR_V5E</a></u></font></p>
+    <blockquote>
+      <p style="line-height: 100%; margin-left: 0; margin-top: -10"><font face="Arial" size="3" color="#FFFFFF"><b>Recommandée
+      si vous utilisez la CT60/63 seule</b></font></p>
+    </blockquote>
+    <p style="line-height: 100%; word-spacing: 0; margin-top: 0; margin-bottom: 0">&nbsp;</p>
+    <p style="line-height: 100%; word-spacing: 0; margin-top: 0; margin-bottom: 0">&nbsp;</p>
+    <p style="line-height: 100%; word-spacing: 0; margin-top: 10; margin-bottom: 0">&nbsp;</p>
+    <p style="line-height: 100%; word-spacing: 0; margin-top: 10; margin-bottom: 0"><font face="Arial" size="3" color="#FFFFFF"><b>Pour
+    programmer les chips ABE &amp; SDR, vous pouvez soit vous adressez à moi,
+    soit vous procurer un câble JTAG pour transférer du port // vers les
+    composants.</b> </font></p>
+    <p style="line-height: 100%; word-spacing: 0; margin-top: 0; margin-bottom: 0"><font face="Arial" size="3" color="#FFFFFF"><b>Ce câble
+    existe tout fait chez différents vendeurs. Il ne
+    fonctionnera pas d'origine sur machine TOS.</b></font></p>
+    <p style="line-height: 100%; word-spacing: 0; margin-top: 0; margin-bottom: 0"><font face="Arial" size="3" color="#FFFFFF"><b>Voici
+    2 adresses :</b></font></p>
+    <blockquote>
+    <p style="margin-left: 4" align="left"><font face="Arial" size="3" color="#FFFFFF"><b>FRANCE :
+    </b> </font><a href="http://www.lextronic.fr/recherche.php?rech=jtag&amp;numpage=10"><font face="Arial" size="3">http://www.lextronic.fr/recherche.php?rech=jtag&amp;numpage=10</font></a></p>
+      <p style="margin-left: 4" align="left"><font face="Arial" size="3" color="#FFFFFF"><b>CANADA
+      :&nbsp;</b></font><a class="0" href="http://www.renaelectronics.com/product_x_cable.htm"><font size="3" face="Arial">http://www.renaelectronics.com/product_x_cable.htm</font></a></p>
+    </blockquote>
+    <p style="line-height: 100%; word-spacing: 0; margin-top: 0; margin-bottom: 0">&nbsp;</p>
+    <p style="line-height: 100%; word-spacing: 0; margin-top: 0; margin-bottom: 0"><font face="Arial" size="3" color="#FFFFFF"><b>Deux
+    solutions :</b></font></p>
+    <p style="line-height: 100%; word-spacing: 0; margin-top: 0; margin-bottom: 0">&nbsp;</p>
+    <blockquote>
+      <p style="line-height: 100%; word-spacing: 0; margin-top: 0; margin-bottom: 0"><font face="Arial" size="3" color="#FFFFFF"><u>1-
+      Programmation avec un PC</u></font></p>
+      <p style="line-height: 100%; word-spacing: 0; margin-top: 0; margin-bottom: 0">&nbsp;</p>
+      <p style="line-height: 100%; word-spacing: 0; margin-top: 0; margin-bottom: 0">&nbsp;</p>
+    <p style="line-height: 100%; word-spacing: 0; margin-top: 0; margin-bottom: 0"><font face="Arial" size="3" color="#FFFFFF">Le logiciel
+    PC est disponible
+    gratuitement chez <a href="http://www.Xilinx.com">www.xilinx.com</a>
+    . Son nom : IMPACT dans le WEBPACK à télécharger.</font></p>
+    <p style="line-height: 100%; word-spacing: 0; margin-top: 0; margin-bottom: 0">&nbsp;</p>
+    <p style="line-height: 100%; word-spacing: 0; margin-top: 0; margin-bottom: 0"><font face="Arial" size="3" color="#FFFFFF">Un
+    bon lien pour vous aider avec le PC, le soft et le câble : <a href="http://nokturnal.pl/home/atari_16_32_bit/ct60_firmware_upgrade">http://nokturnal.pl/home/atari_16_32_bit/ct60_firmware_upgrade</a>.&nbsp;</font></p>
+    <p style="line-height: 100%; word-spacing: 0; margin-top: 0; margin-bottom: 0">&nbsp;</p>
+    <p style="line-height: 100%; word-spacing: 0; margin-top: 0; margin-bottom: 0"><font color="#ffffff" size="3" face="Arial">Il
+    faut aussi réorganiser l'ordre des fils sur le connecteur JTAG comme sur le
+    plan ou le brochage indiqué dans la doc de la CT60.&nbsp;</font></p>
+    <p style="line-height: 100%; word-spacing: 0; margin-top: 0; margin-bottom: 0">&nbsp;</p>
+      <p style="line-height: 100%; word-spacing: 0; margin-top: 0; margin-bottom: 0">&nbsp;</p>
+    <p style="line-height: 100%; word-spacing: 0; margin-top: 0; margin-bottom: 0">&nbsp;</p>
+    <p style="line-height: 100%; word-spacing: 0; margin-top: 0; margin-bottom: 0"><font face="Arial" size="3" color="#FFFFFF"><u>2-
+    Programmation avec le Falcon</u></font></p>
+    <p style="line-height: 100%; word-spacing: 0; margin-top: 0; margin-bottom: 0">&nbsp;</p>
+    <p style="line-height: 100%; word-spacing: 0; margin-top: 0; margin-bottom: 0">&nbsp;</p>
+    <p style="line-height: 100%; word-spacing: 0; margin-top: 0; margin-bottom: 0"><font face="Arial" size="3" color="#FFFFFF"> Pour faire fonctionner
+    le câble sur votre Falcon, il faut passer le fil
+    de la pin #13 à la pin #10 sur la DB25. Il faut aussi réorganiser l'ordre
+    des fils sur le connecteur JTAG comme sur le plan ou le brochage indiqué
+    dans la doc de la CT60.&nbsp; </font></p>
+    <p style="line-height: 100%; word-spacing: 0; margin-top: 0; margin-bottom: 0">&nbsp;</p>
+    <p style="line-height: 100%; word-spacing: 0; margin-top: 0; margin-bottom: 0">&nbsp;</p>
+    <p style="line-height: 100%; word-spacing: 0; margin-top: 0; margin-bottom: 0"><font face="Arial" size="3" color="#FFFFFF">Autre
+    solution : faire le
+    câble soit-même.</font></p>
+    <p style="line-height: 100%; word-spacing: 0; margin-top: 0; margin-bottom: 0"><font face="Arial" size="3" color="#FFFFFF">Schéma du câble de
+    transfert pour TOS (PDF) : <a href="../../ct60/CableTOS.pdf"><font size="3" face="Arial">Download
+    ZIP file (15 Ko)</font>. L</a>e schéma de la version PC est chez Xilinx.</font></p>
+    </blockquote>
+    <p>&nbsp;</p>
+    <p style="line-height: 100%; margin-top: 10">&nbsp;</p>
+    <p style="line-height: 100%; margin-top: 10"><strong><font size="4" face="Arial" color="#FFFF00">Ne pas deplugguer&nbsp;
+    la CT60 pour programmer ABE depuis le Falcon</font></strong></p>
+    <p><font face="Arial" size="3" color="#FFFFFF">Souder une résistance de
+    1K à 10K entre les pin #1 et #10 d'un des trois 74LVC245A. Lors du lancement de
+    FLASH060 depuis le mode 030, il faut avoir NVDI pour que le blitter ne soit
+    pas utilisé ! </font> <font face="Arial" size="3" color="#FFFFFF">Maintenant, vous n'avez
+    plus à toucher à la CT60... pour la programmer depuis le Falcon.</font></p>
+    <p><img border="0" src="../ADD_RES.JPG" width="202" height="107"></p>
+    <p>&nbsp;</p>
+    <p style="line-height: 100%; margin-left: 0; margin-top: 10">&nbsp;</p>
+    <p style="line-height: 100%; margin-left: 0; margin-top: 10"><font color="#FFFF00" size="4" face="Arial"><strong>Ajout du CTCM sur
+    CT60</strong></font></p>
+    <p style="line-height: 100%; word-spacing: 0; margin-top: 0; margin-bottom: 0"><font face="Arial" color="#FFFFFF" size="3">Ajouter 2 fils sous
+    la CT60 comme indiqué sur la photo.</font></p>
+    <p style="line-height: 100%; word-spacing: 0; margin-top: 0; margin-bottom: 0"><font face="Arial" size="3" color="#FFFFFF">Ces fils vont des pins du
+    bus I2C de la SDRAM sur les pins #2 et #3 du support de l'oscillateur.</font></p>
+    <p><img border="0" src="../2wires%20for%20CTCM.gif" width="183" height="346">&nbsp;&nbsp;&nbsp;&nbsp;
+    <img border="0" src="../Insert%20CTCM.jpg" width="486" height="253"></p>
+    <p>&nbsp;</p>
+    <p style="line-height: 100%; margin-top: 10">&nbsp;</p>
+    <p style="line-height: 100%; margin-top: 10"><strong><font color="#FFFF00" face="Arial" size="4">PCB de la CT60 de
+    2003</font></strong></p>
+    <p><font face="Arial" color="#FFFFFF" size="3">Ces modifications ne
+    concernent que les premières CT60 (2003). Elles sont indispensables pour
+    toutes mise à jour de ABE &amp; SDR sur ces CT60.</font></p>
+    <p><font face="Arial" color="#FFFFFF" size="3">Couper la pin #9 du CY2309 et
+    la piste comme indiqué sur les photos.&nbsp;</font></p>
+    <p><img border="0" src="../CYpin9_cut.gif" width="180" height="144">&nbsp;&nbsp;&nbsp;&nbsp;
+    <img border="0" src="../CLK500_cut.gif" width="278" height="143"></p>
+</blockquote>
+
+<p align="center"><font size="4"><strong><tt> </tt></strong></font></p>
+</body>
+</html>

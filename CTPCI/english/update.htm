@@ -1,0 +1,321 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.0 Transitional//EN">
+<!-- saved from url=(0049)http://www.czuba-tech.com/CT60/english/update.htm -->
+<HTML><HEAD><TITLE>CT60 Update</TITLE>
+<META content="text/html; charset=iso-8859-1" http-equiv=Content-Type>
+<META content="Microsoft FrontPage 4.0" name=GENERATOR></HEAD>
+<BODY aLink=#ff0000 bgColor=#000000 link=#ff0000 text=#ff0000 vLink=#800000>
+<P align=center>&nbsp;</P>
+<P align=center><FONT color=#ff0000 face=Arial 
+size=7><STRONG>Update</STRONG></FONT></P>
+<BLOCKQUOTE>
+  <b>
+  <FONT color=#ffffff face=Arial size=3>
+  <p>&nbsp;</p>
+  <p><strong><font color="#FFFF00" size="4" face="Arial">Chip</font></strong>
+  </font>
+  <strong><font color="#FFFF00" size="4" face="Arial"> Xilinx XC95288XL</font></strong></p>
+    </b>
+  <p style="text-indent: 0; line-height: 100%"><b><font face="Arial" size="3">March&nbsp;
+  2012 <font color="#FFFFFF">: </font></font></b><font color="#ffffff" face="Arial" size="3"><a href="../../ctpci/CTPCI_1M.jed">CTPCI_1M</a>&nbsp;&nbsp;</font></p>
+  <font color="#ffffff" face="Arial" size="3">
+  <p style="line-height: 100%; word-spacing: 0; margin-top: -15; margin-bottom: 0">&nbsp;</p>
+  </font>
+  <blockquote>
+    <p style="line-height: 100%; word-spacing: 0; margin-top: 0; margin-bottom: 0"><font color="#ffffff" face="Arial" size="3">-
+    Ethernet board is running !&nbsp;</font></p>
+    <p style="line-height: 100%; word-spacing: 0; margin-top: 0; margin-bottom: 0"><font color="#ffffff" face="Arial" size="3">&nbsp;
+    </font><font face="Arial" color="#FFFFFF">Force to 0&nbsp; the unused bits
+    of the INT. registers IPEND &amp; ENBI.</font></p>
+  </blockquote>
+  <p style="text-indent: 0; line-height: 100%"><b><font face="Arial" size="3">Fev&nbsp;
+  2012 <font color="#FFFFFF">: </font></font></b><font color="#ffffff" face="Arial" size="3">CTPCI_1L&nbsp;&nbsp;</font></p>
+  <font color="#ffffff" face="Arial" size="3">
+  <p style="line-height: 100%; word-spacing: 0; margin-top: -15; margin-bottom: 0">&nbsp;</p>
+  </font>
+  <blockquote>
+    <p style="line-height: 100%; word-spacing: 0; margin-top: 0; margin-bottom: 0"><font color="#ffffff" face="Arial" size="3">-
+    The USB mouse is runnng !&nbsp;</font></p>
+    <p style="line-height: 100%; word-spacing: 0; margin-top: 0; margin-bottom: 0"><font color="#ffffff" face="Arial" size="3">&nbsp;
+    Correction for the BYTE SELECT [0:3] swapping.</font></p>
+    <p style="line-height: 100%; word-spacing: 0; margin-top: 0; margin-bottom: 0"><font color="#ffffff" face="Arial" size="3">&nbsp;
+    <b>ATTENTION :</b> USB 2 devices (using EHCI controller) cannot run because
+    no driver in the 2.01 boot.</font></p>
+  </blockquote>
+  <p style="text-indent: 0; line-height: 100%"><b><font face="Arial" size="3">Jan&nbsp;
+  2012 <font color="#FFFFFF">: </font></font></b><font color="#ffffff" face="Arial" size="3">CTPCI_1K&nbsp;&nbsp;</font></p>
+  <font color="#ffffff" face="Arial" size="3">
+  <p style="line-height: 100%; word-spacing: 0; margin-top: -15; margin-bottom: 0">&nbsp;</p>
+  </font>
+  <blockquote>
+    <p style="line-height: 100%; word-spacing: 0; margin-top: 0; margin-bottom: 0"><font color="#ffffff" face="Arial" size="3">-
+    IDE port is now running and the rate is 2.5 times faster than the Falcon
+    port.</font></p>
+    <p style="line-height: 100%; word-spacing: 0; margin-top: 0; margin-bottom: 0"><font color="#ffffff" face="Arial" size="3">&nbsp;
+    By default the F030 IDE port is the PRIMARY and the new port is the
+    SECONDARY.</font></p>
+    <p style="line-height: 100%; word-spacing: 0; margin-top: 0; margin-bottom: 0"><font color="#ffffff" face="Arial" size="3">&nbsp;
+    A button in the CPX BOOT menu allows to inverse the 2 IDE ports.</font></p>
+    <p style="line-height: 100%; word-spacing: 0; margin-top: 0; margin-bottom: 0"><font color="#ffffff" face="Arial" size="3">&nbsp;
+    <b>WARNING</b>, see the fitting documentation because there is an IRQ wire
+    to connect between CTPCI &amp; F030.</font></p>
+    <p style="line-height: 100%; word-spacing: 0; margin-top: 0; margin-bottom: 0"><font color="#ffffff" face="Arial" size="3">&nbsp;
+    <b>It is not recommended to use the new port with too old Devices (before
+    1998) that may not support transfers with PIO MODE4.</b></font></p>
+  </blockquote>
+  <p style="text-indent: 0; line-height: 100%; margin: 0"><b><FONT color=#FF0000 face=Arial size=3>Jan&nbsp;
+  2012 </font></b><FONT color=#ffffff face=Arial size=3><b><font face="Arial" color="#FFFFFF" size="3">:</font>
+  </b>CTPCI_1J<b>&nbsp;&nbsp;&nbsp;&nbsp;</b></font></p>
+  <p style="text-indent: 0; line-height: 100%; margin: 0">&nbsp;&nbsp;&nbsp;<font color="#ffffff" face="Arial" size="3">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+  - Modification of the PCI Arbiter for PLX parking on PCI.
+  </font>
+  </p>
+  <p style="text-indent: 0; line-height: 100%; margin: 0"><font color="#ffffff" face="Arial" size="3">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+  The PCI cards get now the PCI bus correctly.</font>
+  </p>
+  <p style="text-indent: 0; line-height: 100%; margin: 0"><font color="#ffffff" face="Arial" size="3">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+  NEC USB card</font> <font color="#ffffff" face="Arial" size="3">now run with
+  Radeon + SDMA/Blitter</font><font color="#ffffff" face="Arial" size="3">.</font>
+  </p>
+  <p style="text-indent: 0; line-height: 100%; margin: 0"><font color="#ffffff" face="Arial" size="3">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+  Remove the RETRY protocol for 060 when PLX FIFO is full.</font>
+  </p>
+  <p style="text-indent: 0; line-height: 100%; margin: 0"><font color="#ffffff" face="Arial" size="3">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+  Optimize TA# timing to PLX local master.</font>
+  </p>
+  <p style="text-indent: 0; line-height: 100%; margin: 0">&nbsp;</p>
+  <p style="text-indent: 0; line-height: 100%; margin: 0"><b><FONT color=#FF0000 face=Arial size=3>Dec&nbsp; 2010 </font><FONT color=#ffffff face=Arial size=3> </font></b><FONT color=#ffffff face=Arial size=3><b><font face="Arial" color="#FFFFFF" size="3">:</font>
+  </b>
+  CTPCI_1F</font></p>
+  <p style="text-indent: 0; line-height: 100%; margin: 0">&nbsp;&nbsp;&nbsp;<font color="#ffffff" face="Arial" size="3">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+  - new IEO (Int Enable for EtherNAT) timing for CTPCI + EtherNAT.
+  </font>
+  </p>
+  <p style="text-indent: 0; line-height: 100%; margin: 0"><font color="#ffffff" face="Arial" size="3">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+  NOT TESTED - EtherNAT must be updated too ! Contact NATURE.</font>
+  </p>
+  <p style="text-indent: 0; line-height: 100%; margin: 0">&nbsp;</p>
+  <p style="text-indent: 0; line-height: 100%; margin: 0"><b><FONT color=#FF0000 face=Arial size=3>June&nbsp; 2010 </font><FONT color=#ffffff face=Arial size=3> </font></b><FONT color=#ffffff face=Arial size=3><b><font face="Arial" color="#FFFFFF" size="3">:</font>
+  </b>
+  CTPCI_1E</font></p>
+  <p style="text-indent: 0; line-height: 100%; margin: 0"><b>&nbsp;&nbsp;&nbsp;<font color="#ffffff" face="Arial" size="3">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+  </font></b><font color="#ffffff" face="Arial" size="3">- PCI zone extended to
+  2*1GB (no EtherNAT use).<br>
+  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; - TEAP output added for PLX DMA
+  anti-freeze.
+    </font>
+  </p>
+  <b>
+  <p style="line-height: 100%; word-spacing: 0; margin-top: 0; margin-bottom: 0">&nbsp;</p>
+  <p style="line-height: 100%; word-spacing: 0; margin-top: 0; margin-bottom: 0"><FONT color=#FF0000 face=Arial size=3>April&nbsp; 2010 </font><FONT color=#ffffff face=Arial size=3><font face="Arial" color="#FFFFFF" size="3">:</font>
+  </font>
+  </b>
+  <FONT color=#ffffff face=Arial size=3>
+  CTPCI_1C</font></p>
+  <p style="line-height: 100%; word-spacing: 0; margin-top: 0; margin-bottom: 0">&nbsp;&nbsp;&nbsp;<font color="#ffffff" face="Arial" size="3">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+  -
+  Activation of the IEO output pin for EtherNAT.&nbsp;</font></p>
+  <b>
+  <p style="word-spacing: 0; line-height: 100%; text-indent: 0; margin: 0">&nbsp;</p>
+  <p style="word-spacing: 0; line-height: 100%; text-indent: 0; margin: 0"><FONT color=#FF0000 face=Arial size=3>April&nbsp; 2010
+  </font>
+  <FONT color=#ffffff face=Arial size=3>
+  <font face="Arial" color="#FFFFFF" size="3">:</font>
+  </font>
+  </b>
+  <FONT color=#ffffff face=Arial size=3>CTPCI_1B
+  </font>
+
+  </p>
+  <p style="word-spacing: 0; line-height: 100%; text-indent: 0; margin: 0">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+  <FONT color=#ffffff face=Arial size=3>- Modification of the TA signal timing for better stability.</p>
+  <p style="line-height: 100%; word-spacing: 0; margin-top: 0; margin-bottom: 0">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+  -
+  Change of I6 output and INT registers.
+  </p>
+  <b>
+  <p style="line-height: 100%; word-spacing: 0; margin-top: 0; margin-bottom: 0">&nbsp;</p>
+  <p style="line-height: 100%; word-spacing: 0; margin-top: 0; margin-bottom: 0"><FONT color=#FF0000 face=Arial size=3> January 2010</font></b>
+  </font>
+
+  <b>
+  <FONT color=#ffffff face=Arial size=3> </font></b><font color="#FFFFFF"><font face="Arial" size="3">:</font></font><font face="Arial" size="3" color="#FF0000">
+  </font><FONT color=#ffffff face=Arial size=3>Initial
+  version&nbsp; - CTPCI_1A</p>
+  </font>
+  <b>
+
+  <p style="line-height: 100%; word-spacing: 0; text-indent: 0; margin-left: 0; margin-top: 0; margin-bottom: 0">&nbsp;</p>
+
+  <p style="line-height: 100%; word-spacing: 0; text-indent: 0; margin-left: 0; margin-top: 0; margin-bottom: 0">&nbsp;</p>
+
+  <p style="line-height: 100%; word-spacing: 0; text-indent: 0; margin-left: 0; margin-top: 0; margin-bottom: 0">&nbsp;</p>
+
+  <p style="line-height: 100%; word-spacing: 0; text-indent: 0; margin-left: 0; margin-top: 0; margin-bottom: 0"><font face="Arial" size="3" color="#FFFFFF">T<font face="Arial">o</font><FONT color=#ffffff face=Arial size=3>
+  program
+
+
+  </font>
+
+  <font face="Arial">the</font><FONT color=#ffffff face=Arial size=3> chip,
+
+
+  </font>
+
+  <font face="Arial">you can contact me or buy </font>a <FONT color=#ffffff face=Arial size=3>JTAG
+
+
+  </font>
+
+  <font face="Arial">cable </font>to transfer from <FONT color=#ffffff face=Arial size=3>//</font><font face="Arial">
+  port to the chips.</font></font></p>
+  <p style="line-height: 100%; word-spacing: 0; text-indent: 0; margin-left: 0; margin-top: 0; margin-bottom: 0"><b><font face="Arial" size="3" color="#FFFFFF">This
+  <FONT color=#ffffff face=Arial size=3>c</font><font face="Arial">a</font><FONT color=#ffffff face=Arial size=3>ble
+  exist</font><font face="Arial">s</font> ready-to-use to many vendors<FONT color=#ffffff face=Arial size=3>.
+  I</font><font face="Arial">t will not run as it is on TOS </font><FONT color=#ffffff face=Arial size=3>machine</font><font face="Arial">s
+  (see below : 2 )</font>.</font></b></p>
+
+
+    <p style="line-height: 100%; word-spacing: 0; margin-top: 0; margin-bottom: 0"><font face="Arial" size="3" color="#FFFFFF">Here
+    are <FONT color=#ffffff face=Arial size=3>2
+
+
+  </font>
+
+    <font face="Arial">links to buy (you can find many others)</font></font><FONT color=#ffffff face=Arial size=3><font face="Arial" size="3" color="#FFFFFF">
+    :</font></p>
+    <blockquote>
+    <p style="margin-left: 4" align="left"><font face="Arial" size="3" color="#FFFFFF">FRANCE : </font><a href="http://www.lextronic.fr/recherche.php?rech=jtag&amp;numpage=10"><font face="Arial" size="3">http://www.lextronic.fr/recherche.php?rech=jtag&amp;numpage=10</font></a></p>
+      <p style="margin-left: 4" align="left"><font face="Arial" size="3" color="#FFFFFF">CANADA
+      :&nbsp;</font><a class="0" href="http://www.renaelectronics.com/product_x_cable.htm"><font size="3" face="Arial">http://www.renaelectronics.com/product_x_cable.htm</font></a></p>
+    </blockquote>
+  <b>
+    <p style="line-height: 100%; word-spacing: 0; margin-top: 0; margin-bottom: 0">&nbsp;</p>
+
+
+  </font>
+
+    <blockquote>
+
+  <p style="line-height: 100%; word-spacing: 0; margin-top: 0; margin-bottom: 0">&nbsp;</p>
+
+  <p style="line-height: 100%; word-spacing: 0; margin-top: 0; margin-bottom: 0"><font face="Arial" size="3" color="#FFFFFF">Two
+  <font face="Arial">ways</font></font><FONT color=#ffffff face=Arial size=3><font face="Arial" size="3" color="#FFFFFF">
+  :</font></p>
+      </blockquote>
+  <p style="line-height: 100%; word-spacing: 0; margin-top: 0; margin-bottom: 0">&nbsp;</p>
+
+
+  </font>
+
+  </b><FONT color=#ffffff face=Arial size=3>
+  <blockquote>
+    <p style="line-height: 100%; word-spacing: 0; margin-top: 0; margin-bottom: 0">&nbsp;</p>
+    <p style="line-height: 100%; word-spacing: 0; margin-top: 0; margin-bottom: 0"><u><font face="Arial" size="3" color="#FFFFFF">1-
+    Program</font>
+
+
+    </u>
+
+
+  </font>
+
+    <u>
+
+    <font face="Arial" size="3" color="#FFFFFF"> with a PC</font></u></p>
+  <FONT color=#ffffff face=Arial size=3>
+  <b>
+  <p style="line-height: 100%; word-spacing: 0; margin-top: 0; margin-bottom: 0">&nbsp;</p>
+  </b>
+  <p style="line-height: 100%; word-spacing: 0; margin-top: 0; margin-bottom: 0">&nbsp;</p>
+  <p style="line-height: 100%; word-spacing: 0; margin-top: 0; margin-bottom: 0"><font face="Arial" size="3" color="#FFFFFF">PC</font></font><font face="Arial" size="3" color="#FFFFFF">
+  software is available free to <FONT color=#ffffff face=Arial size=3><a href="http://www.Xilinx.com">www.xilinx.com</a>.
+  </font>The name is<FONT color=#ffffff face=Arial size=3>
+  IMPACT
+
+
+  </font>
+
+  </font><font color="#ffffff" face="Arial" size="3">and </font><font face="Arial" size="3" color="#FFFFFF"><font face="Arial">you will find
+  it in the </font><FONT color=#ffffff face=Arial size=3>WEBPACK
+
+
+  </font>
+
+  <font face="Arial">to be downloaded</font></font><FONT color=#ffffff face=Arial size=3><font face="Arial" size="3" color="#FFFFFF">.&nbsp;</font></font></p>
+  <p style="line-height: 100%; word-spacing: 0; margin-top: 0; margin-bottom: 0">&nbsp;</p>
+  <p style="line-height: 100%; word-spacing: 0; margin-top: 0; margin-bottom: 0"><font face="Arial" size="3" color="#FFFFFF">The
+  good link to help you with PC, software &amp; cable : <a href="http://nokturnal.pl/home/atari_16_32_bit/ct60_firmware_upgrade">http://nokturnal.pl/home/atari_16_32_bit/ct60_firmware_upgrade</a></font></p>
+  <p style="line-height: 100%; word-spacing: 0; margin-top: 0; margin-bottom: 0"><font face="Arial" size="3" color="#FFFFFF">
+
+  <font face="Arial">You need too</font> to reorganize the order of the wires on
+  the JTAG&nbsp; connector as on the schematics or pinout in the <FONT color=#ffffff face=Arial size=3>CT60</font><font face="Arial">
+  documentation (in the software pack)</font>.&nbsp;</font></p>
+  <FONT color=#ffffff face=Arial size=3>
+  <b>
+  </b>
+  <p style="line-height: 100%; word-spacing: 0; margin-top: 0; margin-bottom: 0">&nbsp;</p>
+  <p style="line-height: 100%; word-spacing: 0; margin-top: 0; margin-bottom: 0">&nbsp;</p>
+  <p style="line-height: 100%; word-spacing: 0; margin-top: 0; margin-bottom: 0"><u><font face="Arial" size="3" color="#FFFFFF">2-
+  Program</font></u></font><u><font face="Arial" size="3" color="#FFFFFF"> with
+  the Falcon</font></u></p>
+  <b>
+  <FONT color=#ffffff face=Arial size=3>
+    <p style="line-height: 100%; word-spacing: 0; margin-top: 0; margin-bottom: 0">&nbsp;</p>
+
+
+  </font>
+
+  </b>
+
+  <p style="line-height: 100%; word-spacing: 0; margin-top: 0; margin-bottom: 0">&nbsp;</p>
+
+  <p style="line-height: 100%; word-spacing: 0; margin-top: 0; margin-bottom: 0"><font face="Arial" size="3" color="#FFFFFF">To
+  run the cable on your <FONT color=#ffffff face=Arial size=3>Falcon,&nbsp;</font><font face="Arial">
+  you need to modify it : disconnect the wire of </font><FONT color=#ffffff face=Arial size=3>pin #13
+
+
+  </font>
+
+  </font><font color="#ffffff" face="Arial" size="3">&amp; connect </font><font face="Arial" size="3" color="#FFFFFF"><font face="Arial">to the </font><FONT color=#ffffff face=Arial size=3>pin #10
+
+
+  </font>
+
+  <font face="Arial">of the </font><FONT color=#ffffff face=Arial size=3>DB25
+
+
+  </font>
+
+  <font face="Arial"> connector</font><FONT color=#ffffff face=Arial size=3>.
+
+
+  </font>
+
+  <font face="Arial">You need too</font> to reorganize the order of the wires on
+  the JTAG&nbsp; connector as on the schematics or pinout in the <FONT color=#ffffff face=Arial size=3>CT60</font><font face="Arial">
+  documentation (in the software pack)</font></font><FONT color=#ffffff face=Arial size=3><font face="Arial" size="3" color="#FFFFFF">.&nbsp;</font></p>
+  <b>
+    <p style="line-height: 100%; word-spacing: 0; margin-top: 0; margin-bottom: 0">&nbsp;</p>
+  </b>
+  </font><p style="line-height: 100%; word-spacing: 0; margin-top: 0; margin-bottom: 0"><font face="Arial" size="3" color="#FFFFFF">Other
+  way <FONT color=#ffffff face=Arial size=3>:
+  </font><font face="Arial">make the cable yourself</font>.</font></p>
+  <FONT color=#ffffff face=Arial size=3><p style="line-height: 100%; word-spacing: 0; margin-top: 0; margin-bottom: 0"><font face="Arial" size="3" color="#FFFFFF">Sch</font></font><font face="Arial" size="3" color="#FFFFFF">ematics
+  of the ca<FONT color=#ffffff face=Arial size=3>ble</font></font><font color="#ffffff" face="Arial" size="3">
+  </font><font face="Arial" size="3" color="#FFFFFF">for<FONT color=#ffffff face=Arial size=3>
+  </font><font face="Arial">T</font><FONT color=#ffffff face=Arial size=3>OS (PDF) : <a href="../../ct60/CableTOS.pdf"><font size="3" face="Arial">Download
+    ZIP file (15 K</font></a></font><a href="../../ct60/CableTOS.pdf"><font size="3">B</font>)</a><FONT color=#ffffff face=Arial size=3>.
+  </font><font face="Arial">PC version schematics is on Xilinx web site</font></font><FONT color=#ffffff face=Arial size=3><font face="Arial" size="3" color="#FFFFFF">.</font></p>
+  </blockquote>
+  <b>
+  </b>
+  </font>
+  <b>
+    <p>&nbsp;</p>
+  </b>
+
+
+</BLOCKQUOTE>
+
+
+</BODY></HTML>

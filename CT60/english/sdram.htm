@@ -1,0 +1,235 @@
+<html>
+
+<head>
+<meta http-equiv="Content-Type"
+content="text/html; charset=iso-8859-1">
+<meta name="GENERATOR" content="Microsoft FrontPage 4.0">
+<title>CT60 SDRAM ENG</title>
+</head>
+
+<body bgcolor="#000000" text="#FF0000" link="#FF0000"
+vlink="#800000" alink="#FF0000">
+
+<p align="center">&nbsp;</p>
+
+<p align="center"><font color="#FF0000" size="7" face="Arial"><strong>SDRAM</strong></font></p>
+
+<p align="center"><font color="#FFFF00" size="5" face="Arial"><u>CT60 DON'T RUN
+WITHOUT SDRAM !</u></font></p>
+
+<p class="MsoNormal" style="word-spacing: 0; line-height: 100%; margin-top: 0; margin-bottom: 0"><font color="#FFFFFF" size="3" face="Arial">The
+CT60 supports the <strong>PC-100 &amp; PC-133 standard SDRAM
+DIMMs</strong>, but some obsolet or uneeded DIMMs are not
+accepted.</font></p>
+
+<h3 style="word-spacing: 0; line-height: 100%; margin-top: 0; margin-bottom: 0"><font color="#FFFFFF" size="3" face="Arial"><b>In general, PC
+market provides Unbuffured 64-bits models</b>, what you need for
+CT60.</font></h3>
+
+<p style="word-spacing: 0; line-height: 100%; margin-top: 0; margin-bottom: 0">&nbsp;</p>
+
+<h6 style="word-spacing: 0; line-height: 100%; margin-top: 0; margin-bottom: 0"><font color="#FFFF00" size="3" face="Arial">ATTENTION :</font> <font color="#FFFF00" size="3" face="Arial">Don&#146;t
+confuse SDRAM (logical) banks (2 or 4 into a chip) with DIMM (physical) banks (Single
+or double side DIMM) !</font></h6>
+
+<h3>&nbsp;</h3>
+
+<h3><font color="#00FF00" size="5" face="Arial">SDRAM DIMMs for
+CT60</font></h3>
+
+<p class="MsoNormal" style="line-height: 100%; word-spacing: 0; margin-top: 0; margin-bottom: 0"><font color="#FFFFFF" size="3" face="Arial">-
+Must be <b>PC-</b><strong>133</strong>. PC-100 is not recommended.</font></p>
+
+<p class="MsoNormal" style="line-height: 100%; word-spacing: 0; margin-top: 0; margin-bottom: 0"><font color="#FFFFFF" size="3" face="Arial">- Must support
+a <b>CAS LATENCY (CL) of 2.</b> CL = 3 may work&nbsp; with PC133...</font></p>
+
+<p class="MsoNormal" style="line-height: 100%; word-spacing: 0; margin-top: 0; margin-bottom: 0"><font color="#FFFFFF" size="3" face="Arial">-
+Must be <b>UNBUFFURED</b>.</font></p>
+
+<p class="MsoNormal" style="line-height: 100%; word-spacing: 0; margin-top: 0; margin-bottom: 0"><font color="#FFFFFF" size="3" face="Arial">-
+Must be populated with <b>4 logical banks chips</b> (2 banks,
+obsolet, are refused). All DIMM &gt; 32MB use 4 banks chips.</font></p>
+
+<p class="MsoNormal" style="line-height: 100%; word-spacing: 0; margin-top: 0; margin-bottom: 0"><font color="#FFFFFF" size="3" face="Arial">-
+<b>64</b><strong> Bits (no Parity / ECC = 72 / 80 bits)</strong>.</font></p>
+
+<p class="MsoNormal" style="line-height: 100%; word-spacing: 0; margin-top: 0; margin-bottom: 0">&nbsp;</p>
+
+<table border="0" cellpadding="2" width="80%">
+    <tr>
+        <td align="right"><font color="#FFFFFF" size="3"
+        face="Arial"><b>MODULE</b></font></td>
+        <td align="center"><font color="#FFFFFF" size="3"
+        face="Arial"><b>CHIPS / SIDE</b></font></td>
+        <td align="center"><font color="#FFFFFF" size="3"
+        face="Arial"><b>SIDE ?</b></font>
+          <p><font color="#FFFFFF" size="3"
+        face="Arial"><b>&nbsp;(Single/double)</b></font></p>
+        </td>
+        <td align="center"><font color="#FFFFFF" size="3"
+        face="Arial">&nbsp;<b>CHIPS ARCHITECTURE</b></font></td>
+        <td align="right">
+          <p align="center"><font color="#FFFFFF" face="Arial" size="3"><b>PAGE
+        Size</b></font></p>
+          <p align="center"><font color="#FFFFFF" face="Arial" size="3"><b>Banks
+          1 to 4</b></font></p>
+        </td>
+    </tr>
+    <tr>
+        <td align="right"><font color="#FFFFFF" size="3"
+        face="Arial"><b>64 MB</b></font></td>
+        <td align="center"><strong><font color="#FFFFFF" size="3"
+        face="Arial"><b>8</b></font></strong></td>
+        <td align="center"><font color="#FFFFFF" size="3"
+        face="Arial"><b>1</b></font></td>
+        <td align="center"><font color="#FFFFFF" size="3"
+        face="Arial"><b>8M x&nbsp;&nbsp; 8 bits</b></font></td>
+        <td align="right"><font color="#FFFFFF" face="Arial" size="3"><b>8KB</b></font></td>
+    </tr>
+    <tr>
+        <td align="right"><font color="#FFFFFF" size="3"
+        face="Arial"><b>64 MB</b></font></td>
+        <td align="center"><strong><font color="#FFFFFF" size="3"
+        face="Arial"><b>4</b></font></strong></td>
+        <td align="center"><font color="#FFFFFF" size="3"
+        face="Arial"><b>1</b></font></td>
+        <td align="center"><font color="#FFFFFF" size="3"
+        face="Arial"><b>8M x 16 bits</b></font></td>
+        <td align="right"><font color="#FFFFFF" face="Arial" size="3"><b>8KB</b></font></td>
+    </tr>
+    <tr>
+        <td align="right"><font color="#FFFFFF" size="3"
+        face="Arial"><b>128 MB</b></font></td>
+        <td align="center"><strong><font color="#FFFFFF" size="3"
+        face="Arial"><b>8</b></font></strong></td>
+        <td align="center"><font color="#FFFFFF" size="3"
+        face="Arial"><b>2</b></font></td>
+        <td align="center"><font color="#FFFFFF" size="3"
+        face="Arial"><b>8M x&nbsp;&nbsp; 8 bits</b></font></td>
+        <td align="right"><font color="#FFFFFF" face="Arial" size="3"><b>8KB</b></font></td>
+    </tr>
+    <tr>
+        <td align="right"><font color="#FFFFFF" size="3"
+        face="Arial"><b>128 MB</b></font></td>
+        <td align="center"><strong><font color="#FFFFFF" size="3"
+        face="Arial"><b>4</b></font></strong></td>
+        <td align="center"><font color="#FFFFFF" size="3"
+        face="Arial"><b>2</b></font></td>
+        <td align="center"><font color="#FFFFFF" size="3"
+        face="Arial"><b>8M x 16 bits</b></font></td>
+        <td align="right"><font color="#FFFFFF" face="Arial" size="3"><b>8KB</b></font></td>
+    </tr>
+    <tr>
+        <td align="right"><font color="#FFFFFF" size="3"
+        face="Arial"><b>128 MB</b></font></td>
+        <td align="center"><strong><font color="#FFFFFF" size="3"
+        face="Arial"><b>8</b></font></strong></td>
+        <td align="center"><font color="#FFFFFF" size="3"
+        face="Arial"><b>1</b></font></td>
+        <td align="center"><font color="#FFFFFF" size="3"
+        face="Arial"><b>16M x&nbsp;&nbsp; 8 bits</b></font></td>
+        <td align="right"><font color="#FFFFFF" face="Arial" size="3"><b>16KB</b></font></td>
+    </tr>
+    <tr>
+        <td align="right"><font color="#FFFFFF" size="3"
+        face="Arial"><b>128 MB</b></font></td>
+        <td align="center"><strong><font color="#FFFFFF" size="3"
+        face="Arial"><b>4</b></font></strong></td>
+        <td align="center"><font color="#FFFFFF" size="3"
+        face="Arial"><b>1</b></font></td>
+        <td align="center"><font color="#FFFFFF" size="3"
+        face="Arial"><b>16M x 16 bits</b></font></td>
+        <td align="right"><font color="#FFFFFF" face="Arial" size="3"><b>8KB</b></font></td>
+    </tr>
+    <tr>
+        <td align="right"><font color="#FFFFFF" size="3"
+        face="Arial"><b>256 MB</b></font></td>
+        <td align="center"><strong><font color="#FFFFFF" size="3"
+        face="Arial"><b>8</b></font></strong></td>
+        <td align="center"><font color="#FFFFFF" size="3"
+        face="Arial"><b>2</b></font></td>
+        <td align="center"><font color="#FFFFFF" size="3"
+        face="Arial"><b>16M x&nbsp;&nbsp; 8 bits</b></font></td>
+        <td align="right"><font color="#FFFFFF" face="Arial" size="3"><b>16KB</b></font></td>
+    </tr>
+    <tr>
+        <td align="right"><font color="#FFFFFF" size="3"
+        face="Arial"><b>256 MB</b></font></td>
+        <td align="center"><strong><font color="#FFFFFF" size="3"
+        face="Arial"><b>4</b></font></strong></td>
+        <td align="center"><font color="#FFFFFF" size="3"
+        face="Arial"><b>2</b></font></td>
+        <td align="center"><font color="#FFFFFF" size="3"
+        face="Arial"><b>16M x 16 bits</b></font></td>
+        <td align="right"><font color="#FFFFFF" face="Arial" size="3"><b>8KB</b></font></td>
+    </tr>
+    <tr>
+        <td align="right"><font color="#FFFFFF" size="3"
+        face="Arial"><b>256 MB</b></font></td>
+        <td align="center"><strong><font color="#FFFFFF" size="3"
+        face="Arial"><b>8</b></font></strong></td>
+        <td align="center"><font color="#FFFFFF" size="3"
+        face="Arial"><b>1</b></font></td>
+        <td align="center"><font color="#FFFFFF" size="3"
+        face="Arial"><b>32M x&nbsp;&nbsp; 8 bits</b></font></td>
+        <td align="right"><font color="#FFFFFF" face="Arial" size="3"><b>16KB</b></font></td>
+    </tr>
+    <tr>
+        <td align="right"><font color="#FFFFFF" size="3"
+        face="Arial"><b>512 MB</b></font></td>
+        <td align="center"><strong><font color="#FFFFFF" size="3"
+        face="Arial"><b>8</b></font></strong></td>
+        <td align="center"><font color="#FFFFFF" size="3"
+        face="Arial"><b>2</b></font></td>
+        <td align="center"><font color="#FFFFFF" size="3"
+        face="Arial"><b>32M x&nbsp;&nbsp; 8 bits</b></font></td>
+        <td align="right"><font color="#FFFFFF" face="Arial" size="3"><b>16KB</b></font></td>
+    </tr>
+    <tr>
+        <td align="right"><font color="#FFFFFF" size="3"
+        face="Arial"><b>512 MB</b></font></td>
+        <td align="center"><strong><font color="#FFFFFF" size="3"
+        face="Arial"><b>4</b></font></strong></td>
+        <td align="center"><font color="#FFFFFF" size="3"
+        face="Arial"><b>2</b></font></td>
+        <td align="center"><font color="#FFFFFF" size="3"
+        face="Arial"><b>32M x 16 bits</b></font></td>
+        <td align="right"><font color="#FFFFFF" face="Arial" size="3"><b>16KB</b></font></td>
+    </tr>
+</table>
+
+<p>&nbsp;</p>
+
+<h3><font color="#FF0000" size="5" face="Arial">NOT SUPPORTED
+SDRAM DIMMs</font></h3>
+
+<p class="MsoNormal" style="line-height: 100%; word-spacing: 0; text-indent: 0; margin: 0"><font color="#FFFFFF" size="3" face="Arial">- <strong>All
+PC100 DIMM that doesn't support CAS LATENCY (CL) of 2. PC133 DIMM with CL=3 seem
+to work...&nbsp;</strong></font></p>
+
+<p class="MsoNormal" style="line-height: 100%; word-spacing: 0; text-indent: 0; margin: 0"><font color="#FFFFFF" size="3" face="Arial">-
+<strong>All OBSOLET models :</strong> </font></p>
+
+<blockquote>
+    <p class="MsoNormal" style="line-height: 100%; word-spacing: 0; text-indent: 0; margin: 0"><font color="#FFFFFF" size="3"
+    face="Arial">- <b>8MB, 16MB &amp; 32MB </b>DIMMs.</font></p>
+    <p class="MsoNormal" style="line-height: 100%; word-spacing: 0; text-indent: 0; margin: 0"><font color="#FFFFFF" size="3"
+    face="Arial">-<strong> 64MB</strong> DIMMs <strong>with 16 chips and/or
+    chips on the 2 sides</strong>.</font></p>
+    <p class="MsoNormal" style="line-height: 100%; word-spacing: 0; text-indent: 0; margin: 0"><font color="#FFFFFF" size="3"
+    face="Arial">- All DIMMs with <b>2 logical banks chips</b>
+    (needs 4 banks chips).</font></p>
+</blockquote>
+
+<p class="MsoNormal" style="line-height: 100%; word-spacing: 0; text-indent: 0; margin: 0"><font color="#FFFFFF" size="3" face="Arial"><b>-
+REGISTERED / BUFFURED</b> DIMMs (generally for Work Stations
+&amp; Servers, not consumer PC).</font></p>
+
+<p class="MsoNormal" style="line-height: 100%; word-spacing: 0; text-indent: 0; margin: 0"><font color="#FFFFFF" size="3" face="Arial"><b>- All DIMM
+with only TWO chips on one side (32-bit data width chips).</b></font></p>
+
+<p class="MsoNormal" style="line-height: 100%; word-spacing: 0; text-indent: 0; margin: 0"><font color="#FFFFFF" size="3" face="Arial">- <b>512 MB
+DIMM</b><b> with chips on 1 side.</b></font></p>
+
+</body>
+</html>

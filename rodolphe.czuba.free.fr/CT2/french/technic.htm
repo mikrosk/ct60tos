@@ -1,0 +1,282 @@
+<!DOCTYPE HTML PUBLIC "-//IETF//DTD HTML//EN">
+<html>
+
+<head>
+<meta http-equiv="Content-Type"
+content="text/html; charset=iso-8859-1">
+<meta name="GENERATOR" content="Microsoft FrontPage 2.0">
+<title>CT2 Technique FR</title>
+</head>
+
+<body bgcolor="#000000" text="#FFFFFF" link="#4488FF"
+vlink="#FF0000">
+
+<blockquote>
+    <p align="center">&nbsp;</p>
+    <p align="center"><font color="#FFFF00" size="6">CONSIDERATIONS
+    TECHNIQUES</font><font color="#FFFF00" size="4"><br>
+    </font></p>
+    <p align="center"><font color="#FFFF00" size="4">Etude sur
+    FALCON &amp; FALCON CT2b<strong><br>
+    </strong></font><font color="#FFFF00" size="2">(c) Rodolphe
+    Czuba - JANVIER 99</font><font color="#FFFF00" size="4"><br>
+    </font></p>
+    <p align="left"><font color="#FFFF00"><tt>Cette page est
+    destinée à présenter quelques aspects techniques
+    concernant les performances d'un processeur en fonction du
+    bus et de la ram.</tt></font><tt><br>
+    </tt></p>
+    <table border="1" cellpadding="7" cellspacing="0" width="84">
+        <tr>
+            <td width="78" bgcolor="#800000"><font size="4"><strong><tt>FALCON</tt></strong></font></td>
+        </tr>
+    </table>
+    <blockquote>
+        <p><tt>Le système de base est un FALCON 030 équipé
+        d'un MOTOROLA MC68030 16 MHz avec un bus 16-Bit.<br>
+        <br>
+        Sur ce système, la ram est organisée en 2 bancs
+        mémoires 16-Bit de 2 Mo chacun. Ce qui nous fait un
+        total de 4 Mo qui est adressé en 32-Bit uniquement par
+        le circuit vidéo (VIDEL).<br>
+        <br>
+        L'intérêt des 2 bancs mémoires est l'entrelacement ou
+        'interleaving'.<br>
+        En effet, du point de vu MAPPING mémoire, l'accès à un
+        WORD à une adresse word paire ($00, $04, $08, etc) se
+        fait dans un banc mémoire 0 et l'accès à un WORD
+        impaire ($02, $06, $0A, etc...) se fait dans l'autre banc
+        mémoire (1).<br>
+        Ainsi lors d'accès séquentiels linéaires (dans
+        beaucoup de cas), le processseur accède aux bancs 0, 1,
+        0, 1, 0, etc...<br>
+        <br>
+        Mais pourquoi ?<br>
+        <br>
+        Pour éviter de perdre des cycles en PRECHARGE TIME. Ce
+        precharge time est le temps nécessaire et obligatoire
+        entre 2 accès à une DRAM !<br>
+        Pour de la 60 ns, ce temps est de 40 ns; un cycle 16 MHz
+        suffit donc. <br>
+        Le temps du cyle complet de cette ram est de 110 ns !!<br>
+        La ram du F030 est de la 80 ns (cycle complet de 150 ns).<br>
+        <br>
+        </tt><font color="#FFFF00"><tt>A la grande question,
+        pourquoi le FALCON a un bus DATA 16-Bit, voici
+        l'hypothèse la plus probable:</tt></font><tt><br>
+        <br>
+        Pour permettre un bus DATA 32-Bit pour le CPU et garder
+        en même temps les performances avec l'entrelacement, il
+        aurait fallu qu'Atari propose des configurations RAM de 2
+        ou 8 Mo. 2 est trop peu et 8, à l'époque, coûtait
+        très cher...<br>
+        <br>
+        Le 030 du FALCON accède en 4 cycles (16 MHz) à un banc.
+        Un cycle dure 62.5 ns. Ceci nous fait 4 x 62.5 = 250 ns.
+        Ca passe largement, même si la ram d'origine est de la
+        80 ns !<br>
+        <br>
+        Le calcul de la bande passante de la ram (le nombre
+        d'octets par seconde que l'on peut lire/envoyer de/dans
+        la RAM) est le suivant:<br>
+        <br>
+        1 WORD / 4 cycles d'horloge, soit 0.5 octets / cycles
+        horloge.<br>
+        <br>
+        Donc 0.5 x 16 000 000 = 8 Mo/s.<br>
+        </tt></p>
+        <p><tt><br>
+        </tt><font color="#FFFF00"><tt>Ce que vous pouvez envoyer
+        dans la RAM est une chose mais ce que le processeur peut
+        faire en est une autre.</tt></font><tt><br>
+        En effet, pour transférer entre de la RAM et un CPU, ce
+        dernier doit exécuter des instructions. La plus
+        utilisée est un bon vieux MOVE.L qui nécessite 5 cycles
+        d'horloge sur 030 (2 sur 040) et ceci est bien
+        évidemment la plus rapide pour lire. Du coup, ces 8 Mo/s
+        ne sont que théoriques et la réalité en est un peu
+        différente :<br>
+        <br>
+        Sur un bus 16-Bit, le MOVE.L obligera le processeur à
+        faire deux sorties sur le bus pour lire/écrire 2 WORDS.
+        Heureusement, ce type de 'découpage' n'entraine pas de
+        délais entre les deux WORDS.</tt></p>
+        <p><tt>Le MOVE.L prend 4 cycles en externe et 1 en
+        interne.<br>
+        <br>
+        De plus, il faut tenir compte du temps pris par les
+        accès RAM pour alimenter le VIDEL. Ce temps peut prendre
+        de 4 à 32 % de la bande passante du bus et donc réduire
+        d'autant les performances d'accès du CPU.<br>
+        <br>
+        Ce problème n'existe pas avec de la FAST-Ram puisque
+        cette dernière n'est pas utilisée par la vidéo...<br>
+        <br>
+        Prenons le cas du mode 640x480x2 couleurs (1 bit/pixel):<br>
+        <br>
+        Le nombre d'octets à transférer de la RAM à VIDEL
+        (c'est COMBEL qui se charge de les adresser) est de
+        (640x480)/8 = 38400,soit 38400/4 = 9600 LONG (accès
+        32-Bit en RAM).<br>
+        Le VIDEL reçoit ces LONG par BURST de 17 LONG.<br>
+        Et le BURST se fait en 3, 1, 1, .....1, 1, 1 grâce au
+        mode d'accès FAST-PAGE de la ram 80 ns.<br>
+        Soit 9600/17 = 565 BURST (de 17 LONG),ce qui donne 565 x
+        19 = 10735 cycles pour une image.<br>
+        Pour une seconde (60 images puisque 60 Hz en VGA), il
+        faut compter 10735 x 60 = 644 100 cycles.<br>
+        C'est en fait le temps pendant lequel le CPU ne peut pas
+        profiter de la ST-Ram. <br>
+        Ce qui représente 644 100 / 16 000 000 = 0.040, soit 4%
+        !<br>
+        <br>
+        En mode 16 couleurs, cela grimpe à 16% (4 bits/pixel),
+        et en mode TC on atteint les 32% (16-Bit/pixel mais
+        seulement 320 pixel/ligne); ce qui fait ralentir la
+        machine !<br>
+        <br>
+        Avec une CENTurbo, le bus du F030 passe à 25 MHz et on
+        réduit ainsi à 20% pour le TC, 10.2% en 16 couleurs et
+        2.56% pour le mode 2 couleurs. On vous laisse calculer le
+        mode 256 couleurs et découvrir une surprise...<br>
+        <br>
+        Ainsi pour préciser les calculs, il faut compter:<br>
+        <br>
+        16 000 000 - 644 100 = 15 355 900 cycles disponibles pour
+        le CPU en mode 2 couleurs (MONO) 640x480.<br>
+        </tt></p>
+        <p><tt><br>
+        </tt><font color="#FFFF00"><tt><u>Résumons:</u></tt><tt><br>
+        <br>
+        Le nombre d'octets chargeables depuis la ST-Ram en mode
+        MONO 640x480 est: <br>
+        <br>
+        (4 octets / 4 (le move.l) + (2 acces word) x 4) x 15 355
+        900 (5 cycles pour le MOVE.L) soit 5,12 Mo/s.</tt></font><tt><br>
+        </tt></p>
+        <p><tt><br>
+        </tt><font color="#FFFF00"><tt>Pour affiner encore les
+        calculs, quelques remarques:</tt></font><tt><br>
+        </tt></p>
+        <ol>
+            <li><tt>Le mode BURST des CACHES du 030 n'est pas
+                utilisable sur un bus 16 bits !<br>
+                </tt></li>
+            <li><tt>Ce débit ne tient pas compte des cycles de
+                rafraichissement qui arrivent toutes les 15.6 uS
+                et obligent le 030 à attendre (WAIT STATES !).
+                Mais ces cycles sont les mêmes dans tous les
+                sytèmes, alors nous les passeront sous silence.
+                De toute façon, ils modifient de façon infime
+                les performances des systèmes.<br>
+                </tt></li>
+            <li><tt>Ce calcul part du fait qu'on accède
+                linéairement à la ram en continu, donc en
+                profitant de l'entrelacement des bancs mémoires
+                ! Si on accède n'importe comment à la ram
+                (désalignement du code !) ou si on accède au
+                même banc mémoire (accès d'un word tous les 4
+                octets en ram) ($00, $04, $08 par exemple), on
+                doit refaire la calcul:<br>
+                2 WORDS / (12 cycles + 2 cycles (temps de
+                précharge à 16 MHz pour chaque WORD). <br>
+                On a donc 2 WORDS / 14 cycles = 0.286 octets/s<br>
+                0.286 x 15 355 900 = </tt><font color="#FFFF00"><tt>4,4
+                Mo/s</tt></font><tt> en Mono 640x480 au lieu de
+                5,12 !<br>
+                AVIS A CEUX QUI PROGRAMMENT MAL !<br>
+                </tt></li>
+            <li><tt>Il est intéressant de faire une distinction
+                entre la lecture et l'écriture<br>
+                dans une DRAM, car si le hard est bien fait, il
+                est possible d'écrire plus vite que de lire... <br>
+                C'est ce que vous pouvez constater dans les
+                NEMBENCHS (5.3 / 6.4 sur F030 d'origine et 31.2 /
+                32.2 sur CT2).<br>
+                </tt></li>
+            <li><tt>La bande passante du bus est aussi
+                conssommée par des circuits capables de devenir
+                MASTER à la place du CPU. Sur Falcon, il y en a
+                deux : le SDMA et le BLITTER.<br>
+                </tt></li>
+        </ol>
+        <p>&nbsp;</p>
+    </blockquote>
+    <table border="1" cellpadding="7" cellspacing="0" width="183">
+        <tr>
+            <td width="177" bgcolor="#800000"><font size="4"><strong><tt>CT2
+            B</tt></strong></font></td>
+        </tr>
+    </table>
+    <blockquote>
+        <p><tt>Le plus grand point technique de la CT2 est la
+        FAST-Ram 32-Bit.<br>
+        En effet, cette ram autorise ENFIN le BURST (ou rafale)
+        lors du chargement des caches du 030 !!<br>
+        Petit rappel: le BURST est un mode de chargement RAFALE
+        d'une ligne d'un cache.<br>
+        Une ligne fait 16 octets (4 longs), soit l'équivalent de
+        4 accès au bus, mais en bien plus rapide.<br>
+        <br>
+        Le contrôleur de FAST-Ram est bien plus performant que
+        celui de la ST-Ram du Falcon.<br>
+        </tt></p>
+        <ul>
+            <li><tt>Il permet des accès séquentiels en 5 cycles
+                d'horloge 50 MHz en lecture et 4 cycles en
+                écriture !<br>
+                </tt></li>
+            <li><tt>les cycles de rafraichissement durent 5
+                cycles d'horloge !<br>
+                </tt></li>
+            <li><tt>Il autorise le BURST !!! Avec un programme en
+                FAST-Ram, le CPU passe les 90% de son temps à
+                'BURSTER' pour son cache.<br>
+                <br>
+                Ainsi, en 5 cycles 50 MHz, le 030 avale un LONG
+                (4 octets) depuis la FAST-Ram en cas de NON BURST
+                (rare), soit 4/(5+5) 5 cycles pour lire le bus et
+                5 pour exécuter le MOVE.L = 0.4
+                octet/cycle.soit, à 50 MHz, 0.4 x 50000000 = 20
+                Mo/s !<br>
+                Ca commence à chauffer !!<br>
+                </tt></li>
+        </ul>
+        <p><tt>Passons au BURST:<br>
+        <br>
+        Le BURST intervient dans pratiquement 100 % des cas si le
+        code est aligné !!<br>
+        Le BURST de la CENTurbo 2 est fait en 5, 2, 2, 2 à 50
+        MHz.<br>
+        <br>
+        RAPPEL: Cette syntaxe technique signifie que le premier
+        LONG est lu en 5 cycles, et que les 3 suivants sont lus
+        chacun en 2 cycles. Soit un total de 16 octets en 11
+        cycles !<br>
+        <br>
+        Le calcul est donc le suivant:<br>
+        16 octets / (11 + 5 x 3) cycles 50 MHz,<br>
+        soit 16 octets / 26 cycles 50 MHz = 0.6154 octets/s<br>
+        soit 0.6154 x 50 000 000 = 30.77 Mo/s !<br>
+        <br>
+        Ceci fait un facteur de 30.77 / 5.3 = 5.8 fois plus
+        rapide que le veau de Falcon de base (mmeuuuhhhh !!). Il
+        y a encore des gens qui travaillent avec un Falcon sans
+        CENTurbo ??!<br>
+        <br>
+        </tt><font color="#00FF00"><tt><u>REMARQUE :</u></tt><tt>
+        Le BLITTER n'est pas utilisable sur CT2 du fait de son
+        incapacité à adresser un espace 32-Bit d'adresse, dont
+        la FAST-Ram (NVDI est obligatoire !).</tt></font><tt><br>
+        <br>
+        Cette petite 'étude' s'achève.<br>
+        Merci de votre attention et nous espérons que vous avez
+        compris comment calculer des bandes passantes. </tt></p>
+    </blockquote>
+</blockquote>
+
+<p align="center"><a href="bienvenu.htm"><tt><img
+src="../../com/back.gif" alt="Retour" border="0" width="80"
+height="60"></tt></a></p>
+</body>
+</html>

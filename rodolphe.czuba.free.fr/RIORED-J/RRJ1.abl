@@ -1,0 +1,700 @@
+MODULE RRJ_1
+
+"INPUTS"
+pa0..pa31		pin;								"PPC 2.5V
+!ts				pin;								"PPC 2.5V
+tt0..tt4			pin;								"PPC 2.5V	
+tsiz0..tsiz2	pin;								"PPC 2.5V
+!wt				pin;								"PPC 2.5V
+clk				pin;								"PPC 2.5V
+!rs2..!rs0		pin;								"X86 GTL+
+!trdy				pin;								"X86 GTL+
+!bnr				pin;								"X86 GTL+ (Block Next Request)
+!bpri				pin;								"X86 GTL+ (Priority Agent Bus Request)
+!rsti				pin;								"X86 GTL+
+ftpon				pin;								"Local 3.3V
+
+"OUTPUTS"
+!bg				pin istype 'reg';				"PPC 2.5V
+!dbg				pin istype 'reg';				"PPC 2.5V
+!aack				pin istype 'reg';				"PPC 2.5V
+!artry			pin istype 'reg';				"PPC 2.5V
+!ta				pin istype 'reg';				"PPC 2.5V
+!tea				pin istype 'reg';				"PPC 2.5V
+!rsto				pin istype 'com';				"PPC 2.5V
+!xa31..!xa3		pin istype 'reg';				"X86 GTL+
+!ads				pin istype 'reg';				"X86 GTL+
+!req4..!req0	pin istype 'reg';				"X86 GTL+
+!dbsy				pin istype 'reg';				"X86 GTL+ (Data BuSY)
+!lock				pin istype 'reg';				"X86 GTL+ (CPU atomic accesses) 
+!loe,!lwe		pin istype 'reg';				"Local 3.3V (Output & Write Enables)
+la2..la0			pin istype 'com';				"Local 3.3V - Local ADD Bus
+
+"INPUTS/OUTPUTS"
+dh0..dh31		pin istype 'reg';				"PPC 2.5V
+dl0..dl31		pin istype 'reg';				"PPC 2.5V
+!xd63..!xd0		pin istype 'reg';				"X86 GTL+
+!drdy				pin istype 'reg';				"X86 GTL+
+ld7..ld0			pin istype 'reg';				"Local 3.3V - Local DATA Bus
+
+"NODES"
+x86					node;
+flh,sra				node;
+x87					node istype 'keep';
+memdi					node;
+ioapt					node;
+iack					node;
+sack					node;
+ioapic				node;
+bios					node;
+lapic				 	node;
+fsac					node istype 'reg,keep';	"FLH/SRAM ACcess
+ltc0..ltc3			node istype 'reg,keep';	"Local Transfer Flags
+lrle0..lrle7		node istype 'reg,keep';	"Flash Latch Enable
+tsiz3					node istype 'keep';		"Transfer Size High bit
+leot					node istype 'keep';		"Local End Of Transfer
+lcc1..lcc13			node istype 'reg,keep';	"Local Cycle Flags
+wdc0..wdc10			node istype 'reg,keep';	"Watch Dog Clock Counter
+tslk					node istype 'reg,keep';	"TS Lock
+bstwc1..bstwc5		node istype 'reg,keep';	"BurST Write Counter
+bstrc1..bstrc6		node istype 'reg,keep';	"BurST Read  Counter
+b2xd63..b2xd0		node istype 'reg,keep';	"Buffer#2 X86 DATA
+b3xd63..b3xd0		node istype 'reg,keep';	"Buffer#3 X86 DATA
+trdyl					node istype 'reg,keep';	"TRDY Lock
+ts1					node istype 'reg,keep';	"TS delayed clock for REQ B
+be7..be0				node istype 'keep';		"X86 Byte Enable (7-0)
+atr1,atr0			node istype 'keep';		"X86 CPU ATtRibutes
+
+"SETS			
+x			= .x.;
+ladd		= [la2,la1,la0];						"LOCAL Add Bus
+ldata		= [ld7..ld0];							"LOCAL Data Bus
+lcc		= [lcc1..lcc13];						"LOCAL Cycle Counter
+ltc		= [ltc3..ltc0];						"LOCAL Transfer Counter
+lrle		= [lrle0..lrle7];						"Local Read Latch Enables (Flash/Sram)
+tt			= [tt0..tt4];							"PPC Transfer Type
+tsiz		= [tsiz0..tsiz2];						"PPC Transfer SIZe
+tsizh		= [tsiz3,tsiz0..tsiz2];				"PPC Enhanced Transfer SIZe
+wdc		= [wdc10..wdc0]; 						"Watch Dog Clock Counter
+req		= [req4..req0];						"X86 Request
+rs			= [rs2..rs0];							"X86 Response
+bstwc		= [bstwc1..bstwc5];					"BurST Write Counter 
+bstrc		= [bstrc1..bstrc6];					"BurST Read  Counter 
+be			= [be7..be0];							"X86 Byte Enable
+atr		= [atr1,atr0];							"X86 CPU ATtRibutes 
+
+padd		= [pa0..pa28];							"PPC Add Bus
+paddh		= [pa0..pa11];							"PPC Add Bus High
+paddl		= [pa29..pa31];						"PPC Add Bus Low
+
+pdata		= [dh0..dh31,dl0..dl31];			"PPC Data Bus
+pdata0	= [ dh0.. dh7];						"PPC Byte Lane #0 
+pdata1	= [ dh8..dh15];						"PPC Byte Lane #1 
+pdata2	= [dh16..dh23];						"PPC Byte Lane #2
+pdata3	= [dh24..dh31];						"PPC Byte Lane #3
+pdata4	= [ dl0.. dl7];						"PPC Byte Lane #4
+pdata5	= [ dl8..dl15];						"PPC Byte Lane #5
+pdata6	= [dl16..dl23];						"PPC Byte Lane #6
+pdata7	= [dl24..dl31];						"PPC Byte Lane #7 
+
+xadd		= [xa31..xa3];							"X86 Add Bus
+xdata		= [xd63..xd0];							"X86 Data Bus
+xdata7	= [xd63..xd56];						"X86 Byte Lane #7 
+xdata6	= [xd55..xd48];						"X86 Byte Lane #6 
+xdata5	= [xd47..xd40];						"X86 Byte Lane #5
+xdata4	= [xd39..xd32];						"X86 Byte Lane #4
+xdata3	= [xd31..xd24];						"X86 Byte Lane #3
+xdata2	= [xd23..xd16];						"X86 Byte Lane #2
+xdata1	= [xd15.. xd8];						"X86 Byte Lane #1
+xdata0	= [ xd7.. xd0];						"X86 Byte Lane #0
+
+b2xdata	= [b2xd63..b2xd0];					"BUF#2 X86 DATA
+b2xdata7	= [b2xd63..b2xd56];					"BUF#2 X86 Byte Lane #0
+b2xdata6 = [b2xd55..b2xd48];					"BUF#2 X86 Byte Lane #1
+b2xdata5	= [b2xd47..b2xd40];					"BUF#2 X86 Byte Lane #2
+b2xdata4 = [b2xd39..b2xd32];					"BUF#2 X86 Byte Lane #3
+b2xdata3 = [b2xd31..b2xd24];					"BUF#2 X86 Byte Lane #4
+b2xdata2 = [b2xd23..b2xd16];					"BUF#2 X86 Byte Lane #5
+b2xdata1 = [b2xd15..b2xd8];					"BUF#2 X86 Byte Lane #6
+b2xdata0 = [b2xd7..b2xd0];						"BUF#2 X86 Byte Lane #7
+
+b3xdata	= [b3xd63..b3xd0];					"BUF#3 X86 DATA
+b3xdata7	= [b3xd63..b3xd56];					"BUF#3 X86 Byte Lane #0
+b3xdata6 = [b3xd55..b3xd48];					"BUF#3 X86 Byte Lane #1
+b3xdata5	= [b3xd47..b3xd40];					"BUF#3 X86 Byte Lane #2
+b3xdata4 = [b3xd39..b3xd32];					"BUF#3 X86 Byte Lane #3
+b3xdata3 = [b3xd31..b3xd24];					"BUF#3 X86 Byte Lane #4
+b3xdata2 = [b3xd23..b3xd16];					"BUF#3 X86 Byte Lane #5
+b3xdata1 = [b3xd15..b3xd8];					"BUF#3 X86 Byte Lane #6
+b3xdata0 = [b3xd7..b3xd0];						"BUF#3 X86 Byte Lane #7
+
+
+"PROPERTIES"
+Xilinx property 'BUFG=CLK clk';
+Xilinx property 'init=s bg';
+Xilinx property 'init=s dbg';
+Xilinx property 'init=s aack';
+Xilinx property 'init=s artry';
+Xilinx property 'init=s ta';
+Xilinx property 'init=s tea';
+Xilinx property 'init=s dbsy';
+Xilinx property 'init=s fsac';
+Xilinx property 'init=s loe';
+Xilinx property 'init=s lwe';
+
+
+EQUATIONS
+
+////////////////
+// MEMORY MAP //
+////////////////
+"All addresses forward to mb except those at fc,fd,fe,ff.
+"$FF00_0000 FFFF_FFFF	16MB	FLASH Space
+"$FE00_0000	FEFF_FFFF	16MB	SRAM  Space 
+"$FCE0_0000 FCEF_FFFF	 1MB	LOCAL APIC Configuration Space
+"---------------------------------------------------------- 
+"$FBE0_0000	FBFF_FFFF	 2MB	BIOS Aperture
+"$FBC0_0000 FBCF_FFFF    1MB	IOAPIC Configuration Space 
+"$FB30_0000	FB3F_FFFF	 1MB	SMI ACK
+"$FB20_0000	FB2F_FFFF	 1MB	INTR ACK
+"$FB00_0000	FB0F_FFFF	 1MB	I/O Aperture
+
+// DECODE //
+flh	= [pa0..pa7]==^hff;		"FLASH : 16MB
+sra	= [pa0..pa7]==^hfe;		"SRAM  : 16MB
+lapic = paddh==^hfce;			"LOCAL APIC : 1MB 
+bios	= paddh==^hfbf				"BIOS Aperture : 2MB
+		& paddh==^hfbe;
+ioapic= paddh==^hfbc;			"IO APIC : 1MB
+sack	= paddh==^hfb3;			"SMI ACKnowledge : 1MB
+iack	= paddh==^hfb2;			"Intr ACKnowledge : 1MB
+ioapt	= [pa0..pa7]==^hfb;		"IO Aperture : 1MB
+memdi	= [pa0..pa7]<=^hf9;		"Main Board Direct only
+x86	= [pa0..pa7]<=^hfb;		"Main Board All
+x87	= [pa0..pa7]<=^hfb;		"Main Board All - Not collapsed
+
+// TRANSFER TYPE // 
+"TT0	: 	0 = Normal access / 1 = Atomic access
+"TT1	: 	0 = Write / 1 = Read
+"TT2	: 	0 = Single / 1 = Burst
+"TT[3,4]	= [1,0]
+
+// TRANSFER SIZE //
+"TSIZ[0-2]	=	000 -> 8 bytes
+"					001 -> 1
+"					010 -> 2
+"					011 -> 3
+"					100 -> 4
+
+"TSIZH[3,0-2]=1000 -> 8
+tsiz3	= (tsiz==[0,0,0]);	"8 bytes
+
+////////////////
+// LOCAL APIC //
+////////////////
+
+
+
+////////////////////////////////////
+// LOCAL BUS : FLASH, SRAM, & FTP // 
+////////////////////////////////////
+
+// FLASH & SRAM ACCESS //
+fsac.clk= clk;
+fsac.clr= ta.fb;										"Normal End
+fsac	 := ts & flh & (tt==[0,x,0,1,0])			"FLASH access
+		  # ts & sra & (tt==[0,x,0,1,0])			"SRAM  access
+		  # fsac;				
+
+// CYCLE FLAGS (1-13) //
+lcc.clk= clk;
+lcc.clr= ta.fb										"FLH,SRA Single
+		 # fsac & lcc12;	 						"FLH/SRA Multiple"
+lcc1	:= fsac;
+lcc2	:= lcc1;
+lcc3	:= lcc2;
+lcc4	:= lcc3;
+lcc5	:= lcc4;
+lcc6	:= lcc5;
+lcc7	:= lcc6;
+lcc8	:= lcc7;
+lcc9	:= lcc8;
+lcc10	:= lcc9;
+lcc11	:= lcc10;
+lcc12	:= lcc11;
+lcc13	:= lcc12;
+
+// OUTPUT & WRITE ENABLES //
+loe.clk= clk;
+loe.clr= lcc10 & flh										"FLH >90ns
+		 # lcc10 & sra;									"SRA >90ns
+loe	:= fsac & !lcc1 & (tt==[0,1,0,1,0])			"FLH/SRAM : 1-8 byte transfer
+		 # loe.fb;
+
+lwe.clk= clk;		 
+lwe.clr= lcc6 & flh										"FLH >55ns 
+		 # lcc6 & sra;										"SRA >55ns
+lwe	:= fsac & !lcc1 & (tt==[0,0,0,1,0])			"FLH/SRAM : 1-8 byte transfer
+		 # lwe.fb;
+
+// TRANSFER COUNTER (0-7) //
+ltc.clk= clk;
+ltc.ce = fsac & lcc11 & !lcc12;		"End of each byte transfer
+ltc.clr= ta.fb;	 						"End of access
+ltc	:= ltc + 1;
+
+// Local End Of Transfer //
+leot = tsizh==ltc;
+
+// ADD GENERATOR //
+ladd.oe	= !ftpon;						"ftp is off
+ladd	=  paddl     & (ltc==0)			"$0
+		# (paddl +1) & (ltc==1) 		"$1
+		# (paddl +2) & (ltc==2)			"$2
+		# (paddl +3) & (ltc==3)			"$3
+		# (paddl +4) & (ltc==4)			"$4
+		# (paddl +5) & (ltc==5)			"$5
+		# (paddl +6) & (ltc==6)			"$6
+		# (paddl +7) & (ltc==7);		"$7	
+
+// WRITE SWITCH to Local //
+"FLH/SRAM Write accesses are 8,16,24,32 or 64 bits wide.
+ldata.clk= clk;
+ldata.oe	= !tt1 & !ftpon;			"Write & ftp off
+ldata	:= pdata0 & (paddl==0) & (ltc==0)		"1/2/3/4/8 Bytes
+
+		 # pdata1 & (paddl==1) & (ltc==0)		"1/2/3 Bytes
+		 # pdata1 & (paddl==0) & (ltc==1)		"2/3/4/8 Bytes
+
+		 # pdata2 & (paddl==2) & (ltc==0)		"4 Bytes
+		 # pdata2 & (paddl==1) & (ltc==1)		"2/3 Bytes
+		 # pdata2 & (paddl==0) & (ltc==2)		"3/4/8 Bytes
+
+		 # pdata3 & (paddl==3) & (ltc==0)		"1 Byte
+		 # pdata3 & (paddl==2) & (ltc==1)		"2 Bytes
+		 # pdata3 & (paddl==1) & (ltc==2)		"3 Bytes
+		 # pdata3 & (paddl==0) & (ltc==3)		"4/8 Bytes
+
+		 # pdata4 & (paddl==4) & (ltc==0)		"1/2/3/4 Bytes
+		 # pdata4 & (paddl==0) & (ltc==4)		"8 Bytes
+
+		 # pdata5 & (paddl==5) & (ltc==0)		"1/2/3 Bytes
+		 # pdata5 & (paddl==4) & (ltc==1)		"2/3/4 Bytes
+		 # pdata5 & (paddl==0) & (ltc==5)		"8 Bytes
+
+		 # pdata6 & (paddl==6) & (ltc==0)		"1/2 Bytes
+		 # pdata6 & (paddl==5) & (ltc==1)		"2/3 Bytes
+		 # pdata6 & (paddl==4) & (ltc==2)		"3/4 Bytes
+ 	 	 # pdata6 & (paddl==0) & (ltc==6)		"8 Bytes
+
+		 # pdata7 & (paddl==7) & (ltc==0)		"1 Byte
+		 # pdata7 & (paddl==6) & (ltc==1)		"2 Bytes
+		 # pdata7 & (paddl==5) & (ltc==2)		"3 Bytes
+		 # pdata7 & (paddl==4) & (ltc==3)		"4 Bytes
+		 # pdata7 & (paddl==0) & (ltc==7);		"8 Bytes
+
+// LOCAL READ LATCHs //
+lrle.clk= clk;
+lrle.clr= lcc9;				"End of LE two cycles before end of data
+
+lrle0	:= fsac & (paddl==0) & (ltc==0);			"FLH/SRA:1/2/3/4/8 Bytes
+
+lrle1	:= fsac & (paddl==1) & (ltc==0)			"FLH/SRA:1/2/3 Bytes	
+		 # fsac & (paddl==0) & (ltc==1);			"FLH/SRA:2/3/4/8 Bytes
+
+lrle2	:= fsac & (paddl==2) & (ltc==0)		 	"FLH/SRA:4 Bytes
+		 # fsac & (paddl==1) & (ltc==1)			"FLH/SRA:2/3 Bytes
+		 # fsac & (paddl==0) & (ltc==2);			"FLH/SRA:3/4/8 Bytes
+
+lrle3	:= fsac & (paddl==3) & (ltc==0)			"FLH/SRA:1 Byte
+		 # fsac & (paddl==2) & (ltc==1)			"FLH/SRA:2 Bytes
+		 # fsac & (paddl==1) & (ltc==2)			"FLH/SRA:3 Bytes
+		 # fsac & (paddl==0) & (ltc==3);			"FLH/SRA:4/8 Bytes
+
+lrle4	:= fsac & (paddl==4) & (ltc==0)			"FLH/SRA:1/2/3/4 Bytes
+		 # fsac & (paddl==0) & (ltc==4);			"FLH/SRA:8 Bytes
+
+lrle5	:= fsac & (paddl==5) & (ltc==0)			"FLH/SRA:1/2/3 Bytes
+		 # fsac & (paddl==4) & (ltc==1)			"FLH/SRA:2/3/4 Bytes
+		 # fsac & (paddl==0) & (ltc==5);			"FLH/SRA:8 Bytes
+
+lrle6	:= fsac & (paddl==6) & (ltc==0)			"FLH/SRA:1/2 Bytes
+		 # fsac & (paddl==5) & (ltc==1)			"FLH/SRA:2/3 Bytes
+		 # fsac & (paddl==4) & (ltc==2)			"FLH/SRA:3/4 Bytes
+ 	 	 # fsac & (paddl==0) & (ltc==6);			"FLH/SRA:8 Bytes
+
+lrle7	:= fsac & (paddl==7) & (ltc==0)			"FLH/SRA:1 Byte
+		 # fsac & (paddl==6) & (ltc==1)			"FLH/SRA:2 Bytes
+		 # fsac & (paddl==5) & (ltc==2)			"FLH/SRA:3 Bytes
+		 # fsac & (paddl==4) & (ltc==3)			"FLH/SRA:4 Bytes
+		 # fsac & (paddl==0) & (ltc==7);			"FLH/SRA:8 Bytes
+
+// READ SWITCH from Local & X86 //
+"See 'DATA CONVERTER'
+"FLH Read (prog verif/copy) accesses must be 8-Bit wide.
+"SRAM + FLH BOOT (Instr.fetching & data load) accesses are 8,4,3,2 or 1 Byte wide !  
+
+/////////////////
+// BYTE ENABLE //
+/////////////////
+"for X86 transfers (second REQ phase)
+be0	= (paddl==0);							"Burst and Single at $0
+
+be1	= (paddl==0) & tt2					"Burst
+		# (paddl==0) & !tt2 & (tsiz==0)	"8 Bytes
+		# (paddl==0) & !tt2 & (tsiz==2)	"2 Bytes at $0
+		# (paddl==0) & !tt2 & (tsiz==3)	"3 Bytes at $0
+		# (paddl==0) & !tt2 & (tsiz==4)	"4 Bytes at $0
+		# (paddl==1) & !tt2 & (tsiz==1)	"1 Byte  at $1
+		# (paddl==1) & !tt2 & (tsiz==2)	"2 Bytes at $1
+		# (paddl==1) & !tt2 & (tsiz==3);	"3 Bytes at $1
+
+be2	= (paddl==0) & tt2					"Burst
+		# (paddl==0) & !tt2 & (tsiz==0)	"8 Bytes
+		# (paddl==0) & !tt2 & (tsiz==3)	"3 Bytes at $0
+		# (paddl==0) & !tt2 & (tsiz==4)	"4 Bytes at $0
+		# (paddl==1) & !tt2 & (tsiz==2)	"2 Bytes at $1
+		# (paddl==1) & !tt2 & (tsiz==3)	"3 Bytes at $1
+		# (paddl==2) & !tt2 & (tsiz==1)	"1 Byte  at $2
+		# (paddl==2) & !tt2 & (tsiz==2); "2 Bytes at $2
+
+be3	= (paddl==0) & tt2					"Burst
+		# (paddl==0) & !tt2 & (tsiz==0)	"8 Bytes
+		# (paddl==0) & !tt2 & (tsiz==4)	"4 Bytes at $0
+		# (paddl==1) & !tt2 & (tsiz==3)	"3 Bytes at $1
+		# (paddl==2) & !tt2 & (tsiz==2)	"2 Bytes at $2
+		# (paddl==3) & !tt2 & (tsiz==1);	"1 Byte  at $3
+		
+be4	= (paddl==0) & tt2					"Burst
+		# (paddl==0) & !tt2 & (tsiz==0)	"8 Bytes
+		# (paddl==4) & !tt2 & (tsiz==1)	"1 Byte  at $4
+		# (paddl==4) & !tt2 & (tsiz==2)	"2 Bytes at $4
+		# (paddl==4) & !tt2 & (tsiz==3)	"3 Bytes at $4
+		# (paddl==4) & !tt2 & (tsiz==4);	"4 Bytes at $4
+		
+be5	= (paddl==0) & tt2					"Burst
+		# (paddl==0) & !tt2 & (tsiz==0)	"8 Bytes
+		# (paddl==4) & !tt2 & (tsiz==2)	"2 Bytes at $4
+		# (paddl==4) & !tt2 & (tsiz==3)	"3 Bytes at $4
+		# (paddl==4) & !tt2 & (tsiz==4)	"4 Bytes at $4
+		# (paddl==5) & !tt2 & (tsiz==1)	"1 Byte  at $5
+		# (paddl==5) & !tt2 & (tsiz==2)	"2 Bytes at $5
+		# (paddl==5) & !tt2 & (tsiz==3);	"3 Bytes at $5
+
+be6	= (paddl==0) & tt2					"Burst
+		# (paddl==0) & !tt2 & (tsiz==0)	"8 Bytes
+		# (paddl==4) & !tt2 & (tsiz==3)	"3 Bytes at $4
+		# (paddl==4) & !tt2 & (tsiz==4)	"4 Bytes at $4
+		# (paddl==5) & !tt2 & (tsiz==2)	"2 Bytes at $5
+		# (paddl==5) & !tt2 & (tsiz==3)	"3 Bytes at $5
+		# (paddl==6) & !tt2 & (tsiz==1)	"1 Byte  at $6
+		# (paddl==6) & !tt2 & (tsiz==2);	"2 Bytes at $6
+
+be7	= (paddl==0) & tt2					"Burst
+		# (paddl==0) & !tt2 & (tsiz==0)	"8 Bytes
+		# (paddl==4) & !tt2 & (tsiz==4)	"4 Bytes at $4
+		# (paddl==5) & !tt2 & (tsiz==3)	"3 Bytes at $5
+		# (paddl==6) & !tt2 & (tsiz==2)	"2 Bytes at $6
+		# (paddl==7) & !tt2 & (tsiz==1);	"1 Byte  at $7
+
+//////////////////////////
+// ADDRESS TRANSLATIONS //
+//////////////////////////
+xadd.clk= clk;
+xadd.oe = bg.fb;
+xadd:=ts  & memdi  & padd															"Ra:No change
+	 # ts  & ioapt  & [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,pa16..pa28]	"-> Ra:0000xxxx
+	 # ts  & ioapic & [pa0..pa3,1,1,1,0,pa8..pa28]							"Ra:FBCxxxxx -> FECxxxxx 
+	 # ts  & bios   & [pa0..pa3,1,1,1,1,pa8..pa28]							"Ra:FBExxxxx -> FFExxxxx
+	 # ts1 & x86    & !sack & [0,0,0,0,0,0,atr1,atr0,0,0,0,0,0,0,0,0,be7..be0,0,0,0,0,0]		"Rb (except SMI)
+	 # ts1 & sack   &  tt1 & [0,0,0,0,0,0,atr1,atr0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,1,0,0,0,0]	"Rb (SMI ON)
+ 	 # ts1 & sack   & !tt1 & [0,0,0,0,0,0,atr1,atr0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,0,0,0,0,0];	"Rb (SMI End)
+
+////////////////
+// ATtRibutes //
+////////////////
+atr	= [0,0] & ([pa0..pa9]==[1,1,1,1,1,0,1,1,0,0])"Uncacheable = IO,INTR,SMI ($FB0-FB3)
+		# [0,1] & memdi &  wt & !tt1 & !tt2				"Write Through
+		# [1,1] & memdi & !wt & !tt1 &  tt2;	    	"Write Back
+
+/////////////////////////////////////////
+// PPC-X86 TRANSFER PROTOCOL CONVERTER //
+/////////////////////////////////////////
+
+// REQUEST (A & B) //
+ads.clk= clk;
+ads.oe = !bg.fb;
+ads 	:= ts & x86;				"REQ A
+
+ts1.clk= clk;
+ts1	:= ts & x86;				"1 clock delay for REQ B
+
+req.clk= clk;
+req.oe = bg.fb;
+req  := "REQ A"
+ 		  [0,0,1,0,0] & memdi & ts &  wt	& (tt==[x,1,x,1,0]) 	"Ra R Code
+		# [0,0,1,1,0] & memdi & ts & !wt	& (tt==[x,1,x,1,0])	"Ra R Data
+		# [0,0,1,1,1] & memdi & ts &  wt	& (tt==[x,0,0,1,0])	"Ra W Single
+		# [0,0,1,0,1] & memdi & ts & !wt	& (tt==[x,0,1,1,0])	"Ra W Back (Burst)
+		# [1,0,0,0,0] & ioapt & ts & !wt & (tt==[0,1,0,1,0])	"Ra R IO
+		# [1,0,0,0,1] & ioapt & ts &  wt	& (tt==[0,0,0,1,0])	"Ra W IO
+		# [0,1,0,0,0] & iack  & ts & !wt	& (tt==[0,1,0,1,0])	"Ra IACK
+		# [0,1,0,0,0] & sack  & ts & 		  (tt==[0,1,0,1,0])	"Ra SMI
+ 		  "REQ B"	
+		# [0,0,x,0,0] & memdi & ts1 &       (tt==[x,x,0,1,0]) "Rb Single
+		# [0,0,x,1,0] & memdi & ts1 &       (tt==[x,x,1,1,0]) "Rb Burst
+		# [0,0,x,0,0] & ioapt & ts1 & 		(tt==[0,x,0,1,0])	"Rb IO
+		# [0,0,x,0,0] & iack  & ts1 & !wt & (tt==[0,1,0,1,0])	"Rb IACK
+		# [0,0,x,0,1] & sack  & ts1 &       (tt==[0,1,0,1,0]);"Rb SMI
+
+// DATA BUS BUSY // "Not needed for single transfers 
+dbsy.clk= clk;
+dbsy.oe = !bpri & !tt1;						"PPC drives DATA
+dbsy.clr= bstwc5								"W Burst End
+		  # artry.fb;							"W Retry	
+dbsy	 := x87 & !tt1 & tt2 & trdy		"W Burst
+		  # dbsy.fb;			
+
+// DATA READY //
+drdy.clk= clk;
+drdy.oe = !bpri & !tt1;						"PPC drives DATA
+drdy	 := x87 & !tt1 & ta.fb;	
+
+// ATOMIC //
+lock.clk= clk;
+lock	 := x86 & tt0 & tt3 & !tt4;
+
+
+//////////////////
+// TERMINATIONS //
+//////////////////
+// PPC RETRY //
+artry.clk= clk;
+artry	:= x87 & (rs==[0,0,1]); 			"RETRY RESPONSE"
+
+// PPC ADD ACK //
+aack.clk= clk;
+aack	:= fsac & lcc6  & !lcc7	 & !tt0 & !tt1 & !tt2 & tt3 & !tt4 & leot "FLH/SRAM W
+		 # fsac & lcc10 & !lcc11 & !tt0 &  tt1 & !tt2 & tt3 & !tt4 & leot	"FLH/SRAM R
+		 # lapic & ts & !tt0 & !tt2 & tt3 & !tt4									"LOCAL APIC 
+		 "Single"
+		 # x87 & !tt2 & !tt1 & dbsy.fb  & (rs==[1,0,1]) 						"MB W Single
+		 # x87 & !tt2 &  tt1 & drdy.pin & (rs==[1,1,1])							"MB R Single
+		 "Burst"
+		 # x87 &  tt2 & !tt1 & dbsy.fb  & bstwc3 & !bstwc4						"MB W Burst
+		 # x87 &  tt2 &  tt1	&            bstrc5 & !bstrc6;					"MB R Burst
+
+// PPC DATA ACK //		 
+ta.clk = clk;
+ta		:= fsac & lcc6  & !lcc7	 & !tt0 & !tt1 & !tt2 & tt3 & !tt4 & leot	"FLH/SRAM W
+		 # fsac & lcc10 & !lcc11 & !tt0 &  tt1 & !tt2 & tt3 & !tt4 & leot	"FLH/SRAM R
+		 # lapic & ts & !tt0 & !tt2 & tt3 & !tt4									"LOCAL APIC
+		 "Single"
+		 # x87 & !tt2 & !tt1 & dbsy.fb  & (rs==[1,0,1])							"MB W Single
+		 # x87 & !tt2 &  tt1 & drdy.pin & (rs==[1,1,1])							"MB R Single
+		 "W Burst"
+		 # x87 &  tt2 & !tt1 & dbsy.fb  & (rs==[1,0,1])							"MB W Burst	1st Data
+		 # x87 &  tt2 & !tt1 & dbsy.fb  & bstwc1 & !bstwc4						"MB W Burst	2/3/4th Data
+		 "R Burst"
+		 # x87 &  tt2 &  tt1 & drdy.pin & (rs==[1,1,1])							"MB R Burst 1st Data
+		 # x87 &  tt2 &  tt1 & drdy.pin & bstrc3 & !bstrc6;					"MB R Burst 2/3/4th Data
+		 
+
+//////////////////////////////
+// BURST COUNTERS & BUFFERS //
+//////////////////////////////
+// Burst Write Cycles Counter //
+bstwc.clk= clk;
+bstwc.clr= bstwc5;	
+bstwc1  := x87 & !tt1 & tt2 & dbsy.fb & (rs==[1,0,1]);
+bstwc2  := bstwc1;
+bstwc3  := bstwc2;
+bstwc4  := bstwc3;
+bstwc5  := bstwc4;
+
+// Burst Read Cycles Counter //
+bstrc.clk= clk;
+bstrc.clr= bstrc6;	
+bstrc1  := x87 & tt1 & tt2 & drdy.pin & (rs==[1,1,1]);
+bstrc2  :=  drdy.pin & bstrc1;	
+bstrc3  :=  drdy.pin & bstrc2;	
+bstrc4  :=  drdy.pin & bstrc3;	
+bstrc5  := !drdy.pin & bstrc4;	
+bstrc6  := !drdy.pin & bstrc5;	
+
+// Burst Read Latch Buffers (#2 & #3) //
+b2xdata.clk= clk;
+b2xdata.clr= bstrc6;
+b2xdata := xdata & bstrc1 & drdy.pin	"B2 receives data at Burst cycle#2
+			# b2xdata;							"B2 latch
+
+b3xdata.clk= clk;
+b3xdata.clr= bstrc6;
+b3xdata := xdata & bstrc2 & drdy.pin	"B3 receives data at Burst cycle#3
+			# b3xdata;							"B3 latch
+
+
+////////////////////
+// DATA CONVERTER //
+////////////////////
+"  PPC             X86
+"DH0-DH7   	<-->	D7-D0 (DH0<-->D0)
+"DH8-DH15 	<--> 	D15-D8
+"DH16-DH23	<-->	D23-D16
+"DH24-DH31	<-->	D31-D24
+"DL0-DL7	   <-->	D39-D32
+"DL8-DL15	<-->	D47-D40
+"DL16-DL23	<-->	D55-D48
+"DL24-DL31	<-->	D63-D56
+
+// READ from PPC //
+pdata.oe	= x87 & tt1;			
+pdata.clk= clk;
+
+pdata0:= fsac & ldata & (paddl==0) & (ltc==0)				"FLH/SRA:1/2/3/4/8 Bytes
+		 # fsac & pdata0.fb & lrle0								"FLH/SRA Latch
+		 # x87 & xdata0   & !tt2									"MB SINGLE
+		 # x87 & xdata0   & tt2 & !pa28							"MB BURST 00/10
+		 # x87 & xdata0   & tt2 &  pa28 & !bstrc1				"MB BURST 01/11 cycle#1
+		 # x87 & xdata0   & tt2 &  pa28 & bstrc3 & !bstrc4	"MB BURST 01/11 cycle#4
+		 # x87 & b3xdata0 & tt2 &  pa28 & bstrc4 & !bstrc5	"MB BURST 01/11 cycle#5
+		 # x87 & b2xdata0 & tt2 &  pa28 & bstrc5 & !bstrc6;"MB BURST 01/11 cycle#6
+	 	
+pdata1:= fsac & ldata & (paddl==1) & (ltc==0)				"FLH/SRA:1/2/3 Bytes	
+		 # fsac & ldata & (paddl==0) & (ltc==1)				"FLH/SRA:2/3/4/8 Bytes
+		 # fsac & pdata1.fb & lrle1								"FLH/SRA Latch
+		 # x87 & xdata1   & !tt2									"MB SINGLE
+		 # x87 & xdata1   & tt2 & !pa28							"MB BURST 00/10
+		 # x87 & xdata1   & tt2 &  pa28 & !bstrc1				"MB BURST 01/11 cycle#1
+		 # x87 & xdata1   & tt2 &  pa28 & bstrc3 & !bstrc4	"MB BURST 01/11 cycle#4
+		 # x87 & b3xdata1 & tt2 &  pa28 & bstrc4 & !bstrc5	"MB BURST 01/11 cycle#5
+		 # x87 & b3xdata1 & tt2 &  pa28 & bstrc5 & !bstrc6;"MB BURST 01/11 cycle#6
+
+pdata2:= fsac & ldata & (paddl==2) & (ltc==0)		 		"FLH/SRA:4 Bytes
+		 # fsac & ldata & (paddl==1) & (ltc==1)				"FLH/SRA:2/3 Bytes
+		 # fsac & ldata & (paddl==0) & (ltc==2)				"FLH/SRA:3/4/8 Bytes
+		 # fsac & pdata2.fb & lrle2								"FLH/SRA Latch
+		 # x87 & xdata2   & !tt2									"MB SINGLE
+		 # x87 & xdata2   & tt2 & !pa28							"MB BURST 00/10
+		 # x87 & xdata2   & tt2 &  pa28 & !bstrc1				"MB BURST 01/11 cycle#1
+		 # x87 & xdata2   & tt2 &  pa28 & bstrc3 & !bstrc4	"MB BURST 01/11 cycle#4
+		 # x87 & b3xdata2 & tt2 &  pa28 & bstrc4 & !bstrc5	"MB BURST 01/11 cycle#5
+		 # x87 & b2xdata2 & tt2 &  pa28 & bstrc5 & !bstrc6;"MB BURST 01/11 cycle#6
+	
+pdata3:= fsac & ldata & (paddl==3) & (ltc==0)				"FLH/SRA:1 Byte
+		 # fsac & ldata & (paddl==2) & (ltc==1)				"FLH/SRA:2 Bytes
+		 # fsac & ldata & (paddl==1) & (ltc==2)				"FLH/SRA:3 Bytes
+		 # fsac & ldata & (paddl==0) & (ltc==3)				"FLH/SRA:4/8 Bytes
+		 # fsac & pdata3.fb & lrle3								"FLH/SRA Latch
+		 # x87 & xdata3   & !tt2									"MB SINGLE
+		 # x87 & xdata3   & tt2 & !pa28							"MB BURST 00/10
+		 # x87 & xdata3   & tt2 &  pa28 & !bstrc1				"MB BURST 01/11 cycle#1
+		 # x87 & xdata3   & tt2 &  pa28 & bstrc3 & !bstrc4	"MB BURST 01/11 cycle#4
+		 # x87 & b3xdata3 & tt2 &  pa28 & bstrc4 & !bstrc5	"MB BURST 01/11 cycle#5
+		 # x87 & b2xdata3 & tt2 &  pa28 & bstrc5 & !bstrc6;"MB BURST 01/11 cycle#6
+
+pdata4:= fsac & ldata & (paddl==4) & (ltc==0)				"FLH/SRA:1/2/3/4 Bytes
+		 # fsac & ldata & (paddl==0) & (ltc==4)				"FLH/SRA:8 Bytes
+		 # fsac & pdata4.fb & lrle4								"FLH/SRA Latch
+		 # x87 & xdata4   & !tt2									"MB SINGLE
+		 # x87 & xdata4   & tt2 & !pa28							"MB BURST 00/10
+		 # x87 & xdata4   & tt2 &  pa28 & !bstrc1				"MB BURST 01/11 cycle#1
+		 # x87 & xdata4   & tt2 &  pa28 & bstrc3 & !bstrc4	"MB BURST 01/11 cycle#4
+		 # x87 & b3xdata4 & tt2 &  pa28 & bstrc4 & !bstrc5	"MB BURST 01/11 cycle#5
+		 # x87 & b2xdata4 & tt2 &  pa28 & bstrc5 & !bstrc6;"MB BURST 01/11 cycle#6
+		
+pdata5:= fsac & ldata & (paddl==5) & (ltc==0)				"FLH/SRA:1/2/3 Bytes
+		 # fsac & ldata & (paddl==4) & (ltc==1)				"FLH/SRA:2/3/4 Bytes
+		 # fsac & ldata & (paddl==0) & (ltc==5)				"FLH/SRA:8 Bytes
+		 # fsac & pdata5.fb & lrle5								"FLH/SRA Latch
+		 # x87 & xdata5   & !tt2									"MB SINGLE
+		 # x87 & xdata5   & tt2 & !pa28							"MB BURST 00/10
+		 # x87 & xdata5   & tt2 &  pa28 & !bstrc1				"MB BURST 01/11 cycle#1
+		 # x87 & xdata5   & tt2 &  pa28 & bstrc3 & !bstrc4	"MB BURST 01/11 cycle#4
+		 # x87 & b3xdata5 & tt2 &  pa28 & bstrc4 & !bstrc5	"MB BURST 01/11 cycle#5
+		 # x87 & b2xdata5 & tt2 &  pa28 & bstrc5 & !bstrc6;"MB BURST 01/11 cycle#6
+
+pdata6:= fsac & ldata & (paddl==6) & (ltc==0)				"FLH/SRA:1/2 Bytes
+		 # fsac & ldata & (paddl==5) & (ltc==1)				"FLH/SRA:2/3 Bytes
+		 # fsac & ldata & (paddl==4) & (ltc==2)				"FLH/SRA:3/4 Bytes
+		 # fsac & ldata & (paddl==0) & (ltc==6)				"FLH/SRA:8 Bytes
+		 # fsac & pdata6.fb & lrle6								"FLH/SRA Latch
+		 # x87 & xdata6   & !tt2									"MB SINGLE
+		 # x87 & xdata6   & tt2 & !pa28							"MB BURST 00/10
+		 # x87 & xdata6   & tt2 &  pa28 & !bstrc1				"MB BURST 01/11 cycle#1
+		 # x87 & xdata6   & tt2 &  pa28 & bstrc3 & !bstrc4	"MB BURST 01/11 cycle#4
+		 # x87 & b3xdata6 & tt2 &  pa28 & bstrc4 & !bstrc5	"MB BURST 01/11 cycle#5
+		 # x87 & b2xdata6 & tt2 &  pa28 & bstrc5 & !bstrc6;"MB BURST 01/11 cycle#6
+
+pdata7:= fsac & ldata & (paddl==7) & (ltc==0)				"FLH/SRA:1 Byte
+		 # fsac & ldata & (paddl==6) & (ltc==1)				"FLH/SRA:2 Bytes
+		 # fsac & ldata & (paddl==5) & (ltc==2)				"FLH/SRA:3 Bytes
+		 # fsac & ldata & (paddl==4) & (ltc==3)				"FLH/SRA:4 Bytes
+		 # fsac & ldata & (paddl==0) & (ltc==7)				"FLH/SRA:8 Bytes
+		 # fsac & pdata7.fb & lrle7								"FLH/SRA Latch
+		 # x87 & xdata7   & !tt2									"MB SINGLE
+		 # x87 & xdata7   & tt2 & !pa28							"MB BURST 00/10
+		 # x87 & xdata7   & tt2 &  pa28 & !bstrc1				"MB BURST 01/11 cycle#1
+		 # x87 & xdata7   & tt2 &  pa28 & bstrc3 & !bstrc4	"MB BURST 01/11 cycle#4
+		 # x87 & b3xdata7 & tt2 &  pa28 & bstrc4 & !bstrc5	"MB BURST 01/11 cycle#5
+		 # x87 & b2xdata7 & tt2 &  pa28 & bstrc5 & !bstrc6;"MB BURST 01/11 cycle#6
+
+// WRITE to X86 //
+xdata.clk= clk;
+xdata.oe	= x87 & !tt1;			
+xdata0:= pdata0;
+xdata1:= pdata1;
+xdata2:= pdata2;
+xdata3:= pdata3;
+xdata4:= pdata4;
+xdata5:= pdata5;
+xdata6:= pdata6;
+xdata7:= pdata7; 
+
+
+/////////////////
+// ARBITRATION //
+/////////////////
+"!bnr  = Block Next Request
+"!bpri = Priority Agent Bus Request
+
+bg.clk = clk;
+bg	  	:= !bpri & !bnr								"No request & no filled buffers from NB
+		 # bg.fb & bpri & (tt==[1,x,x,1,0]);	"Locked access : BPRI but bg is prolongated
+	  																			 "until the end of lock access"
+
+dbg.clk= clk;
+dbg 	:= bg.fb;		"dbg is inserted 1 cycle later
+
+
+///////////////////////////
+// WATCHDOG & EXCEPTIONS //
+///////////////////////////
+"Only for the RRJ board accesses
+
+// TS LOCK
+tslk.clk= clk;
+tslk.clr= ta.fb
+		  # tea.fb;
+tslk := ts
+	   # tslk;
+
+// Clock divider
+"By 1024 --> 10.24 us delay at 100MHz
+wdc.clk= clk; 				"Counter clock
+wdc.ce = tslk;
+wdc.clr= ta.fb				"Counter reset if hardware answer
+		 # tea.fb;			"Counter reset if TEA (no hardware answer)
+wdc 	:= wdc + 1;			"Counter increment
+
+// EXCEPTIONS
+tea.clk= clk;				
+tea.oe = tslk & (wdc==1023);	"not needed for uni-processor
+tea	:= tslk & wdc10; 
+
+rsto	= rsti;
+
+
+
+END 
+

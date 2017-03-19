@@ -1,0 +1,1432 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+<title>Document sans titre</title>
+<meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1">
+</head>
+
+<body bgcolor="#000000">
+<table width="938" border="0" cellpadding="0" cellspacing="0" height="3162">
+  <tr> 
+    <td height="193" colspan="3" valign="middle" bgcolor="#000000" class="petis-12" width="936"> 
+      <div align="justify"> <p><font color="#FF0000" size="+3" face="Arial, Helvetica, sans-serif"><strong>Utilitaires
+        test&eacute;s sur la CT60<font size="+1"><br> <font color="#FFFFFF">au 
+20 ao&ucirc;t 2003</font><br> <br> <font size="+1">Configuration<br> </font></font></strong><font size="+1"><font size="+1"><font color="#FFFFFF">14 
+Mo de STRAM - 256 Mo de SDRAM</font></font><strong><font size="+1"><br> </font> 
+</strong></font></font><font color="#FFFFFF" size="+1" face="Arial, Helvetica, sans-serif">ABE5K 
+- SDR5D - Boot 0.99c<br> Bus Falcon &agrave; 20 Mhz<br>Cache actif apr&egrave;s 
+5 secondes
+
+</font></p>
+      </div></td>
+  </tr>
+  <tr> 
+    <td height="21" valign="middle" bgcolor="#CCCCFF" class="petis-12" width="281"> <div align="left"><font face="Arial, Helvetica, sans-serif"><strong>L&eacute;gende</strong></font></div></td>
+    <td align="center" valign="middle" bgcolor="#CCCCFF" class="petis-12" height="21" width="108">&nbsp;</td>
+    <td valign="middle" bgcolor="#CCCCFF" class="petis-12" height="21" width="543">&nbsp;</td>
+  </tr>
+  <tr> 
+    <td height="21" valign="middle" bgcolor="#E6E6FF" class="petis-12" width="281"><strong><font color="#666666" size="-1" face="Arial, Helvetica, sans-serif">programme 
+      fonctionnant</font></strong></td>
+    <td align="center" valign="middle" bgcolor="#F2F2FF" class="petis-12" height="21" width="108"> <div align="center"><font color="#666666" size="-1" face="Arial, Helvetica, sans-serif"><img src="Pvert.gif" width="12" height="12"></font></div></td>
+    <td valign="middle" bgcolor="#F2F2FF" class="petis-12" height="21" width="543"><strong><font color="#666666" size="-1" face="Arial, Helvetica, sans-serif">&nbsp;<font color="#33CC33">sans 
+      aucun probl&egrave;me.</font></font></strong></td>
+  </tr>
+  <tr> 
+    <td height="21" valign="middle" bgcolor="#E6E6FF" class="petis-12" width="281"><strong><font color="#666666" size="-1" face="Arial, Helvetica, sans-serif">programme 
+      fonctionnant avec</font></strong></td>
+    <td align="center" valign="middle" bgcolor="#F2F2FF" class="petis-12" height="21" width="108"> <div align="center"><font color="#666666" size="-1" face="Arial, Helvetica, sans-serif"><img src="Pjaune.gif" width="12" height="12"></font></div></td>
+    <td valign="middle" bgcolor="#F2F2FF" class="petis-12" height="21" width="543"><strong><font color="#33CC33" size="-1" face="Arial, Helvetica, sans-serif">&nbsp;une 
+      solution (probl&egrave;me de flags TTRAM ou de cache 68060).</font></strong></td>
+  </tr>
+  <tr> 
+    <td height="21" valign="middle" bgcolor="#E6E6FF" class="petis-12" width="281"><strong><font color="#666666" size="-1" face="Arial, Helvetica, sans-serif">&nbsp;</font></strong></td>
+    <td align="center" valign="middle" bgcolor="#F2F2FF" class="petis-12-Bleu" height="21" width="108"><font color="#666666" size="-1" face="Arial, Helvetica, sans-serif"><strong>COWL</strong></font></td>
+    <td valign="middle" bgcolor="#F2F2FF" class="petis-12" height="21" width="543"> <div align="justify"><strong><font color="#33CC33" size="-1" face="Arial, Helvetica, sans-serif">&nbsp;enlever 
+        le cache avant, le remettre ensuite. Automatique dans le CPX CT60 !</font></strong></div></td>
+  </tr>
+  <tr> 
+    <td height="21" valign="middle" bgcolor="#E6E6FF" class="petis-12" width="281"><strong><font color="#666666" size="-1" face="Arial, Helvetica, sans-serif">programme 
+      ne fonctionnant pas</font></strong></td>
+    <td align="center" valign="middle" bgcolor="#F2F2FF" class="petis-12" height="21" width="108"> <div align="center"><font color="#666666" size="-1" face="Arial, Helvetica, sans-serif"><img src="Prouge.gif" width="12" height="12"></font></div></td>
+    <td valign="middle" bgcolor="#F2F2FF" class="petis-12" height="21" width="543"><strong><font color="#666666" size="-1" face="Arial, Helvetica, sans-serif">&nbsp;<font color="#FF0000">et 
+      sans solution actuellement.</font></font></strong></td>
+  </tr>
+  <tr> 
+    <td height="21" valign="middle" bgcolor="#CCCCFF" class="petis-12" width="281">&nbsp;</td>
+    <td align="center" valign="middle" bgcolor="#CCCCFF" class="petis-12" height="21" width="108">&nbsp;</td>
+    <td valign="middle" bgcolor="#CCCCFF" class="petis-12" height="21" width="543">&nbsp;</td>
+  </tr>
+  <tr> 
+    <td height="20" valign="middle" class="petis-12" width="281"><font color="#FFFFFF" face="Arial, Helvetica, sans-serif">&nbsp;</font></td>
+    <td align="center" valign="middle" class="petis-12-Bleu" height="20" width="108"><font color="#FFFFFF" face="Arial, Helvetica, sans-serif">&nbsp;</font></td>
+    <td valign="middle" class="petis-12" height="20" width="543"><font color="#FFFFFF" face="Arial, Helvetica, sans-serif">&nbsp;</font></td>
+  </tr>
+  <tr> 
+    <td width="281" height="21" align="center" valign="middle" bgcolor="#CCCCFF" class="grand-titre-2"><div align="left"><font face="Arial, Helvetica, sans-serif"><strong>Bureautique</strong></font></div></td>
+    <td align="center" valign="middle" bgcolor="#CCCCFF" class="grand-titre-2" height="21" width="108"><div align="center"><font face="Arial, Helvetica, sans-serif"><strong>Test</strong></font></div></td>
+    <td align="center" valign="middle" bgcolor="#CCCCFF" class="grand-titre-2" height="21" width="543"><font face="Arial, Helvetica, sans-serif"><strong>Solution</strong></font></td>
+  </tr>
+  <tr> 
+    <td width=281 bgcolor="#E6E6FF" class="petis-12-Bleu" height="19"><strong><font size="-1" face="Arial, Helvetica, sans-serif">1st 
+      Word Plus 3.20</font></strong></td>
+    <td height="19" align="center" valign="middle" bgcolor="#F2F2FF" class="petis-12-Bleu" width="108"><font size="-1" face="Arial, Helvetica, sans-serif"><img src="Pvert.gif" width="12" height="12"></font></td>
+    <td bgcolor="#F2F2FF" class="petis-12" height="19" width="543"><strong><font size="-1" face="Arial, Helvetica, sans-serif">&nbsp;</font></strong></td>
+  </tr>
+  <tr> 
+    <td bgcolor="#E6E6FF" class="petis-12-Bleu" height="19" width="281"><strong><font size="-1" face="Arial, Helvetica, sans-serif">Adimens 
+      ST Plus 3.0</font></strong></td>
+    <td height="19" align="center" valign="middle" bgcolor="#F2F2FF" class="petis-12-Bleu" width="108"><font size="-1" face="Arial, Helvetica, sans-serif"><img src="Pvert.gif" width="12" height="12"></font></td>
+    <td bgcolor="#F2F2FF" class="petis-12" height="19" width="543"><strong><font size="-1" face="Arial, Helvetica, sans-serif">&nbsp;</font></strong></td>
+  </tr>
+  <tr> 
+    <td bgcolor="#E6E6FF" class="petis-12-Bleu" height="19" width="281"><strong><font size="-1" face="Arial, Helvetica, sans-serif">Formula 
+      1.0</font></strong></td>
+    <td height="19" align="center" valign="middle" bgcolor="#F2F2FF" class="petis-12-Bleu" width="108"><font size="-1" face="Arial, Helvetica, sans-serif"><img src="Pvert.gif" width="12" height="12"></font></td>
+    <td bgcolor="#F2F2FF" class="petis-12" height="19" width="543"><strong><font size="-1" face="Arial, Helvetica, sans-serif">&nbsp;</font></strong></td>
+  </tr>
+  <tr> 
+    <td bgcolor="#E6E6FF" class="petis-12-Bleu" height="19" width="281"><strong><font size="-1" face="Arial, Helvetica, sans-serif">Formula 
+      2.0 Pro</font></strong></td>
+    <td height="19" align="center" valign="middle" bgcolor="#F2F2FF" class="petis-12-Bleu" width="108"><font size="-1" face="Arial, Helvetica, sans-serif"><img src="Pvert.gif" width="12" height="12"></font></td>
+    <td bgcolor="#F2F2FF" class="petis-12" height="19" width="543"><strong><font size="-1" face="Arial, Helvetica, sans-serif">&nbsp;</font></strong></td>
+  </tr>
+  <tr> 
+    <td bgcolor="#E6E6FF" class="petis-12-Bleu" height="19" width="281"><strong><font size="-1" face="Arial, Helvetica, sans-serif">Freeway 
+      1.14</font></strong></td>
+    <td height="19" align="center" valign="middle" bgcolor="#F2F2FF" class="petis-12-Bleu" width="108"><font size="-1" face="Arial, Helvetica, sans-serif"><img src="Pvert.gif" width="12" height="12"></font></td>
+    <td bgcolor="#F2F2FF" class="petis-12" height="19" width="543"><strong><font size="-1" face="Arial, Helvetica, sans-serif">&nbsp;</font></strong></td>
+  </tr>
+  <tr> 
+    <td bgcolor="#E6E6FF" class="petis-12-Bleu" height="19" width="281"><strong><font size="-1" face="Arial, Helvetica, sans-serif">Headline 
+      4.0</font></strong></td>
+    <td height="19" align="center" valign="middle" bgcolor="#F2F2FF" class="petis-12-Bleu" width="108"><font size="-1" face="Arial, Helvetica, sans-serif"><img src="Pvert.gif" width="12" height="12"></font></td>
+    <td bgcolor="#F2F2FF" class="petis-12" height="19" width="543"><strong><font size="-1" face="Arial, Helvetica, sans-serif">&nbsp;</font></strong></td>
+  </tr>
+  <tr> 
+    <td bgcolor="#E6E6FF" class="petis-12-Bleu" height="21" width="281"><strong><font size="-1" face="Arial, Helvetica, sans-serif">Kspread 
+      4.15</font></strong></td>
+    <td height="21" align="center" valign="middle" bgcolor="#F2F2FF" class="petis-12-Bleu" width="108"><font size="-1" face="Arial, Helvetica, sans-serif"><img src="Pvert.gif" width="12" height="12"></font></td>
+    <td bgcolor="#F2F2FF" class="petis-12-Bleu" height="21" width="543"><strong></strong></td>
+  </tr>
+  <tr> 
+    <td bgcolor="#E6E6FF" class="petis-12-Bleu" height="21" width="281"><strong><font size="-1" face="Arial, Helvetica, sans-serif">La 
+      Cuisine Falcon</font></strong></td>
+    <td height="21" align="center" valign="middle" bgcolor="#F2F2FF" class="petis-12-Bleu" width="108"><font size="-1" face="Arial, Helvetica, sans-serif"><img src="Pvert.gif" width="12" height="12"></font></td>
+    <td bgcolor="#F2F2FF" class="petis-12" height="21" width="543"><strong></strong></td>
+  </tr>
+  <tr> 
+    <td bgcolor="#E6E6FF" class="petis-12-Bleu" height="19" width="281"><strong><font size="-1" face="Arial, Helvetica, sans-serif">LDW 
+      Power 2.0</font></strong></td>
+    <td height="19" align="center" valign="middle" bgcolor="#F2F2FF" class="petis-12-Bleu" width="108"><font size="-1" face="Arial, Helvetica, sans-serif"><img src="Pvert.gif" width="12" height="12"></font></td>
+    <td bgcolor="#F2F2FF" class="petis-12" height="19" width="543"><strong><font size="-1" face="Arial, Helvetica, sans-serif">&nbsp;</font></strong></td>
+  </tr>
+  <tr> 
+    <td bgcolor="#E6E6FF" class="petis-12-Bleu" height="21" width="281"><strong><font size="-1" face="Arial, Helvetica, sans-serif">Le 
+      Rédacteur 4+ VGA</font></strong></td>
+    <td height="21" align="center" valign="middle" bgcolor="#F2F2FF" class="petis-12-Bleu" width="108"><font size="-1" face="Arial, Helvetica, sans-serif"><img src="Pvert.gif" width="12" height="12"></font></td>
+    <td bgcolor="#F2F2FF" class="petis-12" height="21" width="543"><strong></strong></td>
+  </tr>
+  <tr> 
+    <td bgcolor="#E6E6FF" class="petis-12-Bleu" height="19" width="281"><strong><font size="-1" face="Arial, Helvetica, sans-serif">Papyrus 
+      8.20</font></strong></td>
+    <td height="19" align="center" valign="middle" bgcolor="#F2F2FF" class="petis-12-Bleu" width="108"><font size="-1" face="Arial, Helvetica, sans-serif"><img src="Pvert.gif" width="12" height="12"></font></td>
+    <td bgcolor="#F2F2FF" class="petis-12" height="19" width="543"><strong><font size="-1" face="Arial, Helvetica, sans-serif">&nbsp;</font></strong></td>
+  </tr>
+  <tr> 
+    <td bgcolor="#E6E6FF" class="petis-12-Bleu" height="19" width="281"><strong><font size="-1" face="Arial, Helvetica, sans-serif">Phoenix 
+      5.00</font></strong></td>
+    <td height="19" align="center" valign="middle" bgcolor="#F2F2FF" class="petis-12-Bleu" width="108"><font size="-1" face="Arial, Helvetica, sans-serif"><img src="Pvert.gif" width="12" height="12"></font></td>
+    <td bgcolor="#F2F2FF" class="petis-12" height="19" width="543"><strong><font size="-1" face="Arial, Helvetica, sans-serif">&nbsp;</font></strong></td>
+  </tr>
+  <tr> 
+    <td bgcolor="#E6E6FF" class="petis-12-Bleu" height="19" width="281"><strong><font size="-1" face="Arial, Helvetica, sans-serif">Script 
+      5.0</font></strong></td>
+    <td height="19" align="center" valign="middle" bgcolor="#F2F2FF" class="petis-12-Bleu" width="108"><font size="-1" face="Arial, Helvetica, sans-serif"><img src="Pvert.gif" width="12" height="12"></font></td>
+    <td bgcolor="#F2F2FF" class="petis-12" height="19" width="543"><strong><font size="-1" face="Arial, Helvetica, sans-serif">&nbsp;</font></strong></td>
+  </tr>
+  <tr> 
+    <td bgcolor="#E6E6FF" class="petis-12-Bleu" height="19" width="281"><strong><font size="-1" face="Arial, Helvetica, sans-serif">Signum 
+      4.10</font></strong></td>
+    <td height="19" align="center" valign="middle" bgcolor="#F2F2FF" class="petis-12-Bleu" width="108"><font size="-1" face="Arial, Helvetica, sans-serif"><img src="Pvert.gif" width="12" height="12"></font></td>
+    <td bgcolor="#F2F2FF" class="petis-12" height="19" width="543"><strong><font size="-1" face="Arial, Helvetica, sans-serif">&nbsp;</font></strong></td>
+  </tr>
+  <tr> 
+    <td bgcolor="#E6E6FF" class="petis-12-Bleu" height="19" width="281"><strong><font size="-1" face="Arial, Helvetica, sans-serif">Steno 
+      2.12</font></strong></td>
+    <td height="19" align="center" valign="middle" bgcolor="#F2F2FF" class="petis-12-Bleu" width="108"><font size="-1" face="Arial, Helvetica, sans-serif"><img src="Pvert.gif" width="12" height="12"></font></td>
+    <td bgcolor="#F2F2FF" class="petis-12" height="19" width="543"><strong><font size="-1" face="Arial, Helvetica, sans-serif">&nbsp;</font></strong></td>
+  </tr>
+  <tr> 
+    <td bgcolor="#E6E6FF" class="petis-12-Bleu" height="19" width="281"><strong><font size="-1" face="Arial, Helvetica, sans-serif">Texel 
+      2.0</font></strong></td>
+    <td height="19" align="center" valign="middle" bgcolor="#F2F2FF" class="petis-12-Bleu" width="108"><font size="-1" face="Arial, Helvetica, sans-serif"><img src="Pvert.gif" width="12" height="12"></font></td>
+    <td bgcolor="#F2F2FF" class="petis-12" height="19" width="543"><strong><font size="-1" face="Arial, Helvetica, sans-serif">&nbsp;</font></strong></td>
+  </tr>
+  <tr> 
+    <td bgcolor="#E6E6FF" class="petis-12-Bleu" height="19" width="281"><strong><font size="-1" face="Arial, Helvetica, sans-serif">Twist 
+      2.03</font></strong></td>
+    <td height="19" align="center" valign="middle" bgcolor="#F2F2FF" class="petis-12-Bleu" width="108"><font size="-1" face="Arial, Helvetica, sans-serif"><img src="Pvert.gif" width="12" height="12"></font></td>
+    <td bgcolor="#F2F2FF" class="petis-12" height="19" width="543"><strong><font size="-1" face="Arial, Helvetica, sans-serif">&nbsp;</font></strong></td>
+  </tr>
+  <tr> 
+    <td bgcolor="#E6E6FF" class="petis-12-Bleu" height="19" width="281"><strong><font size="-1" face="Arial, Helvetica, sans-serif">Works 
+      1.2</font></strong></td>
+    <td height="19" align="center" valign="middle" bgcolor="#F2F2FF" class="petis-12-Bleu" width="108"><font size="-1" face="Arial, Helvetica, sans-serif"><img src="Pvert.gif" width="12" height="12"></font></td>
+    <td bgcolor="#F2F2FF" class="petis-12" height="19" width="543"><strong><font size="-1" face="Arial, Helvetica, sans-serif">&nbsp;</font></strong></td>
+  </tr>
+  <tr> 
+    <td bgcolor="#E6E6FF" class="petis-12-Bleu" height="21" width="281"><font size="-1" face="Arial, Helvetica, sans-serif"><strong>XXL 
+      1.0</strong></font></td>
+    <td height="21" align="center" valign="middle" bgcolor="#F2F2FF" class="petis-12-Bleu" width="108"><font size="-1" face="Arial, Helvetica, sans-serif"><img src="Pvert.gif" width="12" height="12"></font></td>
+    <td bgcolor="#F2F2FF" class="petis-12" height="21" width="543">&nbsp;</td>
+  </tr>
+  <tr> 
+    <td height="21" bgcolor="#CCCCFF" class="grand-titre-2" width="281"><font face="Arial, Helvetica, sans-serif"><strong>Dessin 
+      bitmap</strong></font></td>
+    <td align="center" valign="middle" bgcolor="#CCCCFF" class="grand-titre-2" height="21" width="108"><div align="center"><font face="Arial, Helvetica, sans-serif"><strong>Test</strong></font></div></td>
+    <td align="center" valign="middle" bgcolor="#CCCCFF" class="grand-titre-2" height="21" width="543"><font face="Arial, Helvetica, sans-serif"><strong>Solution</strong></font></td>
+  </tr>
+  <tr> 
+    <td width=281 bgcolor="#E6E6FF" class="petis-12-Bleu" height="30"><strong><font size="-1" face="Arial, Helvetica, sans-serif">Binary 
+      Viewer 4.0</font></strong></td>
+    <td height="30" align="center" valign="middle" bgcolor="#F2F2FF" class="petis-12-Bleu" width="108"> 
+      <p align="center" class="petis-12"><font size="-1" face="Arial, Helvetica, sans-serif"><img src="Prouge.gif" width="12" height="12"><br>
+        </font></p></td>
+    <td width=543 bgcolor="#F2F2FF" class="petis-12" height="30"><strong><font size="-1" face="Arial, Helvetica, sans-serif">&nbsp;</font></strong></td>
+  </tr>
+  <tr> 
+    <td bgcolor="#E6E6FF" class="petis-12-Bleu" height="30" width="281"><strong><font size="-1" face="Arial, Helvetica, sans-serif">Chagall 
+      2.0</font></strong></td>
+    <td height="30" align="center" valign="middle" bgcolor="#F2F2FF" class="petis-12-Bleu" width="108"> 
+      <p align="center" class="petis-12"><font size="-1" face="Arial, Helvetica, sans-serif"><img src="Pvert.gif" width="12" height="12"><br>
+        </font></p></td>
+    <td bgcolor="#F2F2FF" class="petis-12" height="30" width="543"><strong><font size="-1" face="Arial, Helvetica, sans-serif">&nbsp;</font></strong></td>
+  </tr>
+  <tr> 
+    <td bgcolor="#E6E6FF" class="petis-12-Bleu" height="30" width="281"><strong><font size="-1" face="Arial, Helvetica, sans-serif">Chagall 
+      2.1</font></strong></td>
+    <td height="30" align="center" valign="middle" bgcolor="#F2F2FF" class="petis-12-Bleu" width="108"> 
+      <p align="center" class="petis-12"><font size="-1" face="Arial, Helvetica, sans-serif"><img src="Pvert.gif" width="12" height="12"><br>
+        </font></p></td>
+    <td bgcolor="#F2F2FF" class="petis-12" height="30" width="543"><strong><font size="-1" face="Arial, Helvetica, sans-serif">&nbsp;</font></strong></td>
+  </tr>
+  <tr> 
+    <td bgcolor="#E6E6FF" class="petis-12-Bleu" height="30" width="281"><strong><font size="-1" face="Arial, Helvetica, sans-serif">Charly 
+      Image 3.00</font></strong></td>
+    <td height="30" align="center" valign="middle" bgcolor="#F2F2FF" class="petis-12-Bleu" width="108"> 
+<p align="center" class="petis-12"><font size="-1" face="Arial, Helvetica, sans-serif"><img src="Pvert.gif" width="12" height="12"><br> 
+</font></p></td>
+    <td bgcolor="#F2F2FF" class="petis-12-Bleu" height="30" width="543"><strong></strong></td>
+  </tr>
+  <tr> 
+    <td bgcolor="#E6E6FF" class="petis-12-Bleu" height="21" width="281"><strong><font size="-1" face="Arial, Helvetica, sans-serif">Cranach 
+      Pr&eacute;vision 3.0 release 2.10</font></strong></td>
+    <td height="21" align="center" valign="middle" bgcolor="#F2F2FF" class="petis-12-Bleu" width="108"><font size="-1" face="Arial, Helvetica, sans-serif"><img src="Pvert.gif" width="12" height="12"></font></td>
+    <td bgcolor="#F2F2FF" class="petis-12-Bleu" height="21" width="543">&nbsp;</td>
+  </tr>
+  <tr> 
+    <td bgcolor="#E6E6FF" class="petis-12-Bleu" height="21" width="281"><strong><font size="-1" face="Arial, Helvetica, sans-serif">D2M 
+      2.60</font></strong></td>
+    <td height="21" align="center" valign="middle" bgcolor="#F2F2FF" class="petis-12-Bleu" width="108"> 
+      <div align="center"><font size="-1" face="Arial, Helvetica, sans-serif"><img src="Pjaune.gif" width="12" height="12" align="absmiddle"></font></div></td>
+    <td bgcolor="#F2F2FF" class="petis-12-Bleu" height="21" width="543"><strong><font size="-1" face="Arial, Helvetica, sans-serif">COWL</font></strong></td>
+  </tr>
+  <tr> 
+    <td bgcolor="#E6E6FF" class="petis-12-Bleu" height="21" width="281"><strong><font size="-1" face="Arial, Helvetica, sans-serif">Da's 
+      Picture 1.04</font></strong></td>
+    <td height="21" align="center" valign="middle" bgcolor="#F2F2FF" class="petis-12-Bleu" width="108"> 
+      <div align="center"><font size="-1" face="Arial, Helvetica, sans-serif"><img src="Pvert.gif" width="12" height="12"></font></div></td>
+    <td bgcolor="#F2F2FF" class="petis-12-Bleu" height="21" width="543"><strong></strong></td>
+  </tr>
+  <tr> 
+    <td bgcolor="#E6E6FF" class="petis-12-Bleu" height="21" width="281"><strong><font size="-1" face="Arial, Helvetica, sans-serif">Diapo 
+      1.15</font></strong></td>
+    <td height="21" align="center" valign="middle" bgcolor="#F2F2FF" class="petis-12-Bleu" width="108"> 
+      <div align="center"><font size="-1" face="Arial, Helvetica, sans-serif"><img src="Pjaune.gif" width="12" height="12" align="absmiddle"></font></div></td>
+    <td bgcolor="#F2F2FF" class="petis-12-Bleu" height="21" width="543"><strong><font size="-1" face="Arial, Helvetica, sans-serif">COWL</font></strong></td>
+  </tr>
+  <tr> 
+    <td bgcolor="#E6E6FF" class="petis-12-Bleu" height="21" width="281"><strong><font size="-1" face="Arial, Helvetica, sans-serif">Digital 
+      Lab 1.11</font></strong></td>
+    <td height="21" align="center" valign="middle" bgcolor="#F2F2FF" class="petis-12-Bleu" width="108"> 
+      <div align="center"><font size="-1" face="Arial, Helvetica, sans-serif"><img src="Pjaune.gif" width="12" height="12" align="absmiddle"></font></div></td>
+    <td bgcolor="#F2F2FF" class="petis-12-Bleu" height="21" width="543"><strong><font size="-1" face="Arial, Helvetica, sans-serif">COWL</font></strong></td>
+  </tr>
+  <tr> 
+    <td bgcolor="#E6E6FF" class="petis-12-Bleu" height="21" width="281"><strong><font size="-1" face="Arial, Helvetica, sans-serif">Gemview 
+      3.16</font></strong></td>
+    <td height="21" align="center" valign="middle" bgcolor="#F2F2FF" class="petis-12-Bleu" width="108"> 
+      <div align="center"><font size="-1" face="Arial, Helvetica, sans-serif"><img src="Pjaune.gif" width="12" height="12" align="absmiddle"></font></div></td>
+    <td bgcolor="#F2F2FF" class="petis-12"
+  x:str="pour certains modules, enlever le cache après avoir lancé le programme " height="21" width="543"><strong><font size="-1" face="Arial, Helvetica, sans-serif">pour 
+      certains modules, enlever le cache après avoir lancé le programme </font></strong></td>
+  </tr>
+  <tr> 
+    <td bgcolor="#E6E6FF" class="petis-12-Bleu" height="21" width="281"><strong><font size="-1" face="Arial, Helvetica, sans-serif">Imagecopy 
+      4.2 b2 Plus</font></strong></td>
+    <td height="21" align="center" valign="middle" bgcolor="#F2F2FF" class="petis-12-Bleu" width="108"> 
+      <div align="center"><font size="-1" face="Arial, Helvetica, sans-serif"><img src="Pvert.gif" width="12" height="12"></font></div></td>
+    <td bgcolor="#F2F2FF" class="petis-12-Bleu" height="21" width="543"><strong></strong></td>
+  </tr>
+  <tr> 
+    <td bgcolor="#E6E6FF" class="petis-12-Bleu" height="21" width="281"><strong><font size="-1" face="Arial, Helvetica, sans-serif">Invision 
+      Elite Color 2.0</font></strong></td>
+    <td height="21" align="center" valign="middle" bgcolor="#F2F2FF" class="petis-12-Bleu" width="108"> 
+      <div align="center"><font size="-1" face="Arial, Helvetica, sans-serif"><img src="Pvert.gif" width="12" height="12"></font></div></td>
+    <td bgcolor="#F2F2FF" class="petis-12" height="21" width="543"><strong><font size="-1" face="Arial, Helvetica, sans-serif">&nbsp;</font></strong></td>
+  </tr>
+  <tr> 
+    <td bgcolor="#E6E6FF" class="petis-12-Bleu" height="21" width="281"><strong><font size="-1" face="Arial, Helvetica, sans-serif">Morpher 
+      1.0</font></strong></td>
+    <td height="21" align="center" valign="middle" bgcolor="#F2F2FF" class="petis-12-Bleu" width="108"> 
+      <div align="center"><font size="-1" face="Arial, Helvetica, sans-serif"><img src="Pvert.gif" width="12" height="12"></font></div></td>
+    <td bgcolor="#F2F2FF" class="petis-12" height="21" width="543"><strong><font size="-1" face="Arial, Helvetica, sans-serif">&nbsp;</font></strong></td>
+  </tr>
+  <tr> 
+    <td bgcolor="#E6E6FF" class="petis-12-Bleu" height="21" width="281"><strong><font size="-1" face="Arial, Helvetica, sans-serif">Papillon 
+      3.0</font></strong></td>
+    <td height="21" align="center" valign="middle" bgcolor="#F2F2FF" class="petis-12-Bleu" width="108"> 
+      <div align="center"><font size="-1" face="Arial, Helvetica, sans-serif"><img src="Pvert.gif" width="12" height="12"></font></div></td>
+    <td bgcolor="#F2F2FF" class="petis-12" height="21" width="543"><strong><font size="-1" face="Arial, Helvetica, sans-serif">&nbsp;</font></strong></td>
+  </tr>
+  <tr> 
+    <td bgcolor="#E6E6FF" class="petis-12-Bleu" height="21" width="281"><strong><font size="-1" face="Arial, Helvetica, sans-serif">Photolab 
+      1.40</font></strong></td>
+    <td height="21" align="center" valign="middle" bgcolor="#F2F2FF" class="petis-12-Bleu" width="108"> 
+      <div align="center"><font size="-1" face="Arial, Helvetica, sans-serif"><img src="Pvert.gif" width="12" height="12"></font></div></td>
+    <td bgcolor="#F2F2FF" class="petis-12" height="21" width="543"><strong><font size="-1" face="Arial, Helvetica, sans-serif">&nbsp;</font></strong></td>
+  </tr>
+  <tr> 
+    <td bgcolor="#E6E6FF" class="petis-12-Bleu" height="21" width="281"><strong><font size="-1" face="Arial, Helvetica, sans-serif">Photoline 
+      2.30</font></strong></td>
+    <td height="21" align="center" valign="middle" bgcolor="#F2F2FF" class="petis-12-Bleu" width="108"> 
+      <div align="center"><font size="-1" face="Arial, Helvetica, sans-serif"><img src="Pvert.gif" width="12" height="12"></font></div></td>
+    <td bgcolor="#F2F2FF" class="petis-12" height="21" width="543"><strong><font size="-1" face="Arial, Helvetica, sans-serif">&nbsp;</font></strong></td>
+  </tr>
+  <tr> 
+    <td bgcolor="#E6E6FF" class="petis-12-Bleu" height="21" width="281"><strong><font size="-1" face="Arial, Helvetica, sans-serif">Picollo 
+      1.05</font></strong></td>
+    <td height="21" align="center" valign="middle" bgcolor="#F2F2FF" class="petis-12-Bleu" width="108"> 
+      <div align="center"><font size="-1" face="Arial, Helvetica, sans-serif"><img src="Pjaune.gif" width="12" height="12"></font></div></td>
+    <td bgcolor="#F2F2FF" class="petis-12-Bleu" height="21" width="543"><strong><font size="-1" face="Arial, Helvetica, sans-serif">COWL</font></strong></td>
+  </tr>
+  <tr> 
+    <td bgcolor="#E6E6FF" class="petis-12-Bleu" height="21" width="281"><font size="-1" face="Arial, Helvetica, sans-serif"><strong>Pixart 
+      4.42 </strong></font></td>
+    <td height="21" align="center" valign="middle" bgcolor="#F2F2FF" class="petis-12-Bleu" width="108"><font size="-1" face="Arial, Helvetica, sans-serif"><img src="Pvert.gif" width="12" height="12"></font></td>
+    <td bgcolor="#F2F2FF" class="petis-12-Bleu" height="21" width="543">&nbsp;</td>
+  </tr>
+  <tr> 
+    <td bgcolor="#E6E6FF" class="petis-12-Bleu" height="21" width="281"><strong><font size="-1" face="Arial, Helvetica, sans-serif">Prism 
+      Paint 1.1</font></strong></td>
+    <td height="21" align="center" valign="middle" bgcolor="#F2F2FF" class="petis-12-Bleu" width="108"> 
+      <div align="center"><font size="-1" face="Arial, Helvetica, sans-serif"><img src="Pvert.gif" width="12" height="12"></font></div></td>
+    <td bgcolor="#F2F2FF" class="petis-12-Bleu" height="21" width="543"><strong><font size="-1" face="Arial, Helvetica, sans-serif">&nbsp;</font></strong></td>
+  </tr>
+  <tr> 
+    <td bgcolor="#E6E6FF" class="petis-12-Bleu" height="21" width="281"><strong><font size="-1" face="Arial, Helvetica, sans-serif">Smurf 
+      1.04</font></strong></td>
+    <td height="21" align="center" valign="middle" bgcolor="#F2F2FF" class="petis-12-Bleu" width="108"> 
+      <div align="center"><font size="-1" face="Arial, Helvetica, sans-serif"><img src="Pvert.gif" width="12" height="12"></font></div></td>
+    <td bgcolor="#F2F2FF" class="petis-12-Bleu" height="21" width="543">&nbsp;</td>
+  </tr>
+  <tr> 
+    <td bgcolor="#E6E6FF" class="petis-12-Bleu" height="21" width="281"><strong><font size="-1" face="Arial, Helvetica, sans-serif">Speed 
+      of Light 3.8</font></strong></td>
+    <td height="21" align="center" valign="middle" bgcolor="#F2F2FF" class="petis-12-Bleu" width="108"> 
+      <div align="center"><font size="-1" face="Arial, Helvetica, sans-serif"><img src="Pvert.gif" width="12" height="12"></font></div></td>
+    <td bgcolor="#F2F2FF" class="petis-12" height="21" width="543"><strong><font size="-1" face="Arial, Helvetica, sans-serif">&nbsp;</font></strong></td>
+  </tr>
+  <tr> 
+    <td bgcolor="#E6E6FF" class="petis-12-Bleu" height="21" width="281"><strong><font size="-1" face="Arial, Helvetica, sans-serif">Studio 
+      Convert 1.0</font></strong></td>
+    <td height="21" align="center" valign="middle" bgcolor="#F2F2FF" class="petis-12-Bleu" width="108"> 
+      <div align="center"><font size="-1" face="Arial, Helvetica, sans-serif"><img src="Pjaune.gif" width="12" height="12"></font></div></td>
+    <td bgcolor="#F2F2FF" class="petis-12" height="21" width="543"><strong><font size="-1" face="Arial, Helvetica, sans-serif">problème 
+      d'affichage uniquement avec le JPG (utiliser routine Interne)</font></strong></td>
+  </tr>
+  <tr> 
+    <td bgcolor="#E6E6FF" class="petis-12-Bleu" height="21" width="281"><strong><font size="-1" face="Arial, Helvetica, sans-serif">Studio 
+      Photo DSP 1.21</font></strong></td>
+    <td height="21" align="center" valign="middle" bgcolor="#F2F2FF" class="petis-12-Bleu" width="108"> 
+      <div align="center"><font size="-1" face="Arial, Helvetica, sans-serif"><img src="Pjaune.gif" width="12" height="12"></font></div></td>
+    <td bgcolor="#F2F2FF" class="petis-12" height="21" width="543"><strong><font size="-1" face="Arial, Helvetica, sans-serif">problème 
+      d'affichage uniquement avec le JPG (d&eacute;sactiver driver JPG)</font></strong></td>
+  </tr>
+  <tr> 
+    <td bgcolor="#E6E6FF" class="petis-12-Bleu" height="21" width="281"><strong><font size="-1" face="Arial, Helvetica, sans-serif">Studio 
+      Photo Pro 1.1</font></strong></td>
+    <td height="21" align="center" valign="middle" bgcolor="#F2F2FF" class="petis-12-Bleu" width="108"> 
+      <div align="center"><font size="-1" face="Arial, Helvetica, sans-serif"><img src="Pjaune.gif" width="12" height="12"></font></div></td>
+    <td bgcolor="#F2F2FF" class="petis-12" height="21" width="543"><strong><font size="-1" face="Arial, Helvetica, sans-serif">problème 
+      d'affichage uniquement avec le JPG (d&eacute;sactiver driver JPG)</font></strong></td>
+  </tr>
+  <tr> 
+    <td bgcolor="#E6E6FF" class="petis-12-Bleu" height="21" width="281"><strong><font size="-1" face="Arial, Helvetica, sans-serif">True 
+      Image 1.70</font></strong></td>
+    <td height="21" align="center" valign="middle" bgcolor="#F2F2FF" class="petis-12-Bleu" width="108"> 
+      <div align="center"><font size="-1" face="Arial, Helvetica, sans-serif"><img src="Pjaune.gif" width="12" height="12"></font></div></td>
+    <td bgcolor="#F2F2FF" class="petis-12" height="21" width="543"><strong><font size="-1" face="Arial, Helvetica, sans-serif">enlever 
+le cache apr&egrave;s le lancement du programme</font></strong></td>
+  </tr>
+  <tr> 
+    <td bgcolor="#E6E6FF" class="petis-12-Bleu" height="21" width="281"><strong><font size="-1" face="Arial, Helvetica, sans-serif">True 
+      Paint 1.02</font></strong></td>
+    <td height="21" align="center" valign="middle" bgcolor="#F2F2FF" class="petis-12-Bleu" width="108"> 
+      <div align="center"><font size="-1" face="Arial, Helvetica, sans-serif"><img src="Pjaune.gif" width="12" height="12"></font></div></td>
+    <td bgcolor="#F2F2FF" class="petis-12" height="21" width="543"><strong><font size="-1" face="Arial, Helvetica, sans-serif">enlever 
+      le cache apr&egrave;s le lancement du programme</font></strong></td>
+  </tr>
+  <tr> 
+    <td bgcolor="#E6E6FF" class="petis-12-Bleu" height="21" width="281"><strong><font size="-1" face="Arial, Helvetica, sans-serif">Vision 
+      4.0</font></strong></td>
+    <td height="21" align="center" valign="middle" bgcolor="#F2F2FF" class="petis-12-Bleu" width="108"> 
+      <div align="center"><font size="-1" face="Arial, Helvetica, sans-serif"><img src="Pvert.gif" width="12" height="12"></font></div></td>
+    <td bgcolor="#F2F2FF" class="petis-12" height="21" width="543"><strong><font size="-1" face="Arial, Helvetica, sans-serif">&nbsp;</font></strong></td>
+  </tr>
+  <tr> 
+    <td bgcolor="#E6E6FF" class="petis-12-Bleu" height="21" width="281"><strong><font size="-1" face="Arial, Helvetica, sans-serif">Watch 
+      It 1.0a</font></strong></td>
+    <td height="21" align="center" valign="middle" bgcolor="#F2F2FF" class="petis-12-Bleu" width="108"> 
+      <div align="center"><font size="-1" face="Arial, Helvetica, sans-serif"><img src="Pvert.gif" width="12" height="12"></font></div></td>
+    <td bgcolor="#F2F2FF" class="petis-12" height="21" width="543"><strong><font size="-1" face="Arial, Helvetica, sans-serif">&nbsp;</font></strong></td>
+  </tr>
+  <tr> 
+    <td bgcolor="#E6E6FF" class="petis-12-Bleu" height="21" width="281"><strong><font size="-1" face="Arial, Helvetica, sans-serif">Zoom 
+      X 1.01</font></strong></td>
+    <td height="21" align="center" valign="middle" bgcolor="#F2F2FF" class="petis-12-Bleu" width="108"> 
+      <div align="center"><font size="-1" face="Arial, Helvetica, sans-serif"><img src="Pjaune.gif" width="12" height="12"></font></div></td>
+    <td bgcolor="#F2F2FF" class="petis-12-Bleu" height="21" width="543"><strong><font size="-1" face="Arial, Helvetica, sans-serif">enlever 
+      le cache avant le lancement du programme</font></strong></td>
+  </tr>
+  <tr> 
+    <td height="21" align="center" valign="top" bgcolor="#CCCCFF" class="grand-titre-2" width="281"><div align="left"><strong><font face="Arial, Helvetica, sans-serif">Dessin 
+        Vectoriel </font></strong></div></td>
+    <td height="21" align="center" valign="middle" bgcolor="#CCCCFF" class="grand-titre-2" width="108"><strong><font face="Arial, Helvetica, sans-serif">Test</font></strong></td>
+    <td height="21" align="center" valign="middle" bgcolor="#CCCCFF" class="grand-titre-2" width="543"><strong><font face="Arial, Helvetica, sans-serif">Solution</font></strong></td>
+  </tr>
+  <tr> 
+    <td width=281 bgcolor="#E6E6FF" class="petis-12-Bleu" height="21"><strong><font size="-1" face="Arial, Helvetica, sans-serif">Arabesque 
+      2.00</font></strong></td>
+    <td height="21" align="center" valign="middle" bgcolor="#F2F2FF" class="petis-12" width="108"><font size="-1" face="Arial, Helvetica, sans-serif"><img src="Pvert.gif" width="12" height="12"></font></td>
+    <td height="21" align="center" valign="middle" bgcolor="#F2F2FF" class="petis-12" width="543"> 
+      <div align="left" class="petis-12-Bleu"><strong></strong></div></td>
+  </tr>
+  <tr> 
+    <td bgcolor="#E6E6FF" class="petis-12-Bleu" height="21" width="281"><strong><font size="-1" face="Arial, Helvetica, sans-serif">Artworx 
+      2.00</font></strong></td>
+    <td height="21" align="center" valign="middle" bgcolor="#F2F2FF" class="petis-12" width="108"><font size="-1" face="Arial, Helvetica, sans-serif"><img src="Pvert.gif" width="12" height="12"></font></td>
+    <td height="21" align="center" valign="middle" bgcolor="#F2F2FF" class="petis-12" width="543"> 
+      <div align="left" class="petis-12-Bleu"></div></td>
+  </tr>
+  <tr> 
+    <td bgcolor="#E6E6FF" class="petis-12-Bleu" height="19" width="281"><strong><font size="-1" face="Arial, Helvetica, sans-serif">Avant 
+      Vektor 1.2</font></strong></td>
+    <td height="19" align="center" valign="middle" bgcolor="#F2F2FF" class="petis-12" width="108"><font size="-1" face="Arial, Helvetica, sans-serif"><img src="Pvert.gif" width="12" height="12"></font></td>
+    <td height="19" align="center" valign="middle" bgcolor="#F2F2FF" class="petis-12" width="543"><strong><font size="-1" face="Arial, Helvetica, sans-serif">&nbsp;</font></strong></td>
+  </tr>
+  <tr> 
+    <td bgcolor="#E6E6FF" class="petis-12-Bleu" height="19" width="281"><strong><font size="-1" face="Arial, Helvetica, sans-serif">Avant 
+      Vektor 1.3</font></strong></td>
+    <td height="19" align="center" valign="middle" bgcolor="#F2F2FF" class="petis-12" width="108"><font size="-1" face="Arial, Helvetica, sans-serif"><img src="Pvert.gif" width="12" height="12"></font></td>
+    <td height="19" align="center" valign="middle" bgcolor="#F2F2FF" class="petis-12" width="543"><strong><font size="-1" face="Arial, Helvetica, sans-serif">&nbsp;</font></strong></td>
+  </tr>
+  <tr> 
+    <td bgcolor="#E6E6FF" class="petis-12-Bleu" height="21" width="281"><strong><font size="-1" face="Arial, Helvetica, sans-serif">Circu 
+      It 1.5</font></strong></td>
+    <td height="21" align="center" valign="middle" bgcolor="#F2F2FF" class="petis-12" width="108"><font size="-1" face="Arial, Helvetica, sans-serif"><img src="Pvert.gif" width="12" height="12"></font></td>
+    <td height="21" align="center" valign="middle" bgcolor="#F2F2FF" class="petis-12" width="543">&nbsp;</td>
+  </tr>
+  <tr> 
+    <td bgcolor="#E6E6FF" class="petis-12-Bleu" height="19" width="281"><strong><font size="-1" face="Arial, Helvetica, sans-serif">Convector 
+      Pro 1.0</font></strong></td>
+    <td height="19" align="center" valign="middle" bgcolor="#F2F2FF" class="petis-12" width="108"><font size="-1" face="Arial, Helvetica, sans-serif"><img src="Pvert.gif" width="12" height="12"></font></td>
+    <td height="19" align="center" valign="middle" bgcolor="#F2F2FF" class="petis-12" width="543"><strong><font size="-1" face="Arial, Helvetica, sans-serif">&nbsp;</font></strong></td>
+  </tr>
+  <tr> 
+    <td bgcolor="#E6E6FF" class="petis-12-Bleu" height="19" width="281"><strong><font size="-1" face="Arial, Helvetica, sans-serif">Cut 
+      Out 2.01</font></strong></td>
+    <td height="19" align="center" valign="middle" bgcolor="#F2F2FF" class="petis-12" width="108"><font size="-1" face="Arial, Helvetica, sans-serif"><img src="Pvert.gif" width="12" height="12"></font></td>
+    <td height="19" align="center" valign="middle" bgcolor="#F2F2FF" class="petis-12" width="543"><strong><font size="-1" face="Arial, Helvetica, sans-serif">&nbsp;</font></strong></td>
+  </tr>
+  <tr> 
+    <td bgcolor="#E6E6FF" class="petis-12-Bleu" height="19" width="281"><strong><font size="-1" face="Arial, Helvetica, sans-serif">Da's 
+      Vektor 1.10</font></strong></td>
+    <td height="19" align="center" valign="middle" bgcolor="#F2F2FF" class="petis-12" width="108"><font size="-1" face="Arial, Helvetica, sans-serif"><img src="Pvert.gif" width="12" height="12"></font></td>
+    <td height="19" align="center" valign="middle" bgcolor="#F2F2FF" class="petis-12" width="543"><strong><font size="-1" face="Arial, Helvetica, sans-serif">&nbsp;</font></strong></td>
+  </tr>
+  <tr> 
+    <td bgcolor="#E6E6FF" class="petis-12-Bleu" height="19" width="281"><strong><font size="-1" face="Arial, Helvetica, sans-serif">Da's 
+      Vektor Pro 2.00</font></strong></td>
+    <td height="19" align="center" valign="middle" bgcolor="#F2F2FF" class="petis-12" width="108"><font size="-1" face="Arial, Helvetica, sans-serif"><img src="Pvert.gif" width="12" height="12"></font></td>
+    <td height="19" align="center" valign="middle" bgcolor="#F2F2FF" class="petis-12" width="543"><strong><font size="-1" face="Arial, Helvetica, sans-serif">&nbsp;</font></strong></td>
+  </tr>
+  <tr> 
+    <td bgcolor="#E6E6FF" class="petis-12-Bleu" height="19" width="281"><strong><font size="-1" face="Arial, Helvetica, sans-serif">Dynacad 
+      1.36 </font></strong></td>
+    <td height="19" align="center" valign="middle" bgcolor="#F2F2FF" class="petis-12" width="108"><font size="-1" face="Arial, Helvetica, sans-serif"><img src="Pvert.gif" width="12" height="12"></font></td>
+    <td height="19" align="center" valign="middle" bgcolor="#F2F2FF" class="petis-12" width="543"><strong><font size="-1" face="Arial, Helvetica, sans-serif">&nbsp;</font></strong></td>
+  </tr>
+  <tr> 
+    <td bgcolor="#E6E6FF" class="petis-12-Bleu" height="21" width="281"><font size="-1" face="Arial, Helvetica, sans-serif"><b>Eureka</b></font></td>
+    <td height="21" align="center" valign="middle" bgcolor="#F2F2FF" class="petis-12" width="108"><font size="-1" face="Arial, Helvetica, sans-serif"><img src="Pvert.gif" width="12" height="12"></font></td>
+    <td height="21" align="center" valign="middle" bgcolor="#F2F2FF" class="petis-12" width="543">&nbsp;</td>
+  </tr>
+  <tr> 
+    <td bgcolor="#E6E6FF" class="petis-12-Bleu" height="19" width="281"><strong><font size="-1" face="Arial, Helvetica, sans-serif">Easy 
+      Draw 3.0</font></strong></td>
+    <td height="19" align="center" valign="middle" bgcolor="#F2F2FF" class="petis-12" width="108"><font size="-1" face="Arial, Helvetica, sans-serif"><img src="Pvert.gif" width="12" height="12"></font></td>
+    <td height="19" align="center" valign="middle" bgcolor="#F2F2FF" class="petis-12" width="543"><strong><font size="-1" face="Arial, Helvetica, sans-serif">&nbsp;</font></strong></td>
+  </tr>
+  <tr> 
+    <td bgcolor="#E6E6FF" class="petis-12-Bleu" height="19" width="281"><strong><font size="-1" face="Arial, Helvetica, sans-serif">Headline 
+      4.00</font></strong></td>
+    <td height="19" align="center" valign="middle" bgcolor="#F2F2FF" class="petis-12" width="108"><font size="-1" face="Arial, Helvetica, sans-serif"><img src="Pvert.gif" width="12" height="12"></font></td>
+    <td height="19" align="center" valign="middle" bgcolor="#F2F2FF" class="petis-12" width="543"><strong><font size="-1" face="Arial, Helvetica, sans-serif">&nbsp;</font></strong></td>
+  </tr>
+  <tr> 
+    <td bgcolor="#E6E6FF" class="petis-12-Bleu" height="19" width="281"><strong><font size="-1" face="Arial, Helvetica, sans-serif">Outline 
+      Art 3.0</font></strong></td>
+    <td height="19" align="center" valign="middle" bgcolor="#F2F2FF" class="petis-12" width="108"><font size="-1" face="Arial, Helvetica, sans-serif"><img src="Pvert.gif" width="12" height="12"></font></td>
+    <td height="19" align="center" valign="middle" bgcolor="#F2F2FF" class="petis-12" width="543"><strong><font size="-1" face="Arial, Helvetica, sans-serif">&nbsp;</font></strong></td>
+  </tr>
+  <tr> 
+    <td bgcolor="#E6E6FF" class="petis-12-Bleu" height="21" width="281"><strong><font size="-1" face="Arial, Helvetica, sans-serif">Pcb 
+      Layout Plus 1.32</font></strong></td>
+    <td height="21" align="center" valign="middle" bgcolor="#F2F2FF" class="petis-12" width="108"><font size="-1" face="Arial, Helvetica, sans-serif"><img src="Pvert.gif" width="12" height="12"></font></td>
+    <td height="21" align="center" valign="middle" bgcolor="#F2F2FF" class="petis-12" width="543">&nbsp;</td>
+  </tr>
+  <tr> 
+    <td bgcolor="#E6E6FF" class="petis-12-Bleu" height="19" width="281"><strong><font size="-1" face="Arial, Helvetica, sans-serif">Phoenix 
+      Render 1.0</font></strong></td>
+    <td height="19" align="center" valign="middle" bgcolor="#F2F2FF" class="petis-12" width="108"><font size="-1" face="Arial, Helvetica, sans-serif"><img src="Pvert.gif" width="12" height="12"></font></td>
+    <td height="19" align="center" valign="middle" bgcolor="#F2F2FF" class="petis-12" width="543"><strong><font size="-1" face="Arial, Helvetica, sans-serif">&nbsp;</font></strong></td>
+  </tr>
+  <tr> 
+    <td bgcolor="#E6E6FF" class="petis-12-Bleu" height="19" width="281"><strong><font size="-1" face="Arial, Helvetica, sans-serif">Platon 
+      2.3</font></strong></td>
+    <td height="19" align="center" valign="middle" bgcolor="#F2F2FF" class="petis-12" width="108"><font size="-1" face="Arial, Helvetica, sans-serif"><img src="Pvert.gif" width="12" height="12"></font></td>
+    <td height="19" align="center" valign="middle" bgcolor="#F2F2FF" class="petis-12" width="543"><strong><font size="-1" face="Arial, Helvetica, sans-serif">&nbsp;</font></strong></td>
+  </tr>
+  <tr> 
+    <td bgcolor="#E6E6FF" class="petis-12-Bleu" height="19" width="281"><strong><font size="-1" face="Arial, Helvetica, sans-serif">Raystart 
+      3.1</font></strong></td>
+    <td height="19" align="center" valign="middle" bgcolor="#F2F2FF" class="petis-12" width="108"><font size="-1" face="Arial, Helvetica, sans-serif"><img src="Pvert.gif" width="12" height="12"></font></td>
+    <td height="19" align="center" valign="middle" bgcolor="#F2F2FF" class="petis-12" width="543"><strong><font size="-1" face="Arial, Helvetica, sans-serif">&nbsp;</font></strong></td>
+  </tr>
+  <tr> 
+    <td bgcolor="#E6E6FF" class="petis-12-Bleu" height="21" width="281"><strong><font size="-1" face="Arial, Helvetica, sans-serif">Route 
+      It 1.4</font></strong></td>
+    <td height="21" align="center" valign="middle" bgcolor="#F2F2FF" class="petis-12" width="108"><font size="-1" face="Arial, Helvetica, sans-serif"><img src="Pvert.gif" width="12" height="12"></font></td>
+    <td height="21" align="center" valign="middle" bgcolor="#F2F2FF" class="petis-12" width="543">&nbsp;</td>
+  </tr>
+  <tr> 
+    <td bgcolor="#E6E6FF" class="petis-12-Bleu" height="19" width="281"><strong><font size="-1" face="Arial, Helvetica, sans-serif">Scigraph 
+      2.01</font></strong></td>
+    <td height="19" align="center" valign="middle" bgcolor="#F2F2FF" class="petis-12" width="108"><font size="-1" face="Arial, Helvetica, sans-serif"><img src="Pvert.gif" width="12" height="12"></font></td>
+    <td height="19" align="center" valign="middle" bgcolor="#F2F2FF" class="petis-12" width="543"><strong><font size="-1" face="Arial, Helvetica, sans-serif">&nbsp;</font></strong></td>
+  </tr>
+  <tr> 
+    <td bgcolor="#E6E6FF" class="petis-12-Bleu" height="19" width="281"><strong><font size="-1" face="Arial, Helvetica, sans-serif">Scooter 
+      PCB 2.11</font></strong></td>
+    <td height="19" align="center" valign="middle" bgcolor="#F2F2FF" class="petis-12" width="108"><font size="-1" face="Arial, Helvetica, sans-serif"><img src="Pvert.gif" width="12" height="12"></font></td>
+    <td height="19" align="center" valign="middle" bgcolor="#F2F2FF" class="petis-12" width="543"><strong><font size="-1" face="Arial, Helvetica, sans-serif">&nbsp;</font></strong></td>
+  </tr>
+  <tr> 
+    <td bgcolor="#E6E6FF" class="petis-12-Bleu" height="19" width="281"><strong><font size="-1" face="Arial, Helvetica, sans-serif">X 
+      Former 1.0</font></strong></td>
+    <td height="19" align="center" valign="middle" bgcolor="#F2F2FF" class="petis-12" width="108"><font size="-1" face="Arial, Helvetica, sans-serif"><img src="Pvert.gif" width="12" height="12"></font></td>
+    <td height="19" align="center" valign="middle" bgcolor="#F2F2FF" class="petis-12" width="543"><strong><font size="-1" face="Arial, Helvetica, sans-serif">&nbsp;</font></strong></td>
+  </tr>
+  <tr> 
+    <td bgcolor="#E6E6FF" class="petis-12-Bleu" height="19" width="281"><strong><font size="-1" face="Arial, Helvetica, sans-serif">Xact 
+      3.01</font></strong></td>
+    <td height="19" align="center" valign="middle" bgcolor="#F2F2FF" class="petis-12" width="108"><font size="-1" face="Arial, Helvetica, sans-serif"><img src="Pvert.gif" width="12" height="12"></font></td>
+    <td height="19" align="center" valign="middle" bgcolor="#F2F2FF" class="petis-12" width="543"><strong><font size="-1" face="Arial, Helvetica, sans-serif">&nbsp;</font></strong></td>
+  </tr>
+  <tr> 
+    <td bgcolor="#E6E6FF" class="petis-12-Bleu" height="19" width="281"><strong><font size="-1" face="Arial, Helvetica, sans-serif">Xchange 
+      1.0</font></strong></td>
+    <td height="19" align="center" valign="middle" bgcolor="#F2F2FF" class="petis-12" width="108"><font size="-1" face="Arial, Helvetica, sans-serif"><img src="Pvert.gif" width="12" height="12"></font></td>
+    <td height="19" align="center" valign="middle" bgcolor="#F2F2FF" class="petis-12" width="543"><strong><font size="-1" face="Arial, Helvetica, sans-serif">&nbsp;</font></strong></td>
+  </tr>
+  <tr> 
+    <td bgcolor="#E6E6FF" class="petis-12-Bleu" height="19" width="281"><strong><font size="-1" face="Arial, Helvetica, sans-serif">ZZ 
+      volume 1.70</font></strong></td>
+    <td height="19" align="center" valign="middle" bgcolor="#F2F2FF" class="petis-12" width="108"><font size="-1" face="Arial, Helvetica, sans-serif"><img src="Pvert.gif" width="12" height="12"></font></td>
+    <td height="19" align="center" valign="middle" bgcolor="#F2F2FF" class="petis-12" width="543"><strong><font size="-1" face="Arial, Helvetica, sans-serif">&nbsp;</font></strong></td>
+  </tr>
+  <tr> 
+    <td height="21" align="center" valign="top" bgcolor="#CCCCFF" class="grand-titre-2" width="281"><div align="left"><strong><font face="Arial, Helvetica, sans-serif">Multimedia</font></strong></div></td>
+    <td height="21" align="center" valign="middle" bgcolor="#CCCCFF" class="grand-titre-2" width="108"><strong><font face="Arial, Helvetica, sans-serif">Test</font></strong></td>
+    <td height="21" align="center" valign="middle" bgcolor="#CCCCFF" class="grand-titre-2" width="543"><strong><font face="Arial, Helvetica, sans-serif">Solution</font></strong></td>
+  </tr>
+  <tr> 
+    <td width=281 bgcolor="#E6E6FF" class="petis-12-Bleu" height="19"><strong><font size="-1" face="Arial, Helvetica, sans-serif">Apex 
+      Média</font></strong></td>
+    <td height="19" align="center" valign="middle" bgcolor="#F2F2FF" class="petis-12" width="108"><font size="-1" face="Arial, Helvetica, sans-serif"><img src="Prouge.gif" width="12" height="12"></font></td>
+    <td height="19" align="center" valign="middle" bgcolor="#F2F2FF" class="petis-12" width="543"><strong><font size="-1" face="Arial, Helvetica, sans-serif">&nbsp;</font></strong></td>
+  </tr>
+  <tr> 
+    <td bgcolor="#E6E6FF" class="petis-12-Bleu" height="19" width="281"><strong><font size="-1" face="Arial, Helvetica, sans-serif">Color 
+      PCD 1.11</font></strong></td>
+    <td height="19" align="center" valign="middle" bgcolor="#F2F2FF" class="petis-12" width="108"><font size="-1" face="Arial, Helvetica, sans-serif"><img src="Pvert.gif" width="12" height="12"></font></td>
+    <td height="19" align="center" valign="middle" bgcolor="#F2F2FF" class="petis-12" width="543"><strong><font size="-1" face="Arial, Helvetica, sans-serif">&nbsp;</font></strong></td>
+  </tr>
+  <tr> 
+    <td bgcolor="#E6E6FF" class="petis-12-Bleu" height="19" width="281"><strong><font size="-1" face="Arial, Helvetica, sans-serif">Inshape 
+      2.0</font></strong></td>
+    <td height="19" align="center" valign="middle" bgcolor="#F2F2FF" class="petis-12" width="108"><font size="-1" face="Arial, Helvetica, sans-serif"><img src="Pvert.gif" width="12" height="12"></font></td>
+    <td height="19" align="center" valign="middle" bgcolor="#F2F2FF" class="petis-12" width="543"><strong><font size="-1" face="Arial, Helvetica, sans-serif">&nbsp;</font></strong></td>
+  </tr>
+  <tr> 
+    <td bgcolor="#E6E6FF" class="petis-12-Bleu" height="19" width="281"><strong><font size="-1" face="Arial, Helvetica, sans-serif">Neon 
+      3D</font></strong></td>
+    <td height="19" align="center" valign="middle" bgcolor="#F2F2FF" class="petis-12" width="108"><font size="-1" face="Arial, Helvetica, sans-serif"><img src="Pvert.gif" width="12" height="12"></font></td>
+    <td height="19" align="center" valign="middle" bgcolor="#F2F2FF" class="petis-12" width="543"><strong><font size="-1" face="Arial, Helvetica, sans-serif">&nbsp;</font></strong></td>
+  </tr>
+  <tr> 
+    <td bgcolor="#E6E6FF" class="petis-12-Bleu" height="19" width="281"><strong><font size="-1" face="Arial, Helvetica, sans-serif">Overlay 
+      1.0 et 2.0</font></strong></td>
+    <td height="19" align="center" valign="middle" bgcolor="#F2F2FF" class="petis-12" width="108"><font size="-1" face="Arial, Helvetica, sans-serif"><img src="Pvert.gif" width="12" height="12"></font></td>
+    <td height="19" align="center" valign="middle" bgcolor="#F2F2FF" class="petis-12" width="543"><strong><font size="-1" face="Arial, Helvetica, sans-serif">&nbsp;</font></strong></td>
+  </tr>
+  <tr> 
+    <td bgcolor="#E6E6FF" class="petis-12-Bleu" height="19" width="281"><strong><font size="-1" face="Arial, Helvetica, sans-serif">Spectral 
+      Tool Kit 1.5</font></strong></td>
+    <td height="19" align="center" valign="middle" bgcolor="#F2F2FF" class="petis-12" width="108"><font size="-1" face="Arial, Helvetica, sans-serif"><img src="Pvert.gif" width="12" height="12"></font></td>
+    <td height="19" align="center" valign="middle" bgcolor="#F2F2FF" class="petis-12" width="543"><strong><font size="-1" face="Arial, Helvetica, sans-serif">&nbsp;</font></strong></td>
+  </tr>
+  <tr> 
+    <td height="21" align="center" valign="top" bgcolor="#CCCCFF" class="grand-titre-2" width="281"><div align="left"><strong><font face="Arial, Helvetica, sans-serif">Musique</font></strong></div></td>
+    <td height="21" align="center" valign="middle" bgcolor="#CCCCFF" class="grand-titre-2" width="108"><strong><font face="Arial, Helvetica, sans-serif">Test</font></strong></td>
+    <td height="21" align="center" valign="middle" bgcolor="#CCCCFF" class="grand-titre-2" width="543"><strong><font face="Arial, Helvetica, sans-serif">Solution</font></strong></td>
+  </tr>
+  <tr> 
+    <td width=281 bgcolor="#E6E6FF" class="petis-12-Bleu" height="19"><strong><font size="-1" face="Arial, Helvetica, sans-serif">Crazy 
+      Music machine</font></strong></td>
+    <td height="19" align="center" valign="middle" bgcolor="#F2F2FF" class="petis-12" width="108"><font size="-1" face="Arial, Helvetica, sans-serif"><img src="Pvert.gif" width="12" height="12"></font></td>
+    <td width=543 bgcolor="#F2F2FF" class="petis-12" height="19"><strong><font size="-1" face="Arial, Helvetica, sans-serif">&nbsp;</font></strong></td>
+  </tr>
+  <tr> 
+    <td bgcolor="#E6E6FF" class="petis-12-Bleu" height="19" width="281"><strong><font size="-1" face="Arial, Helvetica, sans-serif">Cubase 
+      Audio</font></strong></td>
+    <td height="19" align="center" valign="middle" bgcolor="#F2F2FF" class="petis-12" width="108"><font size="-1" face="Arial, Helvetica, sans-serif"><img src="Pjaune.gif" width="12" height="12"></font></td>
+    <td bgcolor="#F2F2FF" class="petis-12" height="19" width="543"><strong><font size="-1" face="Arial, Helvetica, sans-serif">avec 
+      patch (livr&eacute; avec le pack logiciel CT60)</font></strong></td>
+  </tr>
+  <tr> 
+    <td bgcolor="#E6E6FF" class="petis-12-Bleu" height="19" width="281"><strong><font size="-1" face="Arial, Helvetica, sans-serif">Musicom 
+      2.0</font></strong></td>
+    <td height="19" align="center" valign="middle" bgcolor="#F2F2FF" class="petis-12" width="108"><font size="-1" face="Arial, Helvetica, sans-serif"><img src="Pvert.gif" width="12" height="12"></font></td>
+    <td bgcolor="#F2F2FF" class="petis-12" height="19" width="543"><strong><font size="-1" face="Arial, Helvetica, sans-serif">&nbsp;</font></strong></td>
+  </tr>
+  <tr> 
+    <td bgcolor="#E6E6FF" class="petis-12-Bleu" height="19" width="281"><strong><font size="-1" face="Arial, Helvetica, sans-serif">Paula 
+      2.5</font></strong></td>
+    <td height="19" align="center" valign="middle" bgcolor="#F2F2FF" class="petis-12" width="108"><font size="-1" face="Arial, Helvetica, sans-serif"><img src="Pvert.gif" width="12" height="12"></font></td>
+    <td bgcolor="#F2F2FF" class="petis-12" height="19" width="543"><strong><font size="-1" face="Arial, Helvetica, sans-serif">&nbsp;</font></strong></td>
+  </tr>
+  <tr> 
+    <td bgcolor="#E6E6FF" class="petis-12-Bleu" height="19" width="281"><strong><font size="-1" face="Arial, Helvetica, sans-serif">Pretty 
+      1.0</font></strong></td>
+    <td height="19" align="center" valign="middle" bgcolor="#F2F2FF" class="petis-12" width="108"><font size="-1" face="Arial, Helvetica, sans-serif"><img src="Pvert.gif" width="12" height="12"></font></td>
+    <td bgcolor="#F2F2FF" class="petis-12" height="19" width="543"><strong><font size="-1" face="Arial, Helvetica, sans-serif">&nbsp;</font></strong></td>
+  </tr>
+  <tr> 
+    <td bgcolor="#E6E6FF" class="petis-12-Bleu" height="19" width="281"><strong><font size="-1" face="Arial, Helvetica, sans-serif">Trackom 
+      1.32</font></strong></td>
+    <td height="19" align="center" valign="middle" bgcolor="#F2F2FF" class="petis-12" width="108"><font size="-1" face="Arial, Helvetica, sans-serif"><img src="Pvert.gif" width="12" height="12"></font></td>
+    <td bgcolor="#F2F2FF" class="petis-12" height="19" width="543"><strong><font size="-1" face="Arial, Helvetica, sans-serif">&nbsp;</font></strong></td>
+  </tr>
+  <tr> 
+    <td bgcolor="#E6E6FF" class="petis-12-Bleu" height="19" width="281"><strong><font size="-1" face="Arial, Helvetica, sans-serif">V 
+      Trax 1.03</font></strong></td>
+    <td height="19" align="center" valign="middle" bgcolor="#F2F2FF" class="petis-12" width="108"><font size="-1" face="Arial, Helvetica, sans-serif"><img src="Pvert.gif" width="12" height="12"></font></td>
+    <td bgcolor="#F2F2FF" class="petis-12" height="19" width="543"><strong><font size="-1" face="Arial, Helvetica, sans-serif">&nbsp;</font></strong></td>
+  </tr>
+  <tr> 
+    <td bgcolor="#E6E6FF" class="petis-12-Bleu" height="19" width="281"><strong><font size="-1" face="Arial, Helvetica, sans-serif">Win 
+      Cut Pro 1.30</font></strong></td>
+    <td height="19" align="center" valign="middle" bgcolor="#F2F2FF" class="petis-12" width="108"><font size="-1" face="Arial, Helvetica, sans-serif"><img src="Pvert.gif" width="12" height="12"></font></td>
+    <td bgcolor="#F2F2FF" class="petis-12" height="19" width="543"><strong><font size="-1" face="Arial, Helvetica, sans-serif">&nbsp;</font></strong></td>
+  </tr>
+  <tr> 
+    <td bgcolor="#E6E6FF" class="petis-12-Bleu" height="19" width="281"><strong><font size="-1" face="Arial, Helvetica, sans-serif">Win 
+      Rec Pro 2.12</font></strong></td>
+    <td height="19" align="center" valign="middle" bgcolor="#F2F2FF" class="petis-12" width="108"><font size="-1" face="Arial, Helvetica, sans-serif"><img src="Pvert.gif" width="12" height="12"></font></td>
+    <td bgcolor="#F2F2FF" class="petis-12" height="19" width="543"><strong><font size="-1" face="Arial, Helvetica, sans-serif">&nbsp;</font></strong></td>
+  </tr>
+  <tr> 
+    <td bgcolor="#E6E6FF" class="petis-12-Bleu" height="19" width="281"><strong><font size="-1" face="Arial, Helvetica, sans-serif">Zero 
+      X Pro 1.03</font></strong></td>
+    <td height="19" align="center" valign="middle" bgcolor="#F2F2FF" class="petis-12" width="108"><font size="-1" face="Arial, Helvetica, sans-serif"><img src="Pvert.gif" width="12" height="12"></font></td>
+    <td bgcolor="#F2F2FF" class="petis-12" height="19" width="543"><strong><font size="-1" face="Arial, Helvetica, sans-serif">&nbsp;</font></strong></td>
+  </tr>
+  <tr> 
+    <td bgcolor="#E6E6FF" class="petis-12-Bleu" height="21" width="281"><strong><font size="-1" face="Arial, Helvetica, sans-serif">Zero 
+      X Pro 2.0</font></strong></td>
+    <td height="21" align="center" valign="middle" bgcolor="#F2F2FF" class="petis-12" width="108"><font size="-1" face="Arial, Helvetica, sans-serif"><img src="Pvert.gif" width="12" height="12"></font></td>
+    <td height="21" align="center" valign="middle" bgcolor="#F2F2FF" class="petis-12" width="543"> 
+      <div align="left" class="petis-12-Bleu"></div></td>
+  </tr>
+  <tr> 
+    <td height="21" align="center" valign="top" bgcolor="#CCCCFF" class="grand-titre-2" width="281"><div align="left"><strong><font face="Arial, Helvetica, sans-serif">Utilitaires</font></strong></div></td>
+    <td height="21" align="center" valign="middle" bgcolor="#CCCCFF" class="grand-titre-2" width="108"><strong><font face="Arial, Helvetica, sans-serif">Test</font></strong></td>
+    <td height="21" align="center" valign="middle" bgcolor="#CCCCFF" class="grand-titre-2" width="543"><strong><font face="Arial, Helvetica, sans-serif">Solution</font></strong></td>
+  </tr>
+  <tr> 
+    <td width=281 bgcolor="#E6E6FF" class="petis-12-Bleu" height="19"><strong><font size="-1" face="Arial, Helvetica, sans-serif">CD 
+      Tools 2.10</font></strong></td>
+    <td height="19" align="center" valign="middle" bgcolor="#F2F2FF" class="petis-12" width="108"><font size="-1" face="Arial, Helvetica, sans-serif"><img src="Pvert.gif" width="12" height="12"></font></td>
+    <td height="19" align="center" valign="middle" bgcolor="#F2F2FF" class="petis-12" width="543"><strong><font size="-1" face="Arial, Helvetica, sans-serif">&nbsp;</font></strong></td>
+  </tr>
+  <tr> 
+    <td bgcolor="#E6E6FF" class="petis-12-Bleu" height="19" width="281"><strong><font size="-1" face="Arial, Helvetica, sans-serif">Diskus 
+      3.32</font></strong></td>
+    <td height="19" align="center" valign="middle" bgcolor="#F2F2FF" class="petis-12" width="108"><font size="-1" face="Arial, Helvetica, sans-serif"><img src="Pvert.gif" width="12" height="12"></font></td>
+    <td height="19" align="center" valign="middle" bgcolor="#F2F2FF" class="petis-12" width="543"><strong><font size="-1" face="Arial, Helvetica, sans-serif">&nbsp;</font></strong></td>
+  </tr>
+  <tr> 
+    <td bgcolor="#E6E6FF" class="petis-12-Bleu" height="21" width="281"><strong><font size="-1" face="Arial, Helvetica, sans-serif">E 
+      Copy 1.72</font></strong></td>
+    <td height="21" align="center" valign="middle" bgcolor="#F2F2FF" class="petis-12" width="108"><font size="-1" face="Arial, Helvetica, sans-serif"><img src="Pvert.gif" width="12" height="12"></font></td>
+    <td height="21" align="center" valign="middle" bgcolor="#F2F2FF" class="petis-12" width="543"><div align="left"><strong></strong></div></td>
+  </tr>
+  <tr> 
+    <td bgcolor="#E6E6FF" class="petis-12-Bleu" height="19" width="281"><strong><font size="-1" face="Arial, Helvetica, sans-serif">Egale 
+      4.41</font></strong></td>
+    <td height="19" align="center" valign="middle" bgcolor="#F2F2FF" class="petis-12" width="108"><font size="-1" face="Arial, Helvetica, sans-serif"><img src="Pvert.gif" width="12" height="12"></font></td>
+    <td height="19" align="center" valign="middle" bgcolor="#F2F2FF" class="petis-12" width="543"><strong><font size="-1" face="Arial, Helvetica, sans-serif">&nbsp;</font></strong></td>
+  </tr>
+  <tr> 
+    <td bgcolor="#E6E6FF" class="petis-12-Bleu" height="19" width="281"><strong><font size="-1" face="Arial, Helvetica, sans-serif">Extendos 
+      3.4</font></strong></td>
+    <td height="19" align="center" valign="middle" bgcolor="#F2F2FF" class="petis-12" width="108"><font size="-1" face="Arial, Helvetica, sans-serif"><img src="Pvert.gif" width="12" height="12"></font></td>
+    <td height="19" align="center" valign="middle" bgcolor="#F2F2FF" class="petis-12" width="543"><strong><font size="-1" face="Arial, Helvetica, sans-serif">&nbsp;</font></strong></td>
+  </tr>
+  <tr> 
+    <td bgcolor="#E6E6FF" class="petis-12-Bleu" height="19" width="281"><strong><font size="-1" face="Arial, Helvetica, sans-serif">FastCopy 
+      Pro 1.3</font></strong></td>
+    <td height="19" align="center" valign="middle" bgcolor="#F2F2FF" class="petis-12" width="108"><font size="-1" face="Arial, Helvetica, sans-serif"><img src="Pvert.gif" width="12" height="12"></font></td>
+    <td height="19" align="center" valign="middle" bgcolor="#F2F2FF" class="petis-12" width="543"><strong><font size="-1" face="Arial, Helvetica, sans-serif">&nbsp;</font></strong></td>
+  </tr>
+  <tr> 
+    <td bgcolor="#E6E6FF" class="petis-12-Bleu" height="21" width="281"><strong><font size="-1" face="Arial, Helvetica, sans-serif">Gembench 
+      4.03</font></strong></td>
+    <td height="21" align="center" valign="middle" bgcolor="#F2F2FF" class="petis-12" width="108"><font size="-1" face="Arial, Helvetica, sans-serif"><img src="Pjaune.gif" width="12" height="12"></font></td>
+    <td height="21" align="center" valign="middle" bgcolor="#F2F2FF" class="petis-12" width="543"><div align="LEFT"><strong><font face="Arial, Helvetica, sans-serif" size="-1">Plante 
+parfois lors du test FPU </font></strong></div></td>
+  </tr>
+  <tr> 
+    <td bgcolor="#E6E6FF" class="petis-12-Bleu" height="19" width="281"><font size="-1" face="Arial, Helvetica, sans-serif"><b>Joe</b></font></td>
+    <td height="19" align="center" valign="middle" bgcolor="#F2F2FF" class="petis-12" width="108"><font size="-1" face="Arial, Helvetica, sans-serif"><img src="Pvert.gif" width="12" height="12"></font></td>
+    <td height="19" align="center" valign="middle" bgcolor="#F2F2FF" class="petis-12" width="543">&nbsp;</td>
+  </tr>
+  <tr> 
+    <td bgcolor="#E6E6FF" class="petis-12-Bleu" height="19" width="281"><font size="-1" face="Arial, Helvetica, sans-serif"><b>HP-Penguin</b></font></td>
+    <td height="19" align="center" valign="middle" bgcolor="#F2F2FF" class="petis-12" width="108"><font size="-1" face="Arial, Helvetica, sans-serif"><img src="Pjaune.gif" width="12" height="12"></font></td>
+    <td height="19" align="center" valign="middle" bgcolor="#F2F2FF" class="petis-12" width="543">
+      <p align="left"><b><font face="Arial" size="2">Tourne mais il y a des
+      probs avec le selecteur n_fsel</font></b></td>
+  </tr>
+  <tr>
+    <td bgcolor="#E6E6FF" class="petis-12-Bleu" height="19" width="281"><strong><font size="-1" face="Arial, Helvetica, sans-serif">Icon 
+      Extract 1.40 (avec ou sans FPU)</font></strong></td>
+    <td height="19" align="center" valign="middle" bgcolor="#F2F2FF" class="petis-12" width="108"><font size="-1" face="Arial, Helvetica, sans-serif"><img src="Pvert.gif" width="12" height="12"></font></td>
+    <td height="19" align="center" valign="middle" bgcolor="#F2F2FF" class="petis-12" width="543"><strong><font size="-1" face="Arial, Helvetica, sans-serif">&nbsp;</font></strong></td>
+  </tr>
+  <tr> 
+    <td bgcolor="#E6E6FF" class="petis-12-Bleu" height="19" width="281"><strong><font size="-1" face="Arial, Helvetica, sans-serif">Idealist 
+      3.95</font></strong></td>
+    <td height="19" align="center" valign="middle" bgcolor="#F2F2FF" class="petis-12" width="108"><font size="-1" face="Arial, Helvetica, sans-serif"><img src="Pvert.gif" width="12" height="12"></font></td>
+    <td height="19" align="center" valign="middle" bgcolor="#F2F2FF" class="petis-12" width="543"><strong><font size="-1" face="Arial, Helvetica, sans-serif">&nbsp;</font></strong></td>
+  </tr>
+  <tr> 
+    <td bgcolor="#E6E6FF" class="petis-12-Bleu" height="19" width="281"><strong><font size="-1" face="Arial, Helvetica, sans-serif">Jinnee 
+      2.5</font></strong></td>
+    <td height="19" align="center" valign="middle" bgcolor="#F2F2FF" class="petis-12" width="108"><font size="-1" face="Arial, Helvetica, sans-serif"><img src="Pvert.gif" width="12" height="12"></font></td>
+    <td height="19" align="center" valign="middle" bgcolor="#F2F2FF" class="petis-12" width="543"><strong><font size="-1" face="Arial, Helvetica, sans-serif">&nbsp;</font></strong></td>
+  </tr>
+  <tr> 
+    <td bgcolor="#E6E6FF" class="petis-12-Bleu" height="19" width="281"><strong><font size="-1" face="Arial, Helvetica, sans-serif">Kobold 
+      3.5</font></strong></td>
+    <td height="19" align="center" valign="middle" bgcolor="#F2F2FF" class="petis-12" width="108"><font size="-1" face="Arial, Helvetica, sans-serif"><img src="Pvert.gif" width="12" height="12"></font></td>
+    <td height="19" align="center" valign="middle" bgcolor="#F2F2FF" class="petis-12" width="543"><strong><font size="-1" face="Arial, Helvetica, sans-serif">&nbsp;</font></strong></td>
+  </tr>
+  <tr> 
+    <td bgcolor="#E6E6FF" class="petis-12-Bleu" height="19" width="281"><strong><font size="-1" face="Arial, Helvetica, sans-serif">Locate 
+      1.0</font></strong></td>
+    <td height="19" align="center" valign="middle" bgcolor="#F2F2FF" class="petis-12" width="108"><font size="-1" face="Arial, Helvetica, sans-serif"><img src="Pvert.gif" width="12" height="12"></font></td>
+    <td height="19" align="center" valign="middle" bgcolor="#F2F2FF" class="petis-12" width="543"><strong><font size="-1" face="Arial, Helvetica, sans-serif">&nbsp;</font></strong></td>
+  </tr>
+  <tr> 
+    <td bgcolor="#E6E6FF" class="petis-12-Bleu" height="19" width="281"><font face="Arial" size="2"><b>Luna_2.x_ßeta</b></font></td>
+    <td height="19" align="center" valign="middle" bgcolor="#F2F2FF" class="petis-12" width="108"><font size="-1" face="Arial, Helvetica, sans-serif"><img src="Pvert.gif" width="12" height="12"></font></td>
+    <td height="19" align="center" valign="middle" bgcolor="#F2F2FF" class="petis-12" width="543">&nbsp;</td>
+  </tr>
+  <tr> 
+    <td bgcolor="#E6E6FF" class="petis-12-Bleu" height="19" width="281"><b><font size="2" face="Arial">MetaDOS
+      2.76 / MetaXBS</font></b></td>
+    <td height="19" align="center" valign="middle" bgcolor="#F2F2FF" class="petis-12" width="108"><font size="-1" face="Arial, Helvetica, sans-serif"><img src="Pjaune.gif" width="12" height="12"></font></td>
+    <td height="19" align="center" valign="middle" bgcolor="#F2F2FF" class="petis-12" width="543">
+      <p align="left"><font size="2" face="Arial"><b>Retirer les flags TT-Ram</b></font></td>
+  </tr>
+  <tr> 
+    <td bgcolor="#E6E6FF" class="petis-12-Bleu" height="19" width="281"><font size="-1" face="Arial, Helvetica, sans-serif"><b>MinT
+      1.16</b></font></td>
+    <td height="19" align="center" valign="middle" bgcolor="#F2F2FF" class="petis-12" width="108"><font size="-1" face="Arial, Helvetica, sans-serif"><img src="Pvert.gif" width="12" height="12"></font></td>
+    <td height="19" align="center" valign="middle" bgcolor="#F2F2FF" class="petis-12" width="543">&nbsp;</td>
+  </tr>
+  <tr> 
+    <td bgcolor="#E6E6FF" class="petis-12-Bleu" height="19" width="281"><strong><font size="-1" face="Arial, Helvetica, sans-serif">Naes 
+      1.2</font></strong></td>
+    <td height="19" align="center" valign="middle" bgcolor="#F2F2FF" class="petis-12" width="108"><font size="-1" face="Arial, Helvetica, sans-serif"><img src="Pvert.gif" width="12" height="12"></font></td>
+    <td height="19" align="center" valign="middle" bgcolor="#F2F2FF" class="petis-12" width="543"><strong><font size="-1" face="Arial, Helvetica, sans-serif">&nbsp;</font></strong></td>
+  </tr>
+  <tr> 
+    <td bgcolor="#E6E6FF" class="petis-12-Bleu" height="19" width="281"><font size="-1" face="Arial, Helvetica, sans-serif"><b>Naes
+      2.0</b></font></td>
+    <td height="19" align="center" valign="middle" bgcolor="#F2F2FF" class="petis-12" width="108"><img border="0" src="PROGCT6.gif" width="12" height="12"></td>
+    <td height="19" align="center" valign="middle" bgcolor="#F2F2FF" class="petis-12" width="543">&nbsp;</td>
+  </tr>
+  <tr> 
+    <td bgcolor="#E6E6FF" class="petis-12-Bleu" height="19" width="281"><strong><font size="-1" face="Arial, Helvetica, sans-serif">Nvdi 
+      5.03</font></strong></td>
+    <td height="19" align="center" valign="middle" bgcolor="#F2F2FF" class="petis-12" width="108"><font size="-1" face="Arial, Helvetica, sans-serif"><img src="Pvert.gif" width="12" height="12"></font></td>
+    <td height="19" align="center" valign="middle" bgcolor="#F2F2FF" class="petis-12" width="543"><strong><font size="-1" face="Arial, Helvetica, sans-serif">&nbsp;</font></strong></td>
+  </tr>
+  <tr> 
+    <td bgcolor="#E6E6FF" class="petis-12-Bleu" height="19" width="281"><font size="-1" face="Arial, Helvetica, sans-serif"><b>Qed</b></font></td>
+    <td height="19" align="center" valign="middle" bgcolor="#F2F2FF" class="petis-12" width="108"><font size="-1" face="Arial, Helvetica, sans-serif"><img src="Pvert.gif" width="12" height="12"></font></td>
+    <td height="19" align="center" valign="middle" bgcolor="#F2F2FF" class="petis-12" width="543">&nbsp;</td>
+  </tr>
+  <tr> 
+    <td bgcolor="#E6E6FF" class="petis-12-Bleu" height="19" width="281"><strong><font size="-1" face="Arial, Helvetica, sans-serif">Sysinfo 
+      5.01</font></strong></td>
+    <td height="19" align="center" valign="middle" bgcolor="#F2F2FF" class="petis-12" width="108"><font size="-1" face="Arial, Helvetica, sans-serif"><img src="Pvert.gif" width="12" height="12"></font></td>
+    <td height="19" align="center" valign="middle" bgcolor="#F2F2FF" class="petis-12" width="543"><strong><font size="-1" face="Arial, Helvetica, sans-serif">&nbsp;</font></strong></td>
+  </tr>
+  <tr> 
+    <td bgcolor="#E6E6FF" class="petis-12-Bleu" height="19" width="281"><font size="-1" face="Arial, Helvetica, sans-serif"><b>Thing</b></font></td>
+    <td height="19" align="center" valign="middle" bgcolor="#F2F2FF" class="petis-12" width="108"><font size="-1" face="Arial, Helvetica, sans-serif"><img src="Pvert.gif" width="12" height="12"></font></td>
+    <td height="19" align="center" valign="middle" bgcolor="#F2F2FF" class="petis-12" width="543">&nbsp;</td>
+  </tr>
+  <tr> 
+    <td bgcolor="#E6E6FF" class="petis-12-Bleu" height="19" width="281"><strong><font size="-1" face="Arial, Helvetica, sans-serif">Twilight 
+      2.08</font></strong></td>
+    <td height="19" align="center" valign="middle" bgcolor="#F2F2FF" class="petis-12" width="108"><font size="-1" face="Arial, Helvetica, sans-serif"><img src="Pvert.gif" width="12" height="12"></font></td>
+    <td height="19" align="center" valign="middle" bgcolor="#F2F2FF" class="petis-12" width="543"><strong><font size="-1" face="Arial, Helvetica, sans-serif">&nbsp;</font></strong></td>
+  </tr>
+  <tr> 
+    <td bgcolor="#E6E6FF" class="petis-12-Bleu" height="21" width="281"><strong><font size="-1" face="Arial, Helvetica, sans-serif">Ultimate 
+Virus Killer 8.2</font></strong></td>
+    <td height="21" align="center" valign="middle" bgcolor="#F2F2FF" class="petis-12" width="108"><font size="-1" face="Arial, Helvetica, sans-serif"><img src="Pvert.gif" width="12" height="12"></font></td>
+    <td height="21" align="center" valign="middle" bgcolor="#F2F2FF" class="petis-12" width="543"><div align="left"><strong></strong></div></td>
+  </tr>
+  <tr> 
+    <td bgcolor="#E6E6FF" class="petis-12-Bleu" height="21" width="281"><strong><font size="-1" face="Arial, Helvetica, sans-serif">Xboot 
+      3.10</font></strong></td>
+    <td height="21" align="center" valign="middle" bgcolor="#F2F2FF" class="petis-12" width="108"><font size="-1" face="Arial, Helvetica, sans-serif"><img src="Pjaune.gif" width="12" height="12"></font></td>
+    <td height="21" align="center" valign="middle" bgcolor="#F2F2FF" class="petis-12" width="543"> 
+      <div align="left"><strong><font size="-1" face="Arial, Helvetica, sans-serif">La 
+        création de jeux pose problème, gros probl&egrave;mes avec quelques HD</font></strong></div></td>
+  </tr>
+  <tr> 
+    <td height="21" align="center" valign="top" bgcolor="#CCCCFF" class="petis-12" width="281"><div align="left" class="grand-titre-2"><strong><font face="Arial, Helvetica, sans-serif">PAO</font></strong></div></td>
+    <td height="21" align="center" valign="middle" bgcolor="#CCCCFF" class="grand-titre-2" width="108"><strong><font face="Arial, Helvetica, sans-serif">Test</font></strong></td>
+    <td height="21" align="center" valign="middle" bgcolor="#CCCCFF" class="grand-titre-2" width="543"><strong><font face="Arial, Helvetica, sans-serif">Solution</font></strong></td>
+  </tr>
+  <tr> 
+    <td width=281 bgcolor="#E6E6FF" class="petis-12-Bleu" x:str="Calamus SL " height="21"><strong><font size="-1" face="Arial, Helvetica, sans-serif">Calamus 
+      SL </font></strong></td>
+    <td height="21" align="center" valign="middle" bgcolor="#F2F2FF" class="petis-12" width="108"><font size="-1" face="Arial, Helvetica, sans-serif"><img src="Pvert.gif" width="12" height="12"></font></td>
+    <td height="21" align="center" valign="middle" bgcolor="#F2F2FF" class="petis-12" width="543"> 
+      <div align="left"><strong><font size="-1" face="Arial, Helvetica, sans-serif">En 
+        256 couleurs, utiliser le FALCON8.PRG patché de la CT2</font></strong></div></td>
+  </tr>
+  <tr> 
+    <td bgcolor="#E6E6FF" class="petis-12-Bleu" height="19" width="281"><strong><font size="-1" face="Arial, Helvetica, sans-serif">Da's 
+      Layout 5.304</font></strong></td>
+    <td height="19" align="center" valign="middle" bgcolor="#F2F2FF" class="petis-12" width="108"><font size="-1" face="Arial, Helvetica, sans-serif"><img src="Pvert.gif" width="12" height="12"></font></td>
+    <td height="19" align="center" valign="middle" bgcolor="#F2F2FF" class="petis-12" width="543"><strong><font size="-1" face="Arial, Helvetica, sans-serif">&nbsp;</font></strong></td>
+  </tr>
+  <tr> 
+    <td bgcolor="#E6E6FF" class="petis-12-Bleu" height="19" width="281"><strong><font size="-1" face="Arial, Helvetica, sans-serif">PPM 
+      2.1</font></strong></td>
+    <td height="19" align="center" valign="middle" bgcolor="#F2F2FF" class="petis-12" width="108"><font size="-1" face="Arial, Helvetica, sans-serif"><img src="Pvert.gif" width="12" height="12"></font></td>
+    <td height="19" align="center" valign="middle" bgcolor="#F2F2FF" class="petis-12" width="543"><strong><font size="-1" face="Arial, Helvetica, sans-serif">&nbsp;</font></strong></td>
+  </tr>
+  <tr> 
+    <td bgcolor="#E6E6FF" class="petis-12-Bleu" height="21" width="281"><strong><font size="-1" face="Arial, Helvetica, sans-serif">Type 
+      Art 1B6</font></strong></td>
+    <td height="21" align="center" valign="middle" bgcolor="#F2F2FF" class="petis-12" width="108"><font size="-1" face="Arial, Helvetica, sans-serif"><img src="Pvert.gif" width="12" height="12"></font></td>
+    <td height="21" align="center" valign="middle" bgcolor="#F2F2FF" class="petis-12" width="543"><div align="left"><strong></strong></div></td>
+  </tr>
+  <tr> 
+    <td height="21" align="center" valign="top" bgcolor="#CCCCFF" class="petis-12" width="281"><div align="left" class="grand-titre-2"><strong><font face="Arial, Helvetica, sans-serif">Communication 
+        - Internet</font></strong></div></td>
+    <td height="21" align="center" valign="middle" bgcolor="#CCCCFF" class="grand-titre-2" width="108"><strong><font face="Arial, Helvetica, sans-serif">Test</font></strong></td>
+    <td height="21" align="center" valign="middle" bgcolor="#CCCCFF" class="grand-titre-2" width="543"><strong><font face="Arial, Helvetica, sans-serif">Solution</font></strong></td>
+  </tr>
+  <tr> 
+    <td height="21" align="center" valign="top" bgcolor="#E6E6FF" class="petis-12" width="281"> 
+      <p align="left"><b><font face="Arial" size="2">aIRC</font></b></td>
+    <td height="21" align="center" valign="middle" bgcolor="#F2F2FF" class="petis-12" width="108"><font size="-1" face="Arial, Helvetica, sans-serif"><img src="Pvert.gif" width="12" height="12"></font></td>
+    <td height="21" align="center" valign="middle" bgcolor="#F2F2FF" class="petis-12" width="543">&nbsp;</td>
+  </tr>
+  <tr> 
+    <td height="21" align="center" valign="top" bgcolor="#E6E6FF" class="petis-12" width="281"> 
+      <p align="left"><b><font face="Arial" size="2">AtarICQ</font></b></td>
+    <td height="21" align="center" valign="middle" bgcolor="#F2F2FF" class="petis-12" width="108"><font size="-1" face="Arial, Helvetica, sans-serif"><img src="Pvert.gif" width="12" height="12"></font></td>
+    <td height="21" align="center" valign="middle" bgcolor="#F2F2FF" class="petis-12" width="543">&nbsp;</td>
+  </tr>
+  <tr> 
+    <td height="21" align="center" valign="top" bgcolor="#E6E6FF" class="petis-12" width="281"> 
+      <div align="left" class="petis-12-Bleu"><font size="-1" face="Arial, Helvetica, sans-serif"><strong>Cab 
+        2.8 </strong></font></div></td>
+    <td height="21" align="center" valign="middle" bgcolor="#F2F2FF" class="petis-12" width="108"><font size="-1" face="Arial, Helvetica, sans-serif"><img src="Pvert.gif" width="12" height="12"></font></td>
+    <td height="21" align="center" valign="middle" bgcolor="#F2F2FF" class="petis-12" width="543"><font size="-1" face="Arial, Helvetica, sans-serif">&nbsp;</font></td>
+  </tr>
+  <tr> 
+    <td height="21" align="center" valign="top" bgcolor="#E6E6FF" class="petis-12" width="281"> 
+      <div align="left" class="petis-12-Bleu"><font size="-1" face="Arial, Helvetica, sans-serif"><strong>Coma 
+        4.90 </strong></font></div></td>
+    <td height="21" align="center" valign="middle" bgcolor="#F2F2FF" class="petis-12" width="108"><font size="-1" face="Arial, Helvetica, sans-serif"><img src="Pvert.gif" width="12" height="12"></font></td>
+    <td height="21" align="center" valign="middle" bgcolor="#F2F2FF" class="petis-12" width="543">&nbsp;</td>
+  </tr>
+  <tr> 
+    <td height="21" align="center" valign="top" bgcolor="#E6E6FF" class="petis-12" width="281"> 
+      <div align="left" class="petis-12-Bleu"><font size="-1" face="Arial, Helvetica, sans-serif"><strong>Highwire</strong></font></div></td>
+    <td height="21" align="center" valign="middle" bgcolor="#F2F2FF" class="petis-12" width="108"><font size="-1" face="Arial, Helvetica, sans-serif"><img src="Pvert.gif" width="12" height="12"></font></td>
+    <td height="21" align="center" valign="middle" bgcolor="#F2F2FF" class="petis-12" width="543">&nbsp;</td>
+  </tr>
+  <tr>
+    <td height="21" align="center" valign="top" bgcolor="#E6E6FF" class="petis-12" width="281"> 
+      <div align="left" class="petis-12-Bleu"><font size="-1" face="Arial, Helvetica, sans-serif"><strong>Starcall 
+        4.2</strong></font></div></td>
+    <td height="21" align="center" valign="middle" bgcolor="#F2F2FF" class="petis-12" width="108"><font size="-1" face="Arial, Helvetica, sans-serif"><img src="Pvert.gif" width="12" height="12"></font></td>
+    <td height="21" align="center" valign="middle" bgcolor="#F2F2FF" class="petis-12" width="543">&nbsp;</td>
+  </tr>
+  <tr> 
+    <td height="21" align="center" valign="top" bgcolor="#E6E6FF" class="petis-12" width="281"> 
+      <div align="left" class="petis-12-Bleu"><font size="-1" face="Arial, Helvetica, sans-serif"><strong>Wensuite 
+        3.30c</strong></font></div></td>
+    <td height="21" align="center" valign="middle" bgcolor="#F2F2FF" class="petis-12" width="108"><font size="-1" face="Arial, Helvetica, sans-serif"><img src="Pvert.gif" width="12" height="12"></font></td>
+    <td height="21" align="center" valign="middle" bgcolor="#F2F2FF" class="petis-12" width="543">&nbsp;</td>
+  </tr>
+  <tr> 
+    <td height="21" align="center" valign="top" bgcolor="#CCCCFF" class="grand-titre-2" width="281"><div align="left"><strong><font face="Arial, Helvetica, sans-serif">Programmation</font></strong></div></td>
+    <td height="21" align="center" valign="middle" bgcolor="#CCCCFF" class="grand-titre-2" width="108"><strong><font face="Arial, Helvetica, sans-serif">Test</font></strong></td>
+    <td height="21" align="center" valign="middle" bgcolor="#CCCCFF" class="grand-titre-2" width="543"><strong><font face="Arial, Helvetica, sans-serif">Solution</font></strong></td>
+  </tr>
+  <tr> 
+    <td width=281 bgcolor="#E6E6FF" class="petis-12-Bleu" height="19"><strong><font size="-1" face="Arial, Helvetica, sans-serif">Assemble 
+      1.0</font></strong></td>
+    <td height="19" align="center" valign="middle" bgcolor="#F2F2FF" class="petis-12" width="108"><font size="-1" face="Arial, Helvetica, sans-serif"><img src="Pvert.gif" width="12" height="12"></font></td>
+    <td height="19" align="center" valign="middle" bgcolor="#F2F2FF" class="petis-12" width="543"><strong><font size="-1" face="Arial, Helvetica, sans-serif">&nbsp;</font></strong></td>
+  </tr>
+  <tr> 
+    <td bgcolor="#E6E6FF" class="petis-12-Bleu" height="19" width="281"><font size="-1" face="Arial, Helvetica, sans-serif"><b>AmonST
+      / MonST</b></font></td>
+    <td height="19" align="center" valign="middle" bgcolor="#F2F2FF" class="petis-12" width="108"><font size="-1" face="Arial, Helvetica, sans-serif"><img src="Pvert.gif" width="12" height="12"></font></td>
+    <td height="19" align="center" valign="middle" bgcolor="#F2F2FF" class="petis-12" width="543"><strong><font size="-1" face="Arial, Helvetica, sans-serif">Version
+      patchée : <a class="0" href="http://www.janthomas.f2s.com/files/amon030.zip">http://www.janthomas.f2s.com/files/amon030.zip</a></font></strong></td>
+  </tr>
+  <tr> 
+    <td bgcolor="#E6E6FF" class="petis-12-Bleu" height="19" width="281"><strong><font size="-1" face="Arial, Helvetica, sans-serif">Devpack
+      ST 3.10</font></strong></td>
+    <td height="19" align="center" valign="middle" bgcolor="#F2F2FF" class="petis-12" width="108"><font size="-1" face="Arial, Helvetica, sans-serif"><img src="Pvert.gif" width="12" height="12"></font></td>
+    <td height="19" align="center" valign="middle" bgcolor="#F2F2FF" class="petis-12" width="543">&nbsp;</td>
+  </tr>
+  <tr> 
+    <td bgcolor="#E6E6FF" class="petis-12-Bleu" height="19" width="281"><strong><font size="-1" face="Arial, Helvetica, sans-serif">Devpack 
+      56 1.0</font></strong></td>
+    <td height="19" align="center" valign="middle" bgcolor="#F2F2FF" class="petis-12" width="108"><font size="-1" face="Arial, Helvetica, sans-serif"><img src="Pvert.gif" width="12" height="12"></font></td>
+    <td height="19" align="center" valign="middle" bgcolor="#F2F2FF" class="petis-12" width="543"><strong><font size="-1" face="Arial, Helvetica, sans-serif">&nbsp;</font></strong></td>
+  </tr>
+  <tr> 
+    <td bgcolor="#E6E6FF" class="petis-12-Bleu" height="19" width="281"><strong><font size="-1" face="Arial, Helvetica, sans-serif">DSP 
+      Debug 1.06</font></strong></td>
+    <td height="19" align="center" valign="middle" bgcolor="#F2F2FF" class="petis-12" width="108"><font size="-1" face="Arial, Helvetica, sans-serif"><img src="Pvert.gif" width="12" height="12"></font></td>
+    <td height="19" align="center" valign="middle" bgcolor="#F2F2FF" class="petis-12" width="543"><strong><font size="-1" face="Arial, Helvetica, sans-serif">&nbsp;</font></strong></td>
+  </tr>
+  <tr> 
+    <td bgcolor="#E6E6FF" class="petis-12-Bleu" height="19" width="281"><strong><font size="-1" face="Arial, Helvetica, sans-serif">Eikona 
+      2.04</font></strong></td>
+    <td height="19" align="center" valign="middle" bgcolor="#F2F2FF" class="petis-12" width="108"><font size="-1" face="Arial, Helvetica, sans-serif"><img src="Pvert.gif" width="12" height="12"></font></td>
+    <td height="19" align="center" valign="middle" bgcolor="#F2F2FF" class="petis-12" width="543"><strong><font size="-1" face="Arial, Helvetica, sans-serif">&nbsp;</font></strong></td>
+  </tr>
+  <tr> 
+    <td bgcolor="#E6E6FF" class="petis-12-Bleu" height="21" width="281"><strong><font size="-1" face="Arial, Helvetica, sans-serif">Icon 
+      Master 1.02</font></strong></td>
+    <td height="21" align="center" valign="middle" bgcolor="#F2F2FF" class="petis-12" width="108"><font size="-1" face="Arial, Helvetica, sans-serif"><img src="Pjaune.gif" width="12" height="12"></font></td>
+    <td height="21" align="center" valign="middle" bgcolor="#F2F2FF" class="petis-12" width="543"> 
+      <div align="left"><strong><font size="-1" face="Arial, Helvetica, sans-serif">problème 
+        au moment de quitter le programme</font></strong></div></td>
+  </tr>
+  <tr> 
+    <td bgcolor="#E6E6FF" class="petis-12-Bleu" height="19" width="281"><strong><font size="-1" face="Arial, Helvetica, sans-serif">Interface 
+      2.33</font></strong></td>
+    <td height="19" align="center" valign="middle" bgcolor="#F2F2FF" class="petis-12" width="108"><font size="-1" face="Arial, Helvetica, sans-serif"><img src="Pvert.gif" width="12" height="12"></font></td>
+    <td height="19" align="center" valign="middle" bgcolor="#F2F2FF" class="petis-12" width="543"><strong><font size="-1" face="Arial, Helvetica, sans-serif">&nbsp;</font></strong></td>
+  </tr>
+  <tr> 
+    <td bgcolor="#E6E6FF" class="petis-12-Bleu" height="19" width="281"><strong><font size="-1" face="Arial, Helvetica, sans-serif">Pure 
+      C 1.1</font></strong></td>
+    <td height="19" align="center" valign="middle" bgcolor="#F2F2FF" class="petis-12" width="108"><font size="-1" face="Arial, Helvetica, sans-serif"><img src="Pvert.gif" width="12" height="12"></font></td>
+    <td height="19" align="center" valign="middle" bgcolor="#F2F2FF" class="petis-12" width="543"><strong><font size="-1" face="Arial, Helvetica, sans-serif">&nbsp;</font></strong></td>
+  </tr>
+  <tr> 
+    <td bgcolor="#E6E6FF" class="petis-12-Bleu" height="19" width="281"><strong><font size="-1" face="Arial, Helvetica, sans-serif">Pure 
+      Profiler 1.0</font></strong></td>
+    <td height="19" align="center" valign="middle" bgcolor="#F2F2FF" class="petis-12" width="108"><font size="-1" face="Arial, Helvetica, sans-serif"><img src="Pvert.gif" width="12" height="12"></font></td>
+    <td height="19" align="center" valign="middle" bgcolor="#F2F2FF" class="petis-12" width="543"><strong><font size="-1" face="Arial, Helvetica, sans-serif">&nbsp;</font></strong></td>
+  </tr>
+  <tr> 
+    <td bgcolor="#E6E6FF" class="petis-12-Bleu" height="21" width="281"><strong><font size="-1" face="Arial, Helvetica, sans-serif">Ressource 
+      Master 3.11</font></strong></td>
+    <td height="21" align="center" valign="middle" bgcolor="#F2F2FF" class="petis-12" width="108"><font size="-1" face="Arial, Helvetica, sans-serif"><img src="Pjaune.gif" width="12" height="12"></font></td>
+    <td height="21" align="center" valign="middle" bgcolor="#F2F2FF" class="petis-12" width="543"> 
+      <div align="left"><strong><font size="-1" face="Arial, Helvetica, sans-serif">problème 
+        au moment de quitter le programme</font></strong></div></td>
+  </tr>
+  <tr> 
+    <td bgcolor="#E6E6FF" class="petis-12-Bleu" height="21" width="281"><strong><font size="-1" face="Arial, Helvetica, sans-serif">Zoom 
+      1.0</font></strong></td>
+    <td height="21" align="center" valign="middle" bgcolor="#F2F2FF" class="petis-12" width="108"><font size="-1" face="Arial, Helvetica, sans-serif"><img src="Pvert.gif" width="12" height="12"></font></td>
+    <td height="21" align="center" valign="middle" bgcolor="#F2F2FF" class="petis-12" width="543"> 
+      <div align="left" class="petis-12-Bleu"><strong><font face="Arial, Helvetica, sans-serif" size="-1">le 
+cache doit &ecirc;tre actif en permanence (option du boot CPX CT60) </font> 
+
+
+
+
+</strong></div></td>
+  </tr>
+  <tr> 
+    <td colspan="3" align="right" valign="middle" bgcolor="#CCCCFF" height="39" width="936"><font color="#FFCC66" face="Arial, Helvetica, sans-serif">&nbsp;</font> 
+      <div align="left" class="grand-titre-2"></div></td>
+  </tr>
+</table>
+<table bordercolor="#C0C0C0" border="1">
+  <tr height="17" style="height:12.75pt">
+    <td height="17" class="xl22" width="163" style="height:12.75pt;width:122pt"></td>
+    <td class="xl26" width="116" style="width:87pt">&nbsp;</td>
+    <td class="xl22" width="57" style="width:43pt">&nbsp;</td>
+    <td class="xl22" width="110" style="width:83pt">&nbsp;</td>
+    <td class="xl22" width="34" style="width:26pt">&nbsp;</td>
+    <td class="xl22" width="88" style="width:66pt">&nbsp;</td>
+    <td class="xl22" width="316" style="width:237pt">&nbsp;</td>
+  </tr>
+  <tr height="17" style="height:12.75pt">
+    <td height="17" class="xl22" width="163" style="height:12.75pt;width:122pt"><b><font face="Arial" color="#FFFF00">JEUX
+      TESTES SUR CT60 (2004)</font></b></td>
+    <td class="xl26" width="116" style="width:87pt">&nbsp;</td>
+    <td class="xl22" width="57" style="width:43pt">&nbsp;</td>
+    <td class="xl22" width="110" style="width:83pt">&nbsp;</td>
+    <td class="xl22" width="34" style="width:26pt">&nbsp;</td>
+    <td class="xl22" width="88" style="width:66pt">&nbsp;</td>
+    <td class="xl22" width="316" style="width:237pt">&nbsp;</td>
+  </tr>
+  <tr height="17" style="height:12.75pt">
+    <td height="17" class="xl22" width="163" style="height:12.75pt;width:122pt"><b><font face="Arial" color="#FFFF00">Titre</font></b></td>
+    <td class="xl26" width="116" style="width:87pt"><b><font face="Arial" color="#FFFF00">Auteur</font></b></td>
+    <td class="xl22" width="57" style="width:43pt"><b><font face="Arial" color="#FFFF00">CT60</font></b></td>
+    <td class="xl22" width="110" style="width:83pt"><b><font face="Arial" color="#FFFF00">VGA</font></b></td>
+    <td class="xl22" width="34" style="width:26pt"><b><font class="font5" face="Arial" color="#FFFF00">RGB</font></b></td>
+    <td class="xl22" width="88" style="width:66pt"><b><font face="Arial" color="#FFFF00">Resolution</font></b></td>
+    <td class="xl22" width="316" style="width:237pt"><b><font face="Arial" color="#FFFF00">Effet</font></b></td>
+  </tr>
+  <tr height="17" style="height:12.75pt">
+    <td height="17" class="xl23" style="height:12.75pt"><font color="#FFFFFF" face="Arial"><b>Black
+      hole</b></font></td>
+    <td>&nbsp;</td>
+    <td class="xl23"><font color="#FFFFFF" face="Arial"><b>Non</b></font></td>
+    <td class="xl23"><font color="#FFFFFF" face="Arial"><b>Oui</b></font></td>
+    <td class="xl23"><font color="#FFFFFF" face="Arial"><b>Non</b></font></td>
+    <td class="xl23"><font color="#FFFFFF" face="Arial"><b>&nbsp;</b></font></td>
+    <td class="xl23"><font color="#FFFFFF" face="Arial"><b>&nbsp;</b></font></td>
+  </tr>
+  <tr height="17" style="height:12.75pt">
+    <td height="17" class="xl23" style="height:12.75pt"><font color="#FFFFFF" face="Arial"><b>Chuchu
+      Rocket</b></font></td>
+    <td><font color="#FFFFFF" face="Arial"><b>Reservoir Gods</b></font></td>
+    <td class="xl23"><font color="#FFFFFF" face="Arial"><b>Oui</b></font></td>
+    <td class="xl23"><font color="#FFFFFF" face="Arial"><b>Oui</b></font></td>
+    <td class="xl23"><font color="#FFFFFF" face="Arial"><b>Oui</b></font></td>
+    <td class="xl23"><font color="#FFFFFF" face="Arial"><b>&nbsp;</b></font></td>
+    <td class="xl23"><font color="#FFFFFF" face="Arial"><b>&nbsp;</b></font></td>
+  </tr>
+  <tr height="17" style="height:12.75pt">
+    <td height="17" class="xl23" style="height:12.75pt"><font color="#FFFFFF" face="Arial"><b>Crown
+      of Creation</b></font></td>
+    <td><font color="#FFFFFF" face="Arial"><b>Rebel soft</b></font></td>
+    <td class="xl23"><font color="#FFFFFF" face="Arial"><b>Oui</b></font></td>
+    <td class="xl23"><font color="#FFFFFF" face="Arial"><b>Oui</b></font></td>
+    <td class="xl23"><font color="#FFFFFF" face="Arial"><b>Oui</b></font></td>
+    <td class="xl23"><font color="#FFFFFF" face="Arial"><b>&nbsp;</b></font></td>
+    <td class="xl23"><font color="#FFFFFF" face="Arial"><b>&nbsp;</b></font></td>
+  </tr>
+  <tr height="17" style="height:12.75pt">
+    <td height="17" class="xl23" style="height:12.75pt"><font color="#FFFFFF" face="Arial"><b>Corsair</b></font></td>
+    <td><font color="#FFFFFF" face="Arial"><b>Impulse</b></font></td>
+    <td class="xl23"><font color="#FFFFFF" face="Arial"><b>Oui</b></font></td>
+    <td class="xl23"><font color="#FFFFFF" face="Arial"><b>Oui</b></font></td>
+    <td class="xl23"><font color="#FFFFFF" face="Arial"><b>Oui</b></font></td>
+    <td class="xl23"><font color="#FFFFFF" face="Arial"><b>&nbsp;</b></font></td>
+    <td class="xl23"><font color="#FFFFFF" face="Arial"><b>&nbsp;</b></font></td>
+  </tr>
+  <tr height="17" style="height:12.75pt">
+    <td height="17" class="xl24" style="height:12.75pt"><font class="font6" color="#FFFFFF" face="Arial"><b>Evolution
+      (Dino Dudes)</b></font></td>
+    <td><font class="font6" color="#FFFFFF" face="Arial"><b>Imagitec production</b></font></td>
+    <td class="xl23"><font color="#FFFFFF" face="Arial"><b>Oui</b></font></td>
+    <td class="xl23"><font color="#FFFFFF" face="Arial"><b>Bug graph, léger</b></font></td>
+    <td class="xl23"><font color="#FFFFFF" face="Arial"><b>Oui</b></font></td>
+    <td class="xl23"><font color="#FFFFFF" face="Arial"><b>&nbsp;</b></font></td>
+    <td class="xl23"><font color="#FFFFFF" face="Arial"><b>&nbsp;</b></font></td>
+  </tr>
+  <tr height="17" style="height:12.75pt">
+    <td height="17" class="xl23" style="height:12.75pt"><font color="#FFFFFF" face="Arial"><b>Dream</b></font></td>
+    <td><font color="#FFFFFF" face="Arial"><b>Digital illusion</b></font></td>
+    <td class="xl23"><font color="#FFFFFF" face="Arial"><b>Non</b></font></td>
+    <td class="xl23"><font color="#FFFFFF" face="Arial"><b>&nbsp;</b></font></td>
+    <td class="xl23"><font color="#FFFFFF" face="Arial"><b>&nbsp;</b></font></td>
+    <td class="xl23"><font color="#FFFFFF" face="Arial"><b>&nbsp;</b></font></td>
+    <td class="xl23"><font color="#FFFFFF" face="Arial"><b>&nbsp;</b></font></td>
+  </tr>
+  <tr height="17" style="height:12.75pt">
+    <td height="17" class="xl23" style="height:12.75pt"><font color="#FFFFFF" face="Arial"><b>Doom</b></font></td>
+    <td><font class="font6" color="#FFFFFF" face="Arial"><b>Patrice Mandin</b></font></td>
+    <td class="xl23"><font color="#FFFFFF" face="Arial"><b>Oui</b></font></td>
+    <td class="xl23"><font color="#FFFFFF" face="Arial"><b>&nbsp;</b></font></td>
+    <td class="xl23"><font color="#FFFFFF" face="Arial"><b>&nbsp;</b></font></td>
+    <td class="xl23"><font color="#FFFFFF" face="Arial"><b>&nbsp;</b></font></td>
+    <td class="xl25"><font color="#FFFFFF" face="Arial"><b>Instable, portage de
+      la librairie SDL toujours en cour</b></font></td>
+  </tr>
+  <tr height="17" style="height:12.75pt">
+    <td height="17" class="xl23" style="height:12.75pt"><font color="#FFFFFF" face="Arial"><b>Doom
+      2</b></font></td>
+    <td><font class="font6" color="#FFFFFF" face="Arial"><b>Patrice Mandin</b></font></td>
+    <td class="xl23"><font color="#FFFFFF" face="Arial"><b>Oui</b></font></td>
+    <td class="xl23"><font color="#FFFFFF" face="Arial"><b>&nbsp;</b></font></td>
+    <td class="xl23"><font color="#FFFFFF" face="Arial"><b>&nbsp;</b></font></td>
+    <td class="xl23"><font color="#FFFFFF" face="Arial"><b>&nbsp;</b></font></td>
+    <td class="xl25"><font color="#FFFFFF" face="Arial"><b>Instable, portage de
+      la librairie SDL toujours en cour</b></font></td>
+  </tr>
+  <tr height="17" style="height:12.75pt">
+    <td height="17" class="xl23" style="height:12.75pt"><font color="#FFFFFF" face="Arial"><b>Double
+      Bobble</b></font></td>
+    <td><font color="#FFFFFF" face="Arial"><b>Reservoir Gods</b></font></td>
+    <td class="xl23"><font color="#FFFFFF" face="Arial"><b>Non</b></font></td>
+    <td class="xl23"><font color="#FFFFFF" face="Arial"><b>&nbsp;</b></font></td>
+    <td class="xl23"><font color="#FFFFFF" face="Arial"><b>&nbsp;</b></font></td>
+    <td class="xl23"><font color="#FFFFFF" face="Arial"><b>&nbsp;</b></font></td>
+    <td class="xl23"><font color="#FFFFFF" face="Arial"><b>&nbsp;</b></font></td>
+  </tr>
+  <tr height="17" style="height:12.75pt">
+    <td height="17" class="xl24" style="height:12.75pt"><font class="font6" color="#FFFFFF" face="Arial"><b>Dynabuster</b></font></td>
+    <td><font class="font6" color="#FFFFFF" face="Arial"><b>Scynacore</b></font></td>
+    <td class="xl23"><font color="#FFFFFF" face="Arial"><b>Non</b></font></td>
+    <td class="xl23"><font color="#FFFFFF" face="Arial"><b>&nbsp;</b></font></td>
+    <td class="xl23"><font color="#FFFFFF" face="Arial"><b>&nbsp;</b></font></td>
+    <td class="xl23"><font color="#FFFFFF" face="Arial"><b>&nbsp;</b></font></td>
+    <td class="xl23"><font color="#FFFFFF" face="Arial"><b>&nbsp;</b></font></td>
+  </tr>
+  <tr height="17" style="height:12.75pt">
+    <td height="17" class="xl23" style="height:12.75pt"><font color="#FFFFFF" face="Arial"><b>Enemy
+      War II</b></font></td>
+    <td><font color="#FFFFFF" face="Arial"><b>Markus Binder</b></font></td>
+    <td class="xl23"><font color="#FFFFFF" face="Arial"><b>Oui</b></font></td>
+    <td class="xl23"><font color="#FFFFFF" face="Arial"><b>Oui</b></font></td>
+    <td class="xl23"><font color="#FFFFFF" face="Arial"><b>&nbsp;</b></font></td>
+    <td class="xl23"><font color="#FFFFFF" face="Arial"><b>800x600 TC</b></font></td>
+    <td class="xl23"><font color="#FFFFFF" face="Arial"><b>&nbsp;</b></font></td>
+  </tr>
+  <tr height="17" style="height:12.75pt">
+    <td height="17" class="xl23" style="height:12.75pt"><font color="#FFFFFF" face="Arial"><b>Godboy</b></font></td>
+    <td><font color="#FFFFFF" face="Arial"><b>Reservoir Gods</b></font></td>
+    <td class="xl23"><font color="#FFFFFF" face="Arial"><b>Non</b></font></td>
+    <td class="xl23"><font color="#FFFFFF" face="Arial"><b>&nbsp;</b></font></td>
+    <td class="xl23"><font color="#FFFFFF" face="Arial"><b>&nbsp;</b></font></td>
+    <td class="xl23"><font color="#FFFFFF" face="Arial"><b>&nbsp;</b></font></td>
+    <td class="xl23"><font color="#FFFFFF" face="Arial"><b>&nbsp;</b></font></td>
+  </tr>
+  <tr height="19" style="mso-height-source:userset;height:14.85pt">
+    <td height="19" class="xl23" style="height:14.85pt"><font color="#FFFFFF" face="Arial"><b>Godlenes</b></font></td>
+    <td><font color="#FFFFFF" face="Arial"><b>Reservoir Gods</b></font></td>
+    <td class="xl23"><font color="#FFFFFF" face="Arial"><b>Non</b></font></td>
+    <td class="xl23"><font color="#FFFFFF" face="Arial"><b>&nbsp;</b></font></td>
+    <td class="xl23"><font color="#FFFFFF" face="Arial"><b>&nbsp;</b></font></td>
+    <td class="xl23"><font color="#FFFFFF" face="Arial"><b>&nbsp;</b></font></td>
+    <td class="xl23"><font color="#FFFFFF" face="Arial"><b>&nbsp;</b></font></td>
+  </tr>
+  <tr height="17" style="height:12.75pt">
+    <td height="17" class="xl23" style="height:12.75pt"><font color="#FFFFFF" face="Arial"><b>Heretic</b></font></td>
+    <td><font color="#FFFFFF" face="Arial"><b>Patrice Mandin</b></font></td>
+    <td class="xl23"><font color="#FFFFFF" face="Arial"><b>Oui</b></font></td>
+    <td class="xl23"><font color="#FFFFFF" face="Arial"><b>Oui</b></font></td>
+    <td class="xl23"><font color="#FFFFFF" face="Arial"><b>Oui</b></font></td>
+    <td class="xl23"><font color="#FFFFFF" face="Arial"><b>&nbsp;</b></font></td>
+    <td class="xl25"><font color="#FFFFFF" face="Arial"><b>Instable, portage de
+      la librairie SDL toujours en cour</b></font></td>
+  </tr>
+  <tr height="17" style="height:12.75pt">
+    <td height="17" class="xl23" style="height:12.75pt"><font color="#FFFFFF" face="Arial"><b>Heretic
+      2</b></font></td>
+    <td><font color="#FFFFFF" face="Arial"><b>Patrice Mandin</b></font></td>
+    <td class="xl23"><font color="#FFFFFF" face="Arial"><b>Oui</b></font></td>
+    <td class="xl23"><font color="#FFFFFF" face="Arial"><b>&nbsp;</b></font></td>
+    <td class="xl23"><font color="#FFFFFF" face="Arial"><b>&nbsp;</b></font></td>
+    <td class="xl23"><font color="#FFFFFF" face="Arial"><b>&nbsp;</b></font></td>
+    <td class="xl25"><font color="#FFFFFF" face="Arial"><b>Instable, portage de
+      la librairie SDL toujours en cour</b></font></td>
+  </tr>
+  <tr height="17" style="height:12.75pt">
+    <td height="17" class="xl23" style="height:12.75pt"><font color="#FFFFFF" face="Arial"><b>Hexen</b></font></td>
+    <td><font color="#FFFFFF" face="Arial"><b>Patrice Mandin</b></font></td>
+    <td class="xl23"><font color="#FFFFFF" face="Arial"><b>Oui</b></font></td>
+    <td class="xl23"><font color="#FFFFFF" face="Arial"><b>&nbsp;</b></font></td>
+    <td class="xl23"><font color="#FFFFFF" face="Arial"><b>&nbsp;</b></font></td>
+    <td class="xl23"><font color="#FFFFFF" face="Arial"><b>&nbsp;</b></font></td>
+    <td class="xl25"><font color="#FFFFFF" face="Arial"><b>Instable, portage de
+      la librairie SDL toujours en cour</b></font></td>
+  </tr>
+  <tr height="17" style="height:12.75pt">
+    <td height="17" class="xl23" style="height:12.75pt"><font color="#FFFFFF" face="Arial"><b>Hexen
+      2</b></font></td>
+    <td><font color="#FFFFFF" face="Arial"><b>Patrice Mandin</b></font></td>
+    <td class="xl23"><font color="#FFFFFF" face="Arial"><b>Oui</b></font></td>
+    <td class="xl23"><font color="#FFFFFF" face="Arial"><b>&nbsp;</b></font></td>
+    <td class="xl23"><font color="#FFFFFF" face="Arial"><b>&nbsp;</b></font></td>
+    <td class="xl23"><font color="#FFFFFF" face="Arial"><b>&nbsp;</b></font></td>
+    <td class="xl25"><font color="#FFFFFF" face="Arial"><b>Instable, portage de
+      la librairie SDL toujours en cour</b></font></td>
+  </tr>
+  <tr height="17" style="height:12.75pt">
+    <td height="17" class="xl23" style="height:12.75pt"><font color="#FFFFFF" face="Arial"><b>Impulse</b></font></td>
+    <td><font class="font6" color="#FFFFFF" face="Arial"><b>Duranlik</b></font></td>
+    <td class="xl23"><font color="#FFFFFF" face="Arial"><b>Non</b></font></td>
+    <td class="xl23"><font color="#FFFFFF" face="Arial"><b>&nbsp;</b></font></td>
+    <td class="xl23"><font color="#FFFFFF" face="Arial"><b>&nbsp;</b></font></td>
+    <td class="xl23"><font color="#FFFFFF" face="Arial"><b>&nbsp;</b></font></td>
+    <td class="xl23"><font color="#FFFFFF" face="Arial"><b>&nbsp;</b></font></td>
+  </tr>
+  <tr height="17" style="height:12.75pt">
+    <td height="17" class="xl24" style="height:12.75pt"><font class="font6" color="#FFFFFF" face="Arial"><b>Ishar
+      I</b></font></td>
+    <td><font class="font6" color="#FFFFFF" face="Arial"><b>Silmarils</b></font></td>
+    <td class="xl23"><font color="#FFFFFF" face="Arial"><b>Non</b></font></td>
+    <td class="xl23"><font color="#FFFFFF" face="Arial"><b>&nbsp;</b></font></td>
+    <td class="xl23"><font color="#FFFFFF" face="Arial"><b>&nbsp;</b></font></td>
+    <td class="xl23"><font color="#FFFFFF" face="Arial"><b>&nbsp;</b></font></td>
+    <td class="xl23"><font color="#FFFFFF" face="Arial"><b>Plante dés une
+      conversation...</b></font></td>
+  </tr>
+  <tr height="17" style="height:12.75pt">
+    <td height="17" class="xl24" style="height:12.75pt"><font class="font6" color="#FFFFFF" face="Arial"><b>Ishar
+      II</b></font></td>
+    <td><font class="font6" color="#FFFFFF" face="Arial"><b>Silmarils</b></font></td>
+    <td class="xl23"><font color="#FFFFFF" face="Arial"><b>Non</b></font></td>
+    <td class="xl23"><font color="#FFFFFF" face="Arial"><b>&nbsp;</b></font></td>
+    <td class="xl23"><font color="#FFFFFF" face="Arial"><b>&nbsp;</b></font></td>
+    <td class="xl23"><font color="#FFFFFF" face="Arial"><b>&nbsp;</b></font></td>
+    <td class="xl23"><font color="#FFFFFF" face="Arial"><b>&nbsp;</b></font></td>
+  </tr>
+  <tr height="17" style="height:12.75pt">
+    <td height="17" class="xl24" style="height:12.75pt"><font class="font6" color="#FFFFFF" face="Arial"><b>Ishar
+      III</b></font></td>
+    <td><font class="font6" color="#FFFFFF" face="Arial"><b>Silmarils</b></font></td>
+    <td class="xl23"><font color="#FFFFFF" face="Arial"><b>Oui</b></font></td>
+    <td class="xl23"><font color="#FFFFFF" face="Arial"><b>Oui</b></font></td>
+    <td class="xl23"><font color="#FFFFFF" face="Arial"><b>Oui</b></font></td>
+    <td class="xl23"><font color="#FFFFFF" face="Arial"><b>&nbsp;</b></font></td>
+    <td class="xl23"><font color="#FFFFFF" face="Arial"><b>&nbsp;</b></font></td>
+  </tr>
+  <tr height="17" style="height:12.75pt">
+    <td height="17" class="xl23" style="height:12.75pt"><font color="#FFFFFF" face="Arial"><b>Kart</b></font></td>
+    <td><font class="font6" color="#FFFFFF" face="Arial"><b>EXA team</b></font></td>
+    <td class="xl24"><font class="font6" color="#FFFFFF" face="Arial"><b>???</b></font></td>
+    <td class="xl23"><font color="#FFFFFF" face="Arial"><b>&nbsp;</b></font></td>
+    <td class="xl23"><font color="#FFFFFF" face="Arial"><b>&nbsp;</b></font></td>
+    <td class="xl23"><font color="#FFFFFF" face="Arial"><b>&nbsp;</b></font></td>
+    <td class="xl23"><font color="#FFFFFF" face="Arial"><b>&nbsp;</b></font></td>
+  </tr>
+  <tr height="17" style="height:12.75pt">
+    <td height="17" class="xl24" style="height:12.75pt"><font class="font6" color="#FFFFFF" face="Arial"><b>Lamazap</b></font></td>
+    <td><font color="#FFFFFF" face="Arial"><b>Jeff minter</b></font></td>
+    <td class="xl23"><font color="#FFFFFF" face="Arial"><b>Non</b></font></td>
+    <td class="xl23"><font color="#FFFFFF" face="Arial"><b>&nbsp;</b></font></td>
+    <td class="xl23"><font color="#FFFFFF" face="Arial"><b>&nbsp;</b></font></td>
+    <td class="xl23"><font color="#FFFFFF" face="Arial"><b>&nbsp;</b></font></td>
+    <td class="xl23"><font color="#FFFFFF" face="Arial"><b>&nbsp;</b></font></td>
+  </tr>
+  <tr height="17" style="height:12.75pt">
+    <td height="17" class="xl24" style="height:12.75pt"><font class="font6" color="#FFFFFF" face="Arial"><b>Moongame</b></font></td>
+    <td><font class="font6" color="#FFFFFF" face="Arial"><b>Gilles Audoly</b></font></td>
+    <td class="xl23"><font color="#FFFFFF" face="Arial"><b>Oui</b></font></td>
+    <td class="xl23"><font color="#FFFFFF" face="Arial"><b>Oui</b></font></td>
+    <td class="xl23"><font color="#FFFFFF" face="Arial"><b>Oui</b></font></td>
+    <td class="xl23"><font color="#FFFFFF" face="Arial"><b>640x480 256c</b></font></td>
+    <td class="xl23"><font color="#FFFFFF" face="Arial"><b>&nbsp;</b></font></td>
+  </tr>
+  <tr height="17" style="height:12.75pt">
+    <td height="17" class="xl24" style="height:12.75pt"><font class="font7" color="#FFFFFF" face="Arial"><b>Multibrique</b></font></td>
+    <td>&nbsp;</td>
+    <td class="xl23"><font color="#FFFFFF" face="Arial"><b>Non</b></font></td>
+    <td class="xl23"><font color="#FFFFFF" face="Arial"><b>&nbsp;</b></font></td>
+    <td class="xl23"><font color="#FFFFFF" face="Arial"><b>&nbsp;</b></font></td>
+    <td class="xl23"><font color="#FFFFFF" face="Arial"><b>&nbsp;</b></font></td>
+    <td class="xl23"><font color="#FFFFFF" face="Arial"><b>&nbsp;</b></font></td>
+  </tr>
+  <tr height="17" style="height:12.75pt">
+    <td height="17" class="xl24" style="height:12.75pt"><font class="font6" color="#FFFFFF" face="Arial"><b>Nethack</b></font></td>
+    <td><font color="#FFFFFF" face="Arial"><b>Windowing system</b></font></td>
+    <td class="xl23"><font color="#FFFFFF" face="Arial"><b>Oui</b></font></td>
+    <td class="xl23"><font color="#FFFFFF" face="Arial"><b>Oui</b></font></td>
+    <td class="xl23"><font color="#FFFFFF" face="Arial"><b>Oui</b></font></td>
+    <td class="xl24"><font class="font6" color="#FFFFFF" face="Arial"><b>NVDI</b></font></td>
+    <td class="xl23"><font color="#FFFFFF" face="Arial"><b>&nbsp;</b></font></td>
+  </tr>
+  <tr height="17" style="height:12.75pt">
+    <td height="17" class="xl24" style="height:12.75pt"><font class="font6" color="#FFFFFF" face="Arial"><b>Oxyd</b></font></td>
+    <td><font class="font6" color="#FFFFFF" face="Arial"><b>Meinoff Schneider</b></font></td>
+    <td class="xl23"><font color="#FFFFFF" face="Arial"><b>Oui</b></font></td>
+    <td class="xl23"><font color="#FFFFFF" face="Arial"><b>Oui</b></font></td>
+    <td class="xl23"><font color="#FFFFFF" face="Arial"><b>Oui</b></font></td>
+    <td class="xl23"><font color="#FFFFFF" face="Arial"><b>&nbsp;</b></font></td>
+    <td class="xl23"><font color="#FFFFFF" face="Arial"><b>Pas de son</b></font></td>
+  </tr>
+  <tr height="17" style="height:12.75pt">
+    <td height="17" class="xl24" style="height:12.75pt"><font color="#FFFFFF" face="Arial"><b>Oxyd
+      Magnum</b></font></td>
+    <td><font class="font6" color="#FFFFFF" face="Arial"><b>Meinoff Schneider</b></font></td>
+    <td class="xl23"><font color="#FFFFFF" face="Arial"><b>Oui</b></font></td>
+    <td class="xl23"><font color="#FFFFFF" face="Arial"><b>&nbsp;</b></font></td>
+    <td class="xl23"><font color="#FFFFFF" face="Arial"><b>&nbsp;</b></font></td>
+    <td class="xl23"><font color="#FFFFFF" face="Arial"><b>&nbsp;</b></font></td>
+    <td class="xl23"><font color="#FFFFFF" face="Arial"><b>Pas de son</b></font></td>
+  </tr>
+  <tr height="17" style="height:12.75pt">
+    <td height="17" class="xl23" style="height:12.75pt"><font color="#FFFFFF" face="Arial"><b>Quake</b></font></td>
+    <td><font class="font6" color="#FFFFFF" face="Arial"><b>Patrice Mandin</b></font></td>
+    <td class="xl23"><font color="#FFFFFF" face="Arial"><b>Oui</b></font></td>
+    <td class="xl23"><font color="#FFFFFF" face="Arial"><b>Oui</b></font></td>
+    <td class="xl23"><font color="#FFFFFF" face="Arial"><b>Oui</b></font></td>
+    <td class="xl23"><font color="#FFFFFF" face="Arial"><b>&nbsp;</b></font></td>
+    <td class="xl25"><font color="#FFFFFF" face="Arial"><b>Instable, portage de
+      la librairie SDL toujours en cour</b></font></td>
+  </tr>
+  <tr height="17" style="height:12.75pt">
+    <td height="17" class="xl23" style="height:12.75pt"><font color="#FFFFFF" face="Arial"><b>Radical
+      Race</b></font></td>
+    <td><font color="#FFFFFF" face="Arial"><b>Pentagon</b></font></td>
+    <td class="xl23"><font color="#FFFFFF" face="Arial"><b>Non</b></font></td>
+    <td class="xl23"><font color="#FFFFFF" face="Arial"><b>&nbsp;</b></font></td>
+    <td class="xl23"><font color="#FFFFFF" face="Arial"><b>&nbsp;</b></font></td>
+    <td class="xl23"><font color="#FFFFFF" face="Arial"><b>&nbsp;</b></font></td>
+    <td class="xl23"><font color="#FFFFFF" face="Arial"><b>Problème de mémoire</b></font></td>
+  </tr>
+  <tr height="17" style="height:12.75pt">
+    <td height="17" class="xl23" style="height:12.75pt"><font color="#FFFFFF" face="Arial"><b>Robinson
+      requiem</b></font></td>
+    <td><font class="font6" color="#FFFFFF" face="Arial"><b>Silmarils</b></font></td>
+    <td class="xl23"><font color="#FFFFFF" face="Arial"><b>Oui</b></font></td>
+    <td class="xl23"><font color="#FFFFFF" face="Arial"><b>Oui</b></font></td>
+    <td class="xl23"><font color="#FFFFFF" face="Arial"><b>Oui</b></font></td>
+    <td class="xl23"><font color="#FFFFFF" face="Arial"><b>&nbsp;</b></font></td>
+    <td class="xl23"><font color="#FFFFFF" face="Arial"><b>&nbsp;</b></font></td>
+  </tr>
+  <tr height="17" style="height:12.75pt">
+    <td height="17" class="xl23" style="height:12.75pt"><font color="#FFFFFF" face="Arial"><b>Stone
+      age</b></font></td>
+    <td><font color="#FFFFFF" face="Arial"><b>Soft Art</b></font></td>
+    <td class="xl23"><font color="#FFFFFF" face="Arial"><b>Oui</b></font></td>
+    <td class="xl23"><font color="#FFFFFF" face="Arial"><b>Oui</b></font></td>
+    <td class="xl23"><font color="#FFFFFF" face="Arial"><b>Oui</b></font></td>
+    <td class="xl23"><font color="#FFFFFF" face="Arial"><b>&nbsp;</b></font></td>
+    <td class="xl23"><font color="#FFFFFF" face="Arial"><b>&nbsp;</b></font></td>
+  </tr>
+  <tr height="17" style="height:12.75pt">
+    <td height="17" class="xl23" style="height:12.75pt"><font color="#FFFFFF" face="Arial"><b>Running</b></font></td>
+    <td><font class="font6" color="#FFFFFF" face="Arial"><b>RDT</b></font></td>
+    <td class="xl23"><font color="#FFFFFF" face="Arial"><b>Non</b></font></td>
+    <td class="xl23"><font color="#FFFFFF" face="Arial"><b>&nbsp;</b></font></td>
+    <td class="xl23"><font color="#FFFFFF" face="Arial"><b>&nbsp;</b></font></td>
+    <td class="xl23"><font color="#FFFFFF" face="Arial"><b>&nbsp;</b></font></td>
+    <td class="xl23"><font color="#FFFFFF" face="Arial"><b>Problème de mémoire</b></font></td>
+  </tr>
+  <tr height="17" style="height:12.75pt">
+    <td height="17" class="xl23" style="height:12.75pt"><font color="#FFFFFF" face="Arial"><b>Rosemary
+      Gem</b></font></td>
+    <td><font color="#FFFFFF" face="Arial"><b>Rajah Lone</b></font></td>
+    <td class="xl23"><font color="#FFFFFF" face="Arial"><b>Oui</b></font></td>
+    <td class="xl23"><font color="#FFFFFF" face="Arial"><b>&nbsp;</b></font></td>
+    <td class="xl23"><font color="#FFFFFF" face="Arial"><b>&nbsp;</b></font></td>
+    <td class="xl23"><font color="#FFFFFF" face="Arial"><b>&nbsp;</b></font></td>
+    <td class="xl23"><font color="#FFFFFF" face="Arial"><b>&nbsp;</b></font></td>
+  </tr>
+  <tr height="17" style="height:12.75pt">
+    <td height="17" class="xl23" style="height:12.75pt"><font color="#FFFFFF" face="Arial"><b>Space
+      fighter</b></font></td>
+    <td><font color="#FFFFFF" face="Arial"><b>Frontiere software</b></font></td>
+    <td class="xl23"><font color="#FFFFFF" face="Arial"><b>Non</b></font></td>
+    <td class="xl23"><font color="#FFFFFF" face="Arial"><b>&nbsp;</b></font></td>
+    <td class="xl23"><font color="#FFFFFF" face="Arial"><b>&nbsp;</b></font></td>
+    <td class="xl23"><font color="#FFFFFF" face="Arial"><b>&nbsp;</b></font></td>
+    <td class="xl23"><font color="#FFFFFF" face="Arial"><b>&nbsp;</b></font></td>
+  </tr>
+  <tr height="20" style="height:15.0pt">
+    <td height="20" class="xl25" style="height:15.0pt"><font color="#FFFFFF" face="Arial"><b>Teenage
+      Queen Reloaded</b></font></td>
+    <td><font color="#FFFFFF" face="Arial"><b>Rajah Lone/ERE</b></font></td>
+    <td class="xl23"><font color="#FFFFFF" face="Arial"><b>Oui</b></font></td>
+    <td class="xl23"><font color="#FFFFFF" face="Arial"><b>&nbsp;</b></font></td>
+    <td class="xl23"><font color="#FFFFFF" face="Arial"><b>&nbsp;</b></font></td>
+    <td class="xl23"><font color="#FFFFFF" face="Arial"><b>&nbsp;</b></font></td>
+    <td class="xl23"><font color="#FFFFFF" face="Arial"><b>&nbsp;</b></font></td>
+  </tr>
+  <tr height="17" style="height:12.75pt">
+    <td height="17" class="xl24" style="height:12.75pt"><font class="font6" color="#FFFFFF" face="Arial"><b>Tecknoball</b></font></td>
+    <td><font class="font6" color="#FFFFFF" face="Arial"><b>Ognibene Pascal</b></font></td>
+    <td class="xl23"><font color="#FFFFFF" face="Arial"><b>Oui</b></font></td>
+    <td class="xl23"><font color="#FFFFFF" face="Arial"><b>&nbsp;</b></font></td>
+    <td class="xl23"><font color="#FFFFFF" face="Arial"><b>&nbsp;</b></font></td>
+    <td class="xl23"><font color="#FFFFFF" face="Arial"><b>&nbsp;</b></font></td>
+    <td class="xl23"><font color="#FFFFFF" face="Arial"><b>&nbsp;</b></font></td>
+  </tr>
+  <tr height="17" style="height:12.75pt">
+    <td height="17" class="xl23" style="height:12.75pt"><font color="#FFFFFF" face="Arial"><b>Towers
+      II</b></font></td>
+    <td><font color="#FFFFFF" face="Arial"><b>JV Games</b></font></td>
+    <td class="xl23"><font color="#FFFFFF" face="Arial"><b>Oui/non</b></font></td>
+    <td class="xl23"><font color="#FFFFFF" face="Arial"><b>&nbsp;</b></font></td>
+    <td class="xl23"><font color="#FFFFFF" face="Arial"><b>&nbsp;</b></font></td>
+    <td class="xl23"><font color="#FFFFFF" face="Arial"><b>&nbsp;</b></font></td>
+    <td class="xl24"><font color="#FFFFFF" face="Arial"><b>Sauvegarde impossible</b></font></td>
+  </tr>
+  <tr height="17" style="height:12.75pt">
+    <td height="17" class="xl24" style="height:12.75pt"><font class="font6" color="#FFFFFF" face="Arial"><b>Transartica</b></font></td>
+    <td><font class="font6" color="#FFFFFF" face="Arial"><b>Silmarils</b></font></td>
+    <td class="xl23"><font color="#FFFFFF" face="Arial"><b>Non</b></font></td>
+    <td class="xl23"><font color="#FFFFFF" face="Arial"><b>&nbsp;</b></font></td>
+    <td class="xl23"><font color="#FFFFFF" face="Arial"><b>&nbsp;</b></font></td>
+    <td class="xl23"><font color="#FFFFFF" face="Arial"><b>&nbsp;</b></font></td>
+    <td class="xl23"><font color="#FFFFFF" face="Arial"><b>&nbsp;</b></font></td>
+  </tr>
+  <tr height="17" style="height:12.75pt">
+    <td height="17" class="xl23" style="height:12.75pt"><font color="#FFFFFF" face="Arial"><b>Zero5</b></font></td>
+    <td>&nbsp;</td>
+    <td class="xl23"><font color="#FFFFFF" face="Arial"><b>Non</b></font></td>
+    <td class="xl23"><font color="#FFFFFF" face="Arial"><b>&nbsp;</b></font></td>
+    <td class="xl23"><font color="#FFFFFF" face="Arial"><b>&nbsp;</b></font></td>
+    <td class="xl23"><font color="#FFFFFF" face="Arial"><b>&nbsp;</b></font></td>
+    <td class="xl23"><font color="#FFFFFF" face="Arial"><b>&nbsp;</b></font></td>
+  </tr>
+</table>
+</body>
+</html>

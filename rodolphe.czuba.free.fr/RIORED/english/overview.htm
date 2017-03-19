@@ -1,0 +1,281 @@
+<html>
+
+<head>
+<meta http-equiv="Content-Type"
+content="text/html; charset=iso-8859-1">
+<meta name="GENERATOR" content="Microsoft FrontPage 4.0">
+<title>RIORED Overview</title>
+</head>
+
+<body bgcolor="#000000" text="#FFFFFF" link="#4488FF"
+vlink="#FF0000">
+
+<p align="center">&nbsp;</p>
+
+<p align="center"><font color="#FF0000" size="7"><strong>RIORED
+PPC</strong></font></p>
+
+<blockquote>
+    <p align="center"><img src="../../com/barre.jpg" width="298"
+    height="4"></p>
+    <p align="center">&nbsp;</p>
+    <p align="center"><font color="#FFFF00" size="2">© June
+    2000, SILICON FRUIT / Rodolphe Czuba / Thierry Schembri</font></p>
+</blockquote>
+
+<blockquote>
+    <blockquote>
+        <p align="center" class="MsoNormal"><font color="#FF0000"
+        size="5">Please, try to not print on paper this page -
+        Save the planet !</font></p>
+        <p class="MsoNormal">&nbsp;</p>
+    </blockquote>
+    <p align="left" class="MsoNormal"><font color="#FFFF00"
+    size="5">ARCHITECTURE</font></p>
+</blockquote>
+
+<blockquote>
+    <blockquote>
+        <p class="MsoNormal"><img src="../RR_ARCHI.gif"
+        width="700" height="715"></p>
+    </blockquote>
+</blockquote>
+
+<blockquote>
+    <blockquote>
+        <p class="MsoNormal">&nbsp;</p>
+    </blockquote>
+    <p class="MsoNormal"><font color="#FFFF00" size="5">OVERVIEW</font></p>
+    <blockquote>
+        <p class="MsoNormal"><font color="#FFFF00" size="3">By
+        offering high performance, the RIORED motherboard
+        provides an easy, cost-effective solution for companies
+        developing high-performance products with LINUX and other
+        operating systems running with Power PC microprocessors
+        familly.</font><font color="#FFFFFF" size="3"><br>
+        <br>
+        RIORED motherboard is designed to use standard PC
+        components such as synchronous DRAM (SDRAM) DIMMs and PCI
+        32/64-Bits option cards.<br>
+        The RIORED offers four PCI 32-Bits/33MHz and two PCI
+        64-Bits/66MHz slots, one AGP slot, two IDE ports
+        (Ultra-DMA 66), four USB ports, and four PC-100 SDRAM
+        DIMMs providing access to up to 1 gigabytes of high
+        bandwidth interleaved memory. The mainboard contains the
+        IBM CPC710 chipset (north bridge) and the AMD VIPER
+        chipset (south Bridge).<br>
+        The CPC710 interfaces to the CPUs, main memory, FLASH
+        memory and the AGP and PCI buses.<br>
+        The VIPER interfaces to the IDE &amp; USB ports, the RTC,
+        Timers and INTerrupts engine, and the Power Management
+        system.<br>
+        The CPU is not on the mainboard, but on a daughterboard
+        by a SLOT1 type connector. RIORED has two of these
+        connectors. One or two daughtercards may be used for
+        uni-processor or dual-processor (SMP) configurations.<br>
+        <br>
+        In the early version of RIORED, each daughtercard
+        contains a 550 MHz PowerPC G3cx microprocessor
+        'SideWinder' from IBM. In the next versions, the clock
+        frequency of the G3cx may be increased up to 700 MHz.<br>
+        </font></p>
+    </blockquote>
+    <p class="MsoNormal"><font color="#FFFF00" size="5">HARDWARE
+    FEATURES</font></p>
+    <blockquote>
+        <p class="MsoNormal"><font color="#FFFFFF" size="3">-
+        RIORED mainboard supports one or two CPU daughtercards.
+        Each daughtercard contains one PowerPC G3cx
+        microprocessor operating at a speed of 550 MHz.<br>
+        - 64MB to 1GB memory by four interleaved sockets (used 2
+        by 2) consisting of 64 or 72-Bits (ECC) unbuffered SDRAM
+        168pins DIMMs. <br>
+        - Memory speed support of 100MHz (PC-100) for up to 800
+        MBytes/s.<br>
+        - 512KB of FLASH memory for the BIOS and SETUP.<br>
+        - Four 33MHz PCI-32 (32-Bits) slots with BURST transfers
+        at 133 MBytes/s.<br>
+        - Two 66MHz/3.3V PCI-64 (64-Bits) slots with BURST
+        transfers at 528 MBytes/s.<br>
+        - AGP (3.3V) bus support with onboard DMA capabilities. <br>
+        - PCI IDE for four devices (Ultra-DMA 66).<br>
+        - PCI USB for four onboard ports (1.5 &amp; 12Mbits/s).<br>
+        - I2C port to pilot a front panel LCD to show the system
+        information.<br>
+        - I2C port for geeks.<br>
+        - Time-of-year clock &amp; NVRAM (256Bytes) with 3V
+        lithium battery.<br>
+        - Interrupt management with clear distribution (not
+        shared int lines).<br>
+        - Power management with wake up capability from USB
+        events (keyboard / modem) and PCI cards (Ethernet).<br>
+        - Ambiant thermical sensor.<br>
+        </font></p>
+    </blockquote>
+    <p class="MsoNormal"><font color="#FFFF00" size="3">The
+    hardware is explained in the Riored Open Hardware Book
+    (ROHB).</font></p>
+    <p class="MsoNormal"><a href="../ROHB.pdf"><font face="Arial" size="4">ROHB.PDF -
+    337 KB - English</font></a></p>
+    <blockquote>
+        <p class="MsoNormal">&nbsp;</p>
+    </blockquote>
+    <p class="MsoNormal"><font color="#FFFF00" size="5">SOFTWARE
+    FEATURES</font></p>
+    <p class="MsoNormal">&nbsp;&nbsp;&nbsp;<font color="#FFFF00"
+    size="5"> THE BIOS</font></p>
+    <blockquote>
+        <p class="MsoNormal">The BIOS is a program located on a
+        Flash-ROM chip on the mainboard. It can be updated only
+        by a special program. This program is also referred to as
+        the boot program. Its main function is to manage the
+        setup of the mainboard and interface cards parameters,
+        incuding simple parameters such as time, date, hard disk
+        drive, as well as more complex parameters such as
+        hardware synchronisation or device operating mode.</p>
+        <p class="MsoNormal"><font color="#FFFF00" size="4">Bios
+        working steps</font><font color="#FFFFFF" size="3"><br>
+        </font><br>
+        When you start the computer, it is controlled by the BIOS
+        program. The BIOS first operates an auto-diagnostic for
+        all the necessary hardware, configurates the parameters
+        of the hardware synchronisation, and detects all the
+        hardware. Only when these tasks are completed does it
+        give up control of the computer to the program of the
+        next level, which is the Operating System.&nbsp;<br>
+        <br>
+        Here are the startup steps :</p>
+        <ul>
+            <li><font color="#FFFFFF" size="3">Initialisation of
+                the chips (cpu(s), bridges) &amp; PCI bus.</font></li>
+            <li><font color="#FFFFFF" size="3">Quick memory test
+                (check only what and how much memory is onboard)</font></li>
+            <li><font color="#FFFFFF" size="3">Installation of
+                the I2C driver to handle the LCD screen</font></li>
+            <li><font color="#FFFFFF" size="3">Install PS/2
+                Keyboard &amp; mouse drivers (only on prototypes,
+                keyboard &amp; mouse will use USB ports in the
+                production series)</font></li>
+            <li><font color="#FFFFFF" size="3">Get information
+                from the PCI cards</font></li>
+            <li><font color="#FFFFFF" size="3">Video card(s)
+                initialisations &amp; Display Logo (on each
+                screen)</font></li>
+            <li><font color="#FFFFFF" size="3">Test memory</font></li>
+            <li><font color="#FFFFFF" size="3">Install IDE / SCSI
+                driver &amp; get hard disk info</font></li>
+            <li><font color="#FFFFFF" size="3">Install NE2000
+                driver</font></li>
+            <li><font color="#FFFFFF" size="3">Display info &amp;
+                Setup menu &amp; play a welcome sound</font></li>
+            <li><font color="#FFFFFF" size="3">Install system
+                calls (to be used eventually by an operating
+                system)</font></li>
+            <li><font color="#FFFFFF" size="3">Load MBR from boot
+                disk to memory / Boot from network</font></li>
+            <li><font color="#FFFFFF" size="3">Execute MBR
+                program</font></li>
+        </ul>
+        <p class="MsoNormal"><font color="#FFFF00" size="4">Main
+        features</font></p>
+        <ul>
+            <li><font color="#FFFFFF" size="3">Supports Intel PCI
+                2.1 specification</font></li>
+            <li><font color="#FFFFFF" size="3">Supports APM
+                specification</font></li>
+            <li><font color="#FFFFFF" size="3">Boots from ATA /
+                ATAPI /&nbsp; SCSI&nbsp; (can boot from hard
+                disk, CDROM compatible with EL-Torito standard,
+                ZIP or flash RAM)</font></li>
+            <li><font color="#FFFFFF" size="3">Boots from NE2000
+                PCI ethernet card with bootp</font></li>
+            <li><font color="#FFFFFF" size="3">Graphical setup
+                program (use graphic mode &amp; mouse)</font></li>
+            <li><font color="#FFFFFF" size="3">Displays
+                information on I2C LCD screen</font></li>
+        </ul>
+        <p class="MsoNormal"><font color="#FFFF00" size="4">Basic
+        drivers</font></p>
+        <p class="MsoNormal">The BIOS installs low level
+        functions to allow operating systems to communicate with
+        hardware. We want to specify that these functions are
+        really generic and are not optimised for special hardware
+        (for example, video functions use only low resolution VGA
+        modes, and don't use any built-in accelerator or special
+        high resolution modes). These functions are only used for
+        test purpose, they should'nt be used in an operating
+        system. Operating System should use its own device
+        drivers and don't call these low level functions.
+        Moreover, these functions are located in the 8bit flash
+        rom, and call to these function are really slow.</p>
+        <p class="MsoNormal"><font color="#FFFF00">Mechanism to
+        call these functions is explained in the Riored Open
+        Software Book (ROSB)</font>.</p>
+        <p class="MsoNormal"><u>Functions</u> :</p>
+        <ul>
+            <li><font color="#FFFFFF" size="3">Keyboard &amp;
+                Mouse drivers (PS/2 &amp; USB)&nbsp;</font></li>
+            <li><font color="#FFFFFF" size="3">Disk driver
+                (enumeration, info, format, read, write tracks)</font></li>
+            <li><font color="#FFFFFF" size="3">PCI functions
+                (cards enumeration, search)</font></li>
+            <li><font color="#FFFFFF" size="3">Video driver
+                (supports standard VGA graphic &amp; text modes,
+                change mode, display pixel or lines, display text
+                (either in text or graphic modes))</font></li>
+            <li><font color="#FFFFFF" size="3">I2C driver
+                (display info on the LCD screen)</font></li>
+            <li><font color="#FFFFFF" size="3">RTC functions (get
+                / set date / time)</font></li>
+            <li><font color="#FFFFFF" size="3">APM functions
+                (configure APM features)</font></li>
+            <li><font color="#FFFFFF" size="3">Soundcard driver
+                (configure &amp; play sound)</font></li>
+            <li><font color="#FFFFFF" size="3">Memory driver (get
+                info about available memory)</font></li>
+            <li><font color="#FFFFFF" size="3">Network driver</font></li>
+        </ul>
+        <p class="MsoNormal"><font color="#FFFFFF" size="3">We've
+        thought about a cool and funny (and absolutely useless)
+        feature : if there's no boot disk and no network card,
+        the bios could run a small built-in basic language !</font></p>
+    </blockquote>
+    <p class="MsoNormal"><br>
+    &nbsp;&nbsp;&nbsp;<font color="#FFFF00" size="5"> THE
+    OPERATING SYSTEM</font></p>
+    <p class="MsoNormal">&nbsp;</p>
+    <blockquote>
+        <p class="MsoNormal"><font color="#FFFFFF" size="3">RIORED
+        is intended to be used with PPC LINUX. We have contacts
+        with software companies involved in the Linux
+        world.&nbsp; However, virtually any operating system can
+        be used on this hardware platform (QNX, FreeBSD, NetBSD,
+        BeOS, or even AmigaOS and MinT !).&nbsp;</font></p>
+        <p class="MsoNormal"><font color="#FFFFFF" size="3">We
+        want to help any people who wants to adapt an operating
+        system on this computer.</font></p>
+    </blockquote>
+    <p align="left">&nbsp;</p>
+    <p align="left"><font color="#FFFF00" size="5">MAINBOARD
+    (Rev.1) SCHEMATIC VIEW</font></p>
+</blockquote>
+
+<blockquote>
+    <blockquote>
+        <p align="left"><img src="../RR_BOARD.gif" width="700"
+        height="460"></p>
+    </blockquote>
+</blockquote>
+
+<blockquote>
+    <p align="left">&nbsp;</p>
+    <p align="left"><font color="#FFFF00" size="5">Download the
+    Product Brief document :</font></p>
+    <p align="left"><a href="RR_PB.pdf">PDF Format - 12 KB</a></p>
+    <p align="left"><a href="RR_PB.zip">RTF Format - 5 KB</a></p>
+    <p align="center"><font
+    size="4"><tt><a href="../../welcome.htm"><img src="../../com/back.gif" alt="Retour"
+    border="0" width="80" height="60"></a></tt></font></p>
+</blockquote>
+</body>
+</html>

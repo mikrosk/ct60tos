@@ -1,0 +1,314 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.0 Transitional//EN">
+<!-- saved from url=(0049)http://www.czuba-tech.com/CT60/english/update.htm -->
+<HTML><HEAD><TITLE>CT60 Update</TITLE>
+<META content="text/html; charset=iso-8859-1" http-equiv=Content-Type>
+<META content="Microsoft FrontPage 4.0" name=GENERATOR></HEAD>
+<BODY aLink=#ff0000 bgColor=#000000 link=#ff0000 text=#ff0000 vLink=#800000>
+<P align=center>&nbsp;</P>
+<P align=center><FONT color=#ff0000 face=Arial 
+size=7><STRONG>Update</STRONG></FONT></P>
+<BLOCKQUOTE>
+  <b>
+  <FONT color=#ffffff face=Arial size=3>
+  <p align="left"><strong><font color="#FFFF00" face="Arial" size="4">FLASH
+  &amp; </font></strong>
+
+
+  </font>
+
+  <strong><font color="#FFFF00" face="Arial" size="4">software</font></strong></p>
+</b>
+  <p align="left"><font color="#FFFFFF" size="3" face="Arial">PACK (FLASH,
+  CPX, Tools, Manual, Patchs &amp; Sources) on Didier's pages : <a href="http://didierm.pagesperso-orange.fr/">http://didierm.pagesperso-orange.fr/</a></font></p>
+  <FONT color=#ffffff face=Arial size=3>
+  <b>
+  <p>&nbsp;</p>
+  <p><font color="#FFFF00" size="4" face="Arial"><strong>Chips ABE
+    &amp; SDR</strong></font></p>
+    </b>
+  </font>
+  <p><b><font face="Arial" color="#FFFFFF" size="3">Last update </font><font face="Arial"><font color="#FFFFFF">for all</font> </font><font face="Arial" color="#FFFFFF" size="3"><FONT color=#ffffff face=Arial size=3>CT</font></font><font color="#ffffff" face="Arial" size="3">60/63</font><font face="Arial" color="#FFFFFF" size="3"><font face="Arial">&nbsp;
+  + CTPCI</font></font><FONT color=#ffffff face=Arial size=3><font face="Arial" color="#FFFFFF" size="3">
+  </font>- January 2012 </font></b><FONT color=#ffffff face=Arial size=3><b><font face="Arial" color="#FFFFFF" size="3">:</font>
+  </b>
+  <a href="../../ct60/ABE_V7F.jed">ABE_V7F</a> ; </font><font face="Arial" size="3" color="#FFFFFF"><u><a href="../../ct60/SDR_V7D.jed">SDR_V7D</a></u></font></p>
+  <FONT color=#ffffff face=Arial size=3>
+  <font color="#ffffff" face="Arial" size="3">
+  <blockquote>
+  <p style="line-height: 100%; word-spacing: 0; margin-top: 0; margin-bottom: 0">Replace
+  ABE7A &amp; SDR7A with following features :</p>
+  <p style="line-height: 100%; word-spacing: 0; margin-top: 0; margin-bottom: 0">-
+  Support for new IDE port on CTPCI and the SWAP of the 2 IDE ports.
+  </p>
+  <p style="line-height: 100%; word-spacing: 0; margin-top: 0; margin-bottom: 0">&nbsp;
+  <b>WARNING</b>, see the fitting documentation because there is an IRQ wire to
+  connect between CTPCI &amp; F030.</p>
+  <p style="line-height: 100%; word-spacing: 0; margin-top: 0; margin-bottom: 0">&nbsp;<b>
+  It is not recommended to use the new port with too old devices (before 1998)
+  that may not support transfers with PIO MODE4.</b></p>
+  <p style="line-height: 100%; word-spacing: 0; margin-top: 0; margin-bottom: 0">-
+  New WatchDog with new delays = 80us at 100 MHz &amp; 120us at 66 MHz
+  </p>
+  <p style="line-height: 100%; word-spacing: 0; margin-top: 0; margin-bottom: 0">-
+  Modification of the local arbiter (F030, 060, Exp. Slot (CTPCI, SuperVidel)&nbsp;
+  </p>
+  <p style="line-height: 100%; word-spacing: 0; margin-top: 0; margin-bottom: 0">&nbsp;
+  to run together Radeon + NEC USB cards and SDMA+Blitter.&nbsp;<br>
+  </p>
+  </font>
+  <p style="line-height: 100%; word-spacing: 0; margin-top: 0; margin-bottom: 0">Replace
+  ABE5M &amp; SDR5E with following features :</p>
+  <p style="line-height: 100%; word-spacing: 0; margin-top: 0; margin-bottom: 0">-&nbsp;TS delayed of 1 clk
+  : no more limit for high speed higher than 100 Mhz.&nbsp;<br>
+  - Replace ABE Watch dog clk from SDR by F030 clk (16/25Mhz).</p>
+  <p style="line-height: 100%; word-spacing: 0; margin-top: 0; margin-bottom: 0">- New
+  ABE WatchDog timing for PCI MEM &amp; IO on CTPCI : 64us.<br>
+  - Modify TBI decoding : Burst with Move16 is now usable on all expand slot
+  addresses.<br>
+  - New Local Arbiter (previous one was designed in 2003 and never tested
+  !).&nbsp;<br>
+  - Decode BOOT signal in SDR for ABE flash boot : no more need TOS chip on
+  falcon in 060 mode !&nbsp;</p>
+  </blockquote>
+  <p style="line-height: 100%; word-spacing: 0; margin-top: 0; margin-bottom: 0">&nbsp;</p>
+  <p style="line-height: 100%; word-spacing: 0; margin-top: 0; margin-bottom: 0"><b>Initial
+  version for CT60 (compatible with CT63) - 2006 : </b><a href="../../ct60/AB5M.jed">ABE_V5M</a> ;
+  <u><font face="Arial" size="3" color="#FFFFFF"><a href="../../ct60/SD5E.jed">SDR_V</a></font></u></font><u><font face="Arial" size="3" color="#FFFFFF"><a href="../../ct60/SDR_V7A.jed">5E</a></font></u></p>
+  <p style="line-height: 100%; word-spacing: 0; margin-top: -10; margin-bottom: 0">&nbsp;</p>
+  <FONT color=#ffffff face=Arial size=3>
+  <blockquote>
+    <p style="line-height: 100%; word-spacing: 0; margin-top: -10; margin-bottom: 0"><b>Recommended
+    for CT60/63 alone (no add-on board).</b></p>
+  </blockquote>
+  <b>
+
+
+  </b>
+
+
+  </font>
+
+  <p style="line-height: 100%; word-spacing: 0; margin-top: 0; margin-bottom: 0">&nbsp;</p>
+
+  <p style="line-height: 100%; word-spacing: 0; margin-top: 0; margin-bottom: 0">&nbsp;</p>
+
+  <p style="line-height: 100%; word-spacing: 0; margin-top: 0; margin-bottom: 0"><font face="Arial" size="3" color="#FFFFFF"><b>T<font face="Arial">o</font><FONT color=#ffffff face=Arial size=3>
+  program
+
+
+  </font>
+
+  <font face="Arial">the</font><FONT color=#ffffff face=Arial size=3>
+  chips ABE &amp; SDR,
+
+
+  </font>
+
+  <font face="Arial">you can contact me or buy </font>a <FONT color=#ffffff face=Arial size=3>JTAG
+
+
+  </font>
+
+  <font face="Arial">cable </font>to transfer from <FONT color=#ffffff face=Arial size=3>//</font><font face="Arial">
+  port to the chips.</font></b></font></p>
+  <p style="line-height: 100%; word-spacing: 0; margin-top: 0; margin-bottom: 0"><b><font face="Arial" size="3" color="#FFFFFF">This
+  <FONT color=#ffffff face=Arial size=3>c</font><font face="Arial">a</font><FONT color=#ffffff face=Arial size=3>ble
+  exist</font><font face="Arial">s</font> ready-to-use to many vendors<FONT color=#ffffff face=Arial size=3>.
+  I</font><font face="Arial">t will not run as it is on TOS </font><FONT color=#ffffff face=Arial size=3>machine</font><font face="Arial">s</font></font></b><FONT color=#ffffff face=Arial size=3><b><font face="Arial" size="3" color="#FFFFFF">.</font></b></p>
+
+
+  </font>
+
+    <p style="line-height: 100%; word-spacing: 0; margin-top: 0; margin-bottom: 0"><font face="Arial" size="3" color="#FFFFFF">Here
+    are <FONT color=#ffffff face=Arial size=3>2
+
+
+  </font>
+
+    <font face="Arial">links to buy (you can find many others)</font></font><FONT color=#ffffff face=Arial size=3><font face="Arial" size="3" color="#FFFFFF">
+    :</font></p>
+    <blockquote>
+    <p style="margin-left: 4" align="left"><font face="Arial" size="3" color="#FFFFFF">FRANCE : </font><a href="http://www.lextronic.fr/recherche.php?rech=jtag&amp;numpage=10"><font face="Arial" size="3">http://www.lextronic.fr/recherche.php?rech=jtag&amp;numpage=10</font></a></p>
+      <p style="margin-left: 4" align="left"><font face="Arial" size="3" color="#FFFFFF">CANADA
+      :&nbsp;</font><a class="0" href="http://www.renaelectronics.com/product_x_cable.htm"><font size="3" face="Arial">http://www.renaelectronics.com/product_x_cable.htm</font></a></p>
+    </blockquote>
+  <b>
+    <p style="line-height: 100%; word-spacing: 0; margin-top: 0; margin-bottom: 0">&nbsp;</p>
+
+
+  </font>
+
+  <p style="line-height: 100%; word-spacing: 0; margin-top: 0; margin-bottom: 0"><font face="Arial" size="3" color="#FFFFFF">Two
+  <font face="Arial">ways</font></font><FONT color=#ffffff face=Arial size=3><font face="Arial" size="3" color="#FFFFFF">
+  :</font></p>
+  <p style="line-height: 100%; word-spacing: 0; margin-top: 0; margin-bottom: 0">&nbsp;</p>
+
+
+  </font>
+
+  </b><FONT color=#ffffff face=Arial size=3>
+  <blockquote>
+    <p style="line-height: 100%; word-spacing: 0; margin-top: 0; margin-bottom: 0">&nbsp;</p>
+    <p style="line-height: 100%; word-spacing: 0; margin-top: 0; margin-bottom: 0"><u><font face="Arial" size="3" color="#FFFFFF">1-
+    Program</font>
+
+
+    </u>
+
+
+  </font>
+
+    <u>
+
+    <font face="Arial" size="3" color="#FFFFFF"> with a PC (USB or // cable)</font></u></p>
+  <FONT color=#ffffff face=Arial size=3>
+  <b>
+  <p style="line-height: 100%; word-spacing: 0; margin-top: 0; margin-bottom: 0">&nbsp;</p>
+  </b>
+  <p style="line-height: 100%; word-spacing: 0; margin-top: 0; margin-bottom: 0">&nbsp;</p>
+  <p style="line-height: 100%; word-spacing: 0; margin-top: 0; margin-bottom: 0"><font face="Arial" size="3" color="#FFFFFF">PC</font></font><font face="Arial" size="3" color="#FFFFFF">
+  software is available free to <FONT color=#ffffff face=Arial size=3><a href="http://www.Xilinx.com">www.xilinx.com</a>.
+  </font>The name is<FONT color=#ffffff face=Arial size=3>
+  IMPACT
+
+
+  </font>
+
+  </font><font color="#ffffff" face="Arial" size="3">and </font><font face="Arial" size="3" color="#FFFFFF"><font face="Arial">you will find
+  it in the </font><FONT color=#ffffff face=Arial size=3>WEBPACK
+
+
+  </font>
+
+  <font face="Arial">to be downloaded</font></font><FONT color=#ffffff face=Arial size=3><font face="Arial" size="3" color="#FFFFFF">.&nbsp;</font></font></p>
+  <p style="line-height: 100%; word-spacing: 0; margin-top: 0; margin-bottom: 0">&nbsp;</p>
+  <p style="line-height: 100%; word-spacing: 0; margin-top: 0; margin-bottom: 0"><font face="Arial" size="3" color="#FFFFFF">The
+  good link to help you with PC, software &amp; cable : <a href="http://nokturnal.pl/home/atari_16_32_bit/ct60_firmware_upgrade">http://nokturnal.pl/home/atari_16_32_bit/ct60_firmware_upgrade</a></font></p>
+  <FONT color=#ffffff face=Arial size=3>
+  <b>
+    <p style="line-height: 100%; word-spacing: 0; margin-top: 0; margin-bottom: 0">&nbsp;</p>
+  </b>
+  <p style="line-height: 100%; word-spacing: 0; margin-top: 0; margin-bottom: 0">&nbsp;</p>
+  <p style="line-height: 100%; word-spacing: 0; margin-top: 0; margin-bottom: 0">&nbsp;</p>
+  <p style="line-height: 100%; word-spacing: 0; margin-top: 0; margin-bottom: 0"><u><font face="Arial" size="3" color="#FFFFFF">2-
+  Program</font></u></font><u><font face="Arial" size="3" color="#FFFFFF"> with
+  the Falcon (// cable)</font></u></p>
+  <b>
+  <FONT color=#ffffff face=Arial size=3>
+    <p style="line-height: 100%; word-spacing: 0; margin-top: 0; margin-bottom: 0">&nbsp;</p>
+
+
+  </font>
+
+  </b>
+
+  <p style="line-height: 100%; word-spacing: 0; margin-top: 0; margin-bottom: 0">&nbsp;</p>
+
+  <p style="line-height: 100%; word-spacing: 0; margin-top: 0; margin-bottom: 0"><font face="Arial" size="3" color="#FFFFFF">To
+  run the cable on your <FONT color=#ffffff face=Arial size=3>Falcon,&nbsp;</font><font face="Arial">
+  you need to modify it : disconnect the wire of </font><FONT color=#ffffff face=Arial size=3>pin #13
+
+
+  </font>
+
+  </font><font color="#ffffff" face="Arial" size="3">&amp; connect </font><font face="Arial" size="3" color="#FFFFFF"><font face="Arial">to the </font><FONT color=#ffffff face=Arial size=3>pin #10
+
+
+  </font>
+
+  <font face="Arial">of the </font><FONT color=#ffffff face=Arial size=3>DB25
+
+
+  </font>
+
+  <font face="Arial"> connector</font><FONT color=#ffffff face=Arial size=3>.&nbsp;
+
+
+  </font>
+
+  </font></p>
+
+  <p style="line-height: 100%; word-spacing: 0; margin-top: 0; margin-bottom: 0"><font face="Arial" size="3" color="#FFFFFF">
+
+  <font face="Arial">You need too</font> to reorganize the order of the wires on
+  the JTAG&nbsp; connector as on the schematics or pinout in the <FONT color=#ffffff face=Arial size=3>CT60</font><font face="Arial">
+  documentation (in the software pack)</font></font><FONT color=#ffffff face=Arial size=3><font face="Arial" size="3" color="#FFFFFF">.&nbsp;</font></p>
+  <b>
+    <p style="line-height: 100%; word-spacing: 0; margin-top: 0; margin-bottom: 0">&nbsp;</p>
+  </b>
+  </font><p style="line-height: 100%; word-spacing: 0; margin-top: 0; margin-bottom: 0"><font face="Arial" size="3" color="#FFFFFF">Other
+  way <FONT color=#ffffff face=Arial size=3>:
+  </font><font face="Arial">make the cable yourself</font>.</font></p>
+  <FONT color=#ffffff face=Arial size=3><p style="line-height: 100%; word-spacing: 0; margin-top: 0; margin-bottom: 0"><font face="Arial" size="3" color="#FFFFFF">Sch</font></font><font face="Arial" size="3" color="#FFFFFF">ematics
+  of the ca<FONT color=#ffffff face=Arial size=3>ble</font></font><font color="#ffffff" face="Arial" size="3">
+  </font><font face="Arial" size="3" color="#FFFFFF">for<FONT color=#ffffff face=Arial size=3>
+  </font><font face="Arial">T</font><FONT color=#ffffff face=Arial size=3>OS (PDF) : <a href="../../ct60/CableTOS.pdf"><font size="3" face="Arial">Download
+    ZIP file (15 K</font></a></font><a href="../../ct60/CableTOS.pdf"><font size="3">B</font>)</a><FONT color=#ffffff face=Arial size=3>.
+  </font><font face="Arial">PC version schematics is on Xilinx web site</font></font><FONT color=#ffffff face=Arial size=3><font face="Arial" size="3" color="#FFFFFF">.</font></p>
+  </blockquote>
+  <b>
+  </b>
+  </font>
+  <b>
+    <p>&nbsp;</p>
+    <p><strong><font size="4" face="Arial" color="#FFFF00">Do not unplug CT60/63
+    to program ABE from the Falcon</font></strong></p>
+  </b>
+  <FONT color=#ffffff face=Arial size=3><p><font face="Arial" size="3" color="#FFFFFF">S</font></font><font face="Arial" size="3" color="#FFFFFF">older
+  a 1 to 10K resistor between <FONT color=#ffffff face=Arial size=3>pin #1
+  </font><font face="Arial">&amp;</font><FONT color=#ffffff face=Arial size=3> #10
+  </font><font face="Arial">of one of the three</font><FONT color=#ffffff face=Arial size=3>
+  74LVC245A</font><font face="Arial"> chips</font><FONT color=#ffffff face=Arial size=3>.
+  </font><font face="Arial">When launching</font>  <FONT color=#ffffff face=Arial size=3>FLASH060
+  </font><font face="Arial">from 030 </font><FONT color=#ffffff face=Arial size=3>mode,
+  NVDI
+  </font><font face="Arial">must be running to avoid Blitter</font> to be used
+  by the system !</font><FONT color=#ffffff face=Arial size=3>   Now, you will not
+  have to touch the CT</font><font face="Arial" size="3" color="#FFFFFF">...to
+  program from the Falcon // port</font><FONT color=#ffffff face=Arial size=3><font face="Arial" size="3" color="#FFFFFF">.</font></p>
+  <b>
+    <p><img border="0" src="../ADD_RES.JPG" width="202" height="107"></p>
+    <p>&nbsp;</p>
+    <p><strong><font color="#FFFF00" size="4" face="Arial">CTCM </font></strong></font><strong><font color="#FFFF00" size="4" face="Arial">for
+    CT60</font></strong></p>
+  </b>
+  <FONT color=#ffffff face=Arial size=3><p style="line-height: 100%; word-spacing: 0; margin-top: 0; margin-bottom: 0"><font face="Arial" color="#FFFFFF" size="3">A</font></font><font face="Arial" color="#FFFFFF" size="3">dd<FONT color=#ffffff face=Arial size=3> 2
+  </font><font face="Arial">wires</font> under the <FONT color=#ffffff face=Arial size=3>CT60
+  </font><font face="Arial">as on the picture below</font></font><FONT color=#ffffff face=Arial size=3><font face="Arial" color="#FFFFFF" size="3">.</font></p>
+  </font><p style="line-height: 100%; word-spacing: 0; margin-top: 0; margin-bottom: 0"><font face="Arial" size="3" color="#FFFFFF">These
+  wires are connecting from <FONT color=#ffffff face=Arial size=3>I2C</font><font face="Arial">
+  bus pins of </font><FONT color=#ffffff face=Arial size=3>SDRAM
+  </font><font face="Arial">to </font><FONT color=#ffffff face=Arial size=3>pins #2
+  </font><font face="Arial">&amp;</font><FONT color=#ffffff face=Arial size=3> #3
+  </font><font face="Arial">of the oscillator socket</font></font><FONT color=#ffffff face=Arial size=3><font face="Arial" size="3" color="#FFFFFF">.</font></p>
+  <b>
+    <p><img border="0" src="../2wires%20for%20CTCM.gif" width="183" height="346">&nbsp;&nbsp;&nbsp;&nbsp;
+    <img border="0" src="../Insert%20CTCM.jpg" width="486" height="253"></p>
+    <p>&nbsp;</p>
+    <p><strong><font color="#FFFF00" face="Arial" size="4">PCB </font></strong></font><strong><font color="#FFFF00" face="Arial" size="4">of
+  first CT60 (2003)</font></strong></p>
+  </b>
+  <p style="line-height: 100%; word-spacing: 0; margin-top: 0; margin-bottom: 0"><font face="Arial" color="#FFFFFF" size="3">These m<FONT color=#ffffff face=Arial size=3>odifications
+  </font>concern only the first <FONT color=#ffffff face=Arial size=3>CT60 (2003).
+  </font><font face="Arial">It is obligation for all update of </font><FONT color=#ffffff face=Arial size=3>ABE
+  &amp; SDR </font><font face="Arial">chip on these </font></font><FONT color=#ffffff face=Arial size=3><font face="Arial" color="#FFFFFF" size="3">CT60.</font></p>
+  <p style="line-height: 100%; word-spacing: 0; margin-top: 0; margin-bottom: 0"><font face="Arial" color="#FFFFFF" size="3">C</font></font><font face="Arial" color="#FFFFFF" size="3">ut
+  pi<FONT color=#ffffff face=Arial size=3>n #9
+  </font><font face="Arial">of </font><FONT color=#ffffff face=Arial size=3>CY2309
+  </font>and the trace as indicated on the pictures</font><FONT color=#ffffff face=Arial size=3><font face="Arial" color="#FFFFFF" size="3">.&nbsp;</font></p>
+  <b>
+    <p><img border="0" src="../CYpin9_cut.gif" width="180" height="144">&nbsp;&nbsp;&nbsp;&nbsp;
+    <img border="0" src="../CLK500_cut.gif" width="278" height="143"></p>
+
+
+  </font>
+
+<STRONG>
+
+  <FONT color=#ffffff face=Arial size=3>
+
+
+</BLOCKQUOTE>
+
+
+<P align=center>&nbsp;</P></font></b></strong></BODY></HTML>

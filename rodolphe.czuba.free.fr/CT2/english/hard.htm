@@ -1,0 +1,129 @@
+<!DOCTYPE HTML PUBLIC "-//IETF//DTD HTML//EN">
+<html>
+
+<head>
+<meta http-equiv="Content-Type"
+content="text/html; charset=iso-8859-1">
+<meta name="GENERATOR" content="Microsoft FrontPage 4.0">
+<title>CT2 Hardware ENG</title>
+</head>
+
+<body bgcolor="#000000" text="#FFFFFF" link="#4488FF"
+vlink="#800000">
+
+<blockquote>
+    <p align="center"><font color="#FF0000" size="7"><strong>CT2
+    ARCHITECTURE</strong></font></p>
+    <blockquote>
+        <p align="center"><font color="#FF0000" size="3">(c)
+        January 99, Rodolphe Czuba</font></p>
+    </blockquote>
+    <pre><font color="#FFFF00" size="5" face="Times New Roman"><u>1/ PRESENTATION</u></font></pre>
+    <p><tt><br>
+    As you can see on the picture lower, the hardware
+    architecture of the CT2 is built with two 32-Bit buses,
+    adverse the Falcon built with a 16-Bit DATA bus (except the
+    32-Bit DATA bus between ST-Ram and VIDEL).<br>
+    <br>
+    The FAST-Ram of the CT2 considerably increases the
+    performances of the Falcon which have only a 16-Bit singe
+    memory (ST-Ram) used by both the CPU and the VIDEO/SOUND
+    chips.<br>
+    You can now run the programs in True Color mode as quick as
+    in 16 colors mode because the programs executions are not
+    decreased by the big video modes accesses! <br>
+    More, the BURST mode of the 68030 is now used to read and
+    cache 4 LONGWORDS with only 12 CPU (50MHz) cycles !<br>
+    <br>
+    The WRITE accesses have been improved from 6 (REV A) to 4
+    cycles at 50 MHz !<br>
+    <br>
+    In fact, the Falcon becomes a simple 16-Bit Super I/O card
+    managed by the CENTurbo II...<br>
+    So, the ST-Ram becomes the VIDEO/SOUND ram; what it is called
+    'CHIP-Ram' in the AMIGA world: the ram uses by the chips
+    (BLITTER, VIDEO, SOUND).<br>
+    The FAST-Ram becomes the MAIN ram which must be used as much
+    as possible by the CPU. This architecture is near the one of
+    the PC... <br>
+    </tt></p>
+    <p><tt>The heart of the CT2 is done with 2 chipsets named
+    ANNA &amp; THALIE which manage the following features:<br>
+    <br>
+    </tt><font color="#00FF00"><tt><u>ANNA:</u></tt></font></p>
+    <ul>
+        <li><tt>60ns EDO DRAM 50 MHz Controller performing BURST
+            READING with 5,2,2,2 clock cycles at 50 MHz (real
+            32.5 MB/s) and WRITING with 4 clock cycles at 50 MHz
+            (real 38 MB/s !). See the benchs...</tt></li>
+        <li><tt>Hardware Watchdog of 6 us.</tt></li>
+        <li><tt>Generation of the 500 kHz clock for the two ACIA.</tt></li>
+    </ul>
+    <p><font color="#00FF00"><u>THALIE:</u></font></p>
+    <ul>
+        <li><tt>FPU communication.</tt></li>
+        <li><tt>Logical interface to access the Falcon 68000 bus
+            at 50 MHz.</tt></li>
+        <li><tt>DATA buffers.</tt></li>
+        <li><tt>Accesses to the FLASH at 50 MHz.</tt></li>
+        <li><tt>Accesses to the DSP at 50 MHz.</tt></li>
+        <li><tt>Accesses to the ACIAs at 50 MHz.</tt></li>
+        <li><tt>Accesses to/from the SDMA in SLAVE/MASTER mode.</tt></li>
+        <li><tt>INTerrupt level 4 and 2 (VBL and HBL).</tt></li>
+        <li><tt>Clocks (except for the ACIAs).</tt></li>
+        <li><tt>CT2 setting registers.</tt></li>
+    </ul>
+    <p><br>
+    <font color="#FFFF00" size="5"><u>2/ NEW METHODS</u></font></p>
+    <p><tt>Many software developers have to change their
+    programming methods of the Falcon because, in many cases, the
+    use of the FAST-Ram by the CPU is very more advantageous than
+    the use of any others techniques designed to avoid the
+    slowness of the ST-Ram.<br>
+    <br>
+    This is a fact for those who have used the DSP to compute
+    things that can now be computed faster by the CPU in
+    FAST-Ram. Programmers have now to use the DSP only for the
+    things for what it was originally designed (matrix, FFT, and
+    so...), and don't forget that the time to transfer to and
+    from the DSP (by a 8-Bit bus !) is became important opposite
+    to the time about the FAST-Ram. </tt></p>
+    <p><tt>Furthermore, an important effort must be done to code
+    LONGWORDs and align the code (C programmers: code with ASM !)
+    at least on 32-Bit boundaries, or better, on 16 bytes
+    boundaries (4 LONGWORDs = 1 cache LINE).<br>
+    <br>
+    This is necessary if you want to use the CACHE BURST at the
+    better performances.<br>
+    Meanwhile, you have to know that the 'WRAP AROUND' of the 030
+    is set OFF by the CT2 to avoid a performances decrease with
+    the majority of the softwares which don't respect the
+    alignments on 32-Bit boundaries.<br>
+    <br>
+    The VL-BURST (Variable Length) allows the CPU to fill only
+    the end of the cache line without filling the begining of
+    this line.<br>
+    By example, if you run code at $01025480, the CPU bursts an
+    entierely line of the cache from the addresses $01025480,
+    $01025484, $01025488 and $0102548C.<br>
+    If the CPU begins to burst from $01025488, it will stop after
+    reading the second LONGWORD at $0102548C and will not go to
+    read the two first LONGWORDs at $01025480 and $01025484 !
+    What it would have done with the WRAP AROUND...<br>
+    <br>
+    In the most cases, 4 CPU cycles (2+2) are economised because
+    it is rare the CPU needs these two first LONGWORDs, except
+    with some not very used addressing modes... </tt></p>
+    <p><tt>For more informations about the caches of the 68030,
+    please refer to the '68030 USER'S MANUAL' (chapters 6 &amp;
+    7) from MOTOROLA.</tt></p>
+</blockquote>
+
+<p align="center"><img src="../architec.gif"
+alt="Functionnal block diagram" width="864" height="400"></p>
+
+<p align="center"><a
+href="welcome.htm"><img src="../../com/back.gif" alt="Back"
+border="0" width="80" height="60"></a></p>
+</body>
+</html>

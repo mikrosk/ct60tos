@@ -1,0 +1,240 @@
+<html>
+
+<head>
+<meta http-equiv="Content-Type"
+content="text/html; charset=iso-8859-1">
+<meta name="GENERATOR" content="Microsoft FrontPage 4.0">
+<title>CT60 COPRO FR</title>
+</head>
+
+<body bgcolor="#000000" text="#FF0000" link="#FF0000"
+vlink="#800000" alink="#FF0000">
+
+<p align="center">&nbsp;</p>
+
+<p align="center"><font color="#FF0000" size="7" face="Arial"><strong>Copro, PMMU
+&amp; Masks</strong></font></p>
+
+<p align="center">&nbsp;</p>
+
+<p align="left"><b><font face="Arial" size="4">Petit rappel d'histoire</font></b></p>
+
+<blockquote>
+    <p align="left"><strong><u><font color="#FFFF00" size="3" face="Arial">De
+    1994 à 1996</font></u><font color="#FFFF00" size="3" face="Arial">, les 060
+    (à </font> </strong><font color="#FFFF00"><font
+    color="#FFFFFF" size="3" face="Arial"><strong>50, 60</strong></font><strong><font color="#FFFFFF" size="3" face="Arial">
+    &amp;
+    </font></strong></font><strong> <font size="3" face="Arial" color="#FFFF00"> 66
+    MHz) existent en 3
+    versions gravées en <u> 0.60um</u> :</font></strong></p>
+</blockquote>
+
+<blockquote>
+    <blockquote>
+        <p align="left"><font color="#FFFFFF"><strong><font size="3"
+        face="Arial">- </font> </strong><strong><font
+        color="#FFFFFF" size="3" face="Arial">X</font><font size="3" face="Arial">C68060RCxx
+        </font><font size="3" face="Arial">('Full') contenant
+        une PMMU et une FPU (Floating
+        Point Unit = Coprocesseur).</font></strong></font></p>
+    </blockquote>
+    <blockquote>
+        <p align="left"><font color="#FFFFFF"><strong><font size="3"
+        face="Arial">- </font> </strong><font size="3" face="Arial"><strong>XC68LC060RCxx contenant
+        une PMMU mais PAS de FPU.</strong></font></font></p>
+    </blockquote>
+    <blockquote>
+        <p align="left"><font color="#FFFFFF"><strong><font size="3"
+        face="Arial">- XC68EC060</font></strong><font size="3" face="Arial"><strong>RCxx ne
+        contenant PAS de PMMU, NI de FPU. </strong></font></font></p>
+    </blockquote>
+    <p align="left"><strong><font face="Arial" size="3" color="#FFFFFF">Ces
+    premiers 060 sont fabriqués avec le mask </font><font color="#00FF00"><font face="Arial" size="3"> 1F43G
+    </font></font><font face="Arial" size="3" color="#FFFFFF"> (Rev.1) qui accepte
+    jusque 66 MHz dans 70% des cas.</font></strong></p>
+    <p align="left"><strong><font face="Arial" size="3" color="#FFFFFF">Ce mask
+    contient des bugs qui ne posent pas de problèmes sur la CT60.</font></strong></p>
+    <p align="left"><font color="#FFFFFF" size="3" face="Arial"><strong>Les
+    lettres RC désignent le type de boitier = PGA (Pin Grid Array) et non le model FULL !</strong></font></p>
+    <p align="left">&nbsp;</p>
+    <p align="left"><strong><u><font color="#FFFF00" size="3" face="Arial">En
+    1996</font></u><font color="#FFFF00" size="3" face="Arial">, les 3 modèles
+    passent au mask 1G65V avec 1 bug copro (F6) en moins
+    par rapport au 1F43G.&nbsp;</font></strong></p>
+    <p align="left"><strong><font size="3" face="Arial" color="#FFFFFF">Plus
+    tard,&nbsp;</font></strong></p>
+    <p align="left"><strong><font size="3" face="Arial" color="#FFFFFF">- les
+    EC &amp; LC changent de mask pour le 2G65V sans bugs.</font></strong></p>
+    <p align="left"><strong><font size="3" face="Arial" color="#FFFFFF">- les
+    'Full' changent de mask pour le 0E41J sans bugs aussi.</font></strong></p>
+    <p align="left"><strong><font face="Arial" size="3" color="#FFFFFF">Voir : <a href="../../ct60/060_mask40.pdf">060_mask40.pdf</a></font></strong></p>
+    <p align="left">&nbsp;</p>
+    <p align="left"><strong><u><font color="#FFFF00" size="3" face="Arial">En
+    1998</font></u><font color="#FFFF00" size="3" face="Arial">, apparaissent
+    les gravures <u>0.42um</u>.</font></strong></p>
+    <p align="left"><strong><font color="#FFFFFF" size="3" face="Arial">Les EC
+    et LC passent du préfixe XC à MC (qualification finale) et leur mask passe de 2G59Y
+    à 3G59Y :&nbsp;</font></strong></p>
+    <p align="left"><strong><font size="3" face="Arial" color="#FFFFFF">Les 'Full' passent du mask 0E41J à </font><font size="3" face="Arial" color="#00FF00">1E41J</font><font size="3" face="Arial" color="#FFFFFF">
+    mais restent en XC.</font></strong></p>
+    <p align="left"><strong><font face="Arial" size="3" color="#FFFFFF">Voir : <a href="../../ct60/42um_status.html">42um_status.html</a></font></strong></p>
+    <p align="left">&nbsp;</p>
+    <p align="left"><strong><u><font color="#FFFF00" size="3" face="Arial">En
+    1999</font></u><font color="#FFFFFF" size="3" face="Arial">, les XC68060RCxx
+    sont qualifiés et passent avec préfixe en MC</font></strong><strong><font
+    color="#FFFFFF" size="3" face="Arial"><font color="#FFFFFF"> avec le mask </font></font><font
+    color="#00FF00" size="3" face="Arial">1E41J</font><font color="#FFFFFF" size="3" face="Arial"> :</font></strong></p>
+    <p align="left"><strong><font face="Arial" size="3" color="#FFFFFF">Voir : <a href="../../ct60/mc_status.html">mc_status.html</a></font></strong></p>
+    <p align="left"><strong><font face="Arial" size="3" color="#00FF00">Le dernier mask est
+    le 71E41J&nbsp; (Rev.6) et a la particularité de supporter d'être cadencé
+    à 100 MHz dans la plupart des cas !</font></strong></p>
+    <p align="left"><strong><font face="Arial" size="3" color="#00FF00">Ils sont
+    gravés en 0.32um au lieu de 0.42um des premiers 1E41J.</font></strong></p>
+    <p align="left"><strong><font face="Arial" size="3" color="#00FF00">Bien
+    sur, une gravure 0.32um dissipe moins de chaleur qu'une 0.60um !</font></strong></p>
+    <p align="left">&nbsp;</p>
+    <p align="left"><strong><u><font color="#FFFF00" size="3" face="Arial">A partir
+    de 1999</font></u><font color="#FFFF00" size="3" face="Arial">, apparaissent
+    les 2 versions </font></strong><font
+    color="#FFFF00" size="3" face="Arial"><strong>75 MHz en 0.32um :</strong></font></p>
+    <blockquote>
+        <p align="left"><font color="#FFFFFF"><strong><font size="3"
+        face="Arial">- </font> </strong><font
+        color="#FFFFFF" size="3" face="Arial"><strong>MC68LC060</strong></font><strong><font size="3" face="Arial">RC75</font><font
+        color="#C0C0C0" size="3" face="Arial"> </font><font
+        color="#FFFFFF" size="3" face="Arial"> contenant une </font></strong><font
+        size="3" face="Arial"><strong>PMMU mais PAS de FPU.</strong></font></font></p>
+    </blockquote>
+    <blockquote>
+        <p align="left"><font color="#FFFFFF"><strong><font size="3"
+        face="Arial">- </font> </strong><font
+        color="#FFFFFF" size="3" face="Arial"><strong>MC68EC060</strong></font><strong><font size="3" face="Arial">RC75</font><font
+        color="#C0C0C0" size="3" face="Arial"> </font> <font
+        color="#FFFFFF" size="3" face="Arial"> ne
+        contenant </font> </strong><font size="3"
+        face="Arial"><strong>PAS de PMMU, NI de FPU.</strong></font></font></p>
+    </blockquote>
+    <p align="left">&nbsp;</p>
+    <p align="left">&nbsp;</p>
+</blockquote>
+
+<p align="left"><b><font face="Arial" size="4">Histoire de copro</font></b></p>
+
+<blockquote>
+    <p align="left"><font color="#FFFFFF" size="3" face="Arial"><strong>Le
+    CT60 utilise un 68060 avec COPRO &amp; PMMU.</strong></font></p>
+    <p align="left"><font color="#FFFFFF" size="3" face="Arial"><strong>Le
+    060 a besoin d'une librairie copro pour
+    faire fonctionner les logiciels utlisant le copro (qui
+    utlisent des instructions Fxxxx) !</strong></font></p>
+    <p align="left"><strong><font color="#FFFFFF" size="3" face="Arial">En
+    effet, seulement 1/3 du jeu d'instruction du 68882 (copro du
+    68030) - les instructions les plus importantes/utilisées - a
+    été implanté dans le 060 (d'abord dans le 040), les 2/3
+    restant devant être émulés grâce à cette librairie.</font></strong>  <font color="#FFFFFF" size="3" face="Arial"><strong>Cette
+    librairie est intégrée dans la FLASH.</strong></font></p>
+    <p align="left"><font color="#FFFFFF" size="3" face="Arial"><strong>Le
+    (vieux et lent) 68882 ne peut pas fonctionner avec un 060 !
+    Mais, bien sur, il est toujours utilisable avec le 030, une
+    fois la CT60 installée et NON activée.</strong></font></p>
+    <p align="left">&nbsp;</p>
+    <p align="left"><font color="#FFFFFF" size="3" face="Arial">Les
+    listes suivantes ont été constituées par plusieurs
+    personnes que je tiens à remercier ! Si vous pouvez
+    améliorer ces listes, merci de me contacter !</font></p>
+    <p align="left"><font color="#FFFF00" size="3" face="Arial">Cette
+    liste n'est pas complète mais répond aux interrogations les
+    plus courantes. Pour une liste plus complète, consulter la liste des softs
+    testés sur la page principale du site.</font></p>
+    <p align="left"><font color="#FFFF00" size="5" face="Arial"><strong>Logiciels
+    ayant BESOIN d'un COPRO : &nbsp;</strong></font></p>
+    <p align="left">&nbsp;</p>
+</blockquote>
+
+<blockquote>
+    <blockquote>
+        <p align="left"><font color="#FFFFFF" size="3"
+        face="Arial"><strong>LINUX</strong><br>
+        <strong>Neon 3D</strong><br>
+        <strong>Inshape 1 &amp; 2</strong><br>
+        <strong>Design 3D</strong><br>
+        <strong>Kaffe </strong>(Console JAVA)<br>
+        <strong>Csound</strong> (Language de programmation pour
+        créer des sons)<br>
+        <strong>Apache</strong> server v1.3.3<br>
+        <strong>Mpg123</strong> (MP3 Player)<br>
+        <strong>Lame Encoder</strong> (recommended for MinT)</font><font
+        color="#FFFFFF" size="3" face="Arial"><br>
+        <strong>Lame Encoder TOS</strong> version (recommended
+        for TOS &amp; MagiC)</font></p>
+        <p align="left"><font
+        color="#FFFFFF" size="3" face="Arial"><strong>DEMOS : </strong></font></p>
+        <blockquote>
+            <p align="left"><font color="#FFFFFF" size="3"
+            face="Arial">ATS 1.1 (Demo DHS)<br>
+            128DIST (Demo DHS)<br>
+            4orce (Demo DHS)<br>
+            Dream 4Mention (Demo DHS)<br>
+            Liquid Sunshine (Demo DHS)<br>
+            128krawl (Demo DHS)<br>
+            Dream Dimension (Demo DHS)<br>
+            4ever (Demo DHS)<br>
+            Most demos from Mind-Design</font></p>
+        </blockquote>
+    </blockquote>
+</blockquote>
+
+<blockquote>
+    <p align="left">&nbsp;</p>
+    <p align="left"><font color="#FFFF00" size="5" face="Arial"><strong>Logiciels
+    qui utilisent le COPRO si présent :</strong></font></p>
+    <blockquote>
+        <p align="left"><font color="#FFFFFF" size="3"
+        face="Arial"><strong>ST CAD 1.63</strong></font></p>
+        <p align="left"><font color="#FFFFFF" size="3"
+        face="Arial"><strong>LINUX</strong> (Nouvelle version en
+        développement)</font></p>
+        <p align="left"><font color="#FFFFFF" size="3"
+        face="Arial"><strong>Blade Encoder</strong> (MP3 Encoder
+        recommended for MinT)<br>
+        <strong>FalcAMP</strong> (MP3 player 150% faster on
+        falcon)</font></p>
+        <p align="left"><font color="#FFFFFF" size="3"
+        face="Arial"><strong>Photoline</strong><br>
+        <strong>POV</strong><br>
+        <strong>Cloe</strong><br>
+        <strong>Raystart / Phoenix</strong><br>
+        <strong>CALAMUS SL 2000</strong> (4 à 7 fois plus rapide
+        AVEC le COPRO !)<br>
+        <strong>Fractal 2.xx</strong><br>
+        <strong>Audiomaster</strong><br>
+        <strong>Dynamite<br>
+        Denoiser<br>
+        Studio Son<br>
+        V-Trax<br>
+        Kandinsky 2.x<br>
+        Graph 1.20</strong> (Grapher)<br>
+        <strong>IJG 6a</strong> (JPEG &lt;--&gt; GIF/PPM/TGA/BMP
+        Converter)<br>
+        <strong>NView 2.95</strong> (Multi-format Viewer : plus
+        de 100 !)<br>
+        <strong>Nconvert 2.95 </strong>(Multi-format converter)<br>
+        <strong>Mesa</strong> (Open GL Library)<br>
+        <strong>Tiny </strong>(Open GL Library)<br>
+        <strong>Morpher</strong> (Morphing)<br>
+        <strong>Devpac<br>
+        Assemble<br>
+        GCC<br>
+        PureC<br>
+        Da's Layout</strong> (à verifier !)<br>
+        <strong>Fracktals V<br>
+        GemGraph 1.49 &amp; 2.xx<br>
+        Positive Image<br>
+        Pine 4.x</strong> (Mailer)</font></p>
+    </blockquote>
+</blockquote>
+
+<p align="center"><font size="4"><strong><tt> </tt></strong></font></p>
+</body>
+</html>

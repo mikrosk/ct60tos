@@ -1,0 +1,327 @@
+<!DOCTYPE HTML PUBLIC "-//IETF//DTD HTML//EN">
+<html>
+
+<head>
+<meta http-equiv="Content-Type"
+content="text/html; charset=iso-8859-1">
+<meta name="GENERATOR" content="Microsoft FrontPage 2.0">
+<title>CT2 CHPB ENG</title>
+</head>
+
+<body bgcolor="#000000" text="#FFFFFF" link="#4488FF"
+vlink="#800000">
+
+<blockquote>
+    <p align="center">&nbsp;</p>
+    <p align="center"><font color="#FFFF00" size="7">CHPB</font></p>
+    <p align="center"><font color="#FFFF00" size="4">C</font><font
+    color="#808080" size="4">T2</font><font color="#FFFF00"
+    size="4"> H</font><font color="#808080" size="4">ARDWARE</font><font
+    color="#FFFF00" size="4"> P</font><font color="#808080"
+    size="4">ROGRAMING</font><font color="#FFFF00" size="4"> B</font><font
+    color="#808080" size="4">OOK</font><font color="#FFFF00"
+    size="4"><br>
+    </font><font color="#C0C0C0">Rev 1.0 - (c) April 2000
+    Rodolphe Czuba</font><font color="#FFFF00" size="4"><br>
+    </font></p>
+    <p align="left"><font color="#FF0000" size="4">Try to use
+    this file on screen and not print it on paper ! <br>
+    Remember that paper is produced with trees !!</font><font
+    color="#FFFF00" size="4"><br>
+    <br>
+    This file is intended to the developers who want to code a
+    new CT2 boot.<br>
+    </font></p>
+    <p align="left"><font color="#FFFF00" size="4"><u>1- CT2
+    FAMILLY</u><br>
+    <br>
+    </font><font color="#FFFFFF" size="3">There are now 4
+    revisions (Rev) of the CT2 :<br>
+    Rev A - The first one with up to 32 MB of ram at address
+    $04x.<br>
+    Rev B - The last one with up to 128 MB of ram at address
+    $04x.<br>
+    Rev AN - The Rev A with ram at address $01x.<br>
+    Rev BN - The Rev B with ram at address $01x.<br>
+    <br>
+    Rev AN &amp; BN are planned, but not yet available.<br>
+    <br>
+    The PCB is the same between xN and notxN revision; only the
+    logic code<br>
+    inside the ISP(s) is changed.</font><font color="#FFFF00"
+    size="4"><br>
+    <br>
+    <br>
+    <u>2- WHY THE 'N' RELEASE ?</u><br>
+    <br>
+    </font><font color="#FFFFFF" size="3">When I designed the
+    CT2, I needed logic space in the ISP chips and a decoding of<br>
+    $04 to $07 was so easier to do than a decoding at $01 to $04.
+    It's only a <br>
+    binary frontier question... I did that because the software
+    developer of the<br>
+    set up proposed me to use the PMMU of the 030 to remap the
+    add $04x to $01x <br>
+    because some bad coded programs refuse to run at $04x (don't
+    ask me why).<br>
+    Even if it is working with the PPMU, we discovered later that
+    some programs <br>
+    like OUTSIDE, MAGIC, LINUX original booter, and other, modify
+    the PMMU tree in <br>
+    the memory WITHOUT read it before, assuming it is the atari
+    original tree from<br>
+    the TOS initialization !<br>
+    The crash is immediate because the new PMMU tree doesn't
+    declare Fast-ram to <br>
+    $04x, but at best $01x, and at worse no Fast-Ram at all. <br>
+    Finally, because of those bad programmed software, CT2 should
+    not use the PMMU.<br>
+    <br>
+    But keep in mind that in modern sytems, no user program can
+    touch <br>
+    the PMMU tree what is reserved to some system actions only !
+    But you are on <br>
+    atari...</font><font color="#FFFF00" size="4"><br>
+    <br>
+    <br>
+    3- HOW TO DETECT THE REVISION OF THE CT2 ?<br>
+    <br>
+    </font><font color="#FFFF00" size="3">- Rev A or B ?</font><font
+    color="#FFFFFF" size="3"><br>
+    On Rev A/AN, the FLASH space is shadowed at
+    $F5000000-$F5FFFFFF.<br>
+    Read a byte at $F5000000 to know the CT2 revision :<br>
+    Flash shadow --&gt; Rev A<br>
+    BUS ERROR --&gt; Rev B<br>
+    <br>
+    </font><font color="#FFFF00" size="3">- N release ?</font><font
+    color="#FFFFFF" size="3"><br>
+    On N releases, the access to $0F000000 is not filtered by the
+    32-Bit<br>
+    logic filter and goes to the mainboard = $000000 (24-bit
+    address).<br>
+    Read a word at $0F000000 :<br>
+    No BUS ERROR --&gt; Rev A or B (you read the word at $000000
+    that is<br>
+    remaped by F030 to $E00000 (the TOS ROM !)<br>
+    BUS ERROR --&gt; Rev AN or BN</font><font color="#FFFF00"
+    size="4"><br>
+    </font></p>
+    <hr>
+    <p align="left"><font color="#FFFF00" size="5"><u>CT2 Rev
+    A/B/AN/BN - 32-Bit PHYSICAL ADDRESSES MAP</u></font><font
+    color="#FFFF00" size="4"><br>
+    </font><font color="#FFFF00" size="1">Rev 4.0 - March 2000
+    (c) Rodolphe Czuba</font><font color="#FFFF00" size="4"><br>
+    </font></p>
+    <table border="0" cellpadding="5" cellspacing="5" width="70%">
+        <tr>
+            <td><font color="#FFFFFF" size="3">$00000000-$00DFFFFF</font><p><font
+            color="#FFFFFF" size="3">$00E00000-$00EFFFFF</font></p>
+            <p><font color="#FFFFFF" size="3">$00F00000-$00F0FFFF</font></p>
+            <p><font color="#FFFFFF" size="3">$00F10000-$00F9FFFF</font></p>
+            <p><font color="#FFFFFF" size="3">$00FA0000-$00FBFFFF</font></p>
+            <p><font color="#808080" size="3">$00FC0000-$00FDFFFF</font></p>
+            <p><font color="#FFFFFF" size="3">$00FF0000-$00FFFFFF
+            </font></p>
+            <hr>
+            </td>
+            <td><font color="#FFFFFF" size="3">ST-RAM (14 MB)</font><p><font
+            color="#FFFFFF" size="3">TOS 4.0x ROM (1 MB)</font></p>
+            <p><font color="#FFFFFF" size="3">I/O IDE (64 KB)</font></p>
+            <p><font color="#FFFFFF" size="3">F030 BUS SLOT (576
+            KB)</font></p>
+            <p><font color="#FFFFFF" size="3">CARTRIDGE SLOT (128
+            KB) </font></p>
+            <p><font color="#808080" size="3">Not used (192 KB)</font></p>
+            <p><font color="#FFFFFF" size="3">I/O (64 KB) </font></p>
+            <hr>
+            </td>
+            <td><font color="#FFFF00" size="3"></font><p><font
+            color="#FFFF00" size="3"></font>&nbsp;</p>
+            <p><font color="#FFFF00" size="3">24-Bit</font></p>
+            <p><font color="#FFFF00" size="3"></font>&nbsp;</p>
+            <p><font color="#FFFF00" size="3">FALCON</font></p>
+            <p><font color="#FFFF00" size="3"></font>&nbsp;</p>
+            <p><font color="#FFFF00" size="3">Space</font></p>
+            <hr>
+            </td>
+        </tr>
+        <tr>
+            <td><font color="#FFFFFF" size="3">$01000000-$02FFFFFF</font><p><font
+            color="#FFFFFF" size="3">$03000000-$08FFFFFF</font></p>
+            </td>
+            <td><font color="#FFFFFF" size="3">32-Bit FAST-Ram
+            (Rev AN/BN)(32 MB)</font><p><font color="#FFFFFF"
+            size="3">32-Bit FAST-Ram (Rev BN) (96 MB)</font></p>
+            </td>
+            <td>&nbsp;</td>
+        </tr>
+        <tr>
+            <td><font color="#FFFFFF" size="3">$04000000-$05FFFFFF</font><p><font
+            color="#FFFFFF" size="3">$06000000-$0BFFFFFF</font></p>
+            </td>
+            <td><font color="#FFFFFF" size="3">32-Bit FAST-Ram
+            (Rev A/B) (32 MB)</font><p><font color="#FFFFFF"
+            size="3">32-Bit FAST-Ram (Rev B) (96 MB)</font></p>
+            </td>
+            <td><font color="#FFFF00" size="3">32-Bit</font><p><font
+            color="#FFFF00" size="3"></font>&nbsp;</p>
+            </td>
+        </tr>
+        <tr>
+            <td><font color="#808080" size="3">$0C000000-$7FFFFFFF
+            </font></td>
+            <td><font color="#808080" size="3">Reserved (1856 MB)</font></td>
+            <td>&nbsp;</td>
+        </tr>
+        <tr>
+            <td><font color="#808080" size="3">$80000000-$EFFFFFFF</font></td>
+            <td><font color="#808080" size="3">Not used - Do not
+            use (1792 MB)</font></td>
+            <td><font color="#FFFF00" size="3">CT2</font></td>
+        </tr>
+        <tr>
+            <td><font color="#FFFFFF" size="3">$F0000000-$F3FFFFFF</font><p><font
+            color="#FFFFFF" size="3">$F4000000-$F5FFFFFF</font></p>
+            <p><font color="#FFFFFF" size="3">$F6000000-$F6FFFFFF
+            </font></p>
+            <p><font color="#FFFFFF" size="3">$F7000000-$F7FFFFFF</font></p>
+            <p><font color="#808080" size="3">$F8000000-$FEFFFFFF</font></p>
+            <p><font color="#FFFFFF" size="3">$FF000000-$FFFFFFFF</font></p>
+            </td>
+            <td><font color="#FFFFFF" size="3">32-Bit EXP SLOT
+            (Rev A/AN) (64 MB)</font><p><font color="#FFFFFF"
+            size="3">BOOT FLASH 64KB (32 MB)</font></p>
+            <p><font color="#FFFFFF" size="3">SET UP Registers
+            (16 MB)</font></p>
+            <p><font color="#FFFFFF" size="3">FAST-Ram Controller
+            (16 MB)</font></p>
+            <p><font color="#808080" size="3">Reserved (112 MB) </font></p>
+            <p><font color="#FFFFFF" size="3">FALCON 24-Bit
+            SHADOW (16 MB)</font></p>
+            </td>
+            <td><font color="#FFFF00" size="3">Space</font></td>
+        </tr>
+    </table>
+    <p align="left">&nbsp;</p>
+    <p align="left"><font color="#FFFF00" size="4"><u>SET UP
+    REGISTERS - WRITE BYTE at $F6xx0000</u></font></p>
+    <table border="0" cellspacing="7">
+        <tr>
+            <td><font color="#FFFFFF" size="3"><u>ADD</u></font></td>
+            <td><font color="#FFFFFF" size="3"><u>NAME FUNCTION
+            (if set to 1)</u></font></td>
+            <td><font color="#FFFFFF" size="3"><u>REVISION</u></font></td>
+        </tr>
+        <tr>
+            <td><font color="#FFFFFF" size="3">A18</font></td>
+            <td><font color="#FFFFFF" size="3">FLH FLasH WRITE
+            ENABLE</font></td>
+            <td><font color="#FFFFFF" size="3">B/BN</font></td>
+        </tr>
+        <tr>
+            <td><font color="#FFFFFF" size="3">A19</font></td>
+            <td><font color="#FFFFFF" size="3">E32 External Clock
+            at 32 MHz</font></td>
+            <td><font color="#FFFFFF" size="3">A/AN</font></td>
+        </tr>
+        <tr>
+            <td><font color="#FFFFFF" size="3">A20</font></td>
+            <td><font color="#FFFFFF" size="3">ECO External Clock
+            OFF</font></td>
+            <td><font color="#FFFFFF" size="3">A/B/AN</font></td>
+        </tr>
+        <tr>
+            <td><font color="#FFFFFF" size="3">A21</font></td>
+            <td><font color="#FFFFFF" size="3">IDE WS on IDE
+            (Turbo only)</font></td>
+            <td><font color="#FFFFFF" size="3">A/B/AN/BN</font></td>
+        </tr>
+        <tr>
+            <td><font color="#FFFFFF" size="3">A22</font></td>
+            <td><font color="#FFFFFF" size="3">DSP WS on DSP
+            (Turbo only)</font></td>
+            <td><font color="#FFFFFF" size="3">A/B/AN/BN</font></td>
+        </tr>
+        <tr>
+            <td><font color="#FFFFFF" size="3">A23</font></td>
+            <td><font color="#FFFFFF" size="3">CT2 BOOT on F030
+            (Turbo only)</font></td>
+            <td><font color="#FFFFFF" size="3">A/B/AN/BN</font></td>
+        </tr>
+    </table>
+    <p align="left"><font color="#FFFF00" size="3">1-</font><font
+    color="#FFFFFF" size="3"> Data value are sent by the ADDress
+    lines. By example : to set<br>
+    IDE bit at 1, write a byte at $F6200000, where 20 is a byte<br>
+    composed by A21 = 1. If you want to set DSP and IDE to 1,
+    write<br>
+    to $F6600000, where 60 is composed by A22,A21=1,1.<br>
+    Data value (on data bus) don't care.<br>
+    </font><font color="#FFFF00" size="3">2-</font><font
+    color="#FFFFFF" size="3"> A RESET INSTRUCTION or HARDWARE
+    RESET sets all bits to 0.<br>
+    </font><font color="#FFFF00" size="3">3-</font><font
+    color="#FFFFFF" size="3"> Read is not possible : use a
+    variable in memory.<br>
+    </font><font color="#FFFF00" size="3">4-</font><font
+    color="#FFFFFF" size="3"> Externam CLOCK (Bit ECO) is not
+    recommended on Rev B/BN.<br>
+    External clock from CT2 B is not wired on some fitting
+    because of<br>
+    a recently discovered disturbance of the DSP clock !<br>
+    It is not recommended to use this feature that will no longer
+    be <br>
+    supported !<br>
+    Don't offer it in the setup of Rev B/BN ! Write bit to 1.<br>
+    </font><font color="#FFFF00" size="3">5-</font><font
+    color="#FFFFFF" size="3"> FLH,E32 &amp; ECO are available in
+    NORMAL mode too !<br>
+    </font><font color="#FFFF00" size="3">6-</font><font
+    color="#FFFFFF" size="3"> Bit E32 : 0 = 36 MHz / 1 = 32 MHz
+    on Rev A/AN.<br>
+    Rev B as only 32 MHz (no E32 bit).<br>
+    Rev BN has no clock at all (no E32 &amp; ECO)!</font><font
+    color="#FFFF00" size="4"><br>
+    </font></p>
+    <p align="left"><font color="#FFFF00" size="4"><u>FAST-Ram
+    CONTROLLER REGISTERS </u><br>
+    Rev A/AN : BYTE WRITE at $F730C788<br>
+    Rev B/BN : BYTE WRITE at $F700000x <br>
+    <br>
+    <u>Rev A/AN</u></font></p>
+    <p align="left"><font color="#FFFFFF" size="3">Write a BYTE
+    at $F730C788 : this value will be latched by <br>
+    the controller. Use only this address.<br>
+    Any other access to $F7x will modify the controller
+    configuration<br>
+    and may crash the CT2A/AN if the FAST-Ram is already used !<br>
+    Only 16 and 32MB EDO SIMM can be used.</font><font
+    color="#FFFF00" size="4"><br>
+    <br>
+    <u>Rev B/BN</u></font></p>
+    <p align="left"><font color="#FFFFFF" size="3">The memory
+    controller must be configured regarding the size of<br>
+    EDO that is used :<br>
+    A BYTE write to $F7000000= 16/32MB SIMM<br>
+    $F7000001= 64/128MB SIMM</font><font color="#FFFF00" size="4"><br>
+    <br>
+    </font><font color="#FFFFFF" size="3">In general a 32MB SIMM
+    is a doubled 16MB SIMM and a <br>
+    128MB is a doubled 64MB SIMM.<br>
+    But, about 64MB there is a type that needs to be used with<br>
+    the 16/32 configuration, because of a different matrix in the
+    chips and<br>
+    a different wiring of the chips on the SIMM. Those 64MB SIMM
+    are rare...<br>
+    The memory test is a little complex : elimination method from
+    the biggest memory<br>
+    size case (128 MB : the upper 64MB window) must be practiced.
+    </font></p>
+    <p align="center"><a href="welcome.htm"><tt><img
+    src="../../com/back.gif" alt="Back" border="0" width="80"
+    height="60"></tt></a></p>
+</blockquote>
+</body>
+</html>

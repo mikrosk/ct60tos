@@ -1,0 +1,125 @@
+<html>
+
+<head>
+<meta http-equiv="Content-Type"
+content="text/html; charset=iso-8859-1">
+<meta name="GENERATOR" content="Microsoft FrontPage Express 2.0">
+<title>CT2 Hardware FR</title>
+</head>
+
+<body bgcolor="#000000" text="#FFFFFF" link="#4488FF"
+vlink="#FF0000">
+
+<blockquote>
+    <blockquote>
+        <p align="center"><font color="#FF0000" size="7"><strong>ARCHITECTURE
+        CT2</strong></font></p>
+        <blockquote>
+            <p align="center"><font color="#FF0000" size="3">(c)
+            Janvier 99, Rodolphe Czuba</font></p>
+        </blockquote>
+    </blockquote>
+    <pre><font color="#FFFF00" size="5" face="Times New Roman"><u>1/ PRESENTATION</u></font></pre>
+    <pre><tt>Comme vous pouvez le voir sur l'image plus bas, l'architecture de la CT2 est construite autour de 2 bus 32-Bit, alors que le Falcon d'origine est, à l'exception du bus DATA entre le VIDEL et la ST-Ram, organisé en 16-Bit. </tt></pre>
+    <p><tt>Avec la CT2, l'architecture propre aux ST/FALCON qui
+    consiste en une ram unique pour la vidéo et le CPU, est
+    soulagée par la FAST-Ram !<br>
+    En effet, avec la CT2 vous pouvez faire tourner vos
+    programmes aussi vite en 'True Color' qu'en 16 couleurs,
+    puisque le programme en FAST-Ram n'est plus ralenti par des
+    modes vidéo gourmands ! De plus le mode BURST du 030 est
+    enfin utilisé pour lire 4 LONGS et les cacher en 12 cycles
+    50 MHz ! <br>
+    <br>
+    L'écriture a été améliorée en 4 cycles 50 MHz au lieu de
+    6 sur la REV A !<br>
+    <br>
+    Ainsi, le Falcon devient une simple carte I/O 16-Bits
+    pilotée par la CT2. La ST-Ram devient donc la RAM vidéo et
+    sonore, ce que l'on appelle 'CHIP-Ram' sur AMIGA, c'est à
+    dire la ram utilisée par les chips (BLITTER, SOUND, VIDEO).
+    La FAST-Ram devient donc la ram système à utiliser le plus
+    possible par le CPU. Cette architecture se rapproche de celle
+    d'un PC...<br>
+    <br>
+    Le coeur de la CT2 est constitué de 2 composants nommés
+    ANNA et THALIE assurant les fonctions suivantes:<br>
+    <br>
+    </tt><font color="#00FF00" face="Courier New"><u>ANNA:</u></font></p>
+    <ul>
+        <li><tt>Contrôleur DRAM EDO 60 ns avec LECTURE BURST en
+            5,2,2,2 cycles 50 MHz (32.5 Mo/s réels) et ECRITURE
+            en 4 cycles 50 MHz (38 Mo/s).</tt></li>
+        <li><tt>Watchdog Hardware de 6 us.</tt></li>
+        <li><tt>Génération de l'horloge 500 kHz pour les ACIA.</tt></li>
+    </ul>
+    <p><font color="#00FF00"><u>THALIE:</u></font></p>
+    <ul>
+        <li><tt>Communication avec le COPRO.</tt></li>
+        <li><tt>Interfacage 030 avec le bus 68000 du Falcon et
+            logique d'accès à 50 MHz au Falcon.</tt></li>
+        <li><tt>Contrôle des buffer DATA.</tt></li>
+        <li><tt>Contrôle des accès à la FLASH à 50 MHz.</tt></li>
+        <li><tt>Contrôle des accès au DSP à 50 MHz.</tt></li>
+        <li><tt>Contrôle des accès aux ACIAS à 50 MHz.</tt></li>
+        <li><tt>Contrôle des accès au/du SDMA en SLAVE/MASTER.</tt></li>
+        <li><tt>Gestion des INTerruption 4 et 2 (VBL et HBL).</tt></li>
+        <li><tt>Génération des horloges (sauf ACIA).</tt></li>
+        <li><tt>Registres de configuration de la CT2.</tt></li>
+    </ul>
+    <p>&nbsp;</p>
+    <p><font color="#FFFF00" size="4"><u>2/ NOUVELLES REGLES</u></font><strong><tt><u><br>
+    </u></tt></strong></p>
+    <p><tt>De nombreux développeurs software doivent changer
+    leur approche du Falcon car dans de nombreux cas
+    l'utilisation de la FAST-Ram par le CPU est bien plus
+    avantageuse que toute autre méthode qu'ils auraient pu
+    mettre en place pour palier à la lenteur de la ST-Ram.<br>
+    Ceci est particulièrement valable pour ceux qui ont utilisé
+    à tout va le DSP pour des calculs qui sont maintenant, dans
+    une majorité des cas, effectués plus rapidement par le CPU
+    en FAST-Ram. Il convient désormais de n'utiliser le DSP que
+    pour des calculs pour lesquels il a été conçu (matrice,
+    FFT, etc...), en n'oubliant pas que les délais de transferts
+    dans ce dernier sont devenus considérables par rapport à
+    ceux de la FAST-Ram. </tt></p>
+    <p><tt>De plus, un effort important doit être fait pour
+    coder en LONG et aligner le code (programmeurs en C, mettez
+    vous à l'ASM !) sur, au minimum, des LONGs, ou mieux, des
+    frontières de 16 octets (4 LONGs = 1 ligne de cache).<br>
+    Ceci est nécessaire si vous voulez profiter au maximum du
+    BURST. Il faut cependant savoir que le 'WRAP AROUND' du 030
+    est désactivé par le hard de la CT2 pour éviter une baisse
+    de performance avec la majorité des logiciels actuels qui ne
+    respectent pas les alignements 32-Bit sur des lignes de
+    cache. Ainsi le VL-BURST (Variable Length) permet au CPU de
+    ne remplir que la fin de sa ligne de cache sans retourner
+    compléter le début de sa ligne avec du code ou des data à
+    des adresses précédentes.<br>
+    <br>
+    Par exemple, si vous exécutez du code à l'adresse
+    $01025480, le CPU va burster une ligne compléte de son cache
+    avec le contenu (LONG) des adresses:<br>
+    $01025480, $01025484, $01025488 et $0102548C.<br>
+    Si par contre le CPU burst à partir de $01025488, il
+    s'arrêtera après avoir lu le deuxième LONG à $0102548C
+    mais n'ira pas prendre les 2 premiers longs en $01025480 et
+    $01025484 ! Ce qu'il aurait fait avec le WRAP AROUND...C'est
+    dans la plupart des cas 4 cycles (2+2) qui ont ainsi été
+    économisés car il est rare que le CPU ait besoin de ces 2
+    précédents LONGs, sauf avec certains modes d'adressage
+    assez peu usités... </tt></p>
+    <p><tt>Pour plus d'informations sur le fonctionnement des
+    caches du 030, veuillez vous reporter au chapitres 6 et 7 du
+    '68030 USER'S MANUAL' de MOTOROLA ou au chapitre 4 du 'MISE
+    EN OEUVRE DU 68030' aux éditions SYBEX (code ISBN
+    2-7361-0350-5) pour ceux qui ne maîtrisent pas la langue
+    anglaise.</tt></p>
+</blockquote>
+
+<p align="center"><img src="../architec.gif" alt="ARCHITEC.GIF"
+width="864" height="400"><br>
+<a href="bienvenu.htm"><img src="../../com/back.gif" alt="Retour"
+border="0" width="80" height="60"></a></p>
+</body>
+</html>

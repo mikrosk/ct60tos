@@ -1,0 +1,210 @@
+<!DOCTYPE HTML PUBLIC "-//IETF//DTD HTML//EN">
+<html>
+
+<head>
+<meta http-equiv="Content-Type"
+content="text/html; charset=iso-8859-1">
+<meta name="GENERATOR" content="Microsoft FrontPage 2.0">
+<title>CT2 Technical ENG</title>
+</head>
+
+<body bgcolor="#000000" text="#FFFFFF" link="#4488FF"
+vlink="#800000">
+
+<blockquote>
+    <p align="center">&nbsp;</p>
+    <p align="center"><font color="#FFFF00" size="5">TECHNIQUES
+    CONSIDERATIONS</font><font color="#FFFF00" size="4"><br>
+    </font></p>
+    <p align="center"><font color="#FFFF00" size="4">Studying the
+    FALCON &amp; the FALCON CT2b<br>
+    </font><font color="#FFFF00" size="2">(c) Rodolphe Czuba -
+    JANVIER 99.</font><tt><br>
+    </tt></p>
+    <p align="left"><font color="#FFFF00"><tt>This page presents
+    some of the technical ascpects of performance of a processor
+    regarding bus and ram.<br>
+    </tt></font></p>
+    <table border="1" cellpadding="7" cellspacing="0" width="84">
+        <tr>
+            <td width="78" bgcolor="#800000"><font size="4"><strong><tt>FALCON</tt></strong></font></td>
+        </tr>
+    </table>
+    <blockquote>
+        <p><font color="#FFFF00"><tt>The basic system is a FALCON
+        030 equiped of a 16 MHz MOTOROLA MC68030 with a 16 bits
+        bus.</tt></font><tt><br>
+        <br>
+        On this system, the ram is divided in 2 banks of 16 bits,
+        2 MBytes each. This makes a total of 4 MBytes adressed in
+        32 bits only by the video chip (VIDEL).<br>
+        <br>
+        The advantage of the 2 banks is the interleaving.<br>
+        On the memory mapping point of view, accessing to an even
+        WORD ($00, $04, $08, etc) is done on bank 0, accessing to
+        an odd WORD ($02, $06, $0A, etc) is done on bank 1.<br>
+        So the acces to sequential linear (in lots of cases), the
+        processor acces to bank 0, 1, 0, 1, 0, 1, 0, 1 etc...<br>
+        <br>
+        But why ?<br>
+        To avoid the loss of cycle durring PRECHARGE TIME. This
+        precrache time is the time necessary between 2 DRAM
+        acces. So, for a 60 ns, this is 40 ns; one 16 MHz cyle is
+        enought. The entire cycle of this RAM is 110 ns !<br>
+        The F030 RAM is a 80 ns (complete cycle is 150 ns).<br>
+        <br>
+        The question is why the FALCON has a 16 bit wide data
+        bus. Here is the most probable answer :<br>
+        <br>
+        To have a 32 bit wide DATA bus for the CPU and to keep
+        same performances using interleaving, Atari would have to
+        provide RAM configurations of 2 or 8 MBytes. 2 is not
+        enought, and 8, at the time the machine was done, was too
+        expensive.<br>
+        <br>
+        The 030 of the FALCON accesses in 4 (16 MHz) cycles to a
+        bank. A cycle is 62.5 ns long. This is 4 x 62.5 = 250 ns.
+        This could be done with 80 ns ram.<br>
+        <br>
+        </tt><font color="#FFFF00"><tt>The calcul of band width
+        in the RAM is the folowing :</tt></font><tt><br>
+        <br>
+        1 WORD / 4 clock cycles, so 0.5 octets / clock cycles.<br>
+        <br>
+        So 0.5 x 16 000 000 = </tt><font color="#FFFF00"><tt>8
+        MBytes/s.</tt></font><tt><br>
+        <br>
+        What you can send to the RAM is one thing, but what the
+        processor cant do with it is another.<br>
+        In fact, to transfer between a RAM and a CPU, the CPU
+        have to execute instructions. The most used is a MOVE.L
+        that is 5 clock cycle. on a 030 (2 on a 040) and this of
+        cource is faster to write. So, the 8 MBytes/s a only
+        theory, the reality is a bit different :<br>
+        On a 16 bit bus, a MOVE.L makes the processor de 2 output
+        on the bus to read/write 2 WORDS. Hopefully, this type
+        does not make delays between the 2 WORDS.<br>
+        Moreover, you have to take care of the time of an acces
+        to the RAM to feed the VIDEL. This can take from 4 up to
+        32% of the band width of the bus. This problem does not
+        exist with FAST-Ram because this one is not used by
+        video...<br>
+        <br>
+        </tt><font color="#FFFF00"><tt>Let's see the case of the
+        640x480x2 color mode (1 bit per pixel) :</tt></font><tt><br>
+        <br>
+        The number of bytes to transfer from RAM to the VIDEL
+        (the COMBEL is adressing those) is (640x480)/8 = 38400.
+        This represent 9600 LONG (acces to RAM in 32 bit mode).<br>
+        The VIDEL recieved those LONGs by bursting 17 longs.<br>
+        BURST is achieved in 3, 1, 1, [...] 1, 1 using FAST-PAGE
+        mode of the 80 ns RAM.<br>
+        So 9600/17 = 565 BURST (of 17 LONGs), this is 565x19 =
+        10735 cycles for an image.<br>
+        For a second (60 image in a 60 Hz VGA mode), it's
+        10735x60 = 644100 cycles.<br>
+        Durring this time, the CPU can't acces to the ST-RAM.<br>
+        This represent 644,100/ 16,000,000 = 0.04, so </tt><font
+        color="#FFFF00"><tt>4%</tt></font><tt> !<br>
+        <br>
+        With the 25 MHz of the F030 bus when it has a CT1, the TC
+        slowness is 20%, 10.2% in 16 color and 2.56% for the 2
+        color mode. We let you make the calcul for the 256 color
+        mode, and discover a surprise...<br>
+        <br>
+        </tt><font color="#00FF00"><tt>To be sure of the calculs,
+        read thoses remarks :<br>
+        </tt></font></p>
+        <ol>
+            <li><font color="#00FF00"><tt>The BURST mode of the
+                030 CACHEs are unusable with 16-Bit bus.<br>
+                </tt></font></li>
+            <li><font color="#00FF00"><tt>This does not take of
+                refresh cycles that occur every 15.6 µs that
+                slow down the 030 (WAIT SATES). But it's on all
+                system, and it does not influence the calculs a
+                lot.<br>
+                </tt></font></li>
+            <li><font color="#00FF00"><tt>The calcul is made
+                aserting that we are accessing to the RAM
+                lineary, so without the interleave of memory
+                banks. If we access anywhere (lake every 4
+                bytes), we have to calcul once more (read this
+                article in french for details). </tt></font></li>
+            <li><font color="#00FF00"><tt>Making a distinction
+                between reading and writing in RAM is
+                interessant, because if the hardware is well
+                made, it is possible to write faster that
+                reading. You can notice it using NEMBENCH (5.3 /
+                6.4 on a normal F030 and 31.2/32.2 on a Falcon
+                CT2).<br>
+                </tt></font></li>
+            <li><font color="#00FF00"><tt>The band width of the
+                bus is allso consumed by chips capable of being
+                MASTER in stead of the CPU. On the Falon, 2 chips
+                does it : the SDMA and the BLITTER.</tt></font></li>
+        </ol>
+        <p>&nbsp;</p>
+    </blockquote>
+    <table border="1" cellpadding="7" cellspacing="0" width="183">
+        <tr>
+            <td width="177" bgcolor="#800000"><font size="4"><strong><tt>CT2
+            B</tt></strong></font></td>
+        </tr>
+    </table>
+    <blockquote>
+        <p><tt>The bigest techincal point of the CT2 is the 32
+        bit FAST-Ram. In fact, this RAM allow BURST durring the
+        loading of caches of the 030.<br>
+        A line in the cache is 16 bytes long (4 LONG), so this
+        make 4 bus acces, but in a faster way.<br>
+        The FAST-Ram controler is realy faster that the Falcon
+        ST-Ram one.<br>
+        </tt></p>
+        <ul>
+            <li><tt>It allows sequential acces in five 50 MHz
+                clock cycles in reading, and 4 in writing !<br>
+                </tt></li>
+            <li><tt>Refresh cycles are 5 clock cycle long.<br>
+                </tt></li>
+            <li><tt>It alows BURST !!! With a program in
+                FAST-Ram, the CPU take 90% of his time to burst
+                for it's cache.<br>
+                <br>
+                In five 50 MHz cycle, the 030 take 4 LONGs (4
+                bytes) from FAST-Ram in the case of NON BURST
+                (realy rare), so 4/(5+5) cycles for reading bus
+                and 5 for executing MOVE.L = 0.4 bytes per cycle.
+                So, at 50 MHz, this is 20 MBytes/s!<br>
+                </tt></li>
+        </ul>
+        <p><font color="#FFFF00"><tt>Let's talk about BURST :</tt></font><tt><br>
+        <br>
+        The CPU bursts in most part of the time. The CT2 gets 5,
+        2, 2, 2 cycles at 50 MHz.<br>
+        <br>
+        The calcul is the folowing :<br>
+        16 bytes / (11 + 5 x 3) 50 MHz cycles,<br>
+        so 16 bytes / 26 cycles = 0.6154 bytes/s<br>
+        so 0.6154 x 50 000 000 = </tt><font color="#FFFF00"><tt>30.77
+        MBytes/s</tt></font><tt> !<br>
+        <br>
+        This is 30.77/5.3 = 5.8 time faster than a stock Falcon.
+        Is there any pepole that work without a CT2 ???<br>
+        <br>
+        </tt><font color="#00FF00"><tt><u>REMARQUE :</u></tt><tt>
+        The BLITTER is not usable on a CT2 because of it's
+        incapacity of adressing a 32 bit adresse space, including
+        FAST-Ram (you have to have NVDI).</tt></font><tt><br>
+        <br>
+        This is the end of this analysis. Thanks for your
+        attention.<br>
+        We hope that you understood and that you will start to
+        calculate band width yourselves. </tt></p>
+    </blockquote>
+    <p align="center"><a href="welcome.htm"><tt><img
+    src="../../com/back.gif" alt="Back" border="0" width="80"
+    height="60"></tt></a></p>
+</blockquote>
+</body>
+</html>
