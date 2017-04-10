@@ -28,8 +28,8 @@
 	
 SLAVE_SDRAM_ADDRESS     equ $50 ;7 bits 1010xxx
 SLAVE_DS_ADDRESS        equ $58   
-SLAVE_CY_EEPROM_ADDRESS equ $68
-SLAVE_CY_SRAM_ADDRESS   equ $69
+SLAVE_CY_EEPROM_ADDRESS equ $68 ; $40-$47 EEPROM
+SLAVE_CY_SRAM_ADDRESS   equ $69 ;
 
 ;DS1085 serial programmable clock registers
 DIVWORD   equ $01

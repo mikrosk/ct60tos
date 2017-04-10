@@ -20,6 +20,7 @@
 	.export ct60_read_temp
 	.export ct60_stop
 	.export ct60_cpu_revision
+	.export cf_stop
 	.export mes_delay
 	.export value_supexec
 	.import ct60_rw_param
@@ -153,6 +154,13 @@ ct9:
 	move (SP)+,SR
 	tst.l D0
 	movem.l (SP)+,D1-D3/A0-A2
+	rts
+
+cf_stop:
+
+	move.l #$700,D0
+	move.w D0,SR
+	dc.w $4ac8 ; halt					;fpstop #$2700
 	rts
 	
 ct60_stop:

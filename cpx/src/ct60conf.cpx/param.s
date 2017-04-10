@@ -298,6 +298,7 @@ devices:
 	dc.l 0x000422AB, fujitsu_mbm29f400bc-devices
 	dc.l 0x00042258, fujitsu_mbm29f800ba-devices
 	dc.l 0x00012258, amd_am29f800bb-devices
+	dc.l 0x00202258, st_m29f800db-devices
 	dc.l 0
 	
 fujitsu_mbm29f400bc:
@@ -305,6 +306,7 @@ fujitsu_mbm29f400bc:
 
 fujitsu_mbm29f800ba:
 amd_am29f800bb:
-	dc.l FLASH_ADR+0xF0000, FLASH_UNLOCK1, FLASH_UNLOCK2
+st_m29f800db:
+	dc.l FLASH_ADR+0xF0000, FLASH_UNLOCK1, FLASH_UNLOCK2	
 
 	end
