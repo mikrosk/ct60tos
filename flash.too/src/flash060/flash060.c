@@ -1,5 +1,5 @@
-/* Flashing CT60 soft & hard
-*  Didier Mequignon 2003 July, 2005 April, e-mail: aniplay@wanadoo.fr
+/* Flashing CT60 / CTPCI soft & hard and FIREBEE
+*  Didier Mequignon 2003-2011, e-mail: aniplay@wanadoo.fr
 *
 *  This program is free software; you can redistribute it and/or modify
 *  it under the terms of the GNU General Public License as published by
@@ -16,7 +16,10 @@
 *  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 */
 
-#include <tos.h>
+#include <tos.h> 
+#ifndef SIGPIPE
+#include <mint.h>
+#endif
 #include <aes.h>
 #include <vdi.h>
 #include <string.h>
@@ -34,6 +37,8 @@
 #define	NOWINDOW	form_alert(1,"[1][No window available!][Cancel]")
 #define	NOALERT		form_alert(1,"[1][Error message not found |inside file FLASH060.RSC][OK]")
 #define	NOMEMORY	form_alert(1,"[1][Not enough memory! |This program needs 1MB][Cancel]")
+#define FORCEABESDR form_alert(1,"[2][ABE60 / SDR60 ?][ABE60|SDR60]")
+#define FORCESDRABE form_alert(1,"[2][SDR60 / ABE60 ?][SDR60|ABE60]")
 
 #define ERR_DEVICE  -1
 #define ERR_ERASE   -2
@@ -100,7 +105,8 @@ __Sigfunc signal(int sig, __Sigfunc func);
 int Alert(int name);
 int Load(void);
 int Keyboard(int key);
-int Button(int code);
+int Button(int code,int mouse_x);
+void move_cursor(void);
 void aff_leds(int count);
 int jtag_test_device(unsigned char *tap_state,unsigned long *usercode);
 int jtag_isp_enable(unsigned char *tap_state);
@@ -113,12 +119,14 @@ unsigned long jtag_device_adr(unsigned long jedec_line);
 unsigned long get_user_code_jed(void);
 int test_file(char *path);
 void load_file(char *path_argv);
+void display_objc_form(int objc,int clip_x,int clip_y,int clip_w,int clip_h);
 int init(int argc,int *vp,int *wp);
 void term(int code,int vh,int wh);
 int rc_intersect(GRECT *r1,GRECT *r2);
 int min(int a,int b),max(int a,int b);
 void get_date_file(unsigned short date_file,char *date_format);
 void get_date_os(unsigned char *date_os,char *date_format);
+void get_date_os2(unsigned short *date_os,char *date_format);
 void get_version_boot(unsigned char *version_boot,char *version_format);
 COOKIE *fcookie(void);
 COOKIE *ncookie(COOKIE *p);
@@ -132,21 +140,30 @@ int dd_reply(long fd,unsigned char ack);
 extern int srec_read(const char *path);
 extern long get_date_flash(void);
 extern long get_version_flash(void);
+extern long get_checksum_flash(void);
+extern long read_flash(long offset,long size,void *dest);
 extern long program_flash(long offset,long size,void *source,int lock_interrupts);
+extern long get_date_flash_cf(void);
+extern long get_version_flash_cf(void);
+extern long get_checksum_flash_cf(void);
+extern long read_flash_cf(long offset,long size,void *dest);
+extern long program_flash_cf(long offset,long size,void *source);
 
 /* global variables */
 
 int contrl[12],intin[128],intout[128],ptsin[128],ptsout[128];
 int ap_id,wh,w_icon,file_loaded=0;
-void *buffer_flash=0;
+void *buffer_flash=NULL;
 long size_tos=0;
+int coldfire=0;
 int jedec_only=0;
 int soft_hard=SOFT_BIN;
 int device=NO_DEVICE;
-unsigned long usercode_jed=0,flash_device=0;
-OBJECT *Resource;
+unsigned long usercode_jed=0,flash_device=0,dreg_length=DATA_LENGTH;
+OBJECT *Form;
 OBJECT *Icone;
 GRECT shrink;
+int ed_objc,new_objc,ed_pos,new_pos;
 jedec_data_t jed=0;
 __Sigfunc oldsig;
 extern unsigned long start_adr,end_adr;
@@ -158,12 +175,13 @@ void main(int argc, char **argv)
 	int message[8];
 	long value=0;
 	unsigned short version;
-	char *path;
 	OBJECT *op;
 	TEDINFO *tp;
 	GRECT rect1,rect2;
+	if(get_cookie('_CF_')!=0)
+		coldfire=1;
 	clic=1;
-	value=Supexec(get_date_flash);
+	value=Supexec(coldfire ? get_date_flash_cf : get_date_flash);
 	jedec_only=0;
 	if(value==0)
 		jedec_only=1;
@@ -174,13 +192,13 @@ void main(int argc, char **argv)
 		get_date_os((unsigned char *)&value,tp->te_ptext);  /* TOS in flash date */
 		rsrc_gaddr(R_OBJECT,VERSION_FLASH,&op);
 		tp=op->ob_spec.tedinfo;
-		version=(unsigned short)Supexec(get_version_flash);
+		version=(unsigned short)Supexec(coldfire ? get_version_flash_cf : get_version_flash);
 		get_version_boot((unsigned char *)&version,tp->te_ptext);
 		if(argc>1)
 		{
 			wind_update(BEG_UPDATE);
 			load_file(argv[1]);
-			Button(PROG);
+			Button(PROG,0);
 			wind_update(END_UPDATE);
 		}
 		do
@@ -196,13 +214,13 @@ void main(int argc, char **argv)
 			}
 			if(event & MU_BUTTON && !w_icon)
 			{
-				if((!(clic^=1)) && ((i=objc_find(Resource,ROOT,MAX_DEPTH,x,y)) >= 0))
+				if((!(clic^=1)) && ((i=objc_find(Form,ROOT,MAX_DEPTH,x,y)) >= 0))
 				{
 					wind_get(wh,WF_TOP,&ok,&bid,&bid,&bid);
 					if(ok==wh)
 					{
 						wind_update(BEG_UPDATE);
-						done|=Button(i);
+						done|=Button(i,x);
 						wind_update(END_UPDATE);
 					}
 				}
@@ -222,27 +240,23 @@ void main(int argc, char **argv)
 						Icone[ROOT].ob_height=rect1.g_h;
 						Icone[ICONE].ob_x=(rect1.g_w-Icone[ICONE].ob_width)/2;
 						Icone[ICONE].ob_y=(rect1.g_h-Icone[ICONE].ob_height)/2;
+						rect2.g_x=message[4];
+						rect2.g_y=message[5];
+						rect2.g_w=message[6];
+						rect2.g_h=message[7];
+						wind_get(message[3],WF_FIRSTXYWH,aGrect(&rect1));
+						while(rect1.g_w && rect1.g_h)
+						{
+							if(rc_intersect(&rect2,&rect1))
+								objc_draw(Icone,ROOT,MAX_DEPTH,Grect(&rect1));
+							wind_get(message[3],WF_NEXTXYWH,aGrect(&rect1));
+						}
 					}
 					else
 					{
-						Resource[ROOT].ob_x=rect1.g_x;
-						Resource[ROOT].ob_y=rect1.g_y;
-					}
-					rect2.g_x=message[4];
-					rect2.g_y=message[5];
-					rect2.g_w=message[6];
-					rect2.g_h=message[7];
-					wind_get(message[3],WF_FIRSTXYWH,aGrect(&rect1));
-					while(rect1.g_w && rect1.g_h)
-					{
-						if(rc_intersect(&rect2,&rect1))
-						{
-							if(!w_icon)	/* window not iconified */
-								objc_draw(Resource,ROOT,MAX_DEPTH,Grect(&rect1));
-							else
-								objc_draw(Icone,ROOT,MAX_DEPTH,Grect(&rect1));
-						}
-						wind_get(message[3],WF_NEXTXYWH,aGrect(&rect1));
+						Form[ROOT].ob_x=rect1.g_x;
+						Form[ROOT].ob_y=rect1.g_y;
+						display_objc_form(ROOT,message[4],message[5],message[6],message[7]);
 					}
 					break;
 				case WM_TOPPED:
@@ -260,8 +274,8 @@ void main(int argc, char **argv)
 				case WM_MOVED:		/* window moved */
 					wind_set(message[3],WF_CURRXYWH,message[4],message[5],message[6],message[7]);
 					wind_get(message[3],WF_WORKXYWH,&message[4],&message[5],&message[6],&message[7]);
-					Resource->ob_x=message[4];
-					Resource->ob_y=message[5];
+					Form->ob_x=message[4];
+					Form->ob_y=message[5];
 					break;
 				case WM_BOTTOMED:
 					wind_set(message[3],WF_BOTTOM,message[4],message[5],message[6],message[7]);
@@ -327,34 +341,80 @@ int Alert(int name)
 int Load(void)
 {
 	return(rsrc_load("flash060.rsc")
-		&& rsrc_gaddr(R_TREE,FORM1,&Resource)
+		&& rsrc_gaddr(R_TREE,FORM1,&Form)
 		&& rsrc_gaddr(R_TREE,FORM2,&Icone));
 }
 
 int Keyboard(int key)
 {
-	key&=0x7F;
-	switch(key)
+	int i, dial;
+	OBJECT *op;
+	TEDINFO *tp;
+	dial=form_keybd(Form,ed_objc,ed_objc,key,&new_objc,&key);
+	if(!key && dial)
 	{
-		case 12:            /* CTRL-L */
-			Button(LOAD);
-			break;
-		case 13:            /* ENTER */
-			Button(PROG);
-			break;
-		case 17:            /* CTRL-Q */
-		case 27:            /* ESC */
-			return(1);
+		if(new_objc)
+		{
+			if(!rsrc_gaddr(R_OBJECT,new_objc,&op))
+				return(0);
+			tp=op->ob_spec.tedinfo;
+			for(i=0;tp->te_ptext[i];i++);
+			new_pos=i;          /* cursor in end of zone edited */
+		}
 	}
+	else
+	{
+		if(Form[ed_objc].ob_flags & EDITABLE)
+		{
+			switch(key & 0xff00)
+			{
+			case 0x7300:			/* ctrl + left */
+				new_objc=ed_objc;	/* same zone */
+				new_pos=0;			/* cursor at left */
+				key=0;
+				break;
+			case 0x7400:			/* ctrl + right */
+				new_objc=ed_objc;	/* same zone */
+				key=0;
+				if(!rsrc_gaddr(R_OBJECT,new_objc,&op))
+					return(0);
+				tp=op->ob_spec.tedinfo;
+				for(i=0;tp->te_ptext[i];i++);
+				new_pos=i;			/* cursor in end of zone */
+			}
+		}
+		switch(key & 0x7F)
+		{
+			case 12:            /* CTRL-L */
+				Button(LOAD,0);
+				break;
+			case 13:            /* ENTER */
+				Button(PROG,0);
+				break;
+			case 17:            /* CTRL-Q */
+			case 27:            /* ESC */
+				return(1);
+		}
+	}
+	if(key>0)
+	{
+		objc_edit(Form,ed_objc,key,&ed_pos,ED_CHAR);	/* text edited in usual zone */
+		new_objc=ed_objc;
+		new_pos=ed_pos;
+	}
+	if(dial)						/* if 0 => new_objc contains object EXIT */
+		move_cursor();
+	else
+		return(1);
 	return(0);
 }
 
-int Button(int code)
+int Button(int objc_clic, int mouse_x)
 {
 	long stack,offset,value,tosram;
-	unsigned long usercode;
+	unsigned long usercode=0;
 	unsigned short version;
-	int i,b,error,verify,repeat,lock_interrupts;
+	int i,j,b,error,verify,repeat,lock_interrupts,pos_clic,xoff,yoff,width,ret;
 	unsigned char tap_state;
 	char c;
 	NVM nvram;
@@ -362,245 +422,415 @@ int Button(int code)
 	OBJECT *op;
 	TEDINFO *tp;
 	char buffer[2];
-	if(!rsrc_gaddr(R_OBJECT,code,&op)
-	 || !((op->ob_flags & SELECTABLE) && !(op->ob_state & DISABLED)))
+	if(!rsrc_gaddr(R_OBJECT,objc_clic,&op))
 		return(0);
 	verify=0;
-	switch(code)
+	if((op->ob_flags & SELECTABLE) && !(op->ob_state & DISABLED))
 	{
-	case LOAD:
-	case FILE:
-		load_file(0);
-		break;	
-	case VERIFY:
-		verify=1;
-	case PROG:
-		objc_change(Resource,code,MAX_DEPTH,Resource->ob_x,Resource->ob_y,
-			Resource->ob_width,Resource->ob_height,SELECTED,1);
-		if(!file_loaded)
+		switch(objc_clic)
+		{
+		case LOAD:
 			load_file(0);
-		b=1;
-		tosram=lock_interrupts=0;
-		if(file_loaded && ((p=get_cookie('_CPU'))!=0) && (p->v.l==0x3C))	/* 68060 */
-		{
-			if(get_cookie('CT60'))
-				tosram=ct60_rw_parameter(CT60_MODE_READ,CT60_PARAM_TOSRAM,0L)&1;
-			if(!tosram && soft_hard!=HARD_JED)
+			break;
+		case FILE:
+			if(file_loaded && soft_hard==HARD_JED && jed)
 			{
-				b=Alert(ALERT_060);
-				if(b && get_cookie('MagX')==0)
-					lock_interrupts=1;
-			}
-			else if(soft_hard==HARD_JED)
-			{
-				Alert(ALERT_HARD_060);
-				b=0;			
-			}
-		}
-		if(file_loaded && b==1)
-		{
-			graf_mouse(BUSYBEE,0L);
-			aff_leds(-1);  /* init */
-			if(soft_hard==HARD_JED && jed)
-			{
-				if(Supexec(test_cable)==0)
-					Alert(ALERT_CABLE);
-				else
+				if(device==ABE)
 				{
-					stack=Super(0L);
-					/* Initialize the I/O.  SetPort initializes I/O on first call */
-					setPort(TMS,1);
-					setPort(TCK,1);
-					b=(int)readTDOBit(); 
-					Super((void *)stack);
-					if(!b)
-						Alert(ALERT_POWER);
+					if(FORCEABESDR!=1)
+					{
+						device=SDR;
+						tp=op->ob_spec.tedinfo;
+						tp->te_ptext="SDR60";
+						display_objc_form(FILE,Form->ob_x,Form->ob_y,Form->ob_width,Form->ob_height);
+					}
+				}
+				else if(device==SDR)
+				{
+					if(FORCESDRABE!=1)
+					{
+						device=ABE;
+						tp=op->ob_spec.tedinfo;
+						tp->te_ptext="ABE60";
+						display_objc_form(FILE,Form->ob_x,Form->ob_y,Form->ob_width,Form->ob_height);
+					}
+				}
+			}
+			else
+				load_file(0);
+			break;
+		case VERIFY:
+			verify=1;
+		case PROG:
+			op->ob_state |= SELECTED;
+			display_objc_form(objc_clic,Form->ob_x,Form->ob_y,Form->ob_width,Form->ob_height);
+			if(!file_loaded)
+				load_file(0);
+			b=1;
+			tosram=lock_interrupts=0;
+			if(file_loaded && ((p=get_cookie('_CPU'))!=0) && (p->v.l==0x3C))	/* 68060 */
+			{
+				if(coldfire || get_cookie('CT60'))
+				{
+					if((unsigned short)Supexec(coldfire ? get_version_flash_cf : get_version_flash) < 0x200)
+						tosram=ct60_rw_parameter(CT60_MODE_READ,CT60_PARAM_TOSRAM,0L)&1;
+					else
+						tosram=1;
+				}
+				if(!tosram && soft_hard!=HARD_JED)
+				{
+					b=Alert(ALERT_060);
+					if(b && get_cookie('MagX')==0)
+						lock_interrupts=1;
+				}
+				else if(soft_hard==HARD_JED)
+				{
+					if(Alert(ALERT_HARD_060)!=1)
+					{
+						rsrc_gaddr(R_OBJECT,VERSION_FILE,&op);
+						tp=op->ob_spec.tedinfo;
+						usercode=(((unsigned long)tp->te_ptext[0])<<24)+(((unsigned long)tp->te_ptext[1])<<16)+(((unsigned long)tp->te_ptext[2])<<8)+((unsigned long)tp->te_ptext[3]);
+#if 1 /* obsolete since boot V2.00 */
+						if((device==ABE) || (device==SDR))
+						{
+							NVMaccess(0,0,(int)(sizeof(NVM)),&nvram); /* read */
+							if(device==ABE)
+								nvram.code_abe=usercode;
+							else if(device==SDR)
+								nvram.code_sdr=usercode;
+							NVMaccess(1,0,(int)(sizeof(NVM)),&nvram); /* write */
+						}
+#endif
+					}
+					b=0;			
+				}
+			}
+			if(file_loaded && b==1)
+			{
+				int nvdi=0;
+				if(get_cookie('NVDI'))
+					nvdi=1;			
+				graf_mouse(BUSYBEE,0L);
+				aff_leds(-1);  /* init */
+				if(soft_hard==HARD_JED && jed
+				 && ((device!=ABE) || nvdi || ((device==ABE) && !nvdi && (Alert(ALERT_NVDI)!=1))))
+				{
+					if(Supexec(test_cable)==0)
+						Alert(ALERT_CABLE);
 					else
 					{
-						JtagSelectTarget(device);
 						stack=Super(0L);
-						setPort(TMS,1); /* JTAG reset */
-						pulseClock(5);
-						setPort(TMS,0);
-						pulseClock(1);
+						/* Initialize the I/O.  SetPort initializes I/O on first call */
+						setPort(TMS,1);
+						setPort(TCK,1);
+						b=(int)readTDOBit(); 
 						Super((void *)stack);
-						tap_state=TAPSTATE_RUNTEST;
-						error=jtag_test_device(&tap_state,&usercode);
-						b=1;
-						for(i=0;i<32;i+=8)
+						if(!b)
+							Alert(ALERT_POWER);
+						else
 						{
-							c=(char)(usercode>>i);
-							if(!((c>='0' && c<='9') || (c>='A' && c<='Z') || (c>='a' && c<='z')))
+							switch(device)
 							{
-								b=0;
-								break;
+								case ETHERNAT: dreg_length=DATA_LENGTH/2; break; /* XC9572 */
+								case CTPCI: dreg_length=DATA_LENGTH*2; break; /* XC95288 */
+								default: dreg_length=DATA_LENGTH; break; /* XC95144 */
 							}
-						}
-						if(b)
-						{
-							rsrc_gaddr(R_OBJECT,USERCODE,&op);
-							tp=op->ob_spec.tedinfo;
-							for(i=3;i>=0;tp->te_ptext[3-i]=(char)(usercode>>(i<<3)),i--);
-							tp->te_ptext[4]=0;
-							objc_draw(Resource,USERCODE,MAX_DEPTH,Resource->ob_x,Resource->ob_y,Resource->ob_width,Resource->ob_height);
-						}
-						if(error==ERROR_NONE)
-						{
-							if(verify)
+							JtagSelectTarget(device);
+							stack=Super(0L);
+							setPort(TMS,1); /* JTAG reset */
+							pulseClock(5);
+							setPort(TMS,0);
+							pulseClock(1);
+							Super((void *)stack);
+							tap_state=TAPSTATE_RUNTEST;
+							error=jtag_test_device(&tap_state,&usercode);
+							b=1;
+							for(i=0;i<32;i+=8)
 							{
-								NVMaccess(0,0,(int)(sizeof(NVM)),&nvram);       /* read */
-								if(device==ABE)
-									nvram.code_abe=usercode;
-								if(device==SDR)
-									nvram.code_sdr=usercode;
-								NVMaccess(1,0,(int)(sizeof(NVM)),&nvram);       /* write */			
-								if(usercode!=usercode_jed)
-									error=ERROR_CODE;
-							}
-							else
-							{
-								repeat=10;
-								do
+								c=(char)(usercode>>i);
+								if(!((c>='0' && c<='9') || (c>='A' && c<='Z') || (c>='a' && c<='z')))
 								{
-									error=jtag_isp_enable(&tap_state);
-									if(error==ERROR_NONE)
+									b=0;
+									break;
+								}
+							}
+							if(b)
+							{
+								rsrc_gaddr(R_OBJECT,USERCODE,&op);
+								tp=op->ob_spec.tedinfo;
+								for(i=3;i>=0;tp->te_ptext[3-i]=(char)(usercode>>(i<<3)),i--);
+								tp->te_ptext[4]=0;
+								display_objc_form(USERCODE,Form->ob_x,Form->ob_y,Form->ob_width,Form->ob_height);
+							}
+							if(error==ERROR_NONE)
+							{
+								if(verify)
+								{									
+#if 1 /* obsolete since boot V2.00 */
+									if((device==ABE) || (device==SDR))
 									{
-										error=jtag_erase(&tap_state);
-										i=jtag_isp_exit(&tap_state);
-										if(error==ERROR_NONE && i!=ERROR_NONE)
-											error=i;
+										NVMaccess(0,0,(int)(sizeof(NVM)),&nvram);       /* read */
+										if(device==ABE)
+											nvram.code_abe=usercode;
+										else if(device==SDR)
+											nvram.code_sdr=usercode;
+										NVMaccess(1,0,(int)(sizeof(NVM)),&nvram);       /* write */
 									}
-									if(error==NONE || error==ERROR_ERASE)
+#endif
+									if(usercode!=usercode_jed)
+										error=ERROR_CODE;
+								}
+								else if(!verify)                                  /* programming */
+								{
+									repeat=10;
+									do
 									{
 										error=jtag_isp_enable(&tap_state);
 										if(error==ERROR_NONE)
 										{
-											error=jtag_blank(&tap_state);
+											error=jtag_erase(&tap_state);
+											i=jtag_isp_exit(&tap_state);
+											if(error==ERROR_NONE && i!=ERROR_NONE)
+												error=i;
+										}
+										if(error==NONE || error==ERROR_ERASE)
+										{
+											error=jtag_isp_enable(&tap_state);
+											if(error==ERROR_NONE)
+											{
+												error=jtag_blank(&tap_state);
+												i=jtag_isp_exit(&tap_state);
+												if(error==ERROR_NONE && i!=ERROR_NONE)
+													error=i;
+											}
+										}
+										repeat--;
+									}
+									while(repeat>=0 && (error==ERROR_ERASE || error==ERROR_BLANK));
+									if(error==NONE)
+									{
+										error=jtag_isp_enable(&tap_state);
+										if(error==ERROR_NONE)
+										{
+											error=jtag_program(&tap_state);
 											i=jtag_isp_exit(&tap_state);
 											if(error==ERROR_NONE && i!=ERROR_NONE)
 												error=i;
 										}
 									}
-									repeat--;
+#if 1 /* obsolete since boot V2.00 */
+									if((error==NONE) && ((device==ABE) || (device==SDR)))
+									{
+										NVMaccess(0,0,(int)(sizeof(NVM)),&nvram);       /* read */
+										if(device==ABE)
+											nvram.code_abe=usercode_jed;
+										else if(device==SDR)
+											nvram.code_sdr=usercode_jed;
+										NVMaccess(1,0,(int)(sizeof(NVM)),&nvram);       /* write */			
+									}
+#endif
 								}
-								while(repeat>=0 && (error==ERROR_ERASE || error==ERROR_BLANK));
 								if(error==NONE)
 								{
 									error=jtag_isp_enable(&tap_state);
 									if(error==ERROR_NONE)
 									{
-										error=jtag_program(&tap_state);
+										error=jtag_verify(&tap_state);
 										i=jtag_isp_exit(&tap_state);
 										if(error==ERROR_NONE && i!=ERROR_NONE)
 											error=i;
 									}
 								}
-								if(error==NONE)
-								{
-									NVMaccess(0,0,(int)(sizeof(NVM)),&nvram);       /* read */
-									if(device==ABE)
-										nvram.code_abe=usercode_jed;
-									if(device==SDR)
-										nvram.code_sdr=usercode_jed;
-									NVMaccess(1,0,(int)(sizeof(NVM)),&nvram);       /* write */			
-								}
 							}
-							if(error==NONE)
+							switch(error)
 							{
-								error=jtag_isp_enable(&tap_state);
-								if(error==ERROR_NONE)
-								{
-									error=jtag_verify(&tap_state);
-									i=jtag_isp_exit(&tap_state);
-									if(error==ERROR_NONE && i!=ERROR_NONE)
-										error=i;
-								}
-							}
-						}
-						switch(error)
-						{
-							case ERROR_TDOMISMATCH: i=ALERT_JTAG_DEV; break;
-							case ERROR_MAXRETRIES: i=ALERT_JTAG_RETRY; break;
-							case ERROR_ILLEGALSTATE: i=ALERT_JTAG_STATE; break;
-							case ERROR_ERASE:
-							case ERROR_BLANK: i=ALERT_JTAG_ERASE; break;
-							case ERROR_PROGRAM: i=ALERT_JTAG_PROG; break;
-							case ERROR_VERIFY: i=ALERT_JTAG_VERIF; break;
-							case ERROR_CODE: i=ALERT_JTAG_CODE; break;
-							default: i=-1; break;
-						}
-						if(i>=0)
-							Alert(i);
-					}
-				}
-			}
-			else
-			{
-				if(!jedec_only && buffer_flash!=0)
-				{
-					offset=0;
-					if(soft_hard==SOFT_HEX)
-						offset=(start_adr-FLASH_ADR) & 0xFF0000;
-					while(offset<(FLASH_SIZE-PARAM_SIZE))
-					{
-						if(lock_interrupts)
-						{
-							buffer[0]=0x13;
-							Ikbdws(0,buffer); /* pause output */
-							evnt_timer(10,0);
-						}
-						stack=Super(0L);
-						offset=program_flash(offset,size_tos,buffer_flash,lock_interrupts);
-						Super((void *)stack);
-						if(lock_interrupts)
-						{
-							buffer[0]=0x11;
-							Ikbdws(0,buffer); /* resume */
-							evnt_timer(10,0);
-						}											
-						if(offset<0)
-						{
-							switch(offset)
-							{
-								case ERR_DEVICE: i=ALERT_DEVICE; break;
-								case ERR_ERASE: i=ALERT_ERASE; break;
-								case ERR_PROGRAM: i=ALERT_PROGRAM; break;
-								case ERR_VERIFY: i=ALERT_VERIFY; break;
-								case ERR_CT60: i=ALERT_CT60; break;
+								case ERROR_TDOMISMATCH: i=ALERT_JTAG_DEV; break;
+								case ERROR_MAXRETRIES: i=ALERT_JTAG_RETRY; break;
+								case ERROR_ILLEGALSTATE: i=ALERT_JTAG_STATE; break;
+								case ERROR_ERASE:
+								case ERROR_BLANK: i=ALERT_JTAG_ERASE; break;
+								case ERROR_PROGRAM: i=ALERT_JTAG_PROG; break;
+								case ERROR_VERIFY: i=ALERT_JTAG_VERIF; break;
+								case ERROR_CODE: i=ALERT_JTAG_CODE; break;
 								default: i=-1; break;
 							}
 							if(i>=0)
-								Alert(i);	
-							break;
+								Alert(i);
 						}
-						if(soft_hard==SOFT_HEX)
-						{
-							aff_leds((int)((offset-((start_adr-FLASH_ADR) & 0xFF0000)*16L)/size_tos));
-							if(offset>=size_tos)
-								break;
-						}
-						else
-							aff_leds((int)((offset*16L)/(long)(FLASH_SIZE-PARAM_SIZE)));
 					}
 				}
+				else
+				{
+					if(!jedec_only && (buffer_flash!=NULL))
+					{
+						int ok=0;
+						long end_offset=FLASH_SIZE-PARAM_SIZE;
+						if(coldfire)
+							end_offset=FLASH_SIZE_CF;
+						offset=0;
+						if(soft_hard==SOFT_HEX)
+						{
+							if(coldfire)
+								offset = (start_adr-FLASH_ADR_CF) & 0xFF0000;
+							else
+								offset = (start_adr-FLASH_ADR) & 0xFF0000;
+							size_tos+=65535;     /* alignment */
+							size_tos&=0xFFFF0000;	
+						}
+						else if(coldfire) /* .BIN */
+						{
+							offset = (FLASH_ADR_TOS_CF-FLASH_ADR_CF);
+							size_tos += offset;
+							end_offset = offset + (FLASH_SIZE-PARAM_SIZE);
+						}
+						while(offset<end_offset)
+						{
+							if(lock_interrupts)
+							{
+								buffer[0]=0x13;
+								Ikbdws(0,buffer); /* pause output */
+								evnt_timer(10,0);
+							}
+							if(offset>=size_tos)
+								break;
+							if(!ok && coldfire && ((offset < 0x100000) || (offset >= 0x700000))) /* Bas or dBUG or FPGA table */
+							{
+								static char msg[256];
+								sprintf(msg,"[2][Confirm writing flash sector at 0x%08lX?|(Bas or dBUG or FPGA table)][Yes|Yes All|No]",offset+FLASH_ADR_CF);
+								ret=form_alert(1,msg);
+								if(ret == 2)
+									ok=1;
+								if(ret > 2)
+									break;
+							}
+							stack=Super(0L);
+							/* write sector */
+							if(coldfire)
+								offset=program_flash_cf(offset,size_tos,buffer_flash);
+							else
+								offset=program_flash(offset,size_tos,buffer_flash,lock_interrupts);
+							Super((void *)stack);
+							if(lock_interrupts)
+							{
+								buffer[0]=0x11;
+								Ikbdws(0,buffer); /* resume */
+								evnt_timer(10,0);
+							}											
+							if(offset<0)
+							{
+								switch(offset)
+								{
+									case ERR_DEVICE: i=ALERT_DEVICE; break;
+									case ERR_ERASE: i=ALERT_ERASE; break;
+									case ERR_PROGRAM: i=ALERT_PROGRAM; break;
+									case ERR_VERIFY: i=ALERT_VERIFY; break;
+									case ERR_CT60: i=ALERT_CT60; break;
+									default: i=-1; break;
+								}
+								if(i>=0)
+									Alert(i);	
+								break;
+							}
+							if(soft_hard==SOFT_HEX)
+							{
+								long start;
+								if(coldfire)
+									start = start_adr-FLASH_ADR_CF;
+								else
+									start = (start_adr-FLASH_ADR) & 0xFF0000;
+								aff_leds((int)(((offset-start)*16L)/(size_tos-start)));
+								if(offset>=size_tos)
+									break;
+							}
+							else
+								aff_leds((int)(((offset & (FLASH_SIZE-1))*16L)/(long)(FLASH_SIZE-PARAM_SIZE)));
+						}
+					}
+				}
+				graf_mouse(ARROW,0L);
 			}
-			graf_mouse(ARROW,0L);
+			rsrc_gaddr(R_OBJECT,DATE_FLASH,&op);
+			tp=op->ob_spec.tedinfo;
+			value=Supexec(coldfire ? get_date_flash_cf : get_date_flash);
+			get_date_os((unsigned char *)&value,tp->te_ptext);
+			rsrc_gaddr(R_OBJECT,VERSION_FLASH,&op);
+			tp=op->ob_spec.tedinfo;
+			version=(unsigned short)Supexec(coldfire ? get_version_flash_cf : get_version_flash);
+			get_version_boot((unsigned char *)&version,tp->te_ptext);
+			display_objc_form(DATE_FLASH,Form->ob_x,Form->ob_y,Form->ob_width,Form->ob_height);
+			display_objc_form(VERSION_FLASH,Form->ob_x,Form->ob_y,Form->ob_width,Form->ob_height);
+			rsrc_gaddr(R_OBJECT,objc_clic,&op);
+			op->ob_state &= ~SELECTED;
+			display_objc_form(objc_clic,Form->ob_x,Form->ob_y,Form->ob_width,Form->ob_height);
+			break;
 		}
-		rsrc_gaddr(R_OBJECT,DATE_FLASH,&op);
-		tp=op->ob_spec.tedinfo;
-		value=Supexec(get_date_flash);
-		get_date_os((unsigned char *)&value,tp->te_ptext);
-		rsrc_gaddr(R_OBJECT,VERSION_FLASH,&op);
-		tp=op->ob_spec.tedinfo;
-		version=(unsigned short)Supexec(get_version_flash);
-		get_version_boot((unsigned char *)&version,tp->te_ptext);
-		objc_draw(Resource,DATE_FLASH,MAX_DEPTH,Resource->ob_x,Resource->ob_y,Resource->ob_width,Resource->ob_height);
-		objc_draw(Resource,VERSION_FLASH,MAX_DEPTH,Resource->ob_x,Resource->ob_y,Resource->ob_width,Resource->ob_height);
-		objc_change(Resource,code,MAX_DEPTH,Resource->ob_x,Resource->ob_y,
-			Resource->ob_width,Resource->ob_height,NORMAL,1);
-		break;
+	}
+	else if(form_button(Form,objc_clic,1,&new_objc))
+	{
+		if(new_objc>0)
+		{
+			objc_offset(Form,objc_clic,&xoff,&yoff);
+			tp=op->ob_spec.tedinfo;
+			if(tp->te_font==SMALL)
+				width=6;
+			else
+				width=8;
+			for(i=0;tp->te_ptmplt[i];i++); /* size of mask string */
+			if((pos_clic=op->ob_width-i*width)>=0)
+			{
+				switch(tp->te_just)
+				{
+				case TE_RIGHT:          /* justified to right */
+					pos_clic=mouse_x-xoff-pos_clic;
+					break;
+				case TE_CNTR:           /* centred */
+					pos_clic=mouse_x-xoff-pos_clic/2;
+					break;
+				case TE_LEFT:           /* justified to left */
+				default:
+					pos_clic=mouse_x-xoff;
+				}
+			}
+			else
+				pos_clic=mouse_x-xoff;
+			new_pos=-1;
+			pos_clic/=width;            /* position character checked */
+			j=-1;
+			do
+			{
+				if(tp->te_ptmplt[++j]=='_')
+					new_pos++;
+			}
+			while(j<i && j<pos_clic);   /* end if cursor on end of string or position character checked */
+			if(j>=i)
+				new_pos=-1;             /* cursor at end of string */
+			else
+			{
+				j--;
+				while(tp->te_ptmplt[++j]!='_' && j<i);
+				if(j>=i)
+					new_pos=-1;         /* cursor at end of string */
+			}
+			for(i=0;tp->te_ptext[i];i++); /* size of string text */
+			if(new_pos<0 || i<new_pos)
+				new_pos=i;
+		}
+		move_cursor();
 	}
 	return(0);
+}
+
+void move_cursor(void)
+{
+	if(new_objc>0 && (ed_objc!=new_objc || ed_pos!=new_pos))
+	{
+		objc_edit(Form,ed_objc,0,&ed_pos,ED_END);   /* hide cursor */
+		ed_pos=new_pos;
+		objc_edit(Form,new_objc,0,&ed_pos,ED_CHAR); /* new position of cursor */
+		objc_edit(Form,new_objc,0,&ed_pos,ED_END);  /* showm cursor */
+		ed_objc=new_objc;                           /* new zone edited */
+		ed_pos=new_pos;                             /* new position cursor */
+	}
 }
 
 void aff_leds(int count)
@@ -611,10 +841,10 @@ void aff_leds(int count)
 	{
 		for(i=0;led[i];i++)
 		{
-			if(Resource[led[i]].ob_state & SELECTED)
+			if(Form[led[i]].ob_state & SELECTED)
 			{
-				Resource[led[i]].ob_state &= ~SELECTED;
-				objc_draw(Resource,led[i],MAX_DEPTH,Resource->ob_x,Resource->ob_y,Resource->ob_width,Resource->ob_height);
+				Form[led[i]].ob_state &= ~SELECTED;
+				display_objc_form(led[i],Form->ob_x,Form->ob_y,Form->ob_width,Form->ob_height);
 			}
 		}
 	}
@@ -624,20 +854,18 @@ void aff_leds(int count)
 		{
 			if(i<count)
 			{
-				if(!(Resource[led[i]].ob_state & SELECTED))
+				if(!(Form[led[i]].ob_state & SELECTED))
 				{
-					Resource[led[i]].ob_state |= SELECTED;
-					objc_draw(Resource,led[i],MAX_DEPTH,
-						Resource->ob_x,Resource->ob_y,Resource->ob_width,Resource->ob_height);
+					Form[led[i]].ob_state |= SELECTED;
+					display_objc_form(led[i],Form->ob_x,Form->ob_y,Form->ob_width,Form->ob_height);
 				}					
 			}
 			else
 			{
-				if(Resource[led[i]].ob_state & SELECTED)
+				if(Form[led[i]].ob_state & SELECTED)
 				{
-					Resource[led[i]].ob_state &= ~SELECTED;
-					objc_draw(Resource,led[i],MAX_DEPTH,
-						Resource->ob_x,Resource->ob_y,Resource->ob_width,Resource->ob_height);
+					Form[led[i]].ob_state &= ~SELECTED;
+					display_objc_form(led[i],Form->ob_x,Form->ob_y,Form->ob_width,Form->ob_height);
 				}
 			}
 		}	
@@ -672,7 +900,12 @@ int jtag_test_device(unsigned char *tap_state,unsigned long *usercode)
 		return(error);
 	tdi.len=tdo.len=tdo_cmp.len=tdo_mask.len=4;
 	*(unsigned long *)&tdi.val[0]=0xFFFFFFFF;
-	*(unsigned long *)&tdo_cmp.val[0]=IDCODE_XC95144XL;
+	switch(device)
+	{
+		case ETHERNAT: *(unsigned long *)&tdo_cmp.val[0]=IDCODE_XC9572XL; break;
+		case CTPCI: *(unsigned long *)&tdo_cmp.val[0]=IDCODE_XC95288XL; break;
+		default:	*(unsigned long *)&tdo_cmp.val[0]=IDCODE_XC95144XL; break;
+	}
 	*(unsigned long *)&tdo_mask.val[0]=IDMASK;
 	error=JtagShift(tap_state,TAPSTATE_SHIFTDR,32,&tdi,&tdo,&tdo_cmp,&tdo_mask,TAPSTATE_RUNTEST,0,0);
 #ifdef DEBUG
@@ -862,16 +1095,15 @@ int jtag_program(unsigned char *tap_state)
 	count_size=0;
 	bit=(int)jed->sizes_list[count_size];
 	value=0;
-	byte=8;
+	byte=(int)dreg_length;
 	first=1;
 	adr_fuse=old_adr=0;
-	*(unsigned long *)&tdo_cmp.val[0]=*(unsigned long *)&tdo_mask.val[0]=0;
-	*(unsigned long *)&tdo_cmp.val[4]=*(unsigned long *)&tdo_mask.val[4]=0;
-	*(unsigned long *)&tdo_cmp.val[8]=*(unsigned long *)&tdo_mask.val[8]=0x00000300;
+	for(i=0;i<dreg_length+2;tdo_cmp.val[i]=tdo_mask.val[i]=0x00,i++);
+	tdo_cmp.val[i]=tdo_mask.val[i]=0x03;
 	for(count_fuse=0;count_fuse<jed->fuse_count;count_fuse++)
 	{
 		bit--;
-			value>>=1;
+		value>>=1;
 		if(jedec_get_fuse(jed,count_fuse))
 			value |= 0x80;
 		else
@@ -885,32 +1117,33 @@ int jtag_program(unsigned char *tap_state)
 				adr=jtag_device_adr(adr_fuse);
 				if(old_adr != (adr & 0xFFFFF000))
 					old_adr = adr & 0xFFFFF000;
-				tdi.len=tdo.len=tdo_cmp.len=tdo_mask.len=11;
+				tdi.len=tdo.len=tdo_cmp.len=tdo_mask.len=dreg_length+3;
 				tdi.val[0]=0;
 				*(unsigned short *)&tdi.val[1]=(unsigned short)adr;
 				if((adr & 0x1F)== 0x14)
-					tdi.val[11]=0xC0;
+					tdi.val[dreg_length+3]=0xC0;
 				else
-					tdi.val[11]=0x40;
-				*(unsigned long *)&tdi.val[0]<<=2;
-				*(unsigned long *)&tdi.val[0]|=(*(unsigned long *)&tdi.val[4]>>30);
-				*(unsigned long *)&tdi.val[4]<<=2;
-				*(unsigned long *)&tdi.val[4]|=(*(unsigned long *)&tdi.val[8]>>30);
-				*(unsigned long *)&tdi.val[8]<<=2;
+					tdi.val[dreg_length+3]=0x40;
+				for(i=0;i<dreg_length;i+=4)
+				{
+					*(unsigned long *)&tdi.val[i]<<=2;
+					*(unsigned long *)&tdi.val[i]|=(*(unsigned long *)&tdi.val[i+4]>>30);
+				}
+				*(unsigned long *)&tdi.val[i]<<=2;
 				if((adr & 0x1F)== 0x00)
 				{
-					tdo_cmp.val[10]=0x01;
-					tdo_mask.val[10]=0x03;
+					tdo_cmp.val[dreg_length+2]=0x01;
+					tdo_mask.val[dreg_length+2]=0x03;
 				}
 				if((adr & 0x1F)== 0x01)
 				{
-					tdo_cmp.val[10]=0x02;
-					tdo_mask.val[10]=0x00;
+					tdo_cmp.val[dreg_length+2]=0x02;
+					tdo_mask.val[dreg_length+2]=0x00;
 				}				
 				if(first)
-					error=JtagShift(tap_state,TAPSTATE_SHIFTDR,16+8*8+2,&tdi,0,0,0,TAPSTATE_RUNTEST,0,0);
+					error=JtagShift(tap_state,TAPSTATE_SHIFTDR,16+dreg_length*8+2,&tdi,0,0,0,TAPSTATE_RUNTEST,0,0);
 				else
-					error=JtagShift(tap_state,TAPSTATE_SHIFTDR,16+8*8+2,&tdi,&tdo,&tdo_cmp,&tdo_mask,TAPSTATE_RUNTEST,0,0);
+					error=JtagShift(tap_state,TAPSTATE_SHIFTDR,16+dreg_length*8+2,&tdi,&tdo,&tdo_cmp,&tdo_mask,TAPSTATE_RUNTEST,0,0);
 #ifdef DEBUG
 				if(error)
 				{
@@ -918,9 +1151,9 @@ int jtag_program(unsigned char *tap_state)
 					for(i=0;i<tdi.len;printf("%02x",tdi.val[i++]));
 					if(!first)
 					{
-						printf(", tdo:");
+						printf(",\r\n       tdo:");
 						for(i=0;i<tdo.len;printf("%02x",tdo.val[i++]));
-						printf(", cmp:");
+						printf(",\r\n       cmp:");
 						for(i=0;i<tdo_cmp.len;printf("%02x",tdo_cmp.val[i++]));
 					}
 				}
@@ -941,7 +1174,7 @@ int jtag_program(unsigned char *tap_state)
 						break;
 				}
 				adr_fuse=count_fuse+1;
-				byte=8;
+				byte=(int)dreg_length;
 			}
 			bit=(int)jed->sizes_list[count_size];
 			value=0;
@@ -949,20 +1182,20 @@ int jtag_program(unsigned char *tap_state)
 	}
 	if(!error)
 	{
-		tdi.len=tdo.len=tdo_cmp.len=tdo_mask.len=11;
-		*(unsigned long *)&tdi.val[0]=*(unsigned long *)&tdi.val[4]=0;
-		*(unsigned long *)&tdi.val[8]=0x00000100;
-		tdo_cmp.val[10]=0x01;
-		tdo_mask.val[10]=0x03;		
-		error=JtagShift(tap_state,TAPSTATE_SHIFTDR,16+8*8+2,&tdi,&tdo,&tdo_cmp,&tdo_mask,TAPSTATE_RUNTEST,0,0);
+		tdi.len=tdo.len=tdo_cmp.len=tdo_mask.len=dreg_length+3;
+		for(i=0;i<dreg_length+2;tdi.val[i++]=0x00);
+		tdi.val[i]=0x01;
+		tdo_cmp.val[dreg_length+2]=0x01;
+		tdo_mask.val[dreg_length+2]=0x03;		
+		error=JtagShift(tap_state,TAPSTATE_SHIFTDR,16+dreg_length*8+2,&tdi,&tdo,&tdo_cmp,&tdo_mask,TAPSTATE_RUNTEST,0,0);
 #ifdef DEBUG
 		if(error)
 		{
 			printf("\r\nL%05ld tdi:",adr_fuse);
 			for(i=0;i<tdi.len;printf("%02x",tdi.val[i++]));
-			printf(", tdo:");
+			printf(",\r\n       tdo:");
 			for(i=0;i<tdo.len;printf("%02x",tdo.val[i++]));
-			printf(", cmp:");
+			printf(",\r\n       cmp:");
 			for(i=0;i<tdo_cmp.len;printf("%02x",tdo_cmp.val[i++]));
 		}
 #endif
@@ -974,7 +1207,7 @@ int jtag_program(unsigned char *tap_state)
 
 int jtag_verify(unsigned char *tap_state)
 {
-	unsigned long count_fuse,count_size,adr_fuse,adr,mem_adr;
+	unsigned long count_fuse,count_size,adr_fuse,adr;
 	int i,byte,bit,first,error;				
 	unsigned char value;
 	static lenVal tdi,tdo,tdo_cmp,tdo_mask,old_tdo;
@@ -989,19 +1222,18 @@ int jtag_verify(unsigned char *tap_state)
 	count_size=0;
 	bit=(int)jed->sizes_list[count_size];
 	value=0;
-	byte=8;
+	byte=(int)dreg_length;
 	first=1;
 	adr_fuse=0;
-	tdi.len=tdo.len=tdo_cmp.len=tdo_mask.len=11;
-	*(unsigned long *)&tdi.val[4]=0;
-	*(unsigned long *)&tdi.val[8]=0x00000300;
-	*(unsigned long *)&tdo_mask.val[0]=0x03FFFFFF;
-	*(unsigned long *)&tdo_mask.val[4]=0xFFFFFFFF;
-	*(unsigned long *)&tdo_mask.val[8]=0xFFFFFF00;
+	tdi.len=tdo.len=tdo_cmp.len=tdo_mask.len=dreg_length+3;
+	for(i=0;i<dreg_length+2;tdi.val[i++]=0x00);
+	tdi.val[i]=0x03;
+	tdo_mask.val[0]=0x3F;
+	for(i=1;i<=dreg_length+2;tdo_mask.val[i++]=0xFF);
 	for(count_fuse=0;count_fuse<jed->fuse_count;count_fuse++)
 	{
 		bit--;
-			value>>=1;
+		value>>=1;
 		if(jedec_get_fuse(jed,(count_fuse)))
 			value |= 0x80;
 		else
@@ -1016,16 +1248,17 @@ int jtag_verify(unsigned char *tap_state)
 				*(unsigned long *)&tdi.val[0]=adr<<10;
 				tdo_cmp.val[0]=0;
 				*(unsigned short *)&tdo_cmp.val[1]=(unsigned short)adr;
-				tdo_cmp.val[11]=0x40;
-				*(unsigned long *)&tdo_cmp.val[0]<<=2;
-				*(unsigned long *)&tdo_cmp.val[0]|=(*(unsigned long *)&tdo_cmp.val[4]>>30);
-				*(unsigned long *)&tdo_cmp.val[4]<<=2;
-				*(unsigned long *)&tdo_cmp.val[4]|=(*(unsigned long *)&tdo_cmp.val[8]>>30);
-				*(unsigned long *)&tdo_cmp.val[8]<<=2;
+				tdo_cmp.val[dreg_length+3]=0x40;
+				for(i=0;i<dreg_length;i+=4)
+				{
+					*(unsigned long *)&tdo_cmp.val[i]<<=2;
+					*(unsigned long *)&tdo_cmp.val[i]|=(*(unsigned long *)&tdo_cmp.val[i+4]>>30);
+				}
+				*(unsigned long *)&tdo_cmp.val[i]<<=2;
 				if(first)
-					error=JtagShift(tap_state,TAPSTATE_SHIFTDR,16+8*8+2,&tdi,0,0,0,TAPSTATE_RUNTEST,0,0);
+					error=JtagShift(tap_state,TAPSTATE_SHIFTDR,16+dreg_length*8+2,&tdi,0,0,0,TAPSTATE_RUNTEST,0,0);
 				else
-					error=JtagShift(tap_state,TAPSTATE_SHIFTDR,16+8*8+2,&tdi,&tdo,&old_tdo,&tdo_mask,TAPSTATE_RUNTEST,0,0);
+					error=JtagShift(tap_state,TAPSTATE_SHIFTDR,16+dreg_length*8+2,&tdi,&tdo,&old_tdo,&tdo_mask,TAPSTATE_RUNTEST,0,0);
 #ifdef DEBUG
 				if(error)
 				{
@@ -1033,9 +1266,9 @@ int jtag_verify(unsigned char *tap_state)
 					for(i=0;i<tdi.len;printf("%02x",tdi.val[i++]));
 					if(!first)
 					{
-						printf(", tdo:");
+						printf(",\r\n       tdo:");
 						for(i=0;i<tdo.len;printf("%02x",tdo.val[i++]));
-						printf(", cmp:");
+						printf(",\r\n       cmp:");
 						for(i=0;i<old_tdo.len;printf("%02x",old_tdo.val[i++]));
 					}
 				}
@@ -1049,7 +1282,7 @@ int jtag_verify(unsigned char *tap_state)
 				}
 				old_tdo=tdo_cmp;
 				adr_fuse=count_fuse+1;
-				byte=8;
+				byte=(int)dreg_length;
 			}
 			bit=(int)jed->sizes_list[count_size];
 			value=0;
@@ -1060,7 +1293,7 @@ int jtag_verify(unsigned char *tap_state)
 	if(!error)
 	{
 		tdi.val[10]=0x01;
-		error=JtagShift(tap_state,TAPSTATE_SHIFTDR,16+8*8+2,&tdi,&tdo,&tdo_cmp,&tdo_mask,TAPSTATE_RUNTEST,0,0);
+		error=JtagShift(tap_state,TAPSTATE_SHIFTDR,16+dreg_length*8+2,&tdi,&tdo,&tdo_cmp,&tdo_mask,TAPSTATE_RUNTEST,0,0);
 		if(error==ERROR_TDOMISMATCH)
 			error=ERROR_VERIFY;
 	}
@@ -1070,8 +1303,8 @@ int jtag_verify(unsigned char *tap_state)
 unsigned long jtag_device_adr(unsigned long jedec_line)
 {
 	unsigned long saddr,taddr,laddr;
-	saddr=jedec_line/(DATA_LENGTH/2)/SECTOR_LENGTH;
-	taddr=(jedec_line/DATA_LENGTH)%MAX_SECTOR;
+	saddr = jedec_line/(dreg_length/2) / SECTOR_LENGTH;
+	taddr = (jedec_line/dreg_length) % MAX_SECTOR;
 	if(taddr<72)
 		laddr=taddr/8;
 	else
@@ -1086,21 +1319,21 @@ unsigned long get_user_code_jed(void)
 	for(count_fuse=0;count_fuse<jed->fuse_count;count_fuse++)
 	{
 		fuse=jedec_get_fuse(jed,count_fuse);					
-		if((count_fuse >= 648*DATA_LENGTH) && (count_fuse < 712*DATA_LENGTH))
+		if((count_fuse >= 648*dreg_length) && (count_fuse < 712*dreg_length))
 		{
-			j = count_fuse - (648*DATA_LENGTH);
-			m = j / (DATA_LENGTH*8);
-			if((j & (DATA_LENGTH*8-1)) == 6 || (j & (DATA_LENGTH*8-1)) == 7)
+			j = count_fuse - (648*dreg_length);
+			m = j / (dreg_length*8);
+			if((j & (dreg_length*8-1)) == 6 || (j & (dreg_length*8-1)) == 7)
 			{
 				if(fuse)
 					usercode |= 0x80000000L >> (m*2+1-(count_fuse&1));
 			}
 		}
-		if((count_fuse >= 756*DATA_LENGTH) && (count_fuse < 820*DATA_LENGTH))
+		if((count_fuse >= 756*dreg_length) && (count_fuse < 820*dreg_length))
 		{
-			j = (count_fuse - 756*DATA_LENGTH);
-			m = j / (DATA_LENGTH*8);
-			if((j & (DATA_LENGTH*8-1)) == 6 || (j & (DATA_LENGTH*8-1)) == 7)
+			j = (count_fuse - 756*dreg_length);
+			m = j / (dreg_length*8);
+			if((j & (dreg_length*8-1)) == 6 || (j & (dreg_length*8-1)) == 7)
 			{
 				if(fuse)
 					usercode |= 0x00008000L >> (m*2+1-(count_fuse&1));
@@ -1120,7 +1353,9 @@ int test_file(char *path)
 		return(HARD_JED);
 	if(i>3 && path[i-4]=='.'
 	 && ((path[i-3]=='H' && path[i-2]=='E' && path[i-1]=='X')
-	 || (path[i-3]=='h' && path[i-2]=='e' && path[i-1]=='x')))
+	 || (path[i-3]=='h' && path[i-2]=='e' && path[i-1]=='x')
+	 || (path[i-3]=='S' && path[i-2]=='1' && path[i-1]=='9')
+	 || (path[i-3]=='s' && path[i-2]=='1' && path[i-1]=='9')))
 		return(SOFT_HEX);
 	return(SOFT_BIN);
 }
@@ -1133,6 +1368,7 @@ void load_file(char *path_argv)
 	char c;
 	int i,handle,b,title;
 	unsigned short date;
+	long stack;
 	OBJECT *op;
 	TEDINFO *tp;
 	unsigned char *p;
@@ -1151,17 +1387,14 @@ void load_file(char *path_argv)
 		}	
 		else
 		{
-			if(get_cookie('MagX') || get_cookie('MiNT'))
-				strcat(path,"*.BIN");
-			else
-				strcat(path,"*.*");
+			strcat(path,"*.*");
 			title=TITLE_BIN_JED;
 		}
 		if(rsrc_gaddr(R_STRING,title,&addr))
 			fsel_exinput(path,nom,&b,addr);
 		else
 			fsel_input(path,nom,&b);
-		objc_draw(Resource,ROOT,MAX_DEPTH,Resource->ob_x,Resource->ob_y,Resource->ob_width,Resource->ob_height);
+		display_objc_form(ROOT,Form->ob_x,Form->ob_y,Form->ob_width,Form->ob_height);
 		if(path[0]>='A' && path[0]<='Z')
 		{
 			c=strlen(path)-1;	
@@ -1175,7 +1408,7 @@ void load_file(char *path_argv)
 	{
 		strcpy(path,path_argv);
 		b=1;
-		objc_draw(Resource,ROOT,MAX_DEPTH,Resource->ob_x,Resource->ob_y,Resource->ob_width,Resource->ob_height);
+		display_objc_form(ROOT,Form->ob_x,Form->ob_y,Form->ob_width,Form->ob_height);
 	}
 	if(b)
 	{
@@ -1201,7 +1434,7 @@ void load_file(char *path_argv)
 				op->ob_flags &= ~HIDETREE;
 				rsrc_gaddr(R_OBJECT,USERCODE,&op);
 				op->ob_flags |= HIDETREE;
-				objc_draw(Resource,ROOT,MAX_DEPTH,Resource->ob_x,Resource->ob_y,Resource->ob_width,Resource->ob_height);
+				display_objc_form(ROOT,Form->ob_x,Form->ob_y,Form->ob_width,Form->ob_height);
 			}
 		}
 		file_loaded=0;
@@ -1226,20 +1459,46 @@ void load_file(char *path_argv)
 				tp=op->ob_spec.tedinfo;
 				get_date_file(date,tp->te_ptext);
 				graf_mouse(ARROW,0L);
-				usercode_jed=get_user_code_jed();
 				if(strcmp(device_name,"XC95144XL-5-TQ144")==0
-				 || strcmp(device_name,"XC95144XL-10-TQ144")==0)
+				 || strcmp(device_name,"XC95144XL-10-TQ144")==0) /* ABE from 2003 to 2009 (before the CT63 updates) */
 				{
-					device=ABE;
-					strcat(device_name," ABE60 ");
+					if((strstr(nom,"SDR") != NULL) && (FORCESDRABE==1)) /* check filename :-( */
+					{
+						device=SDR;
+						strcat(device_name," SDR60 ");
+					}
+					else /* before CT63, the test XC95144XL-10-TQ144 is valid */
+					{
+						device=ABE;
+						strcat(device_name," ABE60 ");
+					}
 				}
-				else if(strcmp(device_name,"XC95144XL-7-TQ144")==0)
+				else if(strcmp(device_name,"XC95144XL-7-TQ144")==0) /* SDR from 2003 to 2009 (excepted CT63) */
 				{
-					device=SDR;
-					strcat(device_name," SDR60 ");
+					if((strstr(nom,"ABE") != NULL) && (FORCEABESDR==1)) /* check filename :-( */
+					{
+						device=ABE;
+						strcat(device_name," ABE60 ");
+					}
+					else /* before CT63, the test XC95144XL-7-TQ144 is valid */
+					{
+						device=SDR;
+						strcat(device_name," SDR60 ");
+					}
 				}
+				else if(strstr(device_name,"XC95288XL") != NULL) /* CTPCI */
+					device=CTPCI;
+				else if(strstr(device_name,"XC9572XL") != NULL) /* ETHERNAT */
+					device=ETHERNAT;
 				else
 					device=NO_DEVICE;
+				switch(device)
+				{
+					case ETHERNAT: dreg_length=DATA_LENGTH/2; break;
+					case CTPCI: dreg_length=DATA_LENGTH*2; break;
+					default: dreg_length=DATA_LENGTH; break;
+				}
+				usercode_jed=get_user_code_jed();
 				if(device==NO_DEVICE)
 					Alert(ALERT_JED_DEVICE);
 				else
@@ -1258,7 +1517,7 @@ void load_file(char *path_argv)
 					tp=op->ob_spec.tedinfo;
 					if(b)
 					{
-						for(i=3;i>=0;tp->te_ptext[3-i]=code[3-i]=(char)(usercode_jed>>(i<<3)),i--);
+						for(i=3;i>=0;tp->te_ptext[3-i]=code[3-i]=(char)(usercode_jed>>(i<<3)),i--);						
 						code[4]=0;
 					}
 					else
@@ -1276,7 +1535,12 @@ void load_file(char *path_argv)
 						tp->te_ptext[0]=tp->te_ptext[1]=tp->te_ptext[2]=tp->te_ptext[3]='X';
 					}
 					tp->te_ptext[4]=0;
-					strcat(device_name,code);
+					switch(device)
+					{
+						case ETHERNAT: strcat(device_name, " ETHERNAT"); break;
+						case CTPCI:	strcat(device_name," CTPCI"); break;
+						default: strcat(device_name,code); break;
+					}
 					rsrc_gaddr(R_OBJECT,FILE,&op);
 					tp=op->ob_spec.tedinfo;
 					tp->te_ptext=device_name;
@@ -1296,17 +1560,23 @@ void load_file(char *path_argv)
 					op->ob_flags |= HIDETREE;
 					rsrc_gaddr(R_OBJECT,USERCODE,&op);
 					op->ob_flags &= ~HIDETREE;
-					objc_draw(Resource,ROOT,MAX_DEPTH,Resource->ob_x,Resource->ob_y,Resource->ob_width,Resource->ob_height);		
+					display_objc_form(ROOT,Form->ob_x,Form->ob_y,Form->ob_width,Form->ob_height);		
 					file_loaded=1;
 				}
 			}			
 			return;
 		}
-		if(jedec_only || buffer_flash==0)
+		if(jedec_only || (buffer_flash==NULL))
 			Alert(ALERT_JEDEC);
 		else if(soft_hard==SOFT_HEX)
 		{
-			memset(buffer_flash,-1,FLASH_SIZE-PARAM_SIZE);		
+			memset(buffer_flash,-1,coldfire ? FLASH_SIZE_CF : FLASH_SIZE-PARAM_SIZE);
+			stack=Super(0L);
+			if(coldfire)
+				read_flash_cf(0L,FLASH_SIZE_CF,buffer_flash);
+			else
+				read_flash(0L,FLASH_SIZE-PARAM_SIZE,buffer_flash);
+			Super((void *)stack);	
 			switch(srec_read(path))
 			{
 				case 0:
@@ -1318,28 +1588,52 @@ void load_file(char *path_argv)
 					else
 					{
 						file_loaded=1;
-						size_tos = end_adr - (FLASH_ADR & 0xFFFFFF);
+						if(coldfire)
+							size_tos = end_adr - FLASH_ADR_CF;
+						else
+							size_tos = end_adr - (FLASH_ADR & 0xFFFFFF);
 					}
 					break;
 				case -1: Alert(ALERT_SREC); size_tos=0; break;
 				default: Alert(ALERT_OPEN); size_tos=0; break;
 			}
 		}
-		else
+		else /* .BIN */
 		{		
-			memset(buffer_flash,-1,FLASH_SIZE-PARAM_SIZE);
+			memset(buffer_flash,-1,coldfire ? FLASH_SIZE_CF : FLASH_SIZE-PARAM_SIZE);
 			if((handle=(int)Fopen(path,0))>=0)
 			{
-				if((size_tos=Fread(handle,FLASH_SIZE-PARAM_SIZE,buffer_flash))>=0)
+				char *buf = (char *)buffer_flash;
+				if(coldfire)
+					buf += (FLASH_ADR_TOS_CF-FLASH_ADR_CF);
+				if((size_tos=Fread(handle,FLASH_SIZE-PARAM_SIZE,buf))>=0)
 				{
-					p=(unsigned char *)buffer_flash;
-					if(size_tos<8 || p[4]!=0 || p[5]!=0xE0 || p[6]!=0 || p[7]!=0x30)
+					p=(unsigned char *)buf;
+					if((size_tos<8) || p[4]!=0 || p[5]!=0xE0 || p[6]!=0 || p[7]!=0x30)
 					{ 
 						Alert(ALERT_TOS);
 						size_tos=0;
 					}
 					else
-						file_loaded=1;
+					{ 
+						if((*((unsigned short *)((unsigned long)buf+0x30))!=0x4EF9) /* no jump */
+						 && (*((unsigned short *)((unsigned long)buf+0x30))!=0x60FF)) /* no bra.l */
+						{
+							if(size_tos>=0x80000 && (p[0x7FFFE]!=0x49 || p[0x7FFFF]!=0xFB))
+							{ 
+								Alert(ALERT_TOS);
+								size_tos=0;
+							}
+							else
+							{
+								*((unsigned short *)((unsigned long)buf+0x30))=0x60FF; /* bra.l to boot (12 bytes version header) */
+								*((unsigned long *)((unsigned long)buf+0x32))=0xE8000C-0xE00030-2;
+								file_loaded=1;
+							}
+						}
+						else
+							file_loaded=1;
+					}
 				}
 				else
 				{
@@ -1356,31 +1650,51 @@ void load_file(char *path_argv)
 		tp=op->ob_spec.tedinfo;
 		if(file_loaded && soft_hard==SOFT_BIN)
 		{
+			char *buf = (unsigned char *)buffer_flash;
+			if(coldfire)
+				buf += (FLASH_ADR_TOS_CF-FLASH_ADR_CF);
 			tp->te_ptext=path;
-			rsrc_gaddr(R_OBJECT,DATE_FILE,&op);
-			tp=op->ob_spec.tedinfo;
-			get_date_os((unsigned char *)buffer_flash+0x18,tp->te_ptext);
 			rsrc_gaddr(R_OBJECT,VERSION_FILE,&op);
 			tp=op->ob_spec.tedinfo;
-			get_version_boot((unsigned char *)buffer_flash+0x80000,tp->te_ptext);
+			get_version_boot(&buf[0x80000],tp->te_ptext);
+			rsrc_gaddr(R_OBJECT,DATE_FILE,&op);
+			tp=op->ob_spec.tedinfo;
+			if(*(unsigned short *)((unsigned long)&buf[0x80000]) >= 0x200) /* new boot patches TOS, so date of flash TOS is unchanged */
+				get_date_os2((unsigned short *)((unsigned long)&buf[0x80002]),tp->te_ptext);
+			else
+				get_date_os((unsigned char *)&buf[18],tp->te_ptext);
 		}
 		else if(file_loaded && soft_hard==SOFT_HEX)
 		{
+			char *buf = (unsigned char *)buffer_flash+0x80000;
+			if(coldfire)
+				buf += (FLASH_ADR_TOS_CF-FLASH_ADR_CF);
 			tp->te_ptext=path;
-			rsrc_gaddr(R_OBJECT,DATE_FILE,&op);
-			save_dta=Fgetdta();
-			Fsetdta(&tp_dta);
-			date=0;				
-			if(Fsfirst(path,1)==0)
-				date=(unsigned short)tp_dta.d_date;
-			Fsetdta(save_dta);
-			tp=op->ob_spec.tedinfo;
-			get_date_file(date,tp->te_ptext);
 			rsrc_gaddr(R_OBJECT,VERSION_FILE,&op);
 			tp=op->ob_spec.tedinfo;
-			strcpy(tp->te_ptext,"X.XX");
+			if((!coldfire && (start_adr==0xE80000) && (end_adr>=0xE8000C))
+			 || (coldfire && ((start_adr==0xE0400000) || (start_adr==0xE0480000)) && (end_adr>=0xE048000C)))
+				get_version_boot(buf,tp->te_ptext);
+			else
+				strcpy(tp->te_ptext,"X.XX");
+			rsrc_gaddr(R_OBJECT,DATE_FILE,&op);
+			tp=op->ob_spec.tedinfo;
+			if(((!coldfire && (start_adr==0xE80000) && (end_adr>=0xE8000C))
+			 || (coldfire && ((start_adr==0xE0400000) || (start_adr==0xE0480000)) && (end_adr>=0xE048000C)))
+			  && (*(unsigned short *)((unsigned long)&buf[0]) >= 0x200)) /* new boot patches TOS, so date of flash TOS is unchanged */
+				get_date_os2((unsigned short *)((unsigned long)&buf[2]),tp->te_ptext);
+			else
+			{
+				save_dta=Fgetdta();
+				Fsetdta(&tp_dta);
+				date=0;				
+				if(Fsfirst(path,1)==0)
+					date=(unsigned short)tp_dta.d_date;
+				Fsetdta(save_dta);
+				get_date_file(date,tp->te_ptext);
+			}
 		}
-		else
+		else /* JEDEC file */
 		{
 			tp->te_ptext[0]=0;
 			rsrc_gaddr(R_OBJECT,DATE_FILE,&op);
@@ -1390,10 +1704,34 @@ void load_file(char *path_argv)
 			tp=op->ob_spec.tedinfo;
 			strcpy(tp->te_ptext,"X.XX");
 		}
-		objc_draw(Resource,FILE,MAX_DEPTH,Resource->ob_x,Resource->ob_y,Resource->ob_width,Resource->ob_height);
-		objc_draw(Resource,DATE_FILE,MAX_DEPTH,Resource->ob_x,Resource->ob_y,Resource->ob_width,Resource->ob_height);
-		objc_draw(Resource,VERSION_FILE,MAX_DEPTH,Resource->ob_x,Resource->ob_y,Resource->ob_width,Resource->ob_height);
+		display_objc_form(FILE,Form->ob_x,Form->ob_y,Form->ob_width,Form->ob_height);
+		display_objc_form(DATE_FILE,Form->ob_x,Form->ob_y,Form->ob_width,Form->ob_height);
+		display_objc_form(VERSION_FILE,Form->ob_x,Form->ob_y,Form->ob_width,Form->ob_height);
 	}
+}
+
+void display_objc_form(int objc,int clip_x,int clip_y,int clip_w,int clip_h)
+{
+	GRECT clip,rect;
+	int cursor=0;
+	clip.g_x=clip_x;
+	clip.g_y=clip_y;
+	clip.g_w=clip_w;
+	clip.g_h=clip_h;
+	if(objc==ROOT)
+	{
+		objc_edit(Form,ed_objc,0,&ed_pos,ED_END); /* hide cursor */
+		cursor=1;
+	}
+	wind_get(wh,WF_FIRSTXYWH,aGrect(&rect));
+	while(rect.g_w && rect.g_h)
+	{
+		if(rc_intersect(&clip,&rect))
+			objc_draw(Form,objc,MAX_DEPTH,Grect(&rect));
+		wind_get(wh,WF_NEXTXYWH,aGrect(&rect));
+	}
+	if(cursor)
+		objc_edit(Form,ed_objc,0,&ed_pos,ED_END); /* showm cursor */
 }
 
 int init(int argc,int *vp,int *wp)
@@ -1403,17 +1741,16 @@ int init(int argc,int *vp,int *wp)
 	TEDINFO *tp;
 	GRECT curr,work;
 	COOKIE *p;
-	long value;
 	int i;
 	static int led[]={ L1,L2,L3,L4,L5,L6,L7,L8,L9,L10,L11,L12,L13,L14,L15,L16,0 };
 	if((ap_id=appl_init())==-1)
 		return(4);
 	if(jedec_only)
-		buffer_flash=0;
+		buffer_flash=NULL;
 	else
 	{
-		buffer_flash=Mxalloc(FLASH_SIZE-PARAM_SIZE,3);
-		if(buffer_flash<=0)
+		buffer_flash=Mxalloc(coldfire ? FLASH_SIZE_CF : FLASH_SIZE-PARAM_SIZE,3);
+		if(buffer_flash==NULL)
 		{
 			NOMEMORY;
 			return(4);	
@@ -1445,8 +1782,8 @@ int init(int argc,int *vp,int *wp)
 	shrink.g_y=curr.g_h/2;
 	shrink.g_w=1;
 	shrink.g_h=1;
-	form_center(Resource,aGrect(&work));
-	for(i=0;led[i];Resource[led[i++]].ob_state &= ~SELECTED);	
+	form_center(Form,aGrect(&work));
+	for(i=0;led[i];Form[led[i++]].ob_state &= ~SELECTED);	
 	rsrc_gaddr(R_OBJECT,VERIFY,&op);
 	if(jedec_only)
 	{
@@ -1506,9 +1843,17 @@ int init(int argc,int *vp,int *wp)
 		NOWINDOW;
 		return(3);		/* no window available */
 	}
-	wind_set(*wp,WF_NAME," FLASH TOOL CT60 ",0,0);
+	if(coldfire)
+		wind_set(*wp,WF_NAME," FLASH TOOL FIREBEE",0,0);
+	else
+		wind_set(*wp,WF_NAME," FLASH TOOL CT60 / CTPCI",0,0);
 	graf_growbox(Grect(&shrink),Grect(&curr));
 	wind_open(*wp,Grect(&curr));
+    ed_pos=0;
+    ed_objc=ROOT; /* VERSION_FILE; */
+	objc_edit(Form,ed_objc,0,&ed_pos,ED_INIT);
+	new_objc=ed_objc;
+	new_pos=ed_pos;
 	graf_mouse(ARROW,0L);
 	wind_update(END_UPDATE);
 	w_icon=0;
@@ -1522,6 +1867,7 @@ void term(int code,int vh,int wh)
 	switch(code)
 	{
 	case 0:				/* normal end */
+		objc_edit(Form,ed_objc,0,&ed_pos,ED_END);
 		wind_get(wh,WF_CURRXYWH,aGrect(&curr));
 		wind_close(wh);
 		graf_shrinkbox(Grect(&shrink),Grect(&curr));
@@ -1534,7 +1880,7 @@ void term(int code,int vh,int wh)
 			wind_update(END_UPDATE);
 		appl_exit();
 	case 4:				/* other */
-		if(buffer_flash>0)
+		if(buffer_flash!=NULL)
 			Mfree(buffer_flash);
 		break;
 	}
@@ -1576,6 +1922,70 @@ void get_date_file(unsigned short date_file,char *date_format)
 	month=(unsigned char)((date_file>>5)&15);
 	year1=(unsigned char)(((date_file>>9)+1980)/100);
 	year2=(unsigned char)(((date_file>>9)+1980)%100);
+	if(day>31 || month>12 || year1>99 || year2>99)
+		day=month=year1=year2=0;
+	switch((value>>8)&3) /* Date Format */
+	{
+		case 0:          /* MMDDYY */
+			date_format[0]=(month/10)+'0';
+			date_format[1]=(month%10)+'0';
+			date_format[2]=date_format[5]='//';
+			date_format[3]=(day/10)+'0';
+			date_format[4]=(day%10)+'0';
+			date_format[6]=(year1/10)+'0';
+			date_format[7]=(year1%10)+'0';
+			date_format[8]=(year2/10)+'0';
+			date_format[9]=(year2%10)+'0';
+			break;
+		case 1:          /* DDMMYY */
+			date_format[0]=(day/10)+'0';
+			date_format[1]=(day%10)+'0';
+			date_format[2]=date_format[5]='//';
+			date_format[3]=(month/10)+'0';
+			date_format[4]=(month%10)+'0';
+			date_format[6]=(year1/10)+'0';
+			date_format[7]=(year1%10)+'0';
+			date_format[8]=(year2/10)+'0';
+			date_format[9]=(year2%10)+'0';
+			break;
+		case 2:          /* YYMMDD */
+			date_format[0]=(year1/10)+'0';
+			date_format[1]=(year1%10)+'0';
+			date_format[2]=(year2/10)+'0';
+			date_format[3]=(year2%10)+'0';
+			date_format[4]=date_format[7]='//';
+			date_format[5]=(month/10)+'0';
+			date_format[6]=(month%10)+'0';
+			date_format[8]=(day/10)+'0';
+			date_format[9]=(day%10)+'0';
+			break;
+		case 3:          /* YYDDMM */
+			date_format[0]=(year1/10)+'0';
+			date_format[1]=(year1%10)+'0';
+			date_format[2]=(year2/10)+'0';
+			date_format[3]=(year2%10)+'0';
+			date_format[4]=date_format[7]='//';
+			date_format[5]=(day/10)+'0';
+			date_format[6]=(day%10)+'0';
+			date_format[8]=(month/10)+'0';
+			date_format[9]=(month%10)+'0';
+			break;	
+	}
+	date_format[10]=0;
+}
+
+void get_date_os2(unsigned short *date_os,char *date_format)
+{
+	COOKIE *p;
+	unsigned char day,month,year1,year2;
+	long value;
+	value=0x112E;
+	if((p=get_cookie('_IDT'))!=0)
+		value=p->v.l;
+	month=date_os[1];
+	day=date_os[0];
+	year1=date_os[2]/100;
+	year2=date_os[2]%100;
 	if(day>31 || month>12 || year1>99 || year2>99)
 		day=month=year1=year2=0;
 	switch((value>>8)&3) /* Date Format */
@@ -1763,7 +2173,7 @@ void hndl_dd(short pipe_num)
 			cmdline[size]=0;
 			wind_update(BEG_UPDATE);
 			load_file(cmdline);
-			Button(PROG);
+			Button(PROG,0);
 			wind_update(END_UPDATE);
 			Mfree(cmdline);
 			return;
@@ -1783,7 +2193,7 @@ long dd_open_pipe(short pnum)
 	strcpy(pipename,"U:\\PIPE\\DRAGDROP.");
 	strcat(pipename,ext);
 	if((fd=Fopen(pipename,2))>0)
-		oldsig=signal(SIGPIPE,(__Sigfunc)SIG_IGN);
+		oldsig=Psignal(SIGPIPE,(__Sigfunc)SIG_IGN);
 	return(fd);
 }
 
@@ -1807,7 +2217,7 @@ long dd_open(short pipe_num,unsigned char *extlist)
 
 void dd_close(long fd)
 {
-	signal(SIGPIPE,oldsig);
+	Psignal(SIGPIPE,oldsig);
 	Fclose((short)fd);
 }
 

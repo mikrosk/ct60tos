@@ -1,5 +1,5 @@
 /* Flashing CT60, HEX part
-*  Didier Mequignon 2005 April, e-mail: aniplay@wanadoo.fr
+*  Didier Mequignon 2005-2010, e-mail: aniplay@wanadoo.fr
 *
 *  This program is free software; you can redistribute it and/or modify
 *  it under the terms of the GNU General Public License as published by
@@ -22,7 +22,9 @@
 #include "flash.h"
 
 extern void *buffer_flash;
-unsigned long start_adr,end_adr;
+unsigned long start_adr,end_adr,size_srec,offset_srec;
+char *buffer_srec;
+extern int coldfire;
 
 const unsigned char nibble[256] = {
   0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
@@ -43,28 +45,55 @@ const unsigned char nibble[256] = {
   0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
 };
 
-long stegf(char * buf,long len,int handle)
+long stegf(char *buf,long len,int handle)
 {
 	char *cp;
 	long ret,pos;
-	pos=Fseek(0L,handle,1);
-	ret=Fread(handle,len,buf);
-	while(ret>=0 && (cp=strchr(buf,'\n')) != 0)
+	if(coldfire)
 	{
-		*cp = 0;
-		pos++;
+		if(offset_srec+len>size_srec)
+			ret=size_srec-offset_srec;
+		else
+			ret=len;
+		if(ret>0)
+			memcpy(buf,&buffer_srec[offset_srec],ret);
+		pos=offset_srec;
+		while(ret>=0 && (cp=strchr(buf,'\n')) != 0)
+		{
+			*cp = 0;
+			pos++;
+		}
+		while(ret>=0 && (cp=strchr(buf,'\r')) != 0)
+		{
+			*cp = 0;
+			pos++;
+		}
+		if(ret<0)
+			ret=0;
+		else
+			offset_srec=pos+strlen(buf);
 	}
-	while(ret>=0 && (cp=strchr(buf,'\r')) != 0)
-	{
-		*cp = 0;
-		pos++;
-	}
-	if(ret<0)
-		ret=0;
 	else
 	{
-		if(Fseek(pos+strlen(buf),handle,0)<0)
+		pos=Fseek(0L,handle,1);
+		ret=Fread(handle,len,buf);
+		while(ret>=0 && (cp=strchr(buf,'\n')) != 0)
+		{
+			*cp = 0;
+			pos++;
+		}
+		while(ret>=0 && (cp=strchr(buf,'\r')) != 0)
+		{
+			*cp = 0;
+			pos++;
+		}
+		if(ret<0)
 			ret=0;
+		else
+		{
+			if(Fseek(pos+strlen(buf),handle,0)<0)
+				ret=0;
+		}
 	}
 	return(ret);
 }
@@ -107,12 +136,25 @@ void getbytes(char *line,long addr_bytes)
 	if((offset+count) > end_adr)
 		end_adr=offset+count; 
 	p=(unsigned char *)buffer_flash;
-	p+=(offset-(FLASH_ADR & 0xFFFFFF));
-	if((offset >= (FLASH_ADR & 0xFFFFFF))
-	 && ((offset+count) < ((FLASH_ADR & 0xFFFFFF)+FLASH_SIZE-PARAM_SIZE)))
+	if(coldfire)
 	{
-		for(i=0;i<count;i++)
-			*p++=(unsigned char)asciiByte[i+j].v;
+		p+=(offset-FLASH_ADR_CF);
+		if((offset >= FLASH_ADR_CF)
+		 && ((offset+count) < (FLASH_ADR_CF+FLASH_SIZE_CF)))
+		{
+			for(i=0;i<count;i++)
+				*p++=(unsigned char)asciiByte[i+j].v;
+		}
+	}
+	else
+	{
+		p+=(offset-(FLASH_ADR & 0xFFFFFF));
+		if((offset >= (FLASH_ADR & 0xFFFFFF))
+		 && ((offset+count) < ((FLASH_ADR & 0xFFFFFF)+FLASH_SIZE-PARAM_SIZE)))
+		{
+			for(i=0;i<count;i++)
+				*p++=(unsigned char)asciiByte[i+j].v;
+		}
 	}
 }
 
@@ -120,11 +162,30 @@ int srec_read(const char *path)
 {
 	int handle,rt;
 	char line[256];
-	long line_count=0;
+	long line_count=0,ret;
 	start_adr=0xFFFFFFFF;
 	end_adr=0;
+	buffer_srec=NULL;
 	if((handle=(int)Fopen(path,0))<0)
 		return(handle);
+	if(coldfire)
+	{
+		size_srec=Fseek(0L,handle,2);
+		if(size_srec<0)
+			return(size_srec);
+		Fseek(0L,handle,0);
+		buffer_srec=(char *)Mxalloc(size_srec,2);
+		if(buffer_srec==NULL)
+			return(-1);
+		ret=Fread(handle,size_srec,buffer_srec);
+		if(ret<0)
+		{
+			Mfree(buffer_srec);
+			Fclose(handle);		
+			return((int)ret);
+		}
+		offset_srec=0;
+	}
 	while(stegf(line,100,handle))
 	{
 		if(strneq(line,"S0")) rt=0;
@@ -136,6 +197,8 @@ int srec_read(const char *path)
 		else if(strneq(line,"S9")) rt=9;
 		else
 		{
+			if(buffer_srec!=NULL)
+				Mfree(buffer_srec);
 			Fclose(handle);
 			return(-1);
 		}
@@ -148,9 +211,11 @@ int srec_read(const char *path)
 			case 3: getbytes(line,4); break;
 			case 7:
 			case 8:
-			case 9: Fclose(handle); return(0);
+			case 9: break;
 		}
 	}
+	if(buffer_srec!=NULL)
+		Mfree(buffer_srec);
 	Fclose(handle);
 	return(0);
 }

@@ -1,6 +1,5 @@
 ;  Flashing CT60
-;  Didier Mequignon 2003 July / 2004 May, e-mail: aniplay@wanadoo.fr
-;  Based on the flash tool Copyright (C) 2000 Xavier Joubert
+;  Didier Mequignon 2003-2010, e-mail: aniplay@wanadoo.fr
 ;
 ;  This program is free software; you can redistribute it and/or modify
 ;  it under the terms of the GNU General Public License as published by
@@ -15,11 +14,8 @@
 ;  You should have received a copy of the GNU General Public License
 ;  along with this program; if not, write to the Free Software
 ;  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
-;
-;  To contact author write to Xavier Joubert, 5 Cour aux Chais, 44 100 Nantes,
-;  FRANCE or by e-mail to xavier.joubert@free.fr.
 
-FLASH_ADR equ $FFE00000; under 060 write moves.w in ALT3 cpu space works only at $FFExxxxx 
+FLASH_ADR equ 0xFFE00000; under 060 write moves.w in ALT3 cpu space works only at 0xFFExxxxx 
 
 FLASH_UNLOCK1 equ (FLASH_ADR+0xAAA)
 FLASH_UNLOCK2 equ (FLASH_ADR+0x554)
@@ -30,21 +26,25 @@ ERR_PROGRAM equ -3
 ERR_VERIFY  equ -4
 ERR_CT60    equ -5
 
-CMD_UNLOCK1	equ $AA
-CMD_UNLOCK2	equ $55
-CMD_SECTOR_ERASE1 equ $80
-CMD_SECTOR_ERASE2 equ $30
-CMD_PROGRAM equ $A0
-CMD_AUTOSELECT equ $90
-CMD_READ equ $F0
+CMD_UNLOCK1	equ 0xAA
+CMD_UNLOCK2	equ 0x55
+CMD_SECTOR_ERASE1 equ 0x80
+CMD_SECTOR_ERASE2 equ 0x30
+CMD_PROGRAM equ 0xA0
+CMD_AUTOSELECT equ 0x90
+CMD_READ equ 0xF0
 
 	.export get_date_flash
 	.export get_version_flash
+	.export get_checksum_flash
+	.export read_flash
 	.export program_flash
 	.import flash_device
 
 get_date_flash:
 
+	bsr get_version_flash
+	move.l D0,D2
 	move.w SR,-(SP)
 	or #0x700,SR                                        ; lock interrupts
 	moveq #0,D0
@@ -55,10 +55,71 @@ get_date_flash:
 	moveq #3,D1
 	movec.l D1,SFC                                      ; CPU space 3
 	movec.l D1,DFC
-	move.l FLASH_ADR+$18,D1                             ; TOS date
+	moveq #0,D1
+	cmp.l #0x200,D2                                     ; boot 2.0
+	bcc.s .new_boot                                     ; boot patches TOS, so date of flash TOS is unchanged
+	move.l FLASH_ADR+0x18,D1                             ; TOS date
 	cmp.w #60,0x59E
-	beq.s .end_read_date
-	moves.l $E00018,D1                                  ; TOS date	
+	beq .end_read_date
+	moves.l 0xE00018,D1                                 ; TOS date
+	bra .end_read_date
+.new_boot:
+	moveq #0,D0
+	move.w FLASH_ADR+0x80004,D0                         ; month
+	cmp.w #60,0x59E
+	beq.s .month_ok
+	moves.w 0xE80004,D0                                 ; month
+.month_ok:
+	divu #10,D0
+	moveq #0,D1
+	move.w D0,D1
+	asl.l #4,D1
+	swap D0
+	or.l D1,D0
+	move.b D0,D3
+	asl.l #8,D3
+	moveq #0,D0
+	move.w FLASH_ADR+0x80002,D0                         ; day
+	cmp.w #60,0x59E
+	beq.s .day_ok
+	moves.w 0xE80002,D0                                 ; day
+.day_ok:
+	divu #10,D0
+	moveq #0,D1
+	move.w D0,D1
+	asl.l #4,D1
+	swap D0
+	or.l D1,D0
+	move.b D0,D3
+	asl.l #8,D3
+	moveq #0,D0
+	move.w FLASH_ADR+0x80006,D0                         ; year
+	cmp.w #60,0x59E
+	beq.s .year_ok
+	moves.w 0xE80006,D0                                 ; year
+.year_ok:
+	divu #100,D0
+	move.l D0,D2
+	and.l #0xFFFF,D0
+	divu #10,D0
+	moveq #0,D1
+	move.w D0,D1
+	asl.l #4,D1
+	swap D0
+	or.l D1,D0
+	move.b D0,D3
+	asl.l #8,D3
+	clr.w D2
+	swap D2
+	move.l D2,D0
+	divu #10,D0
+	moveq #0,D1
+	move.w D0,D1
+	asl.l #4,D1
+	swap D0
+	or.l D1,D0
+	move.b D0,D3
+	move.l D3,D1
 .end_read_date:
 	move.l D1,D0
 	bne.s .no_flash
@@ -82,10 +143,10 @@ get_version_flash:
 	movec.l D1,SFC                                      ; CPU space 3
 	movec.l D1,DFC
 	moveq #0,D1
-	move.w FLASH_ADR+$80000,D1                          ; Boot version
+	move.w FLASH_ADR+0x80000,D1                         ; Boot version
 	cmp.w #60,0x59E
 	beq.s .end_read_version
-	moves.w $E80000,D1                                  ; Boot version
+	moves.w 0xE80000,D1                                 ; Boot version
 .end_read_version:
 	move.l D1,D0
 	bne.s .no_flash
@@ -96,10 +157,85 @@ get_version_flash:
 	move.w (SP)+,SR
 	rts
 
-program_flash: ; D0.L: offset, D1.L: total size, A0: source, D2: lock_interrupts	
+get_checksum_flash:
+
+	move.w SR,-(SP)
+	or #0x700,SR                                        ; lock interrupts
+	moveq #0,D0
+	lea.l .no_flash(PC),A0
+	move.l 8,A1                                         ; bus error
+	move.l A0,8
+	move.l SP,A2
+	moveq #3,D1
+	movec.l D1,SFC                                      ; CPU space 3
+	movec.l D1,DFC
+	moveq #0,D1
+	move.w FLASH_ADR+0x7FFFE,D1                         ; checksum
+	cmp.w #60,0x59E
+	beq.s .end_read_checksum
+	moves.w 0xE7FFFE,D1                                 ; checksum
+.end_read_checksum:
+	move.l D1,D0
+	bne.s .no_flash
+	moveq #-1,D0
+.no_flash:
+	move.l A1,8
+	move.l A2,SP
+	move.w (SP)+,SR
+	rts
+	
+read_flash: ; D0.L: offset, D1.L: total size, A0: target
 
 	movem.l D1-A6,-(SP)
-	tst D2
+	move.w SR,-(SP)
+	or #0x700,SR                                        ; lock interrupts
+	lea.l FLASH_ADR,A2
+	add.l D0,A2                                         ; offset
+	move.l D1,D7                                        ; size
+	lsr.l #2,D7                                         ; /4
+	lea.l .no_flash(PC),A1
+	move.l 8,A5                                         ; bus error
+	move.l A1,8
+	move.l SP,A6	
+	moveq #ERR_CT60,D0
+	moveq #3,D3
+	movec.l D3,SFC                                      ; CPU space 3
+	movec.l D3,DFC
+	move.l (A2),D0
+	cmp.w #60,0x59E
+	beq.s .end_test_read
+	moves.l (A2),D1
+.end_test_read:		
+	move.l A5,8                                         ; bus error
+	move.l A6,SP
+	move.w (SP)+,SR
+	cmp.w #60,0x59E
+	beq.s .read_060
+.loop_030:
+		moves.l (A2)+,D0
+		move.l D0,(A0)+
+	subq.l #1,D7
+	bgt.s .loop_030
+	moveq #0,D0	
+	bra .read_end
+.read_060:
+		move.l (A2)+,(A0)+
+	subq.l #1,D7
+	bgt.s .read_060
+	moveq #0,D0	
+	bra .read_end
+.no_flash:
+	move.l A5,8                                         ; bus error
+	move.l A6,SP
+	move.w (SP)+,SR
+.read_end:
+	movem.l (SP)+,D1-A6
+	rts
+
+program_flash: ; D0.L: offset, D1.L: total size, A0: source, D2: lock_interrupts
+
+	movem.l D1-A6,-(SP)
+	tst.w D2
 	beq.s .not_locked1
 	move.w SR,-(SP)
 	or #0x700,SR                                        ; lock interrupts
@@ -329,6 +465,7 @@ devices:
 	dc.l 0x000422AB, fujitsu_mbm29f400bc-devices
 	dc.l 0x00042258, fujitsu_mbm29f800ba-devices
 	dc.l 0x00012258, amd_am29f800bb-devices
+	dc.l 0x00202258, st_m29f800db-devices
 	dc.l 0
 	
 fujitsu_mbm29f400bc:
@@ -358,6 +495,7 @@ fujitsu_mbm29f400bc:
 
 fujitsu_mbm29f800ba:
 amd_am29f800bb:
+st_m29f800db:
 	dc.l FLASH_ADR+0x00000, FLASH_UNLOCK1, FLASH_UNLOCK2
 	dc.l FLASH_ADR+0x04000, FLASH_UNLOCK1, FLASH_UNLOCK2
 	dc.l FLASH_ADR+0x06000, FLASH_UNLOCK1, FLASH_UNLOCK2
