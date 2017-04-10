@@ -1,0 +1,9 @@
+To compile .cpx you need to compile in this order:
+
+ct60temp.prj
+convert.prj
+run convert.prg
+ct60conf.prj
+run cpxlink.ttp and give ct60conf.cpx as a parameter
+
+It wil make ct60conf.cpx and put in into /cpx folder.

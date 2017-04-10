@@ -6,6 +6,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include "ct60ctcm.h"
+#include "compat.h"
 
 #ifndef NO_GEM
 unsigned long step_frequency=125;

@@ -5,22 +5,24 @@
 #include <tos.h>
 #include <vdi.h>
 #include <mt_aes.h>
-#include <cpx.h>
+/*#include <cpx.h>*/
+#include "cpx.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
 #include "ct60.h"
-#include "pcixbios.h"
+/* #include "pcixbios.h" */
 #include "ct60ctcm.h"
-#include "radeon.h"
+/* #include "radeon.h" */
+#include "compat.h"
 
-/* #define LIGHT */					/* without language & video */
+#define LIGHT 					/* without language & video */
 /* #define ALERT_INSTALL_CT60TEMP */
 /* #define DEBUG */
 /* #define TEST */
 
-#define ID_CF (long)'_CF_'
+/* #define ID_CF (long)'_CF_' */
 
 #define ID_CPX (long)'CT60'
 #define VA_START 0x4711
@@ -180,14 +182,14 @@ typedef struct
 
 /* prototypes */
 
-int CDECL cpx_call(GRECT *work);
-void CDECL cpx_draw(GRECT *clip);
-void CDECL cpx_wmove(GRECT *work);
-void CDECL cpx_timer(int *event);
-void CDECL cpx_key(int kstate,int key,int *event);
-void CDECL cpx_button(MRETS *mrets,int nclicks,int *event);
-int CDECL cpx_hook(int event,WORD *msg,MRETS *mrets,int *key,int *nclicks);
-void CDECL cpx_close(int flag);
+int cdecl cpx_call(GRECT *work);
+void cdecl cpx_draw(GRECT *clip);
+void cdecl cpx_wmove(GRECT *work);
+void cdecl cpx_timer(int *event);
+void cdecl cpx_key(int kstate,int key,int *event);
+void cdecl cpx_button(MRETS *mrets,int nclicks,int *event);
+int cdecl cpx_hook(int event,WORD *msg,MRETS *mrets,int *key,int *nclicks);
+void cdecl cpx_close(int flag);
 int init_rsc(void);
 OBJECT* adr_tree(int num_tree);
 void init_slider(void);
@@ -233,7 +235,7 @@ COOKIE *fcookie(void);
 COOKIE *ncookie(COOKIE *p);
 COOKIE *get_cookie(long id);
 int add_cookie(COOKIE *cook);
-int find_radeon(void);
+/* int find_radeon(void); */
 int test_060(void);
 int copy_string(char *p1,char *p2);
 int long_deci(char *p,int *lg);
@@ -258,7 +260,7 @@ extern int read_i2c(long device_address);
 
 HEAD config={0,2,2,0x11,'/',1,0x1b2,0x87,0,50,0,0,1,0,1,1,MIN_FREQ,1,1};
 
-#include "ct60temp.h"
+#include "ct60temp.hex"
 
 /* global variables */
 
@@ -267,7 +269,7 @@ int errno;
 WORD global[15];
 int gr_hwchar,gr_hhchar;
 int	ap_id=-1,temp_id=-1,wi_id=-1;
-int mint,magic,radeon,coldfire,flag_frequency,flag_cpuload,flag_xbios,thread=0,time_out_thread=-1,time_out_bubble=-1,bubblegem_right_click=1;
+int mint,magic, /*radeon,coldfire,*/ flag_frequency,flag_cpuload,flag_xbios,thread=0,time_out_thread=-1,time_out_bubble=-1,bubblegem_right_click=1;
 unsigned long magic_date,st_ram,fast_ram,loops_per_sec=0,frequency=MIN_FREQ,min_freq=MIN_FREQ,max_freq=MAX_FREQ_REV6;
 extern unsigned long step_frequency;
 long cpu_cookie=0;
@@ -395,7 +397,7 @@ unsigned short tab_temp[61],tab_temp_eiffel[61],tab_cpuload[61];
 #define OFFSETTLV 1
 #define OFFSETOK 2
 #define OFFSETCANCEL 3
-
+/*
 char *rs_strings[] = {
 	"CT60 Configuration","","",
 	"S‚lection:",
@@ -522,7 +524,7 @@ char *rs_strings[] = {
 	"-00","Offset TLV 2.8øC/unit: ___ unit","X99",
 	"OK",
 	"Annule" };
-
+*/
 char *rs_strings_en[] = {
 	"CT60 Configuration","","",
 	"Selection:",
@@ -1278,7 +1280,7 @@ struct bubblegem bubbletab[NB_BUB] = {
 	"Button to display|program information"}
 };
 
-CPXINFO* CDECL cpx_init(XCPB *xcpb)
+CPXINFO* cdecl cpx_init(XCPB *xcpb)
 
 {
 	register int i;
@@ -1298,7 +1300,7 @@ CPXINFO* CDECL cpx_init(XCPB *xcpb)
 		NVMaccess(2,0,0,&nvram);					/* init */
 		NVMaccess(0,0,(int)(sizeof(NVM)),&nvram);	/* read */
 	}
-	radeon=find_radeon();
+	/* radeon=find_radeon(); */
 	if((*Xcpb->get_cookie)('MiNT',&value))
 		mint=1;
 	else
@@ -1378,11 +1380,11 @@ CPXINFO* CDECL cpx_init(XCPB *xcpb)
 		 && (ap_id=appl_find("FREEDOM2"))<0)
 			ap_id=-1;
 	}
-	if((*Xcpb->get_cookie)(ID_CF,&value))
+/*	if((*Xcpb->get_cookie)(ID_CF,&value))
 		coldfire=1;
 	else
-		coldfire=0;
-	if((*Xcpb->get_cookie)(ID_CT60,&value) || coldfire)
+		coldfire=0;  */
+	if((*Xcpb->get_cookie)(ID_CT60,&value) /*|| coldfire */)
 		flag_xbios=1;
 	else
 		flag_xbios=0;
@@ -1394,7 +1396,7 @@ CPXINFO* CDECL cpx_init(XCPB *xcpb)
 		printf("\r\nStart temperature task");
 #endif
 		if(((*Xcpb->get_cookie)(ID_CT60,&(long)ct60_arg)
-		 || (*Xcpb->get_cookie)(ID_CF,&(long)ct60_arg)) && (ct60_arg!=NULL))
+		 /*|| (*Xcpb->get_cookie)(ID_CF,&(long)ct60_arg)*/) && (ct60_arg!=NULL))
 		{
 			ct60_arg->trigger_temp=(unsigned short)trigger_temp;
 			ct60_arg->daystop=(unsigned short)daystop;
@@ -1409,7 +1411,7 @@ CPXINFO* CDECL cpx_init(XCPB *xcpb)
 	return(&cpxinfo);
 }
 
-int CDECL cpx_call(GRECT *work)
+int cdecl cpx_call(GRECT *work)
 
 {
 	GRECT menu;
@@ -1508,7 +1510,7 @@ int CDECL cpx_call(GRECT *work)
 	rs_object[MENUFASTRAMTOT].ob_spec.free_string[9]=' ';
 	t_edinfo=rs_object[MENUMIPS].ob_spec.tedinfo;
 	if(((*Xcpb->get_cookie)(ID_CT60,&(long)ct60_arg)
-     || (*Xcpb->get_cookie)(ID_CF,&(long)ct60_arg))
+     /*|| (*Xcpb->get_cookie)(ID_CF,&(long)ct60_arg)*/)
       && (ct60_arg!=NULL) && ct60_arg->speed_fan)
 		sprintf(t_edinfo->te_ptext,"æP: %3lu.%02lu Mips     %04u tr/mn",
 		loops_per_sec/500000,(loops_per_sec/5000) % 100,ct60_arg->speed_fan);
@@ -1537,7 +1539,7 @@ int CDECL cpx_call(GRECT *work)
 	t_edinfo->te_ptext=spec_time[(datetime>>4) & 1];
 	t_edinfo=rs_object[MENUSEP].ob_spec.tedinfo;
 	t_edinfo->te_ptext[0]=nvram.separator;
-	if(radeon) /* PCI */
+/*	if(radeon) /* PCI */
 	{
 		if(flag_xbios)
 			value=ct60_rw_parameter(CT60_MODE_READ,CT60_VMODE,0L);
@@ -1582,9 +1584,9 @@ int CDECL cpx_call(GRECT *work)
 		}
 		rs_object[MENUOVERSCAN].ob_state &= ~SELECTED;
 		rs_object[MENUSTMODES].ob_state &= ~SELECTED;
-	}
+	} 
 	else /* VIDEL */
-	{
+	{ */
 		i=0;
 		if(vmode & COL80)
 			i+=2;
@@ -1633,7 +1635,7 @@ int CDECL cpx_call(GRECT *work)
 			if((vmode & NUMCOLS)>=BPS8)
 				vmode &= ~STMODES;	
 		}
-	}
+/*	} */
 	t_edinfo=rs_object[MENUBVIDEO].ob_spec.tedinfo;
 	t_edinfo->te_ptext=spec_video[((vmode & VGA_FALCON)>>4) & 1];
 	t_edinfo=rs_object[MENUBMODE].ob_spec.tedinfo;
@@ -1704,7 +1706,7 @@ int CDECL cpx_call(GRECT *work)
 		Super((void *)stack);
 	}
 #ifndef LIGHT /* todo: use a true button for DMA */
-	if(radeon)
+/*	if(radeon)
 	{
 		if(!start_lang)
 			rs_object[MENUOVERSCAN].ob_spec.free_string = "Utilise DMA";
@@ -1714,7 +1716,7 @@ int CDECL cpx_call(GRECT *work)
 			rs_object[MENUOVERSCAN].ob_state |= SELECTED;
 		else
 			rs_object[MENUOVERSCAN].ob_state &= ~SELECTED;	
-	}
+	} */
 #endif
 	flag_frequency=0; /* modif */
 	step_frequency=125;
@@ -1757,7 +1759,7 @@ int CDECL cpx_call(GRECT *work)
 		selection=PAGE_TEMP;
 		ed_objc=MENUTRIGGER;
 		no_jumper=0;
-		if(coldfire || (value=ct60_read_clock())<0)
+		if(/*coldfire ||*/ (value=ct60_read_clock())<0)
 			frequency=0;                 /* no programmable clock */
 		else
 		{
@@ -1765,7 +1767,7 @@ int CDECL cpx_call(GRECT *work)
 			{
 				min_freq=MIN_FREQ_DALLAS+600UL;
 				if(((*Xcpb->get_cookie)(ID_CT60,&(long)ct60_arg)
-				 || (*Xcpb->get_cookie)(ID_CF,&(long)ct60_arg))
+				 /*|| (*Xcpb->get_cookie)(ID_CF,&(long)ct60_arg)*/)
 				  && (ct60_arg!=NULL))
 				{
 #ifdef DEBUG
@@ -1824,13 +1826,13 @@ int CDECL cpx_call(GRECT *work)
 	return(1);					/* CPX isn't finished */
 }
 
-void CDECL cpx_draw(GRECT *clip)
+void cdecl cpx_draw(GRECT *clip)
 
 {
 	display_objc(0,clip);
 }
 
-void CDECL cpx_wmove(GRECT *work)
+void cdecl cpx_wmove(GRECT *work)
 
 {
 	rs_object[MENUBOX].ob_x=work->g_x;
@@ -1839,7 +1841,7 @@ void CDECL cpx_wmove(GRECT *work)
 	rs_object[MENUBOX].ob_height=work->g_h;
 }
 
-int CDECL cpx_hook(int event,WORD *msg,MRETS *mrets,int *key,int *nclicks)
+int cdecl cpx_hook(int event,WORD *msg,MRETS *mrets,int *key,int *nclicks)
 
 {
 	register int i;
@@ -1907,7 +1909,7 @@ int CDECL cpx_hook(int event,WORD *msg,MRETS *mrets,int *key,int *nclicks)
 	return(0);
 }
 
-void CDECL cpx_timer(int *event)
+void cdecl cpx_timer(int *event)
 
 {
 	register int i,j,ret,mn;
@@ -1929,7 +1931,7 @@ void CDECL cpx_timer(int *event)
 			break;
 		case PAGE_MEMORY:
 			if(((*Xcpb->get_cookie)(ID_CT60,&(long)ct60_arg)
-			 || (*Xcpb->get_cookie)(ID_CF,&(long)ct60_arg))
+			/* || (*Xcpb->get_cookie)(ID_CF,&(long)ct60_arg)*/)
 			  && (ct60_arg!=NULL) && ct60_arg->speed_fan)
 			{
 				t_edinfo=rs_object[MENUMIPS].ob_spec.tedinfo;	
@@ -2057,7 +2059,7 @@ void CDECL cpx_timer(int *event)
 	}
 }
 
-void CDECL cpx_key(int kstate,int key,int *event)
+void cdecl cpx_key(int kstate,int key,int *event)
 
 {
 	register int i,j,dial;
@@ -2112,7 +2114,7 @@ void CDECL cpx_key(int kstate,int key,int *event)
 	}	
 }
 
-void CDECL cpx_button(MRETS *mrets,int nclicks,int *event)
+void cdecl cpx_button(MRETS *mrets,int nclicks,int *event)
 
 {
 	register int i,j,k,objc_clic,pos_clic;
@@ -2260,7 +2262,7 @@ void CDECL cpx_button(MRETS *mrets,int nclicks,int *event)
 				loops_per_sec=bogomips();
 				t_edinfo=rs_object[MENUMIPS].ob_spec.tedinfo;
 				if(((*Xcpb->get_cookie)(ID_CT60,&(long)ct60_arg)
-				 || (*Xcpb->get_cookie)(ID_CF,&(long)ct60_arg))
+				/* || (*Xcpb->get_cookie)(ID_CF,&(long)ct60_arg)*/)
 				  && (ct60_arg!=NULL) && ct60_arg->speed_fan)
 					sprintf(t_edinfo->te_ptext,"æP: %3lu.%02lu Mips     %04u tr/mn",
 					loops_per_sec/500000,(loops_per_sec/5000) % 100,ct60_arg->speed_fan);
@@ -2404,9 +2406,10 @@ void CDECL cpx_button(MRETS *mrets,int nclicks,int *event)
 				ret=(*Xcpb->Popup)(video,2,i,IBM,&menu,Work);
 				if(ret>=0 && ret!=(((vmode & VGA_FALCON)>>4) & 1))
 				{
-					if(radeon)
+			/*		if(radeon)
 						ret=1;
-					else if(ret && (vmode & COL80) && (vmode & NUMCOLS)==BPS16)
+					else  */
+						if(ret && (vmode & COL80) && (vmode & NUMCOLS)==BPS16)
 						ret=0;
 					t_edinfo=rs_object[MENUBVIDEO].ob_spec.tedinfo;
 					t_edinfo->te_ptext=spec_video[ret];
@@ -2414,16 +2417,16 @@ void CDECL cpx_button(MRETS *mrets,int nclicks,int *event)
 					if(ret)
 					{
 						vmode |= VGA_FALCON;
-						if(!radeon)
+/*						if(!radeon)
 						{
 							vmode &= ~OVERSCAN;	
 							change_objc(MENUOVERSCAN,NORMAL,Work);
-						}
+						}  */
 					}
 					else
 						vmode &= ~VGA_FALCON;
-					if(!radeon)
-					{
+		/*			if(!radeon)
+					{    */
 						i=0;
 						if(vmode & COL80)
 							i+=2;
@@ -2434,7 +2437,7 @@ void CDECL cpx_button(MRETS *mrets,int nclicks,int *event)
 						t_edinfo=rs_object[MENUBRES].ob_spec.tedinfo;
 						t_edinfo->te_ptext=spec_res[(vmode & VGA_FALCON) ? 1 : 0][i];
 						display_objc(MENUBRES,Work);
-					}
+				/*	}   */
 				}		
 				break;
 			case MENUBMODE:
@@ -2447,8 +2450,8 @@ void CDECL cpx_button(MRETS *mrets,int nclicks,int *event)
 				ret=(*Xcpb->Popup)(mode,2,i,IBM,&menu,Work);
 				if(ret>=0 && ret!=(((vmode & PAL)>>5) & 1))
 				{
-					if(radeon)
-						ret=1;
+				/*	if(radeon)
+						ret=1;  */
 					t_edinfo=rs_object[MENUBMODE].ob_spec.tedinfo;
 					t_edinfo->te_ptext=spec_mode[ret];
 					display_objc(MENUBMODE,Work);
@@ -2462,7 +2465,7 @@ void CDECL cpx_button(MRETS *mrets,int nclicks,int *event)
 				objc_offset(rs_object,MENUBRES,&menu.g_x,&menu.g_y);
 				menu.g_w=rs_object[MENUBRES].ob_width;
 				menu.g_h=rs_object[MENUBRES].ob_height;
-				if(radeon)
+	/*			if(radeon)
 				{
 					i=2;
 					ret=VERTFLAG2|VESA_768|VESA_600|HORFLAG2|HORFLAG;
@@ -2485,7 +2488,7 @@ void CDECL cpx_button(MRETS *mrets,int nclicks,int *event)
 					}
 				}
 				else
-				{
+				{ */
 					i=0;
 					if(vmode & COL80)
 						i+=2;
@@ -2493,11 +2496,11 @@ void CDECL cpx_button(MRETS *mrets,int nclicks,int *event)
 						i++;
 					if((vmode & VERTFLAG) && !(vmode & VGA_FALCON))
 						i++;
-				}
-				ret=(*Xcpb->Popup)(res[(vmode & VGA_FALCON) ? 1 : 0],radeon ? 8 : 4,i,IBM,&menu,Work);
+		/*		}   */
+				ret=(*Xcpb->Popup)(res[(vmode & VGA_FALCON) ? 1 : 0], /* radeon ? 8 : */ 4 ,i,IBM,&menu,Work);
 				if(ret>=0 && ret!=i)
 				{
-					if(radeon)
+				/*	if(radeon)
 					{
 						if(ret==1)
 							ret--;
@@ -2505,7 +2508,7 @@ void CDECL cpx_button(MRETS *mrets,int nclicks,int *event)
 							ret++;
 					}
 					else
-					{
+					{   */
 						if(ret<2)
 						{
 							if((vmode & NUMCOLS)==BPS1)
@@ -2525,11 +2528,11 @@ void CDECL cpx_button(MRETS *mrets,int nclicks,int *event)
 							default: ret=0; break;		/* 320 x 200 */
 							}
 						}
-					}
+			/*		}   */
 					t_edinfo=rs_object[MENUBRES].ob_spec.tedinfo;
 					t_edinfo->te_ptext=spec_res[(vmode & VGA_FALCON) ? 1 : 0][ret];
 					display_objc(MENUBRES,Work);
-					if(radeon)
+		/*			if(radeon)
 					{
 						switch(ret)
 						{
@@ -2550,7 +2553,7 @@ void CDECL cpx_button(MRETS *mrets,int nclicks,int *event)
 						}
 					}
 					else
-					{
+					{   */
 						switch(ret)
 						{
 						case 0:
@@ -2583,16 +2586,16 @@ void CDECL cpx_button(MRETS *mrets,int nclicks,int *event)
 							break;
 						}
 					}
-				}		
+		/*		}		 */
 				break;		
 			case MENUBCOUL:
 				objc_offset(rs_object,MENUBCOUL,&menu.g_x,&menu.g_y);
 				menu.g_w=rs_object[MENUBCOUL].ob_width;
 				menu.g_h=rs_object[MENUBCOUL].ob_height;
-				ret=(*Xcpb->Popup)(coul,radeon ? 6 : 5,vmode & NUMCOLS,IBM,&menu,Work);
+				ret=(*Xcpb->Popup)(coul,/* radeon ? 6 : */5,vmode & NUMCOLS,IBM,&menu,Work);
 				if(ret>=0 && ret!=(vmode & NUMCOLS))
 				{
-					if(radeon)
+			/*		if(radeon)
 					{
 						if(ret < BPS8)
 						{
@@ -2602,7 +2605,7 @@ void CDECL cpx_button(MRETS *mrets,int nclicks,int *event)
 						}				
 					}
 					else
-					{
+					{ */
 						if(vmode & STMODES)
 						{
 							switch(ret)
@@ -2647,7 +2650,7 @@ void CDECL cpx_button(MRETS *mrets,int nclicks,int *event)
 							ret++;
 						if((vmode & COL80) && (vmode & VGA_FALCON) && ret==BPS16)
 							ret--;
-					}
+			/* 		}  */
 					t_edinfo=rs_object[MENUBCOUL].ob_spec.tedinfo;
 					t_edinfo->te_ptext=spec_coul[ret];
 					display_objc(MENUBCOUL,Work);
@@ -2656,7 +2659,7 @@ void CDECL cpx_button(MRETS *mrets,int nclicks,int *event)
 				}		
 				break;
 			case MENUSTMODES:
-				if(!radeon && (rs_object[MENUSTMODES].ob_state & SELECTED) && (vmode & NUMCOLS)<BPS8)
+				if(/* !radeon && */ (rs_object[MENUSTMODES].ob_state & SELECTED) && (vmode & NUMCOLS)<BPS8)
 				{
 					vmode |= STMODES;
 					switch(vmode & NUMCOLS)
@@ -2693,12 +2696,12 @@ void CDECL cpx_button(MRETS *mrets,int nclicks,int *event)
 				else
 				{
 					vmode &= ~STMODES;
-					if(radeon || (vmode & NUMCOLS)>=BPS8)
+					if(/*(radeon || */(vmode & NUMCOLS)>=BPS8)
 						change_objc(MENUSTMODES,NORMAL,Work);
 				}
 				break;
 			case MENUOVERSCAN:
-				if(radeon) /* PCI */
+		/*		if(radeon) /* PCI */
 				{
 					if(rs_object[MENUOVERSCAN].ob_state & SELECTED)
 						idectpci |= 2;
@@ -2706,7 +2709,7 @@ void CDECL cpx_button(MRETS *mrets,int nclicks,int *event)
 						idectpci &= ~2;
 				}
 				else /* Videl */
-				{
+				{   */
 					if(rs_object[MENUOVERSCAN].ob_state & SELECTED)
 					{
 						if(!(vmode & VGA_FALCON))
@@ -2716,7 +2719,7 @@ void CDECL cpx_button(MRETS *mrets,int nclicks,int *event)
 					}
 					else
 						vmode &= ~OVERSCAN;
-				}
+		/*		}    */
 				break;
 			case MENUNVM:
 				if(rs_object[MENUNVM].ob_state & SELECTED)		
@@ -2873,7 +2876,7 @@ void CDECL cpx_button(MRETS *mrets,int nclicks,int *event)
 				}
 				break;
 			case MENUBSAVE:
-				head->cpxhead.flags.resident=head->cpxhead.flags.bootinit=1;
+				head->cpxhead.flags.ram_resident=head->cpxhead.flags.boot_init=1;
 				header->language=code_lang[language];
 				header->keyboard=code_key[keyboard];
 				header->datetime=(unsigned char)datetime;
@@ -2909,11 +2912,11 @@ void CDECL cpx_button(MRETS *mrets,int nclicks,int *event)
 					if(ret==1)
 						modif_inf(vmode); /* modification modecode NEWDESK.INF */
 				}
-				if(((nclicks>1 && test_060()) || (flag_frequency && !test_060())) && frequency!=0 && !coldfire)
+				if(((nclicks>1 && test_060()) || (flag_frequency && !test_060())) && frequency!=0 /* && !coldfire*/)
 				{
 					value=-1;
-					if(!coldfire)
-						value=ct60_read_clock();
+	/*				if(!coldfire)
+						value=ct60_read_clock();  */
 					if(value>0)
 					{
 						if(step_frequency==DAC_STEP) /* Dallas DS1085 programmable clock */
@@ -3056,7 +3059,7 @@ void CDECL cpx_button(MRETS *mrets,int nclicks,int *event)
 					t_edinfo->te_ptext=spec_mode[((vmode & PAL)>>5) & 1];
 					t_edinfo=rs_object[MENUBCOUL].ob_spec.tedinfo;
 					t_edinfo->te_ptext=spec_coul[vmode & NUMCOLS];
-					if(radeon) /* PCI */
+				/*	if(radeon) /* PCI */
 					{
 						vmode&=(VERTFLAG2|VESA_768|VESA_600|HORFLAG2|HORFLAG|VERTFLAG|VGA_FALCON|COL80|NUMCOLS);
 						vmode|=(PAL|VGA_FALCON);
@@ -3095,7 +3098,7 @@ void CDECL cpx_button(MRETS *mrets,int nclicks,int *event)
 						rs_object[MENUSTMODES].ob_state &= ~SELECTED;
 					}
 					else /* Videl */
-					{
+					{  */
 						i=0;
 						if(vmode & COL80)
 							i+=2;
@@ -3144,7 +3147,7 @@ void CDECL cpx_button(MRETS *mrets,int nclicks,int *event)
 							if((vmode & NUMCOLS)>=3)
 								vmode &= ~STMODES;	
 						}
-					}
+			/*		}  */
 					t_edinfo=rs_object[MENUBRES].ob_spec.tedinfo;
 					t_edinfo->te_ptext=spec_res[(vmode & VGA_FALCON) ? 1 : 0][i];
 #endif
@@ -3210,7 +3213,7 @@ void CDECL cpx_button(MRETS *mrets,int nclicks,int *event)
 					frequency=header->frequency;
 					if(frequency<min_freq || frequency>max_freq)
 						frequency=min_freq;
-					if(test_060() && (coldfire || ct60_read_clock()<0))
+					if(test_060() && (/*coldfire ||*/ ct60_read_clock()<0))
 						frequency=0;
 					init_slider();
 					beep=(int)header->beep&1;
@@ -3229,7 +3232,7 @@ _ok_:
 				nvram.datetime=(unsigned char)datetime;
 				t_edinfo=rs_object[MENUSEP].ob_spec.tedinfo;
 				nvram.separator=t_edinfo->te_ptext[0];
-				if(!radeon)
+		/*		if(!radeon)  */
 					nvram.vmode=(unsigned int)vmode;
 #endif
 				nvram.bootpref=(unsigned int)code_os[bootpref];
@@ -3258,8 +3261,8 @@ _ok_:
 					 (long)((((unsigned long)nvram.bootdelay)<<24)
 					 + (((unsigned long)nvram.vmode)<<8)
 					 + (unsigned long)nvram.scsi));
-					if(radeon)
-						ct60_rw_parameter(CT60_MODE_WRITE,CT60_VMODE,(long)vmode);
+			/*		if(radeon)  
+						ct60_rw_parameter(CT60_MODE_WRITE,CT60_VMODE,(long)vmode);    */
 #endif
 					ct60_rw_parameter(CT60_MODE_WRITE,CT60_PARAM_CTPCI,(long)idectpci);
 				}
@@ -3285,8 +3288,8 @@ _ok_:
 					 (long)((((unsigned long)nvram.bootdelay)<<24)
 					 + (((unsigned long)nvram.vmode)<<8)
 					 + (unsigned long)nvram.scsi));
-					if(radeon)
-						ct60_rw_param(CT60_MODE_WRITE,CT60_VMODE,(long)vmode);
+			/*		if(radeon)
+						ct60_rw_param(CT60_MODE_WRITE,CT60_VMODE,(long)vmode);  */
 #endif
 					ct60_rw_param(CT60_MODE_WRITE,CT60_PARAM_CTPCI,(long)idectpci);
 					Super((void *)stack);
@@ -3312,7 +3315,7 @@ _ok_:
 				if(test_060() && frequency!=0)
 				{
 					value=-1;
-					if(!coldfire)
+			/*		if(!coldfire) */
 						value=ct60_read_clock();
 					if(value>0)
 					{
@@ -3379,7 +3382,7 @@ _ok_:
 	}
 }
 
-void CDECL cpx_close(int flag)
+void cdecl cpx_close(int flag)
 
 {
 	int x,y,m,k;
@@ -3402,17 +3405,23 @@ int init_rsc(void)
 #ifdef DEBUG
 		printf("\r\nInit RSC");
 #endif		
-		if((nvram.language==FRA) || (nvram.language==SWF))
+/*		if((nvram.language==FRA) || (nvram.language==SWF))
 		{
 			start_lang=0;
 			rs_str=rs_strings;
 		}
 		else
-		{
+		{  */
 			start_lang=1;
 			rs_str=rs_strings_en;
-		}
+/*		}  */
+#ifdef DEBUG
+		printf("\r\nXcpb->rsh_fix");
+#endif		
 		(*Xcpb->rsh_fix)(NUM_OBS,NUM_FRSTR,NUM_FRIMG,NUM_TREE,rs_object,rs_tedinfo,rs_str,rs_iconblk,rs_bitblk,rs_frstr,rs_frimg,rs_trindex,rs_imdope);
+#ifdef DEBUG
+		printf("\r\nXcpb->rsh_fix - done");
+#endif			
 		if(rs_object[MENUBINFO].ob_height==1)
 			return(0);	/* error */
 		else
@@ -3489,6 +3498,9 @@ int init_rsc(void)
 			rs_object[MENUBBOOTLOG].ob_y+=(h-4);
 			rs_object[MENUBIDECTPCI-1].ob_y+=(h-4);
 			rs_object[MENUBIDECTPCI].ob_y+=(h-4);
+#ifdef DEBUG
+		printf("\r\nXcpb->get cookie");
+#endif				
 			if((*Xcpb->get_cookie)('_PCI',&value))
 			{
 				rs_object[MENUBIDECTPCI-1].ob_flags &= ~HIDETREE;
@@ -3499,6 +3511,9 @@ int init_rsc(void)
 				rs_object[MENUBIDECTPCI-1].ob_flags |= HIDETREE;	
 				rs_object[MENUBIDECTPCI].ob_flags |= HIDETREE;
 			}		
+#ifdef DEBUG
+		printf("\r\nXcpb->get cookie - done");
+#endif			
 			rs_object[MENUBOXSTOP].ob_y+=(h+1);
 			rs_object[MENUBOXSTOP].ob_height+=h;
 			rs_object[MENUBSAVE].ob_y+=h;
@@ -3520,6 +3535,9 @@ int init_rsc(void)
 				b_itblk=alert_tree[ALERTSTOP].ob_spec.bitblk;
 				b_itblk->bi_pdata=(int *)pic_stop;
 			}
+#ifdef DEBUG
+		printf("\r\nMxalloc");
+#endif				
 			if(!mint && !magic)
 			{
 				buffer_bubble=(char *)Mxalloc(256L,3);		/* normal memory */
@@ -3530,8 +3548,14 @@ int init_rsc(void)
 				buffer_bubble=(char *)Mxalloc(256L,0x23);	/* global memory */
 				buffer_path=(char *)Mxalloc(256L,0x23);
 			}
+#ifdef DEBUG
+		printf("\r\nMxalloc . done");
+#endif			
 		}
 	}
+#ifdef DEBUG
+		printf("\r\nInit RSC - return-OK");
+#endif	
 	return(1);	/* OK */
 }
 
@@ -3785,7 +3809,7 @@ void infos_sdram(void)
 	TEDINFO *t_edinfo;
 	int i;
 	long stack;
-	if(!test_060() || coldfire)
+	if(!test_060() /*|| coldfire*/)
 		return;
 	stack=Super(0L);
 #ifdef DEBUG
@@ -5490,9 +5514,9 @@ void stop_060(void)
 	Shutdown(0L);
 	if((*Xcpb->get_cookie)('_CPU',&value) && (value==60L))
 	{
-		if(coldfire)
+	/*	if(coldfire)
 			Supexec(cf_stop);
-		else
+		else  */
 			Supexec(ct60_stop);	
 	}
 	while(1);
@@ -5504,8 +5528,8 @@ long version_060(void)
 	if(!test_060())
 		return(6);
 #ifndef TEST
-	if(coldfire)
-		return(6);
+/*	if(coldfire)
+		return(6);  */
 	return(Supexec(ct60_cpu_revision));	
 #else
 	return(1);
@@ -5688,6 +5712,7 @@ int add_cookie(COOKIE *cook)
 	return(-1);						/* no cookie-jar */
 }
 
+/*
 int find_radeon(void)
 
 {
@@ -5722,7 +5747,7 @@ int find_radeon(void)
 	while(handle>=0);
 	return(0);
 }	
-
+*/
 int test_060(void)
 
 {

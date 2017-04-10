@@ -10,6 +10,7 @@
 #include <string.h>
 #include <time.h>
 #include "ct60.h"
+#include "compat.h"
 
 #define ID_CF (long)'_CF_'
 
