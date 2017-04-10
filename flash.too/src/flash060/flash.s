@@ -288,11 +288,14 @@ program_flash: ; D0.L: offset, D1.L: total size, A0: source, D2: lock_interrupts
 	move.l A6,SP
 	move.w (SP)+,SR
 	move.l D0,flash_device
-	lea.l devices(PC),A3
+	;lea.l devices(PC),A3
+	lea.l devices+2(PC),A3 			;we are checking only lower word
 .loop_dev:
-		tst.l (A3)
-		beq .no_dev
-		cmp.l (A3),D0
+		;tst.l (A3)
+		tst.w (A3)					;we are checking only lower word
+		beq.s .no_dev
+		;cmp.l (A3),D0				;we are checking only lower word
+		cmp.w (A3),D0
 		beq.s .found_dev
 		addq.l #8,A3
 	bra.s .loop_dev
@@ -306,7 +309,8 @@ program_flash: ; D0.L: offset, D1.L: total size, A0: source, D2: lock_interrupts
 	bra .program_end
 .found_dev:
 	lea.l devices(PC),A1
-	add.l 4(A3),A1                                      ; sector of device
+	;add.l 4(A3),A1
+	add.l 2(A3),A1                                      ; sector of device ;we are checking only lower word
 	moveq #0,D1                                         ; offset
 .find_offset:
 		movem.l (A1),A2-A4                              ; sector, flash_unlock1, flash_unlock2
@@ -461,41 +465,16 @@ program_flash: ; D0.L: offset, D1.L: total size, A0: source, D2: lock_interrupts
 	movem.l (SP)+,D1-A6
 	rts
 	
-devices:
-	dc.l 0x000422AB, fujitsu_mbm29f400bc-devices
-	dc.l 0x00042258, fujitsu_mbm29f800ba-devices
-	dc.l 0x00012258, amd_am29f800bb-devices
-	dc.l 0x00202258, st_m29f800db-devices
+devices: ;I assume all modern 29f800 series flashes are supporting the same commands.
+;
+; Support for old f400 devices was removed. obsolete.
+;
+;	dc.l 0xmanid=devid, label - devices
+;	dc.l 0x00ff22AB, xx29f400_bottom_boot_block - devices 	;Probably obsolete because of small flash. keept for compability.	
+	dc.l 0x00ff2258, xx29f800_bottom_boot_block - devices	;Most of known flashes are identified like this.
 	dc.l 0
-	
-fujitsu_mbm29f400bc:
-	dc.l FLASH_ADR+0x00000, FLASH_UNLOCK1, FLASH_UNLOCK2
-	dc.l FLASH_ADR+0x04000, FLASH_UNLOCK1, FLASH_UNLOCK2
-	dc.l FLASH_ADR+0x06000, FLASH_UNLOCK1, FLASH_UNLOCK2
-	dc.l FLASH_ADR+0x08000, FLASH_UNLOCK1, FLASH_UNLOCK2
-	dc.l FLASH_ADR+0x10000, FLASH_UNLOCK1, FLASH_UNLOCK2
-	dc.l FLASH_ADR+0x20000, FLASH_UNLOCK1, FLASH_UNLOCK2
-	dc.l FLASH_ADR+0x30000, FLASH_UNLOCK1, FLASH_UNLOCK2
-	dc.l FLASH_ADR+0x40000, FLASH_UNLOCK1, FLASH_UNLOCK2
-	dc.l FLASH_ADR+0x50000, FLASH_UNLOCK1, FLASH_UNLOCK2
-	dc.l FLASH_ADR+0x60000, FLASH_UNLOCK1, FLASH_UNLOCK2
-	dc.l FLASH_ADR+0x70000, FLASH_UNLOCK1, FLASH_UNLOCK2
-	dc.l FLASH_ADR+0x80000, FLASH_UNLOCK1+0x80000, FLASH_UNLOCK2+0x80000
-	dc.l FLASH_ADR+0x84000, FLASH_UNLOCK1+0x80000, FLASH_UNLOCK2+0x80000
-	dc.l FLASH_ADR+0x86000, FLASH_UNLOCK1+0x80000, FLASH_UNLOCK2+0x80000
-	dc.l FLASH_ADR+0x88000, FLASH_UNLOCK1+0x80000, FLASH_UNLOCK2+0x80000
-	dc.l FLASH_ADR+0x90000, FLASH_UNLOCK1+0x80000, FLASH_UNLOCK2+0x80000
-	dc.l FLASH_ADR+0xA0000, FLASH_UNLOCK1+0x80000, FLASH_UNLOCK2+0x80000
-	dc.l FLASH_ADR+0xB0000, FLASH_UNLOCK1+0x80000, FLASH_UNLOCK2+0x80000
-	dc.l FLASH_ADR+0xC0000, FLASH_UNLOCK1+0x80000, FLASH_UNLOCK2+0x80000
-	dc.l FLASH_ADR+0xD0000, FLASH_UNLOCK1+0x80000, FLASH_UNLOCK2+0x80000
-	dc.l FLASH_ADR+0xE0000, FLASH_UNLOCK1+0x80000, FLASH_UNLOCK2+0x80000
-	dc.l FLASH_ADR+0xF0000, FLASH_UNLOCK1+0x80000, FLASH_UNLOCK2+0x80000
-	dc.l FLASH_ADR+0x100000, 0, 0
 
-fujitsu_mbm29f800ba:
-amd_am29f800bb:
-st_m29f800db:
+xx29f800_bottom_boot_block:
 	dc.l FLASH_ADR+0x00000, FLASH_UNLOCK1, FLASH_UNLOCK2
 	dc.l FLASH_ADR+0x04000, FLASH_UNLOCK1, FLASH_UNLOCK2
 	dc.l FLASH_ADR+0x06000, FLASH_UNLOCK1, FLASH_UNLOCK2
@@ -518,3 +497,28 @@ st_m29f800db:
 	dc.l FLASH_ADR+0x100000, 0, 0
 	
 	end
+	
+;xx29f400_bottom_boot_block:  
+;	dc.l FLASH_ADR+0x00000, FLASH_UNLOCK1, FLASH_UNLOCK2
+;	dc.l FLASH_ADR+0x04000, FLASH_UNLOCK1, FLASH_UNLOCK2
+;	dc.l FLASH_ADR+0x06000, FLASH_UNLOCK1, FLASH_UNLOCK2
+;	dc.l FLASH_ADR+0x08000, FLASH_UNLOCK1, FLASH_UNLOCK2
+;	dc.l FLASH_ADR+0x10000, FLASH_UNLOCK1, FLASH_UNLOCK2
+;	dc.l FLASH_ADR+0x20000, FLASH_UNLOCK1, FLASH_UNLOCK2
+;	dc.l FLASH_ADR+0x30000, FLASH_UNLOCK1, FLASH_UNLOCK2
+;	dc.l FLASH_ADR+0x40000, FLASH_UNLOCK1, FLASH_UNLOCK2
+;	dc.l FLASH_ADR+0x50000, FLASH_UNLOCK1, FLASH_UNLOCK2
+;	dc.l FLASH_ADR+0x60000, FLASH_UNLOCK1, FLASH_UNLOCK2
+;	dc.l FLASH_ADR+0x70000, FLASH_UNLOCK1, FLASH_UNLOCK2
+;	dc.l FLASH_ADR+0x80000, FLASH_UNLOCK1+0x80000, FLASH_UNLOCK2+0x80000
+;	dc.l FLASH_ADR+0x84000, FLASH_UNLOCK1+0x80000, FLASH_UNLOCK2+0x80000
+;	dc.l FLASH_ADR+0x86000, FLASH_UNLOCK1+0x80000, FLASH_UNLOCK2+0x80000
+;	dc.l FLASH_ADR+0x88000, FLASH_UNLOCK1+0x80000, FLASH_UNLOCK2+0x80000
+;	dc.l FLASH_ADR+0x90000, FLASH_UNLOCK1+0x80000, FLASH_UNLOCK2+0x80000
+;	dc.l FLASH_ADR+0xA0000, FLASH_UNLOCK1+0x80000, FLASH_UNLOCK2+0x80000
+;	dc.l FLASH_ADR+0xB0000, FLASH_UNLOCK1+0x80000, FLASH_UNLOCK2+0x80000
+;	dc.l FLASH_ADR+0xC0000, FLASH_UNLOCK1+0x80000, FLASH_UNLOCK2+0x80000
+;	dc.l FLASH_ADR+0xD0000, FLASH_UNLOCK1+0x80000, FLASH_UNLOCK2+0x80000
+;	dc.l FLASH_ADR+0xE0000, FLASH_UNLOCK1+0x80000, FLASH_UNLOCK2+0x80000
+;	dc.l FLASH_ADR+0xF0000, FLASH_UNLOCK1+0x80000, FLASH_UNLOCK2+0x80000
+;	dc.l FLASH_ADR+0x100000, 0, 0

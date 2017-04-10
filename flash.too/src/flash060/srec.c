@@ -24,7 +24,7 @@
 extern void *buffer_flash;
 unsigned long start_adr,end_adr,size_srec,offset_srec;
 char *buffer_srec;
-extern int coldfire;
+/* extern int coldfire; */
 
 const unsigned char nibble[256] = {
   0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
@@ -49,7 +49,7 @@ long stegf(char *buf,long len,int handle)
 {
 	char *cp;
 	long ret,pos;
-	if(coldfire)
+/*	if(coldfire)
 	{
 		if(offset_srec+len>size_srec)
 			ret=size_srec-offset_srec;
@@ -73,7 +73,7 @@ long stegf(char *buf,long len,int handle)
 		else
 			offset_srec=pos+strlen(buf);
 	}
-	else
+	else */
 	{
 		pos=Fseek(0L,handle,1);
 		ret=Fread(handle,len,buf);
@@ -136,7 +136,7 @@ void getbytes(char *line,long addr_bytes)
 	if((offset+count) > end_adr)
 		end_adr=offset+count; 
 	p=(unsigned char *)buffer_flash;
-	if(coldfire)
+/*	if(coldfire)
 	{
 		p+=(offset-FLASH_ADR_CF);
 		if((offset >= FLASH_ADR_CF)
@@ -146,7 +146,7 @@ void getbytes(char *line,long addr_bytes)
 				*p++=(unsigned char)asciiByte[i+j].v;
 		}
 	}
-	else
+	else */
 	{
 		p+=(offset-(FLASH_ADR & 0xFFFFFF));
 		if((offset >= (FLASH_ADR & 0xFFFFFF))
@@ -168,7 +168,7 @@ int srec_read(const char *path)
 	buffer_srec=NULL;
 	if((handle=(int)Fopen(path,0))<0)
 		return(handle);
-	if(coldfire)
+/*	if(coldfire)
 	{
 		size_srec=Fseek(0L,handle,2);
 		if(size_srec<0)
@@ -185,7 +185,7 @@ int srec_read(const char *path)
 			return((int)ret);
 		}
 		offset_srec=0;
-	}
+	}  */
 	while(stegf(line,100,handle))
 	{
 		if(strneq(line,"S0")) rt=0;

@@ -155,7 +155,7 @@ int contrl[12],intin[128],intout[128],ptsin[128],ptsout[128];
 int ap_id,wh,w_icon,file_loaded=0;
 void *buffer_flash=NULL;
 long size_tos=0;
-int coldfire=0;
+/* int coldfire=0; */
 int jedec_only=0;
 int soft_hard=SOFT_BIN;
 int device=NO_DEVICE;
@@ -178,10 +178,10 @@ void main(int argc, char **argv)
 	OBJECT *op;
 	TEDINFO *tp;
 	GRECT rect1,rect2;
-	if(get_cookie('_CF_')!=0)
-		coldfire=1;
+/*	if(get_cookie('_CF_')!=0)
+		coldfire=1;  */
 	clic=1;
-	value=Supexec(coldfire ? get_date_flash_cf : get_date_flash);
+	value=Supexec(/*coldfire ? get_date_flash_cf : */ get_date_flash);
 	jedec_only=0;
 	if(value==0)
 		jedec_only=1;
@@ -192,7 +192,7 @@ void main(int argc, char **argv)
 		get_date_os((unsigned char *)&value,tp->te_ptext);  /* TOS in flash date */
 		rsrc_gaddr(R_OBJECT,VERSION_FLASH,&op);
 		tp=op->ob_spec.tedinfo;
-		version=(unsigned short)Supexec(coldfire ? get_version_flash_cf : get_version_flash);
+		version=(unsigned short)Supexec(/*coldfire ? get_version_flash_cf : */ get_version_flash);
 		get_version_boot((unsigned char *)&version,tp->te_ptext);
 		if(argc>1)
 		{
@@ -277,7 +277,7 @@ void main(int argc, char **argv)
 					Form->ob_x=message[4];
 					Form->ob_y=message[5];
 					break;
-				case WM_BOTTOMED:
+				case WM_BOTTOM:
 					wind_set(message[3],WF_BOTTOM,message[4],message[5],message[6],message[7]);
 					break;
 				case WM_ICONIFY:	/* window inconified */
@@ -470,9 +470,9 @@ int Button(int objc_clic, int mouse_x)
 			tosram=lock_interrupts=0;
 			if(file_loaded && ((p=get_cookie('_CPU'))!=0) && (p->v.l==0x3C))	/* 68060 */
 			{
-				if(coldfire || get_cookie('CT60'))
+				if(/*coldfire ||*/ get_cookie('CT60'))
 				{
-					if((unsigned short)Supexec(coldfire ? get_version_flash_cf : get_version_flash) < 0x200)
+					if((unsigned short)Supexec(/*coldfire ? get_version_flash_cf : */get_version_flash) < 0x200)
 						tosram=ct60_rw_parameter(CT60_MODE_READ,CT60_PARAM_TOSRAM,0L)&1;
 					else
 						tosram=1;
@@ -665,24 +665,24 @@ int Button(int objc_clic, int mouse_x)
 					{
 						int ok=0;
 						long end_offset=FLASH_SIZE-PARAM_SIZE;
-						if(coldfire)
-							end_offset=FLASH_SIZE_CF;
+				/*		if(coldfire)
+							end_offset=FLASH_SIZE_CF; */
 						offset=0;
 						if(soft_hard==SOFT_HEX)
 						{
-							if(coldfire)
+					/*		if(coldfire)
 								offset = (start_adr-FLASH_ADR_CF) & 0xFF0000;
-							else
+							else  */
 								offset = (start_adr-FLASH_ADR) & 0xFF0000;
 							size_tos+=65535;     /* alignment */
 							size_tos&=0xFFFF0000;	
 						}
-						else if(coldfire) /* .BIN */
+				/*		else if(coldfire) /* .BIN */
 						{
 							offset = (FLASH_ADR_TOS_CF-FLASH_ADR_CF);
 							size_tos += offset;
 							end_offset = offset + (FLASH_SIZE-PARAM_SIZE);
-						}
+						}  */
 						while(offset<end_offset)
 						{
 							if(lock_interrupts)
@@ -693,7 +693,7 @@ int Button(int objc_clic, int mouse_x)
 							}
 							if(offset>=size_tos)
 								break;
-							if(!ok && coldfire && ((offset < 0x100000) || (offset >= 0x700000))) /* Bas or dBUG or FPGA table */
+						/*	if(!ok && coldfire && ((offset < 0x100000) || (offset >= 0x700000))) /* Bas or dBUG or FPGA table */
 							{
 								static char msg[256];
 								sprintf(msg,"[2][Confirm writing flash sector at 0x%08lX?|(Bas or dBUG or FPGA table)][Yes|Yes All|No]",offset+FLASH_ADR_CF);
@@ -702,12 +702,12 @@ int Button(int objc_clic, int mouse_x)
 									ok=1;
 								if(ret > 2)
 									break;
-							}
+							}  */
 							stack=Super(0L);
 							/* write sector */
-							if(coldfire)
+						/*	if(coldfire)
 								offset=program_flash_cf(offset,size_tos,buffer_flash);
-							else
+							else  */
 								offset=program_flash(offset,size_tos,buffer_flash,lock_interrupts);
 							Super((void *)stack);
 							if(lock_interrupts)
@@ -734,9 +734,9 @@ int Button(int objc_clic, int mouse_x)
 							if(soft_hard==SOFT_HEX)
 							{
 								long start;
-								if(coldfire)
+						/*		if(coldfire)
 									start = start_adr-FLASH_ADR_CF;
-								else
+								else  */
 									start = (start_adr-FLASH_ADR) & 0xFF0000;
 								aff_leds((int)(((offset-start)*16L)/(size_tos-start)));
 								if(offset>=size_tos)
@@ -751,11 +751,11 @@ int Button(int objc_clic, int mouse_x)
 			}
 			rsrc_gaddr(R_OBJECT,DATE_FLASH,&op);
 			tp=op->ob_spec.tedinfo;
-			value=Supexec(coldfire ? get_date_flash_cf : get_date_flash);
+			value=Supexec(/*coldfire ? get_date_flash_cf : */ get_date_flash);
 			get_date_os((unsigned char *)&value,tp->te_ptext);
 			rsrc_gaddr(R_OBJECT,VERSION_FLASH,&op);
 			tp=op->ob_spec.tedinfo;
-			version=(unsigned short)Supexec(coldfire ? get_version_flash_cf : get_version_flash);
+			version=(unsigned short)Supexec(/*coldfire ? get_version_flash_cf :*/ get_version_flash);
 			get_version_boot((unsigned char *)&version,tp->te_ptext);
 			display_objc_form(DATE_FLASH,Form->ob_x,Form->ob_y,Form->ob_width,Form->ob_height);
 			display_objc_form(VERSION_FLASH,Form->ob_x,Form->ob_y,Form->ob_width,Form->ob_height);
@@ -1570,11 +1570,11 @@ void load_file(char *path_argv)
 			Alert(ALERT_JEDEC);
 		else if(soft_hard==SOFT_HEX)
 		{
-			memset(buffer_flash,-1,coldfire ? FLASH_SIZE_CF : FLASH_SIZE-PARAM_SIZE);
+			memset(buffer_flash,-1,/*coldfire ? FLASH_SIZE_CF : */FLASH_SIZE-PARAM_SIZE);
 			stack=Super(0L);
-			if(coldfire)
+		/*	if(coldfire)
 				read_flash_cf(0L,FLASH_SIZE_CF,buffer_flash);
-			else
+			else */
 				read_flash(0L,FLASH_SIZE-PARAM_SIZE,buffer_flash);
 			Super((void *)stack);	
 			switch(srec_read(path))
@@ -1588,9 +1588,9 @@ void load_file(char *path_argv)
 					else
 					{
 						file_loaded=1;
-						if(coldfire)
+				/*		if(coldfire)
 							size_tos = end_adr - FLASH_ADR_CF;
-						else
+						else */
 							size_tos = end_adr - (FLASH_ADR & 0xFFFFFF);
 					}
 					break;
@@ -1600,12 +1600,12 @@ void load_file(char *path_argv)
 		}
 		else /* .BIN */
 		{		
-			memset(buffer_flash,-1,coldfire ? FLASH_SIZE_CF : FLASH_SIZE-PARAM_SIZE);
+			memset(buffer_flash,-1,/*coldfire ? FLASH_SIZE_CF : */FLASH_SIZE-PARAM_SIZE);
 			if((handle=(int)Fopen(path,0))>=0)
 			{
 				char *buf = (char *)buffer_flash;
-				if(coldfire)
-					buf += (FLASH_ADR_TOS_CF-FLASH_ADR_CF);
+			/*	if(coldfire)
+					buf += (FLASH_ADR_TOS_CF-FLASH_ADR_CF); */
 				if((size_tos=Fread(handle,FLASH_SIZE-PARAM_SIZE,buf))>=0)
 				{
 					p=(unsigned char *)buf;
@@ -1651,8 +1651,8 @@ void load_file(char *path_argv)
 		if(file_loaded && soft_hard==SOFT_BIN)
 		{
 			char *buf = (unsigned char *)buffer_flash;
-			if(coldfire)
-				buf += (FLASH_ADR_TOS_CF-FLASH_ADR_CF);
+	/*		if(coldfire)
+				buf += (FLASH_ADR_TOS_CF-FLASH_ADR_CF); */
 			tp->te_ptext=path;
 			rsrc_gaddr(R_OBJECT,VERSION_FILE,&op);
 			tp=op->ob_spec.tedinfo;
@@ -1667,20 +1667,20 @@ void load_file(char *path_argv)
 		else if(file_loaded && soft_hard==SOFT_HEX)
 		{
 			char *buf = (unsigned char *)buffer_flash+0x80000;
-			if(coldfire)
-				buf += (FLASH_ADR_TOS_CF-FLASH_ADR_CF);
+		/*	if(coldfire)
+				buf += (FLASH_ADR_TOS_CF-FLASH_ADR_CF); */
 			tp->te_ptext=path;
 			rsrc_gaddr(R_OBJECT,VERSION_FILE,&op);
 			tp=op->ob_spec.tedinfo;
-			if((!coldfire && (start_adr==0xE80000) && (end_adr>=0xE8000C))
-			 || (coldfire && ((start_adr==0xE0400000) || (start_adr==0xE0480000)) && (end_adr>=0xE048000C)))
+			if((/*!coldfire &&*/ (start_adr==0xE80000) && (end_adr>=0xE8000C))
+			 /*|| (coldfire && ((start_adr==0xE0400000) || (start_adr==0xE0480000)) && (end_adr>=0xE048000C))*/)
 				get_version_boot(buf,tp->te_ptext);
 			else
 				strcpy(tp->te_ptext,"X.XX");
 			rsrc_gaddr(R_OBJECT,DATE_FILE,&op);
 			tp=op->ob_spec.tedinfo;
-			if(((!coldfire && (start_adr==0xE80000) && (end_adr>=0xE8000C))
-			 || (coldfire && ((start_adr==0xE0400000) || (start_adr==0xE0480000)) && (end_adr>=0xE048000C)))
+			if(((/*!coldfire &&*/ (start_adr==0xE80000) && (end_adr>=0xE8000C))
+			/* || (coldfire && ((start_adr==0xE0400000) || (start_adr==0xE0480000)) && (end_adr>=0xE048000C))*/)
 			  && (*(unsigned short *)((unsigned long)&buf[0]) >= 0x200)) /* new boot patches TOS, so date of flash TOS is unchanged */
 				get_date_os2((unsigned short *)((unsigned long)&buf[2]),tp->te_ptext);
 			else
@@ -1749,7 +1749,7 @@ int init(int argc,int *vp,int *wp)
 		buffer_flash=NULL;
 	else
 	{
-		buffer_flash=Mxalloc(coldfire ? FLASH_SIZE_CF : FLASH_SIZE-PARAM_SIZE,3);
+		buffer_flash=Mxalloc(/*coldfire ? FLASH_SIZE_CF : */FLASH_SIZE-PARAM_SIZE,3);
 		if(buffer_flash==NULL)
 		{
 			NOMEMORY;
@@ -1843,10 +1843,10 @@ int init(int argc,int *vp,int *wp)
 		NOWINDOW;
 		return(3);		/* no window available */
 	}
-	if(coldfire)
+/*	if(coldfire)
 		wind_set(*wp,WF_NAME," FLASH TOOL FIREBEE",0,0);
-	else
-		wind_set(*wp,WF_NAME," FLASH TOOL CT60 / CTPCI",0,0);
+	else */
+		wind_set(*wp,WF_NAME," FLASH TOOL CT60e",0,0);
 	graf_growbox(Grect(&shrink),Grect(&curr));
 	wind_open(*wp,Grect(&curr));
     ed_pos=0;
