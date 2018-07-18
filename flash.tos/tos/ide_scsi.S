@@ -32,7 +32,6 @@
 
 #if defined(COLDFIRE) && defined(MCF547X)
 #define FIX_IDE
-#define IDE_16BITS
 #define HDV_RW_USE_XHDI
 #endif
 
@@ -3715,6 +3714,12 @@ ide_cmd: 	// D0.L: bytes, D1.L: timeout ATAPI, A0: IDE buffer, A1: cmd buffer
 	beq .ir14
 	cmp.l #0x30,D0           // write sector(s)
 	bne .ir10                // read
+#if defined(COLDFIRE) && defined(MCF547X) // FIREBEE
+	lea OFFSET_DATA(A2),A1   // IDE buffer
+	addq.b #1,D1             // DRQ of the 1st sector tested with time-out
+	bra.s .ir20
+	.long 0
+#else
 .ir4:
 #ifndef USE_ATARI_IO
 	move.b ATA_STATUS_COMMAND,D0           // state
@@ -3723,6 +3728,7 @@ ide_cmd: 	// D0.L: bytes, D1.L: timeout ATAPI, A0: IDE buffer, A1: cmd buffer
 #endif
 	btst #3,D0               // DRQ
 	beq.s .ir4
+#endif /* defined(COLDFIRE) && defined(MCF547X) */
 #ifndef USE_ATARI_IO
 .ir8:		// write
 		lea ATA_DATA,A1   // IDE buffer
@@ -3785,21 +3791,9 @@ ide_cmd: 	// D0.L: bytes, D1.L: timeout ATAPI, A0: IDE buffer, A1: cmd buffer
 	divu.l D0,D3            // uS
 #endif /* MCF5445X */
 #else /* USE_ATARI_IO */
-.ir8:		// write
-		lea OFFSET_DATA(A2),A1   // IDE buffer
 #if defined(COLDFIRE) && defined(MCF547X) // FIREBEE
-#ifdef IDE_16BITS
-		moveq #31,D0      // 512 bytes
-.ir11:
-			move.w (A0)+,(A1)
-			move.w (A0)+,(A1)
-			move.w (A0)+,(A1)
-			move.w (A0)+,(A1)
-			move.w (A0)+,(A1)
-			move.w (A0)+,(A1)
-			move.w (A0)+,(A1)
-			move.w (A0)+,(A1)
-#else
+.ir8:		// write
+		.short 0          // with the moveq: 68K ori.b #15,D0 (emulated)
 		moveq #15,D0      // 512 bytes
 .ir11:
 			move.l (A0)+,(A1)
@@ -3810,10 +3804,12 @@ ide_cmd: 	// D0.L: bytes, D1.L: timeout ATAPI, A0: IDE buffer, A1: cmd buffer
 			move.l (A0)+,(A1)
 			move.l (A0)+,(A1)
 			move.l (A0)+,(A1)
-#endif /* IDE_16BITS */
 		subq.l #1,D0
 		bpl.s .ir11
+.ir20:
 #else /* !(defined(COLDFIRE) && defined(MCF547X)) */
+.ir8:		// write
+		lea OFFSET_DATA(A2),A1   // IDE buffer
 		moveq #15,D0      // 512 bytes
 .ir11:
 			move.l (A0)+,(A1)
@@ -3852,18 +3848,6 @@ ide_cmd: 	// D0.L: bytes, D1.L: timeout ATAPI, A0: IDE buffer, A1: cmd buffer
 		beq .ir1          // error
 		lea OFFSET_DATA(A2),A1 // IDE buffer
 #if defined(COLDFIRE) && defined(MCF547X) // FIREBEE
-#ifdef IDE_16BITS
-		moveq #31,D0      // 512 bytes
-.ir3:
-			move.w (A1),(A0)+
-			move.w (A1),(A0)+
-			move.w (A1),(A0)+
-			move.w (A1),(A0)+
-			move.w (A1),(A0)+
-			move.w (A1),(A0)+
-			move.w (A1),(A0)+
-			move.w (A1),(A0)+
-#else
 		moveq #15,D0      // 512 bytes
 .ir3:
 			move.l (A1),(A0)+
@@ -3874,7 +3858,6 @@ ide_cmd: 	// D0.L: bytes, D1.L: timeout ATAPI, A0: IDE buffer, A1: cmd buffer
 			move.l (A1),(A0)+
 			move.l (A1),(A0)+
 			move.l (A1),(A0)+
-#endif /* IDE_16BITS */
 		subq.l #1,D0
 		bpl.s .ir3
 	subq.l #1,D1
@@ -4354,6 +4337,24 @@ debug_ide:
 	
 wait_end_cmd_ide:	// time-out inside D0.L, return D0 < 0 => time-out
 
+#if defined(COLDFIRE) && defined(MCF547X) // FIREBEE
+	tst.b 0x99(A2)           // no drive
+	bmi.s .weci4
+	add.l _hz_200,D0
+.weci1:
+		tst.b OFFSET_STATUS_COMMAND(A2) // busy bit
+		bmi.s .weci5
+	moveq #0,D0
+	bra.s .weci3
+.weci5:
+	cmp.l _hz_200,D0
+	bgt.s .weci1
+.weci4:
+	moveq #-1,D0 // time-out
+.weci3:
+	tst.l D1                 // flags from D1 as the callers always got
+	rts
+#else
 	move.l D1,-(SP)
 	move.l D2,-(SP)
 	move.l _hz_200,D1
@@ -4382,6 +4383,7 @@ wait_end_cmd_ide:	// time-out inside D0.L, return D0 < 0 => time-out
 	move.l (SP)+,D2
 	move.l (SP)+,D1
 	rts
+#endif /* defined(COLDFIRE) && defined(MCF547X) */
 
 #ifdef COLDFIRE
 

@@ -189,4 +189,28 @@ begin15:
 end15:
 #endif
 
+#ifdef MCF547X
+	.align	2
+	.long	0x6E8
+	.long	end16-begin16
+begin16:	// ROM CRC warning
+	.ascii	"Patched by MCS 05.06.2017 ver.9\r\n"
+	.byte	0
+end16:
+
+	.align	2
+	.long	0x72E
+	.long	end17-begin17
+begin17:	// without chip letter and end of line
+	nop
+	nop
+	nop
+	nop
+	nop
+	nop
+	nop
+	nop
+end17:
+#endif /* MCF547X */
+
 #endif /* COLDFIRE */
