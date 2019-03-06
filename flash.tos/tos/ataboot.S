@@ -2200,8 +2200,6 @@ try_again:
 		move.l	(internal_clock_frequency-_bss).w(A5),D1
 		move.l	(external_clock_frequency-_bss).w(A5),D2
 		lea	init_screen,A0
-		add.l	#0xE80000,A0
-		sub.l	#_ct60tos_half_flash,A0
 		jsr	(A0)
 		move	(SP)+,D1 // old modecode
 		tst	D0

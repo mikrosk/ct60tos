@@ -1,187 +1,92 @@
-#   Flashing tool for the CT60 board
-#   Copyright (C) 2000 Xavier Joubert
-#
-#   This program is free software; you can redistribute it and/or modify
-#   it under the terms of the GNU General Public License as published by
-#   the Free Software Foundation; either version 2 of the License, or
-#   (at your option) any later version.
-#
-#   This program is distributed in the hope that it will be useful,
-#   but WITHOUT ANY WARRANTY; without even the implied warranty of
-#   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-#   GNU General Public License for more details.
-#
-#   You should have received a copy of the GNU General Public License
-#   along with this program; if not, write to the Free Software
-#   Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
-#
-#
-#   To contact author write to Xavier Joubert, 5 Cour aux Chais, 44 100 Nantes,
-#   FRANCE or by e-mail to xavier.joubert@free.fr.
-#
-#
+TOP_DIR		= $(PWD)
 
-CROSS=		N
+include $(TOP_DIR)/CONFIGVARS
 
-CROSSBINDIR_IS_Y=	m68k-atari-mint-
-CROSSBINDIR_IS_N=
+TOS_ROM		= tos404.bin
 
-CROSSBINDIR=	$(CROSSBINDIR_IS_$(CROSS))
+# directories
+TOS_DIR		= tos
+INC_DIR		= tosinclude
+OBJ_DIR		= obj
+LINKER_DIR	= $(TOP_DIR)/linker
 
-CC=		$(CROSSBINDIR)gcc
-STRIP=		$(CROSSBINDIR)strip
-STACK=		$(CROSSBINDIR)stack
 
-SRCDIR=		./src
-INCDIR=		./include
-OBJDIR=		./obj
+# flags for CT60 TOS compilation (m68k)
+ASFLAGS		= -m68060 -I$(INC_DIR) -I.
+CFLAGS		= -m68060 -Wall -O2 -fomit-frame-pointer -I$(INC_DIR)
 
-SUBOBJDIRS=	\
-		$(OBJDIR)/ct60tos
+# flags for host gcc
+#HOSTCFLAGS	= -Wall -O2 -fomit-frame-pointer -Iinclude -D$(PLATFORM)
+HOSTCFLAGS	= -Wall -Os -g -Iinclude -D$(PLATFORM)
 
-INCLUDE=	-I$(INCDIR)
-CFLAGS=		-m68060 -msoft-float -Wall -O2 -fomit-frame-pointer
+# main targets
+CT60_TOS	= ct60tos.bin
 
-CFLAGS_TOS=	-m68060 -msoft-float -Wall -O2 -fomit-frame-pointer
+TOS_PATCHER	= gentos
+CT60_PATCHES	= ct60_patches.bin
 
-PROGRAM=	flash
+include $(TOS_DIR)/SRCFILES
+# order is no longer important, it matters what's in linker script!
+SRCS		= $(patsubst %.c,,$(SRCFILES:%.S=$(TOS_DIR)/%.S)) $(patsubst %.S,,$(SRCFILES:%.c=$(TOS_DIR)/%.c))
+CT60_OBJS	= $(patsubst %.c,,$(SRCFILES:%.S=$(OBJ_DIR)/%.o)) $(patsubst %.S,,$(SRCFILES:%.c=$(OBJ_DIR)/%.o))
 
-FLASH_BINARY=		$(PROGRAM).ttp
-FLASH_STACKSIZE=	64k
-FLASH_OBJS=	\
-		$(OBJDIR)/flash.o \
-		$(OBJDIR)/write.o
+all: setup $(CT60_TOS)
 
-GENTOS_BINARY=	gentos.ttp
-GENTOS_STACKSIZE=	64k
-GENTOS_OBJS=	\
-		$(OBJDIR)/gentos.o \
-		\
-		$(OBJDIR)/ct60tos/start.o \
-		\
-		$(OBJDIR)/ct60tos/pmmu.o \
-		$(OBJDIR)/ct60tos/cookies.o \
-		$(OBJDIR)/ct60tos/dsp.o \
-		$(OBJDIR)/ct60tos/periph.o \
-		$(OBJDIR)/ct60tos/cache.o \
-		$(OBJDIR)/ct60tos/movep.o \
-		$(OBJDIR)/ct60tos/boot.o \
-		$(OBJDIR)/ct60tos/init_par.o \
-		$(OBJDIR)/ct60tos/blitter.o \
-		$(OBJDIR)/ct60tos/bios.o \
-		$(OBJDIR)/ct60tos/xbios.o \
-		$(OBJDIR)/ct60tos/gemdos.o \
-		$(OBJDIR)/ct60tos/aes.o \
-		$(OBJDIR)/ct60tos/vectors.o \
-		$(OBJDIR)/ct60tos/videl.o \
-		$(OBJDIR)/ct60tos/debug.o \
-		\
-		$(OBJDIR)/ct60tos/half.o \
-		\
-		$(OBJDIR)/ct60tos/version.o \
-		\
-		$(OBJDIR)/ct60tos/movep2.o \
-		\
-		$(OBJDIR)/ct60tos/blitter2.o \
-		\
-		$(OBJDIR)/ct60tos/bios2.o \
-		\
-		$(OBJDIR)/ct60tos/xbios2.o \
-		\
-		$(OBJDIR)/ct60tos/gemdos2.o \
-		\
-		$(OBJDIR)/ct60tos/aes2.o \
-		\
-		$(OBJDIR)/ct60tos/vectors2.o \
-		\
-		$(OBJDIR)/ct60tos/debug2.o \
-		\
-		$(OBJDIR)/ct60tos/ataboot.o \
-		$(OBJDIR)/ct60tos/extvidel.o \
-		\
-		$(OBJDIR)/ct60tos/magxboot.o \
-		\
-		$(OBJDIR)/ct60tos/sdram.o \
-		$(OBJDIR)/ct60tos/pmmu2.o \
-		\
-		$(OBJDIR)/ct60tos/videl2.o \
-		\
-		$(OBJDIR)/ct60tos/end.o
+# '#include' dependencies
+$(OBJ_DIR)/bios2.o: $(TOS_DIR)/bios2.S $(TOS_DIR)/conout.S
+	$(CC) $(ASFLAGS) -o $@ -c $<
 
-TOS=	ct60tos.bin
+$(OBJ_DIR)/vectors2.o: $(TOS_DIR)/vectors2.S nonfree/isp.S nonfree/fpsp.S
+	$(CC) $(ASFLAGS) -o $@ -c $<
 
-BINARCHIVE=	$(PROGRAM).zip
-BINDISTDIR=	./$(PROGRAM)
-BINDISTFILES=	\
-		LICENSE \
-		$(FLASH_BINARY) \
-		$(TOS)
-BINDISTFILES2=	$(foreach FILE,$(BINDISTFILES),$(BINDISTDIR)/$(FILE))
+$(OBJ_DIR)/videl2.o: $(TOS_DIR)/videl2.S $(TOS_DIR)/pic_boot.S
+	$(CC) $(ASFLAGS) -o $@ -c $<
 
-SRCARCHIVE=	$(PROGRAM).tgz
-SRCDISTDIR=	./$(PROGRAM)
-SRCDISTFILES=	\
-		LICENSE \
-		Makefile \
-		src \
-		include
-SRCDISTFILES2=	$(foreach FILE,$(SRCDISTFILES),$(SRCDISTDIR)/$(FILE))
+$(OBJ_DIR)/xbios2.o: $(TOS_DIR)/xbios2.S
+	$(CC) $(ASFLAGS) -o $@ -c $<
 
-NFARCHIVE=	$(PROGRAM)_nf.tgz
-NFDISTDIR=	./nonfree
-NFDISTFILES=	\
-		$(NFDISTDIR)/tos404.bin \
-		$(NFDISTDIR)/sparrow.out
+# common build rules
+$(OBJ_DIR)/%.o:	$(TOS_DIR)/%.S
+	$(CC) $(ASFLAGS) -o $@ -c $<
 
-all:	 $(FLASH_BINARY) $(TOS)
+$(OBJ_DIR)/%.o:	$(TOS_DIR)/%.c
+	$(CC) $(CFLAGS) -o $@ -c $<
 
-bindist:	$(BINARCHIVE)
-$(BINARCHIVE):	$(BINDISTFILES)
-	cd .. && zip -9 $(BINDISTDIR)/$(BINARCHIVE) $(BINDISTFILES2)
+# setup, run just once
+.PHONY: setup
+setup: check_ld $(OBJ_DIR)
 
-srcdist:	$(SRCARCHIVE)
-$(SRCARCHIVE):	$(SRCDISTFILES)
-	cd .. && tar -cv $(SRCDISTFILES2) | gzip -9 > $(SRCDISTDIR)/$(SRCARCHIVE)
+$(OBJ_DIR):
+	mkdir $@
 
-nonfreedist:	$(NFARCHIVE)
-$(NFARCHIVE):	$(NFDISTFILES)
-	tar -cv $(NFDISTFILES) | gzip -9 > $(NFARCHIVE)
+
+# we need this check because ld scripts wont be processed correctly
+.PHONY: check_ld	
+check_ld:
+	@$(LD) -v > /dev/null || ( echo "$(LD) not found!"; false )
+	@$(LD) -v | grep -v -q "2.13" || ( echo "Your binutils are too old!"; false )
+
+# we need to enter OBJ_DIR else filename matching doesn't work correctly in link script
+$(CT60_PATCHES): $(CT60_OBJS) $(LINKER_DIR)/ct60.ld
+	cd $(OBJ_DIR) && $(LD) -o ../$@ $(notdir $(CT60_OBJS)) -L$(LINKER_DIR) -T $(LINKER_DIR)/ct60.ld
+
+$(TOS_PATCHER): gentos.c
+	gcc $(HOSTCFLAGS) -o $@ gentos.c
+
+# main rules
+$(CT60_TOS): nonfree/$(TOS_ROM) nonfree/sparrow.out $(CT60_PATCHES) $(TOS_PATCHER)
+	./$(TOS_PATCHER) --tos nonfree/$(TOS_ROM) --tospatch $(CT60_PATCHES) --tests nonfree/sparrow.out --out $@
 
 clean:
-	rm -rf $(OBJDIR)
-	rm -f $(FLASH_BINARY) $(GENTOS_BINARY) $(TOS)
-	rm -f $(BINARCHIVE) $(SRCARCHIVE) $(NFARCHIVE)
+	rm -f $(OBJ_DIR)/*.o
+	rm -f $(CT60_TOS)
+	rm -f $(TOS_PATCHER) $(CT60_PATCHES)
 
-$(FLASH_BINARY):	$(FLASH_OBJS)
-	$(CC) $(FLASH_OBJS) -o $(FLASH_BINARY)
-	$(STRIP) $(FLASH_BINARY)
-	$(STACK) -S $(FLASH_STACKSIZE) $(FLASH_BINARY)
+distclean:
+	$(MAKE) clean
+	rm -rf $(OBJ_DIR)
+	rm -f *~ */*~
 
-$(GENTOS_BINARY):	$(GENTOS_OBJS)
-	$(CC) $(GENTOS_OBJS) -o $(GENTOS_BINARY)
-	$(STRIP) $(GENTOS_BINARY)
-	$(STACK) -S $(GENTOS_STACKSIZE) $(GENTOS_BINARY)
-
-tos:	$(TOS)
-$(TOS):	$(GENTOS_BINARY) $(NFDISTFILES)
-	./$(GENTOS_BINARY) $(NFDISTFILES) $(TOS)
-
-define CREATEOBJDIRS
-	@for d in $(OBJDIR) $(SUBOBJDIRS); do \
-		if [ ! -d $$d ] ; then \
-			mkdir $$d ; \
-		fi ; \
-	done
-endef
-
-$(OBJDIR)/%.o:	$(SRCDIR)/%.c
-	$(CREATEOBJDIRS)
-	$(CC) $(INCLUDE) $(CFLAGS) -c $< -o $@
-
-$(OBJDIR)/ct60tos/%.o:	$(SRCDIR)/ct60tos/%.S
-	$(CREATEOBJDIRS)
-	$(CC) $(INCLUDE) $(CFLAGS_TOS) -c $< -o $@
-
-$(OBJDIR)/%.o:	$(SRCDIR)/%.S
-	$(CREATEOBJDIRS)
-	$(CC) $(INCLUDE) $(CFLAGS) -c $< -o $@
+.PHONY: backup
+backup:
+	find . -path ./obj -prune -o -path ./backup -prune -o ! -name \*.bin -type f -print0 | tar cfz `date +./backup/v%Y%m%d%H%M.tar.gz` --null -T -

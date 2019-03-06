@@ -329,7 +329,7 @@ end34:
 
 	.align	2
 	.long	0x34258
-	.long	end35-begin35+0x80000000
+	.long	end35-begin35
 begin35:
 	jsr	fix_bug_nvdi
 end35:
@@ -338,7 +338,7 @@ end35:
 
 	.align	2
 	.long	0x20122
-	.long	end36-begin36+0x80000000
+	.long	end36-begin36
 begin36:
 	jsr	det_evnt_multi
 end36:

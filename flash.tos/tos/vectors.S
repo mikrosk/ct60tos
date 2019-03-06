@@ -1,5 +1,5 @@
-/* TOS 4.04 Videl patch for the CT60 board
-*  Didier Mequignon 2003 July, e-mail: aniplay@wanadoo.fr
+/* TOS 4.04 Vectors patch for the CT60 board
+*  Didier Mequignon 2002 December, e-mail: aniplay@wanadoo.fr
 *
 *  This library is free software; you can redistribute it and/or
 *  modify it under the terms of the GNU Lesser General Public
@@ -18,11 +18,16 @@
 
 	.text
 
-	.globl	picture_boot
+	.globl	init_vectors
 
 	.align	2
-	.long	0x57E
-	.long	end1-begin1+0x80000000
+	.long	0x77E
+	.long	end1-begin1
 begin1:
-	jsr	picture_boot
+	jsr	init_vectors
+	nop
+	nop
+	nop
+	nop
 end1:
+

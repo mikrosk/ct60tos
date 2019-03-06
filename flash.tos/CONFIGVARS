@@ -1,0 +1,13 @@
+CROSS		= yes
+
+ifeq ($(CROSS),yes)
+CROSS_PREFIX	= m68k-atari-mint-
+PLATFORM	= LINUX
+else
+CROSS_PREFIX	=
+PLATFORM	= ATARI
+endif
+
+CC		= $(CROSS_PREFIX)gcc
+LD		= $(CROSS_PREFIX)ld
+STRIP		= $(CROSS_PREFIX)strip

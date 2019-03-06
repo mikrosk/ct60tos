@@ -1,4 +1,4 @@
-/*  Flashing tool for the CT60 board
+/*  CT60 board
  *  Copyright (C) 2000 Xavier Joubert
  *
  *  This program is free software; you can redistribute it and/or modify
@@ -21,10 +21,46 @@
  *
  */
 
-#ifndef	_CT60TOS_H
-#define	_CT60TOS_H	1
+#ifndef	CT60_HW_H_
+#define	CT60_HW_H_
 
-void ct60tos_patch(void);
-void ct60tos_half_flash(void);
+#define RESERVE_MEM_FONTS  0x8000
+#ifndef COLDFIRE
+#define RESERVE_MEM       0x60000
+#endif
 
-#endif /* _CT60TOS_H */
+#ifdef COLDFIRE
+
+#if defined(MCF5445X) /* M54455EVB */
+
+#define PARAM_SIZE  (128*1024)
+#define FLASH_SIZE  0x00120000
+
+#elif defined(MCF5474X) /* COLDARI */
+
+#define PARAM_SIZE  (64*1024)
+#define FLASH_SIZE  0x00100000
+
+#else /* MCF548X - M5484LITE */
+
+#define PARAM_SIZE  (64*1024)
+#define FLASH_SIZE  0x00100000
+
+#endif /* M5445X */
+
+#else /* ATARI - CT60 */
+
+#define PARAM_SIZE	(64*1024)	/* 64 KB */
+#define FLASH_SIZE  (1024*1024)	/* 1MB */
+
+#endif /* COLDFIRE */
+
+#define TOS4_SIZE	(512*1024)	/* 512 KB */
+
+#define FLASH_ADR	0x00E00000	/* TOS area (2x512 KB) */
+#define TESTS_SIZE  (128*1024)	/* 128 KB */
+
+#define FLASH_ADR2  0x00FC0000	/* TOS 1.x area (192 KB) */
+#define FLASH_SIZE2 (192*1024)	/* 192 KB */
+
+#endif

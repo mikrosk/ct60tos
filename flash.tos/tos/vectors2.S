@@ -273,7 +273,7 @@ _top_isp:
 	.long 0
 	.long 0
              
-#include "../../nonfree/isp.S"
+#include "../nonfree/isp.S"
 
 _top_fpsp:
 	.long _060_real_bsun-_top_fpsp
@@ -309,4 +309,4 @@ _top_fpsp:
 	.long 0
 	.long 0
 	
-#include "../../nonfree/fpsp.S"
+#include "../nonfree/fpsp.S"
