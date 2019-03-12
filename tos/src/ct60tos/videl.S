@@ -22,7 +22,7 @@
 
 	.align	2
 	.long	0x57E
-	.long	end1-begin1+0x80000000
+	.long	end1-begin1
 begin1:
 	jsr	picture_boot
 end1:

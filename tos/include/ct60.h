@@ -44,4 +44,4 @@
 #define ct60_cache(cache_mode) (long)trap_14_ww((short)(0xc60c),(short)(cache_mode))
 #define ct60_flush_cache() (long)trap_14_ww((short)(0xc60d))
 
-#endif	_CT60_H
+#endif

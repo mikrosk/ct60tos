@@ -695,8 +695,6 @@ init_sdram:
 	cmp.b #0x6,D0            // CTRL-LSHIFT
 	beq.s .end_sdram
 	lea _init_mmu_tree,A0
-	add.l #0xE80000,A0
-	sub.l #_ct60tos_half_flash,A0
 	jsr (A0)
 	tst.l D0
 	beq.s .end_sdram
@@ -1121,17 +1119,17 @@ get_cookie:
 	rts
 
 error1:	.asciz "SDRAM not found"
-	.asciz "SDRAM non trouv‚e"
+	.asciz "SDRAM non trouvï¿½e"
 error2:	.asciz "SDRAM chip density error"
-	.asciz "SDRAM erreur densit‚ puces"
+	.asciz "SDRAM erreur densitï¿½ puces"
 error3:	.asciz "SDRAM number of banks error" 
 	.asciz "SDRAM erreur nombre de banques" 
 error4:	.asciz "SDRAM density error" 
-	.asciz "SDRAM erreur densit‚" 
+	.asciz "SDRAM erreur densitï¿½" 
 error5:	.asciz "SDRAM burst length error" 
 	.asciz "SDRAM erreur longueur burst" 
 error6:	.asciz "SDRAM data width error"
-	.asciz "SDRAM erreur largeur donn‚es"
+	.asciz "SDRAM erreur largeur donnï¿½es"
 error7:	.asciz "SDRAM voltage error"
 	.asciz "SDRAM erreur tension"
 error8:	.asciz "SDRAM type error"
@@ -1141,11 +1139,11 @@ error9:	.asciz "SDRAM refresh rate error"
 error10:	.byte 13,10
 	.asciz "            SDRAM read failure at $"
 	.byte 13,10
-	.asciz "            SDRAM erreur v‚rification en $"
+	.asciz "            SDRAM erreur vï¿½rification en $"
 error11:	.asciz "CTCM not found"
-	.asciz "CTCM non trouv‚e"
+	.asciz "CTCM non trouvï¿½e"
 error12:	.asciz "CTCM frequency error"
-	.asciz "CTCM erreur fr‚quence"
+	.asciz "CTCM erreur frï¿½quence"
 name1:	.asciz "Eiffel"
 name2:	.asciz "boot.log"
 message0:	.byte 0x1B,0x62,0x34,0x41
@@ -1171,11 +1169,11 @@ message3:	.asciz "128"
 message4:	.asciz "256"
 message5:	.asciz "512"
 message6:	.asciz "MB detected"
-	.asciz "Mo d‚tect‚e" 
+	.asciz "Mo dï¿½tectï¿½e" 
 message8:	.asciz "68060 Rev."
-	.asciz "68060 R‚v."
+	.asciz "68060 Rï¿½v."
 message9:	.asciz "68EC060 / 68LC060 Rev."
-	.asciz "68EC060 / 68LC060 R‚v."
+	.asciz "68EC060 / 68LC060 Rï¿½v."
 message10:	.asciz "unknown CPU "
 	.asciz "CPU inconnu"
 message11:	.asciz " Mask D00W/D11W" // revision 0
@@ -1224,7 +1222,7 @@ message19:	.byte 13,10,27
 message20:	.byte 13,10
 	.asciz "Byte 2, Memory Type : "
 	.byte 13,10
-	.asciz "Octet 2, Type de m‚moire : "
+	.asciz "Octet 2, Type de mï¿½moire : "
 message20b:	.asciz " SDRAM"
 message21:	.byte 13,10
 	.asciz "Byte 3, Number of Row Addresses : "
@@ -1241,7 +1239,7 @@ message23:	.byte 13,10
 message24:	.byte 13,10
 	.asciz "Bytes 6-7, Module Data Width : "
 	.byte 13,10
-	.asciz "Octets 6-7, Largeur donn‚es module : "
+	.asciz "Octets 6-7, Largeur donnï¿½es module : "
 message24b:	.asciz " bits"
 message25:	.byte 13,10
 	.asciz "Byte 8, Voltage Interface Level : "
@@ -1255,7 +1253,7 @@ message26:	.byte 13,10
 message27:	.byte 13,10
 	.asciz "Byte 10, SDRAM Access from Clock : "
 	.byte 13,10
-	.asciz "Octet 10, SDRAM AccŠs de l'horloge : "
+	.asciz "Octet 10, SDRAM Accï¿½s de l'horloge : "
 message28:	.byte 13,10
 	.asciz "Byte 11, SDRAM Configuration Type : "
 	.byte 13,10
@@ -1263,7 +1261,7 @@ message28:	.byte 13,10
 message29:	.byte 13,10
 	.asciz "Byte 12, Refresh Rate : "
 	.byte 13,10
-	.asciz "Octet 12, Fr‚quence rafraichissement : "
+	.asciz "Octet 12, Frï¿½quence rafraichissement : "
 message30:	.byte 13,10
 	.asciz "Byte 17, Number of Banks : "
 	.byte 13,10
@@ -1271,19 +1269,19 @@ message30:	.byte 13,10
 message31:	.byte 13,10
 	.asciz "Byte 27, Minimum Row Precharge Time : "
 	.byte 13,10
-	.asciz "Octet 27, Temps de pr‚chage mini lignes : "
+	.asciz "Octet 27, Temps de prï¿½chage mini lignes : "
 message32:	.byte 13,10
 	.asciz "Byte 28, Minimum Row Active to Active Delay : "
 	.byte 13,10
-	.asciz "Octet 28, D‚lais mini entre activations de lignes : "
+	.asciz "Octet 28, Dï¿½lais mini entre activations de lignes : "
 message33:	.byte 13,10
 	.asciz "Byte 29, Minimum RAS to CAS Delay : "
 	.byte 13,10
-	.asciz "Octet 29, D‚lais mini entre RAS et CAS : "
+	.asciz "Octet 29, Dï¿½lais mini entre RAS et CAS : "
 message34:	.byte 13,10
 	.asciz "Byte 31, Module Bank Density : "
 	.byte 13,10
-	.asciz "Octet 31, Densit‚ banque du module : "
+	.asciz "Octet 31, Densitï¿½ banque du module : "
 message35:	.byte 13,10
 	.asciz "Bytes 64-71, Module Manufacturers ID : $"
 	.byte 13,10
@@ -1306,13 +1304,13 @@ message42:	.byte 13,10
 	.asciz "IDE  "
 message43:	.asciz " ... "
 message44:	.asciz "no answer"
-	.asciz "pas de r‚ponse"
+	.asciz "pas de rï¿½ponse"
 message45:	.asciz "error"
 	.asciz "erreur"
 message46:	.asciz "read error"
 	.asciz "erreur lecture"
 message47:	.asciz "no boot found"
-	.asciz "boot non trouv‚"
+	.asciz "boot non trouvï¿½"
 message48:	.asciz "boot in progress"
 	.asciz "boot en cours"
 message49:	.asciz " -> "
@@ -1322,10 +1320,10 @@ message51:	.byte 13,10
 //	.asciz "            TOS copied to SDRAM (0-1FFF E00000-EEFFFF)"
 	.asciz "            TOS copied to SDRAM"
 	.byte 13,10
-//	.asciz "            TOS copi‚ en SDRAM (0-1FFF E00000-EEFFFF)"
-	.asciz "            TOS copi‚ en SDRAM"
+//	.asciz "            TOS copiï¿½ en SDRAM (0-1FFF E00000-EEFFFF)"
+	.asciz "            TOS copiï¿½ en SDRAM"
 message51b:	.asciz "NVRAM unused"
-	.asciz "NVRAM non utilis‚e"
+	.asciz "NVRAM non utilisï¿½e"
 message52:	.byte 13,10
 	.asciz "Reset"
 message53:	.byte 13,10
@@ -1333,9 +1331,9 @@ message53:	.byte 13,10
 	.byte 13,10
 	.asciz "Octet 18, CAS Latence : "
 message54:	.asciz ", CAS Latency unsupported"
-	.asciz ", CAS Latence non support‚e"
+	.asciz ", CAS Latence non supportï¿½e"
 message55:	.asciz ", Data Width unsupported"
-	.asciz ", Largeur donn‚es non support‚e"
+	.asciz ", Largeur donnï¿½es non supportï¿½e"
 message56:	.byte 13,10
 	.asciz "Byte 19, CS Latency : " 
 	.byte 13,10
@@ -1347,12 +1345,12 @@ message57:	.byte 13,10
 message58:	.byte 13,10
 	.asciz "Bytes 73-90, Module Part Number : " 
 	.byte 13,10
-	.asciz "Octets 73-90, R‚f‚rence du module : "
+	.asciz "Octets 73-90, Rï¿½fï¿½rence du module : "
 message59:	.asciz " nS"
 message60:	.asciz " no parity"
-	.asciz " pas de parit‚"
+	.asciz " pas de paritï¿½"
 message61:	.asciz " parity"
-	.asciz " parit‚"
+	.asciz " paritï¿½"
 message62:	.asciz " ECC"
 	.asciz " ECC"
 message63:	.asciz "15.625 uS"
@@ -1379,21 +1377,21 @@ message75:	.byte 13,10
 message76:	.byte 13,10
 	.asciz "Keyboard failure"
 	.byte 13,10 
-	.asciz "Pas de r‚ponse du clavier" 
+	.asciz "Pas de rï¿½ponse du clavier" 
 message77:	.byte 13,10,27
 	.ascii "p Choice of the system : "
 	.byte 27
 	.ascii "q"
 	.byte 13,10,0
 	.byte 13,10,27 
-	.ascii "p Choix du systŠme : "
+	.ascii "p Choix du systï¿½me : "
 	.byte 27
 	.ascii "q"
 	.byte 13,10,0
 message78:	.byte 13
 	.asciz "Starting in "
 	.byte 13
-	.asciz "D‚marrage dans "
+	.asciz "Dï¿½marrage dans "
 message79:	.asciz " seconds  "
 	.asciz " secondes  "
 message80:	.asciz " TOS   "
@@ -1402,17 +1400,17 @@ message82:	.asciz " Linux "
 message83:	.asciz " removable"
 	.asciz " amovible"
 message84:	.asciz "no logical unit"
-	.asciz "pas d'unit‚ logique"
+	.asciz "pas d'unitï¿½ logique"
 message85:	.asciz "not ready"
-	.asciz "pas prˆt"
+	.asciz "pas prï¿½t"
 message86:	.asciz "media not present"
-	.asciz "support non pr‚sent"
+	.asciz "support non prï¿½sent"
 message87:	.asciz "boot impossible"
 	.asciz "boot impossible"
 message88:	.byte 13,10
 	.asciz " Abnormal asnwer => Reset SCSI..."
 	.byte 13,10
-	.asciz " R‚ponse anormale => Reset SCSI..."
+	.asciz " Rï¿½ponse anormale => Reset SCSI..."
 message89:	.asciz "MB/S "
 	.asciz "Mo/S "
 message90:	.asciz "boot MSDOS"
@@ -1420,7 +1418,7 @@ message90:	.asciz "boot MSDOS"
 message91:	.byte 13,10
 	.asciz " Found "
 	.byte 13,10
-	.asciz " Trouv‚ "
+	.asciz " Trouvï¿½ "
 message92:	.byte 13,10
 	.ascii "Boot drive has a BPB invalid!"
 	.byte 13,10,0
@@ -1428,7 +1426,7 @@ message92:	.byte 13,10
 	.ascii "Le lecteur de boot a un BPB invalide !"
 	.byte 13,10,0
 message93:	.asciz " ... is not a TOS binary!"
-	.asciz " ... n'est pas un ex‚cutable TOS !"
+	.asciz " ... n'est pas un exï¿½cutable TOS !"
 message94:	.byte 13,10
 	.asciz "Error TOS : "
 	.byte 13,10
@@ -1553,14 +1551,14 @@ list_device_type:
 	.asciz "communication"  // Communication Device
 	.asciz "CompactFlash"
 	
-	.asciz "disque magn‚tique"
-	.asciz "bande magn‚tique"
+	.asciz "disque magnï¿½tique"
+	.asciz "bande magnï¿½tique"
 	.asciz "imprimante"
 	.asciz "processeur"
 	.asciz "disque optique"
 	.asciz "CD/DVD"
 	.asciz "scanner"
-	.asciz "m‚moire optique"
+	.asciz "mï¿½moire optique"
 	.asciz "juke-box"
 	.asciz "communication"
 	.asciz "CompactFlash"
@@ -3412,8 +3410,6 @@ menu_boot:
 	move.l D0,D1
 	move.l #0x5F465055,D0    // _FPU cookie
 	bsr get_cookie
-	add.l #0xE80000,A1
-	sub.l #_ct60tos_half_flash,A1
 	jsr (A1)
 .normal_boot:
 	unlk A6

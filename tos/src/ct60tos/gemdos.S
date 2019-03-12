@@ -22,7 +22,7 @@
 
 	.align	2
 	.long	0x1F164                /* Pexec */
-	.long	end1-begin1+0x80000000
+	.long	end1-begin1
 begin1:
 	jsr	flush_cache_pexec
 end1:
@@ -31,7 +31,7 @@ end1:
 
 	.align	2
 	.long	0x1DF62
-	.long	end2-begin2+0x80000000
+	.long	end2-begin2
 begin2:
 	.short	0x41F9
 	.long	det_gemdos
@@ -41,7 +41,7 @@ end2:
 
 	.align	2
 	.long	0x214
-	.long	end3-begin3+0x80000000
+	.long	end3-begin3
 begin3:
 	move.l	#det_vbl,0x70.w
 end3:

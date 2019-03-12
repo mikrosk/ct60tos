@@ -22,7 +22,7 @@
 
 	.align	2
 	.long	0x77E
-	.long	end1-begin1+0x80000000
+	.long	end1-begin1
 begin1:
 	jsr	init_vectors
 	nop

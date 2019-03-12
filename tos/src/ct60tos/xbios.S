@@ -22,7 +22,7 @@
 
 	.align	2
 	.long	0x230
-	.long	end1-begin1+0x80000000
+	.long	end1-begin1
 begin1:
 	.short	0x21FC
 	.long	det_xbios
@@ -32,7 +32,7 @@ end1:
 
 	.align	2
 	.long	0x26C4
-	.long	end2-begin2+0x80000000
+	.long	end2-begin2
 begin2:
 	jsr	new_statvec
 	nop
@@ -43,7 +43,7 @@ end2:
 
 	.align	2
 	.long	0x340A
-	.long	end3-begin3+0x80000000
+	.long	end3-begin3
 begin3:
 	jsr	new_ikbdvect
 	nop
@@ -53,7 +53,7 @@ end3:
 	
 	.align	2
 	.long	0x216C
-	.long	end4-begin4+0x80000000
+	.long	end4-begin4
 begin4:
 	jmp	nvm_access
 end4:	
@@ -62,7 +62,7 @@ end4:
 	
 	.align	2
 	.long	0x212E
-	.long	end5-begin5+0x80000000
+	.long	end5-begin5
 begin5:
 	jmp	test_rtc
 end5:	
@@ -71,7 +71,7 @@ end5:
 	
 	.align	2
 	.long	0x230E
-	.long	end6-begin6+0x80000000
+	.long	end6-begin6
 begin6:
 	jsr	fix_settime
 end6:	
@@ -88,7 +88,7 @@ end7:
 	
 	.align	2
 	.long	0x2264
-	.long	end8-begin8+0x80000000
+	.long	end8-begin8
 begin8:
 	jsr	fix_gettime
 end8:	

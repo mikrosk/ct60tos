@@ -22,7 +22,7 @@
 
 	.align	2
 	.long	0x798
-	.long	end1-begin1+0x80000000
+	.long	end1-begin1
 begin1:
 	jsr	menu_boot
 end1:
@@ -31,7 +31,7 @@ end1:
 
 	.align	2
 	.long	0xB42
-	.long	end2-begin2+0x80000000
+	.long	end2-begin2
 begin2:
 	jmp	boot_drive
 end2:
