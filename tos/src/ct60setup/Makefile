@@ -27,8 +27,9 @@ HEADERS = ct60_ctcm.h ct60.h ct60_sdram.h form_bootorder.h form_cpu.h \
 
 EXTRA_DIST = $(HEADERS) setup_loader.S bin2src.pl
 
-CFLAGS  = -O2 -fomit-frame-pointer -Wall
-LDFLAGS = -nostdlib -Wl,--entry -Wl,_init_setup -lgcc
+ASFLAGS = -m68060
+CFLAGS  = -O2 -fomit-frame-pointer -m68060 -Wall
+LDFLAGS = -m68060 -nostdlib -Wl,--entry -Wl,_init_setup -lgcc
 ## If gcc generates some memcpy calls:
 #LDFLAGS = -nostdlib -Wl,--entry -Wl,_init_setup -lgcc -lc -lgcc
 OBJCOPY_FLAGS = -I binary -O a.out-mint -B m68k
@@ -43,7 +44,7 @@ VERSION = 1.1
 all:	$(TARGET)
 
 .S.o:
-	${CC} -o $@ -c $<
+	${CC} ${ASFLAGS} -o $@ -c $<
 
 .c.o:
 	${CC} ${CFLAGS} -o $@ -c $<
