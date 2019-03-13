@@ -1,0 +1,5 @@
+# Source files for CT60 Setup m68k build
+
+SRCFILES += \
+	setup_loader.S \
+	setup_firmware.S

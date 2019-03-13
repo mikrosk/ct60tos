@@ -6,6 +6,7 @@ TOS_ROM		= tos404.bin
 
 # directories
 TOS_DIR		= src/ct60tos
+SETUP_DIR	= src/ct60setup
 INC_DIR		= include
 OBJ_DIR		= obj
 LINKER_DIR	= $(TOP_DIR)/linker
