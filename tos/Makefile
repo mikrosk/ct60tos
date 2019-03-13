@@ -5,14 +5,14 @@ include $(TOP_DIR)/CONFIGVARS
 TOS_ROM		= tos404.bin
 
 # directories
-TOS_DIR		= $(TOP_DIR)/src/ct60tos
-INC_DIR		= $(TOP_DIR)/include
-OBJ_DIR		= $(TOP_DIR)/obj
+TOS_DIR		= src/ct60tos
+INC_DIR		= include
+OBJ_DIR		= obj
 LINKER_DIR	= $(TOP_DIR)/linker
 
 
 # flags for CT60 TOS compilation (m68k)
-ASFLAGS		= -m68060 -I$(INC_DIR) -I.
+ASFLAGS		= -m68060 -I$(INC_DIR)
 CFLAGS		= -m68060 -Wall -O2 -fomit-frame-pointer -I$(INC_DIR)
 
 # flags for host gcc
