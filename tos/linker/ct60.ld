@@ -30,6 +30,8 @@ SECTIONS
 		vectors.o( .text )
 		videl.o( .text )
 		debug.o( .text )
+		setup_loader.o( .text )
+		setup_firmware.o( .text )
 		/* Final "patch" header */
 		LONG( ADDR( .text2 ) )
 		LONG( SIZEOF( .text2 ) )

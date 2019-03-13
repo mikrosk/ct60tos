@@ -13,7 +13,7 @@ OBJCOPY=$(CROSS_PREFIX)m68k-atari-mint-objcopy
 BIN2SRC=./bin2src.pl
 
 TARGET = setup.tos
-FIRMWARE_TARGET = setup_firmware.S
+FIRMWARE_TARGET = ../ct60tos/setup_firmware.S
 
 CSRCS = setup.c form_vt.c form_nvram.c form_cpu.c form_devices.c \
 	form_bootorder.c form_exit.c misc.c video.c ct60_ctcm.c \
@@ -58,20 +58,21 @@ clean:
 
 dist:
 	cd .. ; tar cvzf \
-		ct60_setup-$(VERSION).tar.gz \
-		ct60_setup/*.c \
-		ct60_setup/*.h \
-		ct60_setup/*.S \
-		ct60_setup/*.pl \
-		ct60_setup/Makefile \
-		ct60_setup/COPYING \
-		ct60_setup/README \
-		--exclude=ct60_setup/$(FIRMWARE_TARGET)
+		ct60setup-$(VERSION).tar.gz \
+		ct60setup/*.c \
+		ct60setup/*.h \
+		ct60setup/*.S \
+		ct60setup/*.pl \
+		ct60setup/Makefile \
+		ct60setup/COPYING \
+		ct60setup/README \
+		--exclude=ct60setup/$(FIRMWARE_TARGET)
 
 firmware:	$(FIRMWARE_TARGET)
 
 $(FIRMWARE_TARGET):	$(TARGET)
 	$(BIN2SRC) $< > $@
+	cp setup_loader.S ../ct60tos
 
 dep:	$(DEPEND)
 

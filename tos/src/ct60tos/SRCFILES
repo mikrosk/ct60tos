@@ -1,6 +1,6 @@
 # Source files for CT60 (and CTPCI) TOS m68k build
 
-SRCFILES = \
+SRCFILES += \
 	pmmu.S \
 	cookies.S \
 	dsp.S \

@@ -27,8 +27,8 @@ TOS_PATCHER	= gentos
 CT60_PATCHES	= ct60_patches.bin
 
 include $(TOS_DIR)/SRCFILES
+include $(SETUP_DIR)/SRCFILES
 # order is no longer important, it matters what's in linker script!
-SRCS		= $(patsubst %.c,,$(SRCFILES:%.S=$(TOS_DIR)/%.S)) $(patsubst %.S,,$(SRCFILES:%.c=$(TOS_DIR)/%.c))
 CT60_OBJS	= $(patsubst %.c,,$(SRCFILES:%.S=$(OBJ_DIR)/%.o)) $(patsubst %.S,,$(SRCFILES:%.c=$(OBJ_DIR)/%.o))
 
 all: setup $(CT60_TOS)
@@ -47,6 +47,9 @@ $(OBJ_DIR)/xbios2.o: $(TOS_DIR)/xbios2.S
 	$(CC) $(ASFLAGS) -o $@ -c $<
 
 # common build rules
+$(OBJ_DIR)/%.o:	$(SETUP_DIR)/%.S
+	$(CC) $(ASFLAGS) -o $@ -c $<
+
 $(OBJ_DIR)/%.o:	$(TOS_DIR)/%.S
 	$(CC) $(ASFLAGS) -o $@ -c $<
 
@@ -56,6 +59,8 @@ $(OBJ_DIR)/%.o:	$(TOS_DIR)/%.c
 # setup, run just once
 .PHONY: setup
 setup: check_ld $(OBJ_DIR)
+	@echo $(CT60_OBJS)
+	cd $(SETUP_DIR) && make firmware
 
 $(OBJ_DIR):
 	mkdir $@
