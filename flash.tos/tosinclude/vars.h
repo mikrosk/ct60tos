@@ -72,4 +72,4 @@
 #define adr_target    -24
 #define adr_fonts     -20
 
-#endif	_VARS_H
+#endif

@@ -705,11 +705,11 @@ ct60_write_param:
 	moves.w D5,(A0)                                     // Autoselect command
 	move.l (A2),D0                                      // Manufacturer code / Device code
 	moves.w D1,(A2)                                     // Read/Reset command
-	lea.l devices+2(PC),A3
+	lea.l devices(PC),A3
 loop_dev:
-		tst.w (A3)
+		tst.l (A3)
 		beq no_dev
-		cmp.w (A3),D0
+		cmp.l (A3),D0
 		beq.s found_dev
 		addq.l #8,A3
 	bra.s loop_dev
@@ -719,7 +719,7 @@ no_dev:
 	bra program_param_loop_end_2
 found_dev:
 	lea.l devices(PC),A1
-	add.l 2(A3),A1                                      // sector of device
+	add.l 4(A3),A1                                      // sector of device
 	movem.l (A1),A2-A4                                  // sector, flash_unlock1, flash_unlock2
 	add.l D6,A2                                         // offset free block
 	tst.w D7

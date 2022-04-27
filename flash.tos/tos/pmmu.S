@@ -21,7 +21,69 @@
  *
  */
 
-	.text
-	.globl	_ct60tos_patch
+	.text            
+	
+	.globl	init_060
+	
 	.align	2
-_ct60tos_patch:
+	.long	0x30
+	.long	end1-begin1
+begin1:
+	jmp	init_060
+end1:
+
+	.globl	init_sdram
+
+	.align	2
+	.long	0x632
+	.long	end2-begin2
+begin2:
+	jsr	init_sdram
+end2:
+
+	.align	2
+	.long	0x14E6
+	.long	end3-begin3
+begin3:
+	bra.s	begin3-0x14E6+0x1506
+end3:
+
+	.align	2
+	.long	0x39A0
+	.long	end4-begin4
+begin4:
+	bra.s	begin4-0x39A0+0x39B8
+end4:
+
+	.globl	add_sdram
+
+	.align	2
+	.long	0x96E
+	.long	end5-begin5
+begin5:
+	jmp	add_sdram
+end5:
+
+	.align	2
+	.long	0x7A08
+	.long	end6-begin6
+begin6:
+	moveq	#9,D7
+end6:
+
+	.align	2
+	.long	0x7B1C
+	.long	end7-begin7
+begin7:
+	moveq	#9,D7
+end7:
+
+	.globl	display_ram_test
+
+	.align	2
+	.long	0x7D5A
+	.long	end8-begin8
+begin8:
+	jmp	display_ram_test
+end8:
+

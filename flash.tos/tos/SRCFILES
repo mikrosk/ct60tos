@@ -1,0 +1,35 @@
+# Source files for CT60 (and CTPCI) TOS m68k build
+
+SRCFILES = \
+	pmmu.S \
+	cookies.S \
+	dsp.S \
+	periph.S \
+	cache.S \
+	movep.S \
+	boot.S \
+	init_par.S \
+	blitter.S \
+	bios.S \
+	xbios.S \
+	gemdos.S \
+	aes.S \
+	vectors.S \
+	videl.S \
+	debug.S \
+	version.S \
+	movep2.S \
+	blitter2.S \
+	bios2.S \
+	xbios2.S \
+	gemdos2.S \
+	aes2.S \
+	vectors2.S \
+	debug2.S \
+	ataboot.S \
+	extvidel.S \
+	magxboot.S \
+	sdram.S \
+	pmmu2.c \
+	videl2.S \
+

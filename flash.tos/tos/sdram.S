@@ -695,8 +695,6 @@ init_sdram:
 	cmp.b #0x6,D0            // CTRL-LSHIFT
 	beq.s .end_sdram
 	lea _init_mmu_tree,A0
-	add.l #0xE80000,A0
-	sub.l #_ct60tos_half_flash,A0
 	jsr (A0)
 	tst.l D0
 	beq.s .end_sdram
@@ -1192,13 +1190,13 @@ message15:	.byte 27
 	.ascii "."
 	.byte ((VERSION/16) & 0xF) + 0x30
 	.byte (VERSION & 0xF) + 0x30
-	.asciz "c "
+	.asciz "e "
 message15b:	
-	.ascii "2005 July "
+	.ascii "2005 July - DI20190226"
 	.byte 27
 	.ascii "q"
 	.byte 13,10,0
-	.ascii "Juillet 2005 "
+	.ascii "Juillet 2005 - DI20190226"
 	.byte 27
 	.ascii "q"
 	.byte 13,10,0
@@ -3412,8 +3410,6 @@ menu_boot:
 	move.l D0,D1
 	move.l #0x5F465055,D0    // _FPU cookie
 	bsr get_cookie
-	add.l #0xE80000,A1
-	sub.l #_ct60tos_half_flash,A1
 	jsr (A1)
 .normal_boot:
 	unlk A6
