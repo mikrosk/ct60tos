@@ -189,7 +189,7 @@ extern unsigned long swap_long(unsigned long val);
 #define be_to_cpu16(x) (x)
 #define be_to_cpu32(x) (x)
 
-inline void *zalloc(int size)
+static void *zalloc(int size)
 {
 	void *ret = malloc(size);
 	if(!ret)

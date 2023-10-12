@@ -84,7 +84,7 @@
 void get_modregstr (dis_buffer_t *, int, int, int, int);
 int get_modregstr_len (u_short *, int, int, int, int);
 void get_immed (dis_buffer_t *, int);
-inline int get_immed_len (int);
+int get_immed_len (int);
 void get_fpustdGEN (dis_buffer_t *, u_short, const char *);
 void addstr (dis_buffer_t *, const char *s);
 void prints (dis_buffer_t *, int, int);
@@ -4162,7 +4162,7 @@ void get_immed(dis_buffer_t *dbuf, int sz)
   return;
 }
 
-inline int get_immed_len(int sz)
+int get_immed_len(int sz)
 {
   switch (sz) {
   case SIZE_BYTE:
