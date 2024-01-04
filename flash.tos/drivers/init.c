@@ -31,7 +31,6 @@
 #include "fb.h"
 #include "radeon/radeonfb.h"
 #include "lynx/smi.h"
-#include "usb/usb.h"
 #include "mod_devicetable.h"
 #include "m68k_disasm.h"
 #include "ct60.h"
@@ -950,6 +949,7 @@ int init_devices(int no_reset, unsigned long flags) /* after the original setscr
 #ifndef COLDFIRE
 					 && (hardware_flags & CTPCI_1M)
 #endif
+#define USB_MAX_BUS           3
 					 && usb_ok && (usb_found < USB_MAX_BUS))
 					{
 						unsigned long class;

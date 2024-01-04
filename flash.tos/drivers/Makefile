@@ -28,12 +28,10 @@ SUBOBJDIRS=	\
 		$(OBJDIR)/fvdi/common \
 		$(OBJDIR)/fvdi/1_plane \
 		$(OBJDIR)/dma_utils \
-		$(OBJDIR)/usb \
 		$(OBJDIR)/cd
 
 INCLUDE = -I$(INCDIR)
 INCLUDEFVDI = -I$(INCDIRFVDI)
-INCLUDEUSB = -I$(INCDIRUSB)
 
 OBJSDRIVERFVDI=	\
 		$(OBJDIR)/radeon/radeon_accel.o \
@@ -65,16 +63,6 @@ OBJSDRIVERFVDI=	\
 		$(OBJDIR)/fvdi/1_plane/1_fill.o \
 		$(OBJDIR)/gcc.o
 
-OBJSUSB=	\
-		$(OBJDIR)/usb/usb.o \
-		$(OBJDIR)/usb/ohci-hcd.o \
-		$(OBJDIR)/usb/ehci-hcd.o \
-		$(OBJDIR)/usb/usb_kbd.o \
-		$(OBJDIR)/usb/usb_mouse.o \
-		$(OBJDIR)/usb/usb_storage.o \
-		$(OBJDIR)/usb/usb_mem.o \
-		$(OBJDIR)/usb/cmd_usb.o
-    
 OBJSSCSI=	\
 		$(OBJDIR)/cd/cd_scsi.o \
 		$(OBJDIR)/cd/cd_disk.o \
@@ -126,7 +114,6 @@ OBJS=	\
 		$(OBJDIR)/stdlib.o \
 		$(OBJDIR)/printk.o \
 		$(OBJDIR)/malloc.o \
-		$(OBJSUSB) \
 		$(OBJSSCSI) \
 		$(OBJSDRIVERFVDI)
 
@@ -227,10 +214,6 @@ $(OBJDIR)/fvdi/%.o:	$(SRCDIR)/fvdi/%.c
 $(OBJDIR)/fvdi/%.o:	$(SRCDIR)/fvdi/%.S
 	$(CREATEOBJDIRS)
 	$(CC) $(INCLUDE) $(INCLUDEFVDI) $(CFLAGS) -c $< -o $@
-
-$(OBJDIR)/usb/%.o:	$(SRCDIR)/usb/%.c
-	$(CREATEOBJDIRS)
-	$(CC) $(INCLUDE) $(CFLAGS) -c $< -o $@
 
 $(OBJDIR)/%.o:	$(SRCDIR)%.c
 	$(CREATEOBJDIRS)
