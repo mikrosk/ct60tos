@@ -29,9 +29,7 @@ SUBOBJDIRS=	\
 		$(OBJDIR)/fvdi/1_plane \
 		$(OBJDIR)/dma_utils \
 		$(OBJDIR)/usb \
-		$(OBJDIR)/cd \
-		$(OBJDIR)/lwip \
-		$(OBJDIR)/freertos
+		$(OBJDIR)/cd
 
 INCLUDE = -I$(INCDIR)
 INCLUDEFVDI = -I$(INCDIRFVDI)
@@ -67,39 +65,6 @@ OBJSDRIVERFVDI=	\
 		$(OBJDIR)/fvdi/1_plane/1_fill.o \
 		$(OBJDIR)/gcc.o
 
-OBJSLWIP=	\
-		$(OBJDIR)/lwip/tcp_out.o \
-		$(OBJDIR)/lwip/inet.o \
-		$(OBJDIR)/lwip/chksum.o \
-		$(OBJDIR)/lwip/mem.o \
-		$(OBJDIR)/lwip/memp.o \
-		$(OBJDIR)/lwip/netif.o \
-		$(OBJDIR)/lwip/pbuf.o \
-		$(OBJDIR)/lwip/raw.o \
-		$(OBJDIR)/lwip/stats.o \
-		$(OBJDIR)/lwip/sys.o \
-		$(OBJDIR)/lwip/tcp.o \
-		$(OBJDIR)/lwip/tcp_in.o \
-		$(OBJDIR)/lwip/udp.o \
-		$(OBJDIR)/lwip/ip.o \
-		$(OBJDIR)/lwip/ip_addr.o \
-		$(OBJDIR)/lwip/icmp.o \
-		$(OBJDIR)/lwip/ip_frag.o \
-		$(OBJDIR)/lwip/tcpip.o \
-		$(OBJDIR)/lwip/api_msg.o \
-		$(OBJDIR)/lwip/err.o \
-		$(OBJDIR)/lwip/api_lib.o \
-		$(OBJDIR)/lwip/loopif.o \
-		$(OBJDIR)/lwip/sockets.o \
-		$(OBJDIR)/lwip/etharp.o \
-		$(OBJDIR)/lwip/resolv.o \
-		$(OBJDIR)/lwip/sys_arch.o \
-		$(OBJDIR)/lwip/rtl8139.o \
-		$(OBJDIR)/lwip/gs_func.o \
-		$(OBJDIR)/lwip/gs_mem.o \
-		$(OBJDIR)/lwip/gs_stik.o \
-		$(OBJDIR)/lwip/init.o
-		
 OBJSUSB=	\
 		$(OBJDIR)/usb/usb.o \
 		$(OBJDIR)/usb/ohci-hcd.o \
@@ -115,14 +80,6 @@ OBJSSCSI=	\
 		$(OBJDIR)/cd/cd_disk.o \
 		$(OBJDIR)/cd/cd_dos.o \
 		$(OBJDIR)/cd/cd_iso.o
-
-OBJSRTOS=	\
-		$(OBJDIR)/freertos/tasks.o \
-		$(OBJDIR)/freertos/queue.o \
-		$(OBJDIR)/freertos/list.o \
-		$(OBJDIR)/freertos/heap_2.o \
-		$(OBJDIR)/freertos/port.o
-
 
 OBJS=	\
 		$(OBJDIR)/header.o \
@@ -187,7 +144,7 @@ clean:
 	rm -rf $(OBJDIR)
 	rm -f $(BINHEX_BINARY) $(COMPRESS_BINARY) $(HEX) drivers.map $(DRIVERFVDI)
 
-$(HEX):	$(OBJS) $(OBJSRTOS) $(OBJSLWIP) 
+$(HEX):	$(OBJS)
 	$(LD) --oformat srec -Map drivers.map --cref -T drivers.lk \
 	--entry Start -o $(HEX) $(OBJS)
 	#./$(COMPRESS_BINARY) $(HEX) temp.bin

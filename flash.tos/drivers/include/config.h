@@ -27,8 +27,8 @@
 
 #else /* !COLDFIRE */
 
-#define LWIP
-#define FREERTOS
+//#define LWIP
+//#define FREERTOS
 
 #endif /* COLDFIRE */
 
