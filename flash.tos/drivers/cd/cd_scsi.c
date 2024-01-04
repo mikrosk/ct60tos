@@ -1,5 +1,4 @@
-#include <mint/osbind.h> /* for clobber list */
-#include <sysvars.h>
+#include <mint/sysvars.h>
 #include <string.h>
 #include "scsidrv/scsi.h"
 

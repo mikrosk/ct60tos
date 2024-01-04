@@ -24,9 +24,6 @@
 #include "fb.h"
 #include "ct60.h"
 
-#undef Vsetscreen // return a long, trick for get info_fvdi structure with 'VN', CMD_ENUMMODES
-#define Vsetscreen(lscrn,pscrn,rez,mode) (long)trap_14_wllww((short)5,(long)(lscrn),(long)(pscrn),(short)(rez),(short)(mode))
-
 #ifdef COLDFIRE
 extern short SMUL_DIV(short x, short y, short z);
 #else
@@ -4128,8 +4125,8 @@ static long s_enumfunc(SCREENINFO *inf, long flag)
 long CDECL c_get_resolution(struct mode_option *resolution)
 {
 	g_resolution.used = 0;
-	current_modecode = Vsetmode(-1);
-	Vsetscreen(-1, &g_enumfunc, 'VN', CMD_ENUMMODES);
+	current_modecode = VsetMode(-1);
+	VsetScreen(-1, &g_enumfunc, 'VN', CMD_ENUMMODES);
 	*resolution = g_resolution;
 	return(1);
 }
@@ -4143,6 +4140,8 @@ long CDECL c_set_resolution(struct mode_option *resolution)
 	if(use_setscreen)
 	{
 		short modecode = 0;
+// return a long, trick for get info_fvdi structure with 'VN', CMD_ENUMMODES
+#define Vsetscreen(lscrn,pscrn,rez,mode) (long)trap_14_wllww((short)5,(long)(lscrn),(long)(pscrn),(short)(rez),(short)(mode))
 		long ret = Vsetscreen(-1, &s_enumfunc, 'VN', CMD_ENUMMODES);
 		if(exact_modecode)
 			modecode = exact_modecode;
@@ -4154,7 +4153,7 @@ long CDECL c_set_resolution(struct mode_option *resolution)
 			modecode |= VIRTUAL_SCREEN;
 		if(modecode && ret && (ret >> 16) && ((ret >> 16) != -1))
 		{
-			Vsetscreen(0, 0,	3, modecode);
+			VsetScreen(0, 0,	3, modecode);
 			info_fvdi = (struct fb_info *)ret; /* use the same structure than TOS ! */
 			buf_cursor = 0;
 #ifndef DRIVER_IN_ROM

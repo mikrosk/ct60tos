@@ -348,13 +348,13 @@ short V_OPNWK(char *adr_var_vdi, short *INTIN, short *INTOUT, short *PTSOUT)
 		case STAYINDEV:
 			break;
 		case SETMODEFLAG:
-			modecode = Vsetmode(-1); /* get current video mode    */
+			modecode = VsetMode(-1); /* get current video mode    */
 #ifdef USE_RADEON_MEMORY
 			if(lock_video)
 				break;
 #endif
 			if(modecode != PTSOUT[0]) /* see if cur mode != desired  */
-				(void)Vsetscreen(0, 0, 3, PTSOUT[0]); /* set the video to new mode */
+				VsetScreen(0, 0, 3, PTSOUT[0]); /* set the video to new mode */
 			break;
 		default:
 #ifdef USE_RADEON_MEMORY
@@ -362,7 +362,7 @@ short V_OPNWK(char *adr_var_vdi, short *INTIN, short *INTOUT, short *PTSOUT)
 				return(0);
 #endif
 			if(INTIN[0] < SETMODEFLAG)
-				(void)Vsetscreen(-1, -1, INTIN[0] - 2, -1); /* ST modes */
+				VsetScreen(-1, -1, INTIN[0] - 2, -1); /* ST modes */
 			else
 				return(0); /* erreur */
 			break;

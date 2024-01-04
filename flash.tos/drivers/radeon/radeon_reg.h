@@ -5414,6 +5414,7 @@
 #define RT_NTSCM_H_OUT_WIND_WIDTH          0x2F4
 #define RT_NTSCM_V_OUT_WIND_HEIGHT         0xF0
 
+#undef TV	/* mintlib */
 #define TV          0x1
 #define LINEIN      0x2
 #define MUTE        0x3

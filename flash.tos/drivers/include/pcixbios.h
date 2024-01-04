@@ -19,6 +19,8 @@
 #ifndef	_CT60_XBIOS_PCI_H
 #define	_CT60_XBIOS_PCI_H
 
+#include <mint/trap14.h>
+
 #define PCIIDR                0x00   /* PCI Configuration ID Register       */
 #define PCICSR                0x04   /* PCI Command/Status Register         */
 #define PCICR                 0x04   /* PCI Command Register                */
@@ -155,9 +157,6 @@ typedef struct                       /* structure of address conversion     */
 /******************************************************************************/
 /*                              Functions                                     */
 /******************************************************************************/
-#ifndef OSBIND_CLOBBER_LIST
-#define OSBIND_CLOBBER_LIST "d0", "d1", "d2", "a0", "a1", "a2", "memory"
-#endif
 
 #ifndef trap_14_wlw
 #define trap_14_wlw(n, a, b)	\
@@ -175,28 +174,8 @@ __extension__	\
 		"lea	sp@(8),sp"	\
 		: "=r"(retvalue)	\
 		: "g"(n), "r"(_a), "r"(_b)	\
-		: OSBIND_CLOBBER_LIST	\
-	);	\
-	retvalue;	\
-})
-#endif
-#ifndef trap_14_wll
-#define trap_14_wll(n, a, b)	\
-__extension__	\
-({	\
-	register long retvalue __asm__("d0");	\
-	long _a = (long) (a);	\
-	long _b = (long) (b);	\
-	\
-	__asm__ volatile (	\
-		"movl	%3,sp@-\n\t"	\
-		"movl	%2,sp@-\n\t"	\
-		"movw	%1,sp@-\n\t"	\
-		"trap	#14\n\t"	\
-		"lea	sp@(10),sp"	\
-		: "=r"(retvalue)	\
-		: "g"(n), "r"(_a), "r"(_b)	\
-		: OSBIND_CLOBBER_LIST	\
+		:  __CLOBBER_RETURN("d0") "d1", "d2", "a0", "a1", "a2", "cc" /* clobbered regs */ \
+		  AND_MEMORY \
 	);	\
 	retvalue;	\
 })
@@ -219,53 +198,8 @@ __extension__	\
 		"lea	sp@(10),sp"	\
 		: "=r"(retvalue)	\
 		: "g"(n), "r"(_a), "r"(_b), "r"(_c)	\
-		: OSBIND_CLOBBER_LIST	\
-	);	\
-	retvalue;	\
-})
-#endif
-#ifndef trap_14_wlwl
-#define trap_14_wlwl(n, a, b, c)	\
-__extension__	\
-({	\
-	register long retvalue __asm__("d0");	\
-	long  _a = (long) (a);	\
-	short _b = (short) (b);	\
-	long  _c = (long) (c);	\
-	\
-	__asm__ volatile (	\
-		"movl	%4,sp@-\n\t"	\
-		"movw	%3,sp@-\n\t"	\
-		"movl	%2,sp@-\n\t"	\
-		"movw	%1,sp@-\n\t"	\
-		"trap	#14\n\t"	\
-		"lea	sp@(12),sp"	\
-		: "=r"(retvalue)	\
-		: "g"(n), "r"(_a), "r"(_b), "r"(_c)	\
-		: OSBIND_CLOBBER_LIST	\
-	);	\
-	retvalue;	\
-})
-#endif
-#ifndef trap_14_wlll
-#define trap_14_wlll(n, a, b, c)	\
-__extension__	\
-({	\
-	register long retvalue __asm__("d0");	\
-	long  _a = (long) (a);	\
-	long  _b = (long) (b);	\
-	long  _c = (long) (c);	\
-	\
-	__asm__ volatile (	\
-		"movl	%4,sp@-\n\t"	\
-		"movl	%3,sp@-\n\t"	\
-		"movl	%2,sp@-\n\t"	\
-		"movw	%1,sp@-\n\t"	\
-		"trap	#14\n\t"	\
-		"lea	sp@(14),sp"	\
-		: "=r"(retvalue)	\
-		: "g"(n), "r"(_a), "r"(_b), "r"(_c)	\
-		: OSBIND_CLOBBER_LIST	\
+		: __CLOBBER_RETURN("d0") "d1", "d2", "a0", "a1", "a2", "cc" /* clobbered regs */ \
+		  AND_MEMORY \
 	);	\
 	retvalue;	\
 })

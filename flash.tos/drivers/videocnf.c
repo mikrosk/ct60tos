@@ -29,26 +29,6 @@
 #include "gemform.h"
 #include "ct60.h"
 
-#ifndef Vsetscreen
-#ifdef VsetScreen
-#define Vsetscreen VsetScreen
-#else
-#warning Bad falcon.h
-#endif
-#endif
-
-#ifndef Vsetmode
-#ifdef VsetMode
-#define Vsetmode VsetMode
-#else
-#warning Bad falcon.h
-#endif
-#endif
-
-#ifndef Validmode
-#define Validmode(mode) (short)trap_14_ww((short)95,(short)(mode))
-#endif
-
 /* objects */
 #define VIDEOBOX 0
 #define VIDEOTEXT 1
@@ -327,7 +307,7 @@ short set_video(void)
 		return(0);
 	}
 	vq_extnd(vdi_handle, 1, work_extend);
-	modecode = Vsetmode(-1);
+	modecode = VsetMode(-1);
 	if(!(modecode & DEVID))
 		type_modes = MODES_XBIOS;
 	else
@@ -603,10 +583,10 @@ change:
 					xy[3] = xy[7] = work_out[1];      /* y2 */	
 				}
 				vro_cpyfm(vdi_handle, S_ONLY, xy, &target, &source); /* save menu */
-				cur_mode = Vsetmode(-1);            /* save curent video mode */
-				temp = Vsetscreen(-1, choice_rez >= 0 ? (liste_rez[choice_rez].modecode & ~VIRTUAL_SCREEN) : (modecode & ~VIRTUAL_SCREEN), 'VN', CMD_TESTMODE);
+				cur_mode = VsetMode(-1);            /* save curent video mode */
+				VsetScreen(-1, choice_rez >= 0 ? (liste_rez[choice_rez].modecode & ~VIRTUAL_SCREEN) : (modecode & ~VIRTUAL_SCREEN), 'VN', CMD_TESTMODE);
 				Supexec(tempo_5S);                  /* delay */
-				ret = Vsetmode(cur_mode);           /* restore video mode */
+				ret = VsetMode(cur_mode);           /* restore video mode */
 				vro_cpyfm(vdi_handle, S_ONLY, xy, &source, &target);	/* redraw menu */
 				if(screen != NULL)
 					Mfree(screen);
@@ -993,11 +973,10 @@ static long enumfunc(SCREENINFO *inf, long flag)
 void init_list_rez(int choice_color)
 {
 	int i, j, temp;
-	long ret;
 	char buf_temp[24];
 	nb_res = 0;
 	sel_color = (long)choice_color;
-	ret = Vsetscreen(-1, &enumfunc, 'VN', CMD_ENUMMODES);
+	VsetScreen(-1, &enumfunc, 'VN', CMD_ENUMMODES);
 	for(i = 0; i < nb_res; i++)		/* sort */
 	{
 		for(j = 0; j < nb_res; j++)

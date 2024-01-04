@@ -52,22 +52,6 @@ long save_regs[16];
 
 #define CTPCI_1M 0x00000002
 
-#ifndef Vsetscreen
-#ifdef VsetScreen
-#define Vsetscreen VsetScreen
-#else
-#warning Bad falcon.h
-#endif
-#endif
-
-#ifndef Montype
-#ifdef VgetMonitor
-#define Montype VgetMonitor
-#else
-#warning Bad falcon.h
-#endif
-#endif
-
 #if defined(COLDFIRE) && defined(LWIP)
 extern void board_printf(const char *fmt, ...);
 #else
@@ -701,7 +685,6 @@ void get_mouseikbdvec(void) /* for USB drivers and HTTP server (screen view) */
 
 static short init_video(short vmode) /* called by init_devices */
 {
-	long ret;
 	extern void *write_pixel_r, *read_pixel_r, *set_colours_r, *get_colours_r, *get_colour_r;
 	/* fVDI spec */
 	accel_s = 0;  
@@ -715,7 +698,7 @@ static short init_video(short vmode) /* called by init_devices */
 		if((debug && !redirect) /* || usb_found */)
 			wait_key();
 #endif
-		ret = Vsetscreen(screen_addr, screen_addr, 2, 0);  /* for reduce F030 Videl bus load */
+		VsetScreen(screen_addr, screen_addr, 2, 0);  /* for reduce F030 Videl bus load */
 #ifndef COLDFIRE
 		Cconws(mess_ignore);
 #endif
@@ -745,8 +728,9 @@ static short init_video(short vmode) /* called by init_devices */
 			vmode |= BPS16;
 	}
 	vmode = fix_boot_modecode(vmode);
-	ret = Vsetscreen(0, 0, 3, vmode); /* new Vsetscreen with internal driver installed */
-	if(ret);
+
+	VsetScreen(0, 0, 3, vmode); /* new Vsetscreen with internal driver installed */
+
 	return(vmode);
 }
 
@@ -1163,7 +1147,7 @@ int init_devices(int no_reset, unsigned long flags) /* after the original setscr
 			info_fvdi->var.bits_per_pixel = resolution.bpp;
 			if(!old_vector_xbios)
 				old_vector_xbios = install_xbra(46, det_xbios); /* TRAP #14 */
-			(void)Vsetscreen(0, 0, 3, vmode);
+			VsetScreen(0, 0, 3, vmode);
 			if(!os_magic)
 			{
 #if defined(COLDFIRE) && defined(MCF547X) && defined(LWIP)

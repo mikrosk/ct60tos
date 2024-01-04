@@ -1,0 +1,9 @@
+obj/
+version.h
+ati.bin
+binhex.ttp
+compress.ttp
+radeon/radeon_theatre_dsp.txt
+drivers.hex
+drivers.map
+radeon.sys

@@ -124,10 +124,6 @@ typedef tScsiCall *tpScsiCall;
 
 #define DefTimeout 4000
 
-#ifndef OSBIND_CLOBBER_LIST
-#define OSBIND_CLOBBER_LIST "d0", "d1", "d2", "a0", "a1", "a2", "memory"
-#endif
-
 #define init_scsiio() \
 do { \
 	struct { \
@@ -158,7 +154,8 @@ __extension__	\
 		"addql #4,sp"	\
 		: "=r"(retvalue)	\
 		: "r"(_fct), "r"(_Parms)	\
-		: OSBIND_CLOBBER_LIST	\
+		: __CLOBBER_RETURN("d0") "d1", "d2", "a0", "a1", "a2", "cc" /* clobbered regs */ \
+		  AND_MEMORY \
 	);	\
 	retvalue;	\
 })
@@ -177,7 +174,8 @@ __extension__	\
 		"addql #4,sp"	\
 		: "=r"(retvalue)	\
 		: "r"(_fct), "r"(_Parms)	\
-		: OSBIND_CLOBBER_LIST	\
+		: __CLOBBER_RETURN("d0") "d1", "d2", "a0", "a1", "a2", "cc" /* clobbered regs */ \
+		  AND_MEMORY \
 	);	\
 	retvalue;	\
 })
@@ -198,7 +196,8 @@ __extension__	\
 		"addql #6,sp"	\
 		: "=r"(retvalue)	\
 		: "r"(_fct), "r"(_what), "r"(_Info)	\
-		: OSBIND_CLOBBER_LIST	\
+		: __CLOBBER_RETURN("d0") "d1", "d2", "a0", "a1", "a2", "cc" /* clobbered regs */ \
+		  AND_MEMORY \
 	);	\
 	retvalue;	\
 })
@@ -221,7 +220,8 @@ __extension__	\
 		"addql #8,sp"	\
 		: "=r"(retvalue)	\
 		: "r"(_fct), "r"(_what), "r"(_BusNo), "r"(_Dev)	\
-		: OSBIND_CLOBBER_LIST	\
+		: __CLOBBER_RETURN("d0") "d1", "d2", "a0", "a1", "a2", "cc" /* clobbered regs */ \
+		  AND_MEMORY \
 	);	\
 	retvalue;	\
 })
@@ -246,7 +246,8 @@ __extension__	\
 		"lea sp@(14),sp"	\
 		: "=r"(retvalue)	\
 		: "r"(_fct), "r"(_BusNo), "r"(_SCSIId), "r"(_Name), "r"(_Features)	\
-		: OSBIND_CLOBBER_LIST	\
+		: __CLOBBER_RETURN("d0") "d1", "d2", "a0", "a1", "a2", "cc" /* clobbered regs */ \
+		  AND_MEMORY \
 	);	\
 	retvalue;	\
 })
@@ -265,7 +266,8 @@ __extension__	\
 		"addql #2,sp"	\
 		: "=r"(retvalue)	\
 		: "r"(_fct), "r"(_BusNo)	\
-		: OSBIND_CLOBBER_LIST	\
+		: __CLOBBER_RETURN("d0") "d1", "d2", "a0", "a1", "a2", "cc" /* clobbered regs */ \
+		  AND_MEMORY \
 	);	\
 	retvalue;	\
 })
@@ -288,7 +290,8 @@ __extension__	\
 		"lea sp@(10),sp"	\
 		: "=r"(retvalue)	\
 		: "r"(_fct), "r"(_bus), "r"(_SCSIId), "r"(_MaxLen)	\
-		: OSBIND_CLOBBER_LIST	\
+		: __CLOBBER_RETURN("d0") "d1", "d2", "a0", "a1", "a2", "cc" /* clobbered regs */ \
+		  AND_MEMORY \
 	);	\
 	retvalue;	\
 })
@@ -307,7 +310,8 @@ __extension__	\
 		"addql #4,sp"	\
 		: "=r"(retvalue)	\
 		: "r"(_fct), "r"(_handle)	\
-		: OSBIND_CLOBBER_LIST	\
+		: __CLOBBER_RETURN("d0") "d1", "d2", "a0", "a1", "a2", "cc" /* clobbered regs */ \
+		  AND_MEMORY \
 	);	\
 	retvalue;	\
 })
@@ -330,7 +334,8 @@ __extension__	\
 		"addql #8,sp"	\
 		: "=r"(retvalue)	\
 		: "r"(_fct), "r"(_handle), "r"(_rwflag), "r"(_ErrNo)	\
-		: OSBIND_CLOBBER_LIST	\
+		: __CLOBBER_RETURN("d0") "d1", "d2", "a0", "a1", "a2", "cc" /* clobbered regs */ \
+		  AND_MEMORY \
 	);	\
 	retvalue;	\
 })

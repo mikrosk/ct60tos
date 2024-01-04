@@ -181,8 +181,6 @@ BINHEX_BINARY= binhex.ttp
 COMPRESS_BINARY= compress.ttp
 STACKSIZE= 64k
 
-all: $(BINHEX_BINARY) $(COMPRESS_BINARY) version.h $(HEX) $(DRIVERFVDI)
-
 ctpci: $(BINHEX_BINARY) $(COMPRESS_BINARY) version.h $(HEX) $(DRIVERFVDI)
 
 clean:
@@ -192,7 +190,8 @@ clean:
 $(HEX):	$(OBJS) $(OBJSRTOS) $(OBJSLWIP) 
 	$(LD) --oformat srec -Map drivers.map --cref -T drivers.lk \
 	--entry Start -o $(HEX) $(OBJS)
-	./$(COMPRESS_BINARY) $(HEX) temp.bin
+	#./$(COMPRESS_BINARY) $(HEX) temp.bin
+	mv $(HEX) temp.bin
 	objcopy --verbose -I binary -O srec --adjust-vma=$(FLASH_DRIVERS) temp.bin $(HEX)
 	rm temp.bin 
 
@@ -296,15 +295,19 @@ $(OBJDIR)/radeon/radeon_accel_rom.o:	$(SRCDIR)/radeon/radeon_accel.c
 	$(CREATEOBJDIRS)
 	$(CC) $(INCLUDE) $(INCLUDEFVDI) $(CFLAGS) -DDRIVER_IN_ROM -c $< -o $@
 
-$(OBJDIR)/radeon/radeon_theatre_dsp.o: $(ATICOD)
-	./$(COMPRESS_BINARY) $(ATICOD) ./ati.bin
-	./$(BINHEX_BINARY) ./ati.bin $(SRCDIR)/radeon/radeon_theatre_dsp.txt theatre_dsp
+$(SRCDIR)/radeon/radeon_theatre_dsp.txt: $(ATICOD)
+	./$(COMPRESS_BINARY) $< ./ati.bin
+	./$(BINHEX_BINARY) ./ati.bin $< theatre_dsp
 	@rm ati.bin
-	@echo "#include \"config.h\"" > $(SRCDIR)/radeon/radeon_theatre_dsp.c
-	@echo "#ifdef RADEON_THEATRE" >> $(SRCDIR)/radeon/radeon_theatre_dsp.c
-	@cat $(SRCDIR)/radeon/radeon_theatre_dsp.txt >> $(SRCDIR)/radeon/radeon_theatre_dsp.c
-	@echo "#endif" >> $(SRCDIR)/radeon/radeon_theatre_dsp.c
-	@rm $(SRCDIR)/radeon/radeon_theatre_dsp.txt
+
+$(OBJDIR)/radeon/radeon_theatre_dsp.c: $(SRCDIR)/radeon/radeon_theatre_dsp.txt
+	@echo "#include \"config.h\"" > $@
+	@echo "#ifdef RADEON_THEATRE" >> $@
+	@cat $< >> $@
+	@echo "#endif" >> $@
+#	@rm $(SRCDIR)/radeon/radeon_theatre_dsp.txt
+
+$(OBJDIR)/radeon/radeon_theatre_dsp.o: $(OBJDIR)/radeon/radeon_theatre_dsp.c
 	$(CREATEOBJDIRS)
 	$(CC) $(INCLUDE) $(CFLAGS) -c $(SRCDIR)/radeon/radeon_theatre_dsp.c -o $@
 

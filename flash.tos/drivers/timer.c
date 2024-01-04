@@ -187,7 +187,7 @@ void install_vbl_timer(void *func, int remove)
 			else
 #endif
 				Funcs_free(xbra);
-				*func_vbl = NULL;		/* remove old vector */	
+			*func_vbl = NULL;		/* remove old vector */
 			}
 		}
 		if(*func_vbl == NULL)
