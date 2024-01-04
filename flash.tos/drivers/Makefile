@@ -295,19 +295,19 @@ $(OBJDIR)/radeon/radeon_accel_rom.o:	$(SRCDIR)/radeon/radeon_accel.c
 	$(CREATEOBJDIRS)
 	$(CC) $(INCLUDE) $(INCLUDEFVDI) $(CFLAGS) -DDRIVER_IN_ROM -c $< -o $@
 
-$(SRCDIR)/radeon/radeon_theatre_dsp.txt: $(ATICOD)
-	./$(COMPRESS_BINARY) $< ./ati.bin
-	./$(BINHEX_BINARY) ./ati.bin $< theatre_dsp
-	@rm ati.bin
+# $(SRCDIR)/radeon/radeon_theatre_dsp.txt: $(ATICOD)
+# 	./$(COMPRESS_BINARY) $< ./ati.bin
+# 	./$(BINHEX_BINARY) ./ati.bin $< theatre_dsp
+# 	@rm ati.bin
+# 
+# $(SRCDIR)/radeon/radeon_theatre_dsp.c: $(SRCDIR)/radeon/radeon_theatre_dsp.txt
+# 	@echo "#include \"config.h\"" > $@
+# 	@echo "#ifdef RADEON_THEATRE" >> $@
+# 	@cat $< >> $@
+# 	@echo "#endif" >> $@
+# #	@rm $(SRCDIR)/radeon/radeon_theatre_dsp.txt
 
-$(OBJDIR)/radeon/radeon_theatre_dsp.c: $(SRCDIR)/radeon/radeon_theatre_dsp.txt
-	@echo "#include \"config.h\"" > $@
-	@echo "#ifdef RADEON_THEATRE" >> $@
-	@cat $< >> $@
-	@echo "#endif" >> $@
-#	@rm $(SRCDIR)/radeon/radeon_theatre_dsp.txt
-
-$(OBJDIR)/radeon/radeon_theatre_dsp.o: $(OBJDIR)/radeon/radeon_theatre_dsp.c
+$(OBJDIR)/radeon/radeon_theatre_dsp.o: $(SRCDIR)/radeon/radeon_theatre_dsp.c
 	$(CREATEOBJDIRS)
 	$(CC) $(INCLUDE) $(CFLAGS) -c $(SRCDIR)/radeon/radeon_theatre_dsp.c -o $@
 
