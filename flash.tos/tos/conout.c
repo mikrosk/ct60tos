@@ -206,7 +206,6 @@ typedef struct vdiVars
 extern void sb_blank_internal(short x1, short y1, short x2, short y2);
 extern int test_accel(void);
 
-#ifndef COLDFIRE
 
 void *cell_addr(short x, short y) /* Atari planes */
 {
@@ -778,4 +777,3 @@ void sb_move_cursor_c(short x, short y)
   la->disabCnt--; /* end critical section */  
 }
 
-#endif

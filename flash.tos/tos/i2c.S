@@ -16,7 +16,6 @@
  *  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
-#ifndef COLDFIRE
 
 #define _gpip_mfp 0xfffffa01
 #define _ddr_mfp  0xfffffa05
@@ -533,4 +532,3 @@ wait_26us:                            // 26uS (timer C) or 6.5uS (timer B)
 	beq.s .wu1
 	rts
 
-#endif /* !COLDFIRE */

@@ -18,7 +18,6 @@
 
 	.text
 
-#ifndef COLDFIRE /* for reduce boot size, blitter not exist */
 
 	.globl	copy_fonts
 
@@ -128,7 +127,6 @@ begin12:
 	jsr	get_font_ptr_a1
 end12:
 
-#endif /* COLDFIRE */
 
 	.globl	logo_atari
 
@@ -140,7 +138,6 @@ begin13:
 end13:
 
 
-#ifndef COLDFIRE /* for reduce boot size, blitter not exist */
 
 	.globl	det_vdi
 
@@ -152,7 +149,6 @@ begin14:
 	.long	det_vdi
 end14:
 
-#endif /* COLDFIRE */
 
 	.align 2
 	.long	0x4D4F0 // ROM_INQ_TAB[14] bug entry in TOS404 (MAX_VERT is a pointer ???)

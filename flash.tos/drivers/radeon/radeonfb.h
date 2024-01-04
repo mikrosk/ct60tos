@@ -684,23 +684,12 @@ extern void RADEONSubsequentScanlineImageWriteRectMMIO(struct fb_info *info,
 extern void RADEONSetClippingRectangleMMIO(struct fb_info *info,
             int xa, int ya, int xb, int yb);
 extern void RADEONDisableClippingMMIO(struct fb_info *info);
-#ifndef MCF5445X
 extern int RADEONSetupForCPUToScreenAlphaTextureMMIO(struct fb_info *info, 
            int op, unsigned short red, unsigned short green, unsigned short blue, unsigned short alpha, unsigned long maskFormat, unsigned long dstFormat, unsigned char *alphaPtr, int alphaPitch, int width, int height, int flags);
 extern int RADEONSetupForCPUToScreenTextureMMIO(struct fb_info *info,
            int op, unsigned long srcFormat, unsigned long dstFormat, unsigned char *texPtr, int texPitch, int width, int height, int flags);
 extern void RADEONSubsequentCPUToScreenTextureMMIO(struct fb_info *info,
             int dstx, int dsty, int srcx, int srcy, int width, int height);
-#else
-static __inline__ int RADEONSetupForCPUToScreenAlphaTextureMMIO(struct fb_info *info, 
- int op, unsigned short red, unsigned short green, unsigned short blue, unsigned short alpha, unsigned long maskFormat, unsigned long dstFormat, unsigned char *alphaPtr, int alphaPitch, int width, int height, int flags)
-{ return FALSE; }
-static __inline__ int RADEONSetupForCPUToScreenTextureMMIO(struct fb_info *info,
- int op, unsigned long srcFormat, unsigned long dstFormat, unsigned char *texPtr, int texPitch, int width, int height, int flags)
-{ return FALSE; }
-static __inline__ void RADEONSubsequentCPUToScreenTextureMMIO(struct fb_info *info,
- int dstx, int dsty, int srcx, int srcy, int width, int height) { }
-#endif /* MCF5445X */
 
 /* Cursor functions */
 extern void RADEONSetCursorColors(struct fb_info *info, int bg, int fg);

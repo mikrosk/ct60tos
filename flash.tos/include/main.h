@@ -18,35 +18,10 @@
 #ifndef	_MAIN_H
 #define	_MAIN_H	1
 
-#ifdef COLDFIRE
-
-#ifdef MCF5445X /* M54455EVB */
-
-#define PARAM_SIZE  (128*1024)
-#define FLASH_SIZE  0x00120000
-
-#else
-
-#ifdef MCF5474X /* FIREBEE */
 
 #define PARAM_SIZE  (64*1024)
 #define FLASH_SIZE  0x00100000
 
-#else /* MCF548X - M5484LITE */
-
-#define PARAM_SIZE  (64*1024)
-#define FLASH_SIZE  0x00100000
-
-#endif /* MCF547X */
-
-#endif /* M5445X */
-
-#else /* ATARI -CT60 */
-
-#define PARAM_SIZE  (64*1024)
-#define FLASH_SIZE  0x00100000
-
-#endif /* COLDFIRE */
 
 #define FLASH_ADR   0x00E00000
 #define TESTS_SIZE  0x00020000

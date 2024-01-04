@@ -20,9 +20,6 @@
 
 #include "vars.h"
 
-#ifdef COLDFIRE
-#include "fire.h"
-#endif
 
 //#define DEBUG
 
@@ -43,63 +40,29 @@
 
 picture_boot:
 
-#ifdef COLDFIRE
-#ifdef DEBUG
-	move.l A0,-(SP)
-	lea debug1(PC),A0
-	bsr debug_display_string
-	move.l (SP)+,A0
-#endif
-#endif
-#ifndef COLDFIRE
 	move.w #0x2300,SR                         // enable interrupts
-#else
-	move.w #0x2000,SR                         // enable interrupts (for PCI part)
-#endif
 	bsr fix_modecode
-#ifndef COLDFIRE
 	bsr screen_ntc_boot
-#endif
 	moveq #0,D0
 	rts
 
 fix_modecode:
 
 	move.l D1,-(SP)
-#ifdef COLDFIRE
-#ifdef DEBUG
-	move.l A0,-(SP)
-	lea debug2(PC),A0
-	bsr debug_display_string
-	move.l (SP)+,A0
-#endif
-#endif
 	move.w modecode,D0
-#ifdef COLDFIRE
-	and.l #0x1FF,D0                           // valid bits
-	moveq #0,D1                               // mono
-#else
 	and.w #0x1FF,D0                           // valid bits
 	move.b 0xFFFF8006,D1
 	lsr.w #6,D1                               // 0:ST nomo, 1:ST col, 2:VGA, 3:TV
-#endif
 	bclr #4,D0                                // VGA
-#ifndef COLDFIRE
 	cmp.w #2,D1                               // VGA
 	bne.s .no_vga_monitor
 	bset #4,D0                                // VGA
 .no_vga_monitor:	
-#endif
 	moveq #7,D1	
-#ifdef COLDFIRE
-	and.l D0,D1                               // bits/pixel code
-#else
 	and.w D0,D1                               // bits/pixel code
-#endif
 	btst #7,D0                                // STMODES
 	beq.s .normal_mode
 	bclr #6,D0                                // no OVERSCAN with STMODES
-#ifndef COLDFIRE
 	cmp.w #3,D1
 	bcs.s .st_modes
 	bclr #7,D0                                // remove STMODES in 256 or 65K colors
@@ -107,13 +70,11 @@ fix_modecode:
 .st_modes:
 	tst.w D1
 	bne.s .not_640x400
-#endif
 	bset #3,D0                                // COL80
 	bclr #8,D0                                // VERTFLAG
 	btst #4,D0                                // VGA
 	bne.s .normal_mode
 	bset #8,D0                                // VERTFLAG interlaced
-#ifndef COLDFIRE
 	bra.s .normal_mode
 .not_640x400:
 	cmp.w #1,D1
@@ -127,7 +88,6 @@ fix_modecode:
 	btst #4,D0                                // VGA
 	bne.s .normal_mode
 	bclr #8,D0                                // VERTFLAG
-#endif
 .normal_mode:
 	btst #4,D0                                // VGA
 	beq.s .no_vga
@@ -137,48 +97,6 @@ fix_modecode:
 	move.l (SP)+,D1
 	rts
 
-#ifdef COLDFIRE
-
-#ifdef DEBUG
-
-debug1:	.ascii "Enable interrupts"
-	.byte 13,10,13,13,0
-debug2:	.ascii "Fix modecode"
-	.byte 13,10,0
-	
-	.align 2
-	
-debug_display_string:
-
-	move.l D0,-(SP)
-	move.l A0,-(SP)
-.dds2:
-		move.b (A0)+,D0
-		beq.s .dds1
-		bsr debug_display_char
-	bra.s .dds2
-.dds1:
-	move.l (SP)+,A0
-	move.l (SP)+,D0
-	rts
-
-debug_display_char:
-
-	tst.b serial_mouse
-	bne.s .no_debug
-	move.l D1,-(SP)
-.wait_uart:
-	move.b MCF_UART_USR0,D1
-	and.l  #MCF_UART_USR_TXRDY,D1
-	beq.s .wait_uart
-	move.b D0,MCF_UART_UTB0 // send the character
-	move.l (SP)+,D1
-.no_debug:
-	rts
-	
-#endif // DEBUG
-
-#else  // ATARI
 
 picture_build:                                         // target A0
 
@@ -821,5 +739,4 @@ pic_logo_ct60:
 
 #include "pic_boot.S"
 
-#endif // COLDFIRE
 

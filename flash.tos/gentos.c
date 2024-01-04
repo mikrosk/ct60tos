@@ -22,9 +22,6 @@
 
 #include "main.h"
 #include "gentos.h"
-#ifdef COLDFIRE
-#include "fire.h"
-#endif
 
 void *buffer_flash=NULL;
 char *program_name;
@@ -136,67 +133,15 @@ int main(int argc, char **argv)
 		save_tos(argv[3], buffer_flash, end_previous-FLASH_ADR); /* normal TOS saved with CT60 boot only */
 	else if(argc == 5)
 	{
-#ifdef COLDFIRE
-		if(strstr(argv[2], ".hex") == NULL)
-			gentos_error("Need .hex file for CF68KLIB", NULL);
-		printf("read srec file %s...", argv[3]);
-		if(srec_read(argv[3]))
-			gentos_error("Error with HEX CF68KLIB file.", NULL);
-		printf(" (0x%08lX-0x%08lX)\r\n", start_addr, end_addr);
-		if((start_addr < end_previous) || (start_addr >= FLASH_ADR+FLASH_SIZE-PARAM_SIZE))
-			gentos_error("Error with HEX CF68KLIB file, bad start address.", NULL);
-		if((end_addr < end_previous) || (end_addr >= FLASH_ADR+FLASH_SIZE-PARAM_SIZE))
-			gentos_error("Error with HEX CF68KLIB file, bad end address.", NULL);
-		if(end_addr <= start_addr)
-			gentos_error("Error with HEX CF68KLIB file, end address < start address.", NULL);
-		save_tos(argv[4], buffer_flash, end_addr-FLASH_ADR); /* normal CF TOS saved with boot/CF68KLIB */
-#else
 		unsigned long length;
 	  if(end_previous > (FLASH_ADR+FLASH_SIZE-PARAM_SIZE-TESTS_SIZE))
 		  gentos_error("Not enough flash space for load tests.", NULL);
 		length=load_tests(argv[3],buffer_flash+FLASH_SIZE-PARAM_SIZE-TESTS_SIZE,TESTS_SIZE);
 		save_tos(argv[4], buffer_flash, FLASH_SIZE-PARAM_SIZE-TESTS_SIZE+length); /* normal TOS saved with CT60 boot and tests */
-#endif
 	}
 	else /* argc > 5 */
 	{
-#ifdef COLDFIRE
-		int index = 3;
-		if((strstr(argv[index], ".hex") != NULL) && (strstr(argv[index], "aes") != NULL))
-		{
-			char *p =(unsigned char *)buffer_flash;
-			printf("read srec file %s...", argv[index]);
-			if(srec_read(argv[index++]))
-				gentos_error("Error with HEX AES file.", NULL);
-			if((start_addr < FLASH_ADR) || (start_addr >= (FLASH_ADR+(FLASH_SIZE/2))))
-				gentos_error("Error with HEX AES file, bad start address.", NULL);
-			if((end_addr < FLASH_ADR) || (end_addr >= (FLASH_ADR+(FLASH_SIZE/2))))
-				gentos_error("Error with HEX AES file, bad end address.", NULL);
-			if(end_addr <= start_addr)
-				gentos_error("Error with HEX AES file, end address < start address.", NULL);
-			printf(" (0x%08lX-0x%08lX)\r\n", start_addr, end_addr);
-			if((p[start_addr-FLASH_ADR] == 0) && (p[start_addr-FLASH_ADR+1] == 0))
-			{
-				p[start_addr-FLASH_ADR] = 0x4E; /* fix code alignment */
-				p[start_addr-FLASH_ADR+1] = 0x71;
-			}
-		}
-		if(strstr(argv[index], ".hex") == NULL)
-			gentos_error("Need .hex file for CF68KLIB", NULL);
-		printf("read srec file %s...", argv[index]);
-		if(srec_read(argv[index++]))
-			gentos_error("Error with HEX CF68KLIB file.", NULL);
-		printf(" (0x%08lX-0x%08lX)\r\n", start_addr, end_addr);
-		if((start_addr < end_previous) || (start_addr >= FLASH_ADR+FLASH_SIZE-PARAM_SIZE))
-			gentos_error("Error with HEX CF68KLIB file, bad start address.", NULL);
-		if((end_addr < end_previous) || (end_addr >= FLASH_ADR+FLASH_SIZE-PARAM_SIZE))
-			gentos_error("Error with HEX CF68KLIB file, bad end address.", NULL);
-		if(end_addr <= start_addr)
-			gentos_error("Error with HEX CF68KLIB file, end address < start address.", NULL);
-		end_previous = end_addr;
-#else
 		int index = 4;
-#endif
 		if(strstr(argv[index], ".hex") == NULL)
 			gentos_error("Need .hex file for drivers", NULL);
 		printf("read srec file %s...", argv[index]);

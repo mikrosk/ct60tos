@@ -30,9 +30,6 @@
         .global _blink
         .global normal_ascii    // default output type for linea.s
 
-#ifdef COLDFIRE
-	.chip 68060
-#endif
 
 /* References */
                         
@@ -176,22 +173,18 @@ _cputc:
  * printed regardless of the sign of char.
  */
 _bconout5:
-#ifndef COLDFIRE
         move.l  phystop,a0
         move.l  hardware_type(a0),d1
         and.l   #SUPERVIDEL,d1
         bne.s   bconout5_tos
-#endif /* COLDFIRE */
         moveq.l #0,d1
         move.b  7(sp),d1
         movem.l d2-d7/a2-a6,-(sp)
         bsr     ascii_out
         movem.l (sp)+,d2-d7/a2-a6
         rts
-#ifndef COLDFIRE
 bconout5_tos:
         jmp     0xE08D40        // default TOS routine for the Supervidel
-#endif
         
 cputc:          
         move.w  4(sp), d1       // Get just character from stack
@@ -213,28 +206,17 @@ gsx_conout:                     // Gsx enters here
         movea.l con_state,a0    // based on our state goto the correct
         jmp     (a0)            // stub routine
 
-#ifndef COLDFIRE        
 normal_ascii_tos:
         jmp     0xE08D62        // default TOS routine for the Supervidel
-#endif
 
 normal_ascii:
 
-#ifndef COLDFIRE
         move.l  phystop,a0
         move.l  hardware_type(a0),d0
         and.l   #SUPERVIDEL,d0
         bne.s   normal_ascii_tos
-#endif
         cmp.w   #0x20,d1        // If the character is printable ascii
         bge     ascii_out       // go print it.
-#ifdef COLDFIRE
-        cmp.w   #16,_v_planes
-        bcc.s   no_serial
-        cmp.l   #0x01000000,_v_bas_ad
-        bcs     wait_uart       // no graphic card
-no_serial:
-#endif
 
 // We handle the following control characters as special.
 // All others are thrown away.
@@ -824,15 +806,10 @@ ascii_lf:       move.w  _v_cur_cy,d0    // d0 := current cursor y.
  * _blink - cursor blink interrupt routine.
  */
 _blink:
-#ifdef COLDFIRE
-                cmp.l   #0x01000000,_v_bas_ad
-                bcs.s   bl_out          // no graphic card
-#else
                 move.l  phystop,a0
                 move.l  hardware_type(a0),d0
                 and.l   #SUPERVIDEL,d0
                 bne.s   blink_tos
-#endif /* COLDFIRE */
                 lea     _v_stat_0,a0    // (need fix?)
                 btst    #F_CVIS,(a0)    // test visibility/semaphore bit.
                 beq.s   bl_out          // if invisible or blocked, return.
@@ -845,10 +822,8 @@ _blink:
                 bchg    #F_CSTATE, (a0) // toggle cursor state.
                 bsr     comp_cr1        // complement cursor.
 bl_out:         rts
-#ifndef COLDFIRE
 blink_tos:
                 jmp     0xE090F2        // default TOS routine for the Supervidel
-#endif
 
 /*
  * alpha_cell - retrieve the address of the source cell
@@ -900,19 +875,6 @@ out_of_bounds:
  *       clobbered:      everything imaginable except
  */
 ascii_out:
-#ifdef COLDFIRE
-        cmp.w   #16,_v_planes
-        bcc.s   graphic_card
-        cmp.l   #0x01000000,_v_bas_ad
-        bcc.s   graphic_card   // graphic card
-wait_uart:
-        move.b  MCF_UART_USR0,d0
-        and.b   #MCF_UART_USR_TXRDY,d0
-        beq.s   wait_uart
-        move.b  d1,MCF_UART_UTB0 // send the character
-        rts
-graphic_card:
-#endif
         bsr     alpha_cell              // a0 -> the character source
         beq.s   char_ok
         rts
@@ -1531,9 +1493,6 @@ cell_xfer:
         subq.w  #1,d6                   // for dbra.
 
 p_lp0:
-#ifdef COLDFIRE      
-        moveq   #0,d5
-#endif
         move.w  d4,d5                   // reset block length counter
         move.l  a0,a4                   // a4 -> top of source block
         move.l  a1,a5                   // a5 -> top of current dest plane
@@ -1589,9 +1548,6 @@ blk_invrt:                              // inject the inverted source block
 p_lp0_256:
         move.l  d7,d6                   // fg color
         swap d6                         // bg color
-#ifdef COLDFIRE      
-        moveq   #0,d5
-#endif
         move.w  d4,d5                   // reset block length counter
         move.l  a0,a4                   // a4 -> top of source block
         move.l  a1,a5                   // a5 -> top of current dest plane
@@ -1606,49 +1562,26 @@ blk_xfer_byte_256:
         bcc.s   blk_xfer_bgc_256
         move.b  d7,(a1)+                // fg color
         
-#ifdef COLDFIRE
-        subq.l  #1,d1
-        bpl     blk_xfer_byte_256
-        adda.l  a3,a5
-        adda.l  a2,a4
-        
-        subq.l  #1,d5
-        bpl     blk_xfer_256
-#else
         dbra    d1,blk_xfer_byte_256
         adda.w  a3,a5
         adda.w  a2,a4
 
         dbra    d5,blk_xfer_256
-#endif
         rts
 
 blk_xfer_bgc_256:
         move.b  d6,(a1)+                // bg color
 
-#ifdef COLDFIRE
-        subq.l  #1,d1
-        bpl     blk_xfer_byte_256
-        adda.l  a3,a5
-        adda.l  a2,a4
-        
-        subq.l  #1,d5
-        bpl     blk_xfer_256
-#else
         dbra    d1,blk_xfer_byte_256
         adda.w  a3,a5
         adda.w  a2,a4
 
         dbra    d5,blk_xfer_256
-#endif
         rts
 
 p_lp0_ntc:
         move.l  d7,d6                   // fg color
         swap    d6                      // bg color
-#ifdef COLDFIRE      
-        moveq   #0,d5
-#endif
         move.w  d4,d5                   // reset block length counter
         move.l  a0,a4                   // a4 -> top of source block
         move.l  a1,a5                   // a5 -> top of current dest plane
@@ -1663,41 +1596,21 @@ blk_xfer_byte_ntc:
         bcc.s   blk_xfer_bgc_ntc
         move.w  d7,(a1)+                // fg color
         
-#ifdef COLDFIRE
-        subq.l  #1,d1
-        bpl     blk_xfer_byte_ntc
-        adda.l  a3,a5
-        adda.l  a2,a4
-        
-        subq.l  #1,d5
-        bpl     blk_xfer_ntc
-#else
         dbra    d1,blk_xfer_byte_ntc
         adda.w  a3,a5
         adda.w  a2,a4
 
         dbra    d5,blk_xfer_ntc
-#endif
         rts
 
 blk_xfer_bgc_ntc:
         move.w  d6,(a1)+                // bg color
 
-#ifdef COLDFIRE
-        subq.l  #1,d1
-        bpl     blk_xfer_byte_ntc
-        adda.l  a3,a5
-        adda.l  a2,a4
-
-        subq.l  #1,d5
-        bpl     blk_xfer_ntc
-#else
         dbra    d1,blk_xfer_byte_ntc
         adda.w  a3,a5
         adda.w  a2,a4
 
         dbra    d5,blk_xfer_ntc
-#endif
         rts
 
 p_lp0_tc:
@@ -1707,9 +1620,6 @@ p_lp0_tc:
         beq.s   not_inverted_tc
         exg     d6,d7
 not_inverted_tc:
-#ifdef COLDFIRE      
-        moveq   #0,d5
-#endif
         move.w  d4,d5                   // reset block length counter
         move.l  a0,a4                   // a4 -> top of source block
         move.l  a1,a5                   // a5 -> top of current dest plane
@@ -1724,41 +1634,21 @@ blk_xfer_byte_tc:
         bcc.s   blk_xfer_bgc_tc
         move.l  d7,(a1)+                // fg color
         
-#ifdef COLDFIRE
-        subq.l  #1,d1
-        bpl     blk_xfer_byte_tc
-        adda.l  a3,a5
-        adda.l  a2,a4
-        
-        subq.l  #1,d5
-        bpl     blk_xfer_tc
-#else
         dbra    d1,blk_xfer_byte_tc
         adda.w  a3,a5
         adda.w  a2,a4
 
         dbra    d5,blk_xfer_tc
-#endif
         rts
 
 blk_xfer_bgc_tc:
         move.l  d6,(a1)+                // bg color
 
-#ifdef COLDFIRE
-        subq.l  #1,d1
-        bpl     blk_xfer_byte_tc
-        adda.l  a3,a5
-        adda.l  a2,a4
-
-        subq.l  #1,d5
-        bpl     blk_xfer_tc
-#else
         dbra    d1,blk_xfer_byte_tc
         adda.w  a3,a5
         adda.w  a2,a4
 
         dbra    d5,blk_xfer_tc
-#endif
         rts
 
 
@@ -1842,9 +1732,6 @@ neg_cell:
         move.w  _v_cel_ht,d4
         subq.w  #1,d4                   // for dbra.
         move.w  _v_planes,d6
-#ifdef COLDFIRE
-        moveq    #0,d5
-#endif
         cmp.w   #16,d6
         beq     neg_cell_ntc            // 65K colors
         bhi     neg_cell_tc             // 16M colors
@@ -1860,16 +1747,9 @@ plane_loop:
 
 neg_loop:
         not.b   (a4)
-#ifdef COLDFIRE
-        add.l   a2,a4
-
-        subq.l  #1,d5
-        bpl.s   neg_loop
-#else
         add.w   a2,a4
 
         dbra    d5,neg_loop
-#endif
 
         addq.w  #plane_offset,a1        // a1 -> top of block in next plane
         dbra    d6,plane_loop
@@ -1885,16 +1765,9 @@ neg_cell_256:
 neg_loop_256:
         not.l   (a4)
         not.l   4(a4)
-#ifdef COLDFIRE
-        add.l   a2,a4
-
-        subq.l  #1,d5
-        bpl.s   neg_loop_256
-#else
         add.w   a2,a4
 
         dbra    d5,neg_loop_256
-#endif
 //        bclr    #6,_v_stat_0                // end of critical section.
         rts
 
@@ -1910,16 +1783,9 @@ neg_loop_ntc:
         not.l   4(a4)
         not.l   8(a4)
         not.l   12(a4)
-#ifdef COLDFIRE
-        add.l   a2,a4
-
-        subq.l  #1,d5
-        bpl.s   neg_loop_ntc
-#else
         add.w   a2,a4
 
         dbra    d5,neg_loop_ntc
-#endif
 //        bclr    #6,_v_stat_0                // end of critical section.
         rts
 
@@ -1941,16 +1807,9 @@ neg_loop_tc:
         eor.l   d0,20(a4)
         eor.l   d0,24(a4)
         eor.l   d0,28(a4)
-#ifdef COLDFIRE
-        add.l   a2,a4
-
-        subq.l  #1,d5
-        bpl.s   neg_loop_tc
-#else
         add.w   a2,a4
 
         dbra    d5,neg_loop_tc
-#endif
         move.l  (sp)+,d0
 //        bclr    #6,_v_stat_0                // end of critical section.
         rts

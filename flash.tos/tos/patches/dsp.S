@@ -18,16 +18,6 @@
 
 	.text
 	
-#ifdef COLDFIRE
-
-	.align	2
-	.long	0x5B2
-	.long	end0-begin0
-begin0:	// init DSP and sound Matrix
-	bra.s	begin0-0x5B2+0x604
-end0:	
-
-#endif
 
 
 /* XBIOS  96 */

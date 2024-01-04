@@ -33,74 +33,6 @@ typedef struct
 
 static long time_out;
 
-#ifdef COLDFIRE
-
-#ifdef MCF5445X
-
-long get_timer(void)
-{
-	return(*(volatile long *)MCF_DTIM_DTCN1);
-}
-
-void start_timeout(void)
-{
-	time_out = get_timer();
-}
-
-int end_timeout(long msec)
-{
-	msec *= 1000;
-	return(((get_timer() - time_out) < msec) ? 0 : 1);
-}
-
-void udelay(long usec)
-{
-	long dcnt1 = *((volatile long *)MCF_DTIM_DTCN1);
-	while((*((volatile long *)MCF_DTIM_DTCN1) - dcnt1) < usec);
-}
-
-void mdelay(long msec)
-{
-	long val = get_timer();
-	msec *= 1000;
-	while((get_timer() - val) < msec);
-}
-
-#else /* MCF548X */
-
-long get_timer(void)
-{
-	return(~(*(volatile long *)MCF_SLT_SCNT1));
-}
-
-void start_timeout(void)
-{
-	time_out = get_timer();
-}
-
-int end_timeout(long msec)
-{
-	msec *= (1000 * SYSTEM_CLOCK);
-	return(((get_timer() - time_out) < msec) ? 0 : 1);
-}
-
-void udelay(long usec)
-{
-	long scnt1 = *((volatile long *)MCF_SLT_SCNT1);
-	usec *= SYSTEM_CLOCK;
-	while((scnt1 - *((volatile long *)MCF_SLT_SCNT1)) < usec);
-}
-
-void mdelay(long msec)
-{
-	long val = get_timer();
-	msec *= (1000 * SYSTEM_CLOCK);
-	while((get_timer() - val) < msec);
-}
-
-#endif /* MCF5445X */
-
-#else /* ATARI */
 
 long get_timer(void) /* try to get a precise timer on F030 */
 {
@@ -152,21 +84,12 @@ void mdelay(long msec)
 	while((get_timer() - val) < msec);
 }
 
-#endif /* COLDFIRE */
 
 static long vbl_stack[512];
 static long save_stack;
 
 void install_vbl_timer(void *func, int remove)
 {
-#if ((defined(COLDFIRE) && defined(LWIP)) || defined(FREERTOS)) && defined(DRIVER_IN_ROM)
-#if (defined(CONFIG_USB_UHCI) || defined(CONFIG_USB_OHCI) || defined(CONFIG_USB_EHCI))
-	extern void *usb_malloc(long amount);
-	extern int usb_free(void *addr);
-#endif
-	extern void flush_dc(void);
-	extern unsigned long pxCurrentTCB, tid_TOS;
-#endif /* ((defined(COLDFIRE) && defined(LWIP)) || defined(FREERTOS)) && defined(DRIVER_IN_ROM) */
 	XBRA *xbra;
 	int i = (int)*nvbls;
 	void (**func_vbl)(void);
@@ -181,22 +104,12 @@ void install_vbl_timer(void *func, int remove)
 			if((xbra->xbra == 'XBRA') && (xbra->ident == '_PCI')
 			 && (xbra->caller[0] == 0x23CF) && (*(long *)&xbra->caller[7] == (long)func))
 			{
-#if ((defined(COLDFIRE) && defined(LWIP)) || defined(FREERTOS)) && defined(DRIVER_IN_ROM) && (defined(CONFIG_USB_UHCI) || defined(CONFIG_USB_OHCI) || defined(CONFIG_USB_EHCI))
-			if(pxCurrentTCB != tid_TOS)
-				usb_free(xbra);
-			else
-#endif
 				Funcs_free(xbra);
 			*func_vbl = NULL;		/* remove old vector */
 			}
 		}
 		if(*func_vbl == NULL)
 		{
-#if ((defined(COLDFIRE) && defined(LWIP)) || defined(FREERTOS)) && defined(DRIVER_IN_ROM) && (defined(CONFIG_USB_UHCI) || defined(CONFIG_USB_OHCI) || defined(CONFIG_USB_EHCI))
-			if(pxCurrentTCB != tid_TOS)
-				xbra = (XBRA *)usb_malloc(sizeof(XBRA));
-			else
-#endif
 				xbra = (XBRA *)Funcs_malloc(sizeof(XBRA),3);
 			if(xbra != NULL)
 			{
@@ -211,20 +124,7 @@ void install_vbl_timer(void *func, int remove)
 				xbra->caller[9] = 0x2E79; /* move.l xxxx,SP */
 				*(long *)&xbra->caller[10] = (long)&save_stack;
 				xbra->caller[12] = 0x4E75; /* rts */
-#ifdef COLDFIRE
-#if defined(LWIP) && defined(DRIVER_IN_ROM)
-				if(pxCurrentTCB != tid_TOS)
-					flush_dc();
-				else
-#endif
-#if (__GNUC__ > 3)
-					asm volatile (" .chip 68060\n\t cpusha BC\n\t .chip 5485\n\t"); /* from CF68KLIB */
-#else
-					asm volatile (" .chip 68060\n\t cpusha BC\n\t .chip 5200\n\t"); /* from CF68KLIB */
-#endif
-#else /* 68060 */
 				asm volatile (" cpusha BC\n\t");
-#endif /* COLDFIRE */
 				*func_vbl = (void(*)())&xbra->caller[0];
 				xbra->old_address = 0;
 			}

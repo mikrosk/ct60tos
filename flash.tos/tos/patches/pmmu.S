@@ -18,17 +18,6 @@
  
 	.text            
 
-#ifdef COLDFIRE
-
-	.align	2
-	.long	0x2BC
-	.long	end1-begin1
-begin1:
-	nop
-	nop
-end1:
-
-#else
 
 	.align	2
 	.long	0x14E6
@@ -54,7 +43,6 @@ begin1:
 	nop	
 end1:
 
-#endif
 
 	.align	2
 	.long	0x39A0

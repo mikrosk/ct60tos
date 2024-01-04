@@ -158,10 +158,8 @@
 #define save_source         (RESERVE_MEM_FONTS-40)
 #define save_target         (RESERVE_MEM_FONTS-36)
 #define save_contrl         (RESERVE_MEM_FONTS-32)
-#ifndef COLDFIRE /* for reduce boot size, blitter not exist */
 #define adr_source          (RESERVE_MEM_FONTS-28)
 #define adr_target          (RESERVE_MEM_FONTS-24)
 #define adr_fonts           (RESERVE_MEM_FONTS-20)   /* 5 longs */
-#endif
 
 #endif

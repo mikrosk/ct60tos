@@ -26,24 +26,11 @@
 #include "radeon/radeonfb.h"
 #include "lynx/smi.h"
 #include "ct60.h"
-#ifdef COLDFIRE
-#ifndef MCF5445X
-#include "ac97/mcf548x_ac97.h"
-#endif
-#endif
 
 extern void init_var_linea(long video_found);
 extern long call_enumfunc(long (*enumfunc)(SCREENINFO *inf, long flag), SCREENINFO *inf, long flag);
-#ifdef COLDFIRE
-extern long init_videl(long width, long height, long bpp, long freq, long extended);
-extern void setrgb_videl(long index, long rgb, long type);
-#endif
-#if defined(COLDFIRE) && defined(LWIP)
-extern void board_printf(const char *fmt, ...);
-#else
 #define board_printf kprint
 extern void kprint(const char *fmt, ...);
-#endif
 
 unsigned long physbase(void);
 long vgetsize(long modecode);
@@ -51,9 +38,6 @@ long validmode(long modecode);
 
 extern void ltoa(char *buf, long n, unsigned long base);                                    
 extern void cursor_home(void);
-#ifdef COLDFIRE
-extern void videl_blank(long blank);
-#endif
    
 #define XBIOS_SCREEN_VERSION 0x0101
 
@@ -675,18 +659,6 @@ const struct fb_videomode *get_db_from_modecode(long modecode)
 		devID -= VESA_MODEDB_SIZE;
 		if(devID < total_modedb)
 			db = &modedb[devID];
-#if defined(COLDFIRE) && defined(MCF547X) /* FIREBEE */
-		else if(!video_found) /* Videl */
-		{
-			extern struct fb_videomode *videl_modedb;
-			extern unsigned long videl_modedb_len;
-			devID -= total_modedb;
-			if(devID < videl_modedb_len)
-				db = &videl_modedb[devID];
-			else
-				return(NULL);
-		}
-#endif /* defined(COLDFIRE) && defined(MCF547X) */
 		else if(video_found == 1) /* Radeon */
 		{
 			struct radeonfb_info *rinfo = info_fvdi->par;
@@ -715,11 +687,9 @@ long get_modecode_from_screeninfo(struct fb_var_screeninfo *var)
 {
 	const struct fb_videomode *db = NULL;
 	long modecode, i, nb = 0;
-#ifndef COLDFIRE
 	if(info_fvdi->screen_mono)
 		modecode = BPS1; /* VBL mono emulation */
 	else
-#endif
 	{
 		switch(var->bits_per_pixel)
 		{
@@ -728,16 +698,6 @@ long get_modecode_from_screeninfo(struct fb_var_screeninfo *var)
 			default: modecode = BPS8; break;
 		}
 	}
-#if defined(COLDFIRE) && defined(MCF547X) /* FIREBEE */
-	if(!video_found) /* Videl */
-	{
-		extern struct fb_videomode *videl_modedb;
-		extern unsigned long videl_modedb_len;
-		if((nb = videl_modedb_len) != 0)
-			db = videl_modedb;
-	}
-	else
-#endif /* defined(COLDFIRE) && defined(MCF547X) */
 	if(video_found == 1) /* Radeon */
 	{
 		struct radeonfb_info *rinfo = info_fvdi->par;
@@ -785,14 +745,12 @@ void init_screen_info(SCREENINFO *si, long modecode)
 		return;
 	switch(modecode & NUMCOLS)
 	{
-#ifndef COLDFIRE
 		case BPS1: /* VBL mono emulation */
 			si->scrPlanes = 1;
 			si->scrColors = 2;
 			si->redBits = si->greenBits = si->blueBits = 255;
 			si->unusedBits = 0;
 			break;
-#endif
 		case BPS8:
 			si->scrPlanes = 8;
 			si->scrColors = 256;
@@ -826,10 +784,6 @@ void init_screen_info(SCREENINFO *si, long modecode)
 		{
 			case (VERTFLAG+VGA):                      /* 320 * 240 */
 			case 0:
-#if defined(COLDFIRE) && defined(MCF547X) /* FIREBEE */
-				if(!video_found)
-					break;
-#endif 
 				si->scrWidth = 320;
 				si->scrHeight = 240;
 				break;
@@ -882,13 +836,6 @@ void init_screen_info(SCREENINFO *si, long modecode)
 			si->scrFlags = 0;
 			return;
 		}
-#if defined(COLDFIRE) && defined(MCF547X) /* FIREBEE */
-		if(!video_found && (db->vmode & (FB_VMODE_DOUBLE | FB_VMODE_INTERLACED)))
-		{
-			si->scrFlags = 0;
-			return;
-		}
-#endif
 		si->scrWidth = (long)db->xres;
 		si->scrHeight = (long)db->yres;
 		si->refresh = (long)db->refresh;
@@ -1075,21 +1022,6 @@ void init_resolution(long modecode)
 			devID -= VESA_MODEDB_SIZE;
 			if(devID < total_modedb)
 				db = &modedb[devID];
-#if defined(COLDFIRE) && defined(MCF547X) /* FIREBEE */
-			else if(!video_found) /* Videl */
-			{
-				extern struct fb_videomode *videl_modedb;
-				extern unsigned long videl_modedb_len;
-				devID -= total_modedb;
-				if(devID < videl_modedb_len)
-					db = &videl_modedb[devID];
-				else
-				{
-					init_resolution(Mode);
-					return;
-				}
-			}
-#endif /* defined(COLDFIRE) && defined(MCF547X) */
 			else if(video_found == 1) /* Radeon */
 			{
 				struct radeonfb_info *rinfo = info_fvdi->par;
@@ -1144,19 +1076,6 @@ void vsetrgb(long index, long count, long *array)
 			blue = *array & 0xFF;
 			info->fbops->fb_setcolreg((unsigned)i, red << 8, green << 8, blue << 8, 0, info);
 		}
-#ifdef COLDFIRE
-		else if(!video_found)
-		{
-			long type = 1; /* FALCON */
-			bios_colors[i] = *array;
-			if((Modecode & STMODES) && (((Modecode & NUMCOLS) == BPS2) || ((Modecode & NUMCOLS) == BPS4)))
-				type = 0; /* ST */
-			else if((unsigned long)info->screen_base >= 0x1000000)
-				type = 2; /* FIREBEE */
-			if((Modecode & NUMCOLS) <= BPS8)
-				setrgb_videl(i, *array, type);
-		}
-#endif
 		else
 			bios_colors[i] = *array;
 	}
@@ -1191,16 +1110,6 @@ unsigned long physbase(void)
 		else
 			physaddr = (unsigned long)info->screen_base + smiinfo->fb_offset;
 	}
-#if defined(COLDFIRE) && defined(MCF547X)
-	else if(!video_found && ((unsigned long)info->screen_base < 0x1000000)) /* Videl */
-	{
-		physaddr = (unsigned long)(*(unsigned char *)0xFFFF8201); /* video screen memory position, high byte */
-		physaddr <<= 8;
-		physaddr |= (unsigned long)(*(unsigned char *)0xFFFF8203); /* mid byte */
-		physaddr <<= 8;
-		physaddr |= (unsigned long)(*(unsigned char *)0xFFFF820D); /* low byte */
-	}
-#endif
 	else
 		physaddr = (unsigned long)info->screen_base;
 //	board_printf("physbase => %08X\r\n", physaddr);
@@ -1289,7 +1198,6 @@ long vsetscreen(long logaddr, long physaddr, long rez, long modecode, long init_
 #endif
 					switch(modecode & NUMCOLS)
 					{
-#ifndef COLDFIRE
 						case BPS1:
 							if(os_magic == 1)
 								return(0);
@@ -1297,7 +1205,6 @@ long vsetscreen(long logaddr, long physaddr, long rez, long modecode, long init_
 							if((resolution.width > MAX_WIDTH_EMU_MONO) || (resolution.height > MAX_HEIGHT_EMU_MONO))
 								return(0);
 							break;
-#endif
 						case BPS8:
 						case BPS16:
 						case BPS32:
@@ -1501,7 +1408,6 @@ long vsetscreen(long logaddr, long physaddr, long rez, long modecode, long init_
 					test = 1;
 					switch(modecode & NUMCOLS)
 					{
-#ifndef COLDFIRE
 						case BPS1:
 							if(os_magic == 1)
 								return(0);
@@ -1509,7 +1415,6 @@ long vsetscreen(long logaddr, long physaddr, long rez, long modecode, long init_
 							if((resolution.width > MAX_WIDTH_EMU_MONO) || (resolution.height > MAX_HEIGHT_EMU_MONO))
 								return(0);
 							break;
-#endif
 						case BPS8:
 						case BPS16:
 						case BPS32:
@@ -1645,10 +1550,6 @@ long vsetscreen(long logaddr, long physaddr, long rez, long modecode, long init_
 					{
 						if(video_found)
 							info_fvdi->fbops->fb_blank(physaddr, info_fvdi);
-#ifdef COLDFIRE
-						else
-							videl_blank(physaddr);
-#endif
 					}
 					return(0);
 				case -1:
@@ -1684,7 +1585,6 @@ long vsetscreen(long logaddr, long physaddr, long rez, long modecode, long init_
 			}
 			return(Mode);
 #endif
-#ifndef COLDFIRE
 		case 2: /* ST-HIG */
 			if(os_magic == 1)
 				return(Mode);
@@ -1700,7 +1600,6 @@ long vsetscreen(long logaddr, long physaddr, long rez, long modecode, long init_
 			modecode = STMODES|PAL|VGA|COL80|BPS1;
 			Mode = update_modecode(modecode);
 			break;
-#endif
 		case 3:
 #ifdef USE_RADEON_MEMORY
 			if(lock_video)
@@ -1715,13 +1614,11 @@ long vsetscreen(long logaddr, long physaddr, long rez, long modecode, long init_
 #endif
 			switch(modecode & NUMCOLS)
 			{
-#ifndef COLDFIRE
 				case BPS1:
 					init_resolution(modecode);
 					if((resolution.width > MAX_WIDTH_EMU_MONO) || (resolution.height > MAX_HEIGHT_EMU_MONO))
 						return(Mode);
 					break;
-#endif
 				case BPS8:
 				case BPS16:
 				case BPS32:
@@ -1754,74 +1651,6 @@ long vsetscreen(long logaddr, long physaddr, long rez, long modecode, long init_
 	if(((!logaddr && !physaddr) || ((logaddr == -1) && (physaddr == -1))) && (rez >= 0))
 	{
 		resolution.used = 1;
-#if defined(DEBUG) && defined(COLDFIRE) && defined(LWIP)
-		if(init_vdi)
-			board_printf("Setscreen mode 0x%04X %dx%d-%d@%d\r\n", Mode, resolution.width, resolution.height, resolution.bpp, resolution.freq);
-#endif
-#ifdef COLDFIRE
-		if(!video_found)
-		{
-			long addr = init_videl((long)resolution.width, (long)resolution.height, (long)resolution.bpp, (long)resolution.freq, 1);
-     	if(addr)
-     	{
-				*((char **)_v_bas_ad) = info->screen_base = (char *)addr;
-				info->var.xres = info->var.xres_virtual = (int)resolution.width;
-				info->var.yres = info->var.yres_virtual = (int)resolution.height;
-				info->var.bits_per_pixel = (int)resolution.bpp;
-				if(info->var.bits_per_pixel == 8)
-					vsetrgb(0, 256, (long *)0xE1106A); /* default TOS 4.04 palette */
-				if(init_vdi)
-				{
-					init_var_linea((long)video_found);
-					init_screen();
-				}
-				else if(test)
-				{
-					int color = 0;
-					for(y = 0; y < info->var.yres_virtual; y += 16)
-					{
-						long size = ((info->var.bits_per_pixel * info->var.xres_virtual) >> 3) << 4;
-						memset((void *)addr, color, size); 
-						addr += size;
-						switch(info->var.bits_per_pixel)
-						{
-							case 16: 
-							case 32: color += 0x11; break;
-							default: color = (y >> 4) & 15; break;
-						}
-					}
-				}
-			}
-			else if(!test) /* error */
-			{
-				long addr;
-#if defined(DEBUG) && defined(COLDFIRE) && defined(LWIP)
-				board_printf("Setscreen init_videl error mode 0x%04X %dx%d-%d@%d, try to use default 640x480\r\n", Mode, resolution.width, resolution.height, resolution.bpp, resolution.freq);
-#endif
-				resolution.width = 640;
-				resolution.height = 480;
-				resolution.bpp = 16;
-				resolution.freq = 60;
-				Mode = PAL | VGA | COL80 | BPS16;
-				addr = init_videl((long)resolution.width, (long)resolution.height, (long)resolution.bpp, (long)resolution.freq, 0);
-	     	if(addr)
-	     	{
-					*((char **)_v_bas_ad) = info->screen_base = (char *)addr;
-					info->var.xres = info->var.xres_virtual = (int)resolution.width;
-					info->var.yres = info->var.yres_virtual = (int)resolution.height;
-					info->var.bits_per_pixel = (int)resolution.bpp;
-					if(info->var.bits_per_pixel == 8)
-						vsetrgb(0, 256, (long *)0xE1106A); /* default TOS 4.04 palette */
-					if(init_vdi)
-					{
-						init_var_linea((long)video_found);
-						init_screen();
-					}
-				}
-			}
-			return(Mode);
-		}
-#endif /* COLDFIRE */
 		if(test)
 			debug = 0;
 		if(!test && drive_ok && video_log)
@@ -1899,7 +1728,6 @@ long vsetscreen(long logaddr, long physaddr, long rez, long modecode, long init_
 			}
 			if(resolution.flags & MODE_EMUL_MONO_FLAG)
 			{
-#ifndef COLDFIRE /* normal to VBL nono emulation => update fVDI accel functions */
 				extern Driver *me;
 				extern void *default_text;
 //				extern void *default_line, *default_fill;
@@ -1912,7 +1740,6 @@ long vsetscreen(long logaddr, long physaddr, long rez, long modecode, long init_
 				wk->r.fill = &fill;
 				wk->r.fillpoly = NULL; 
 				wk->r.text = &default_text;				
-#endif
 				info->screen_mono = (char *)Srealloc((info->var.xres_virtual * info->var.yres_virtual) >> 3);
 				if(info->screen_mono != NULL)
 					memset(info->screen_mono, 0, (info->var.xres_virtual * info->var.yres_virtual) >> 3);
@@ -2127,33 +1954,6 @@ long find_best_mode(long modecode)
 	long i = 0, index = -1;
 	switch(video_found)
 	{
-#if defined(COLDFIRE) && defined(MCF547X) /* FIREBEE */
-		case 0: /* Videl */
-			{
-				extern struct fb_videomode *videl_modedb;
-				extern unsigned long videl_modedb_len;
-				const struct fb_videomode *db;
-				while(i < videl_modedb_len)
-				{
-					db = &videl_modedb[i];
-					if(db->flag & FB_MODE_IS_FIRST)
-					{
-						modecode = SET_DEVID(i + VESA_MODEDB_SIZE + total_modedb);
-						return(modecode);
-					}
-					i++;
-				}
-				i = 0;
-				while(i < videl_modedb_len)
-				{
-					db = &videl_modedb[i];
-					if(db->flag & FB_MODE_IS_STANDARD)
-						index = i;
-					i++;
-				}
-			}
-			break;
-#endif /* defined(COLDFIRE) && defined(MCF547X) */
 		case 1: /* Radeon */
 			{
 				struct radeonfb_info *rinfo = info_fvdi->par;
@@ -2218,11 +2018,9 @@ long validmode(long modecode)
 //	board_printf("validmode modecode %04X fix %d\r\n", modecode, fix_modecode);
 	if((unsigned short)modecode != 0xFFFF)
 	{
-#ifndef COLDFIRE
 		if((os_magic != 1) && ((modecode & NUMCOLS) == BPS1)) /* VBL mono emulation */
 			modecode &= ~VIRTUAL_SCREEN; /* limit size */
 		else
-#endif
 		if(((modecode & NUMCOLS) < BPS8) || ((modecode & NUMCOLS) > BPS32))
 		{
 			modecode &= ~NUMCOLS;
@@ -2251,18 +2049,6 @@ long validmode(long modecode)
 			 	modecode &= NUMCOLS;
 			 	modecode |= (Mode & ~NUMCOLS);
 			}
-#if defined(COLDFIRE) && defined(MCF547X) /* FIREBEE */
-			if(!video_found) /* Videl */
-			{
-				extern unsigned long videl_modedb_len;
-				if(GET_DEVID(modecode) >= (VESA_MODEDB_SIZE + total_modedb + videl_modedb_len))
-				{
-					modecode &= NUMCOLS;
-					modecode |= (PAL|VGA|COL80);
-				}
-			}
-			else
-#endif /* defined(COLDFIRE) && defined(MCF547X) */
 			if(video_found == 1) /* Radeon */
 			{
 				struct radeonfb_info *rinfo = info_fvdi->par;
@@ -2349,1008 +2135,4 @@ long InitVideo(void) /* test for Video input */
 	return(0);
 }
 
-#ifdef COLDFIRE
-#ifndef MCF5445X
-
-#ifdef SOUND_AC97
-
-#undef DEBUG
-
-#ifdef MCF547X
-#define AC97_DEVICE 2 /* FIREBEE */
-#else /* MCF548X */
-#define AC97_DEVICE 3 /* M5484LITE */
-#endif /* MCF547X */
-#define SETSMPFREQ 7
-#define SETFMT8BITS 8
-#define SETFMT16BITS 9
-#define SETFMT24BITS 10
-#define SETFMT32BITS 11
-#define LTGAINMASTER 12
-#define RTGAINMASTER 13
-#define LTGAINMIC 14
-#define RTGAINMIC 15
-#define LTGAINFM 16
-#define RTGAINFM 17
-#define LTGAINLINE 18
-#define RTGAINLINE 19
-#define LTGAINCD 20
-#define RTGAINCD 21
-#define LTGAINVIDEO 22
-#define RTGAINVIDEO 23
-#define LTGAINAUX 24
-#define RTGAINAUX 25
-
-#define SI_CALLBACK 2
-
-struct McSnCookie
-{
-	short vers; // version in BCD
-	short size; // size the structure
-	short play;
-	short record;
-	short dsp;  // Is the DSP there?
-	short pint; // Playing: Interrupt possible with frame-end?
- 	short rint; // Recording: Interrupt possible with frame-end?
-	long res1;
-	long res2;
-	long res3;
-	long res4;
-};
-
-long flag_snd_init, flag_gsxb, count_timer_a, preload_timer_a, timer_a_enabled, io7_enabled; 
-static long flag_snd_lock, status_dma, mode_res;
-static long volume_play, volume_record, volume_master, volume_mic, volume_fm, volume_line, volume_cd, volume_video, volume_aux;
-static long adder_inputs, record_source;
-static long nb_tracks_play, nb_tracks_record, mon_track;
-static long flag_clock_44_48, prescale_ste, frequency, cause_inter;
-static long play_addr, record_addr, end_play_addr, end_record_addr;
-static void (*callback_play)(), (*callback_record)();
-extern void display_string(char *string);
-extern void ltoa(char *buf, long n, unsigned long base);
-
-static unsigned short tab_freq_falcon[] = {
-	// internal
-	49170, 33800, 24585, 20770, 16940, 16940, 12292, 12292, 9834, 9834, 8195, // 25.175 MHz
-	// external
-	44100, 29400, 22050, 17640, 14700, 14700, 11025, 11025, 8820, 8820, 7350, // 22.5792 MHz
-	48000, 32000, 24000, 19200, 16000, 16000, 12000, 12000, 9600, 9600, 8000 }; // 24.576 MHz
-// static unsigned short tab_freq_ste[] = { 6258, 12517, 25033, 50066 };
-static unsigned short tab_freq_ste[] = { 6146, 12292, 24585, 49170 };
-struct McSnCookie cookie_mac_sound = { 0x0100, 30, 2, 2, 0, 1, 1, 0, 0, 0, 0 }; 
-
-void call_timer_a(void)
-{
-	void *vect_timer_a = *(void **)0x134;
-	if((vect_timer_a == NULL) || (!timer_a_enabled))
-		return;
-	count_timer_a--;
-	if(count_timer_a > 0)
-		return;
-	count_timer_a = preload_timer_a;
-	asm volatile (
-		" clr.w -(SP)\n\t"         /* 68K format */
-		" pea.l .next_timer_a(PC)\n\t" /* return address */
-		" clr.w -(SP)\n\t"         /* space for SR */
-		" move.l D0,-(SP)\n\t"
-		" move.w SR,D0\n\t"
-		" move.w D0,4(SP)\n\t"
-		" move.l (SP)+,D0\n\t"
-		" move.l 0x134,-(SP)\n\t"  /* timer A vector */
-		"	rts\n\t"
-		".next_timer_a:" );
-}
-
-void call_io7_mfp(void)
-{
-	void *vect_io7 = *(void **)0x13C;
-	if((vect_io7 == NULL) || (!io7_enabled))
-		return;
-	asm volatile (
-		" clr.w -(SP)\n\t"         /* 68K format */
-		"	pea.l .next_io7(PC)\n\t" /* return address */
-		" clr.w -(SP)\n\t"		     /* space for SR */
-		" move.l D0,-(SP)\n\t"
-		" move.w SR,D0\n\t"
-		" move.w D0,4(SP)\n\t"
-		" move.l (SP)+,D0\n\t"
-		" move.l 0x13C,-(SP)\n\t"
-		"	rts\n\t"
-		".next_io7:" );            /* IO7 MFP vector */
-}
-
-void stop_dma_play(void)
-{
-	if(status_dma & SB_PLA_ENA)
-	{
-		mcf548x_ac97_playback_trigger(AC97_DEVICE, 0);
-		mcf548x_ac97_playback_close(AC97_DEVICE);
-		status_dma &= ~SB_PLA_ENA;
-	}
-}
-
-void stop_dma_record(void)
-{
-	if(status_dma & SB_REC_ENA)
-	{
-		mcf548x_ac97_capture_trigger(AC97_DEVICE, 0);
-		mcf548x_ac97_capture_close(AC97_DEVICE);
-		status_dma &= ~SB_REC_ENA;
-	}
-}
-
-long locksnd(void)
-{
-#ifdef DEBUG
-	display_string("locksnd\r\n");
-#endif
-	if(flag_snd_lock)
-		return(-128);
-	flag_snd_lock = 1;
-	flag_clock_44_48 = 0; /* seems better for SDL who use devconnect(DMAPLAY,DAC,CLKEXT,prediv,1) */
-#ifdef DEBUG
-	display_string("locksnd ok\r\n");
-#endif
-	return(1);
-}
-
-long unlocksnd(void)
-{
-#ifdef DEBUG
-	display_string("unlocksnd\r\n");
-#endif
-	if(!flag_snd_lock)
-		return(-127);
-	flag_snd_lock = 0;
-#ifdef DEBUG
-	display_string("unlocksnd ok\r\n");
-#endif
-	return(0);
-}
-
-static long get_left_volume(long volume)
-{
-	if(flag_gsxb)
-		return(255 - (volume & 0xff));
-	else			
-		return(volume & 0xff);
-}
-
-static void set_left_volume(unsigned long data, long *volume)
-{
-	*volume &= 0xff00;
-	if(flag_gsxb)
-		*volume |= ((255 - data) & 0xff);
-	else
-		*volume |= (data & 0xff);
-}
-
-static long get_right_volume(long volume)
-{
-	if(flag_gsxb)
-		return(255 - ((volume >> 8) & 0xff));				
-	else
-		return((volume >> 8) & 0xff);
-}
-
-static void set_right_volume(unsigned long data, long *volume)
-{                
-	*volume &= 0xff;
-	data &= 0xff;
-	if(flag_gsxb)
-		*volume |= ((255 - data) << 8);
-	else
-		*volume |= (data << 8);
-}
-
-long soundcmd(long mode, unsigned long data)
-{
-	int val1, val2;
-	long temp;
-#ifdef DEBUG
-	if(data < 0x8000)
-	{
-		char buf[10];
-		display_string("soundcmd, mode: ");
-		ltoa(buf, mode, 10);
-		display_string(buf);
-		display_string(", data: ");
-		ltoa(buf, data, 10);
-		display_string(buf);
-		display_string("\r\n");
-	}
-#endif
-	switch(mode)
-	{
-		case LTATTEN:
-		case RTATTEN:
-			if(mode == LTATTEN)
-			{
-				if(data >= 0x8000)
-					return(255 - (volume_play & 0xff));
-				volume_play &= 0xff00;
-				volume_play |= ((255 - data) & 0xff);
-			}
-			else /* RTATTEN */
-			{
-				if(data >= 0x8000)
-					return(255 - ((volume_play >> 8) & 0xff));
-				volume_play &= 0xff;
-				data &= 0xff;
-				volume_play |= ((255 - data) << 8);			
-			}			
-			mcf548x_ac97_ioctl(AC97_DEVICE, SOUND_MIXER_WRITE_PCM, (void *)&volume_play);
-			return(data);
-		case LTGAIN:
-		case RTGAIN:
-			if(mode == LTGAIN)
-			{
-				if(data >= 0x8000)
-					return(volume_record & 0xff);
-				volume_record &= 0xff00;
-				volume_record |= (data & 0xff);
-			}
-			else /* RTGAIN */
-			{
-				if(data >= 0x8000)
-					return((volume_record >> 8) & 0xff);
-				volume_record &= 0xff;
-				volume_record |= ((data & 0xff) << 8);			
-			}
-			mcf548x_ac97_ioctl(AC97_DEVICE, SOUND_MIXER_WRITE_RECLEV, (void *)&volume_record);
-			return(data);
-		case ADDERIN: /* Select inputs to adder 0=off, 1=on */
-			if(data >= 0x8000)
-				return(adder_inputs);
-			if(data & ADCIN) /* Input from ADC */
-				val1 = 0x1ff0000;
-			else
-				val1 = 0x1000000;
-			mcf548x_ac97_ioctl(AC97_DEVICE, SOUND_MIXER_WRITE_MIC, (void *)&val1);
-			if(data & MATIN) /* Input from connection matrix */
-				val1 = 0x1ff0000;
-			else
-				val1 = 0x1000000;
-			mcf548x_ac97_ioctl(AC97_DEVICE, SOUND_MIXER_WRITE_VOLUME, (void *)&val1); // Master
-			if(data & 0x4000) /* Bit 14 */
-			{
-				/* extended values valid by bit 5 of cookie '_SND'
-				   Bit 2: Mic
-				   Bit 3: FM-Generator, PC Beep on AC97
-				   Bit 4: Line
-				   Bit 5: CD
-					 Bit 6: Video
-				   Bit 7: Aux1
-				   bit 8: PCM
-				*/
-				adder_inputs = data & 0x1ff;
-				if(data & 4) /* Mic */
-					val1 = 0x1ff0000;
-				else
-					val1 = 0x1000000;
-				mcf548x_ac97_ioctl(AC97_DEVICE, SOUND_MIXER_WRITE_MIC, (void *)&val1); // Mic
-				if(data & 8) /* FM-Generator, PC Beep on AC97 */
-					val1 = 0x1ff0000;
-				else
-					val1 = 0x1000000;
-				mcf548x_ac97_ioctl(AC97_DEVICE, SOUND_MIXER_WRITE_SYNTH, (void *)&val1);  // FM enable
-				mcf548x_ac97_ioctl(AC97_DEVICE, SOUND_MIXER_WRITE_ENHANCE, (void *)&val1); // 3D enable
-				if(data & 0x10) /* Line */
-					val1 = 0x1ff0000;
-				else
-					val1 = 0x1000000;
-				mcf548x_ac97_ioctl(AC97_DEVICE, SOUND_MIXER_WRITE_LINE, (void *)&val1);
-				if(data & 0x20) /* CD */
-					val1 = 0x1ff0000;
-				else
-					val1 = 0x1000000;
-				mcf548x_ac97_ioctl(AC97_DEVICE, SOUND_MIXER_WRITE_CD, (void *)&val1);
-				if(data & 0x40) /* Video */
-					val1 = 0x1ff0000;
-				else
-					val1 = 0x1000000;
-				mcf548x_ac97_ioctl(AC97_DEVICE, SOUND_MIXER_WRITE_LINE2, (void *)&val1); // Video
-				if(data & 0x80) /* Aux */
-					val1 = 0x1ff0000;
-				else
-					val1 = 0x1000000;
-				mcf548x_ac97_ioctl(AC97_DEVICE, SOUND_MIXER_WRITE_LINE1, (void *)&val1); // Aux1
-				if(data & 0x100) /* PCM */
-					val1 = 0x1ff0000;
-				else
-					val1 = 0x1000000;
-				mcf548x_ac97_ioctl(AC97_DEVICE, SOUND_MIXER_WRITE_PCM, (void *)&val1);
-			}
-			else
-				adder_inputs = (data & 3) + (adder_inputs & ~3);
-			return(adder_inputs);
-			break;
-		case ADCINPUT: /* Select input to ADC, 0=mic, 1=PSG */
-			if(data >= 0x8000)
-				return(record_source);			
-			record_source = data & (ADCRT | ADCLT | 0x3ffc);
-			if(!(data & 0x4000))
-			{
-				if(data & ADCRT) /* Right channel input */
-					val2 = RECORD_SOURCE_AUX; /* (Firebee PSG) */
-				else
-					val2 = RECORD_SOURCE_LINE;
-				if(data & ADCLT) /* Left channel input */
-					val1 = RECORD_SOURCE_AUX; /* (Firebee PSG) */
-				else
-					val1 = RECORD_SOURCE_LINE;			
-			}
-			else  /* Bit 14 */
-			{
-				/* extended values valid by bit 5 of cookie '_SND'
-					 Bit 0: right microphone
-					 Bit 1: left microphone 
-				   Bit 2: right FM-Generator, not used on AC97
-				   Bit 3: left FM-Generator, not used on AC97
-				   Bit 4: right Line input
-				   Bit 5: left Line input
-				   Bit 6: right CD
-				   Bit 7: left CD                   
-				   Bit 8: right Video
-				   Bit 9: left Video
-				   Bit 10: right Aux
-				   Bit 11: left Aux
-				   Bit 12: right Mix out
-				   Bit 13: left Mix out
-				*/
-				if(!(data & 1)) /* Microphone right input */
-					val2 = RECORD_SOURCE_MIC; 
-				if(!(data & 2)) /* Microphone left input */
-					val1 = RECORD_SOURCE_MIC; 
-				if(!(data & 0x10)) /* Line right input */
-					val2 = RECORD_SOURCE_LINE; 
-				if(!(data & 0x20)) /* Line left input */
-					val1 = RECORD_SOURCE_LINE; 
-				if(!(data & 0x40)) /* CD right input */
-					val2 = RECORD_SOURCE_CD;
-				if(!(data & 0x80)) /* CD left input*/
-					val1 = RECORD_SOURCE_CD;
-				if(!(data & 0x100)) /* Video right */
-					val2 = RECORD_SOURCE_VIDEO;
-				if(!(data & 0x200)) /* Video left */
-					val1 = RECORD_SOURCE_VIDEO;
-				if(!(data & 0x400)) /* Aux right (Firebee PSG)  */
-					val2 = RECORD_SOURCE_AUX;
-				if(!(data & 0x800)) /* Aux left (Firebee PSG) */
-					val1 = RECORD_SOURCE_AUX;
-				if(!(data & 0x1000)) /* Mix right out */
-					val2 = RECORD_SOURCE_STEREO_MIX;
-				if(!(data & 0x2000)) /* Mix left out */
-					val1 = RECORD_SOURCE_STEREO_MIX;
-			}
-			switch(val1) // left
-			{
-				case RECORD_SOURCE_MIC: record_source &= ~ADCLT; break;
-				case RECORD_SOURCE_CD: record_source &= ~0x80; break;
-				case RECORD_SOURCE_VIDEO: record_source &= ~0x200; break;
-				case RECORD_SOURCE_AUX: record_source &= ~0x800; break;
-				case RECORD_SOURCE_LINE: record_source &= ~0x20; break;
-				case RECORD_SOURCE_STEREO_MIX: record_source &= ~0x2000; break;
-			}
-			switch(val2) // right
-			{
-				case RECORD_SOURCE_MIC: record_source &= ~ADCRT; break;
-				case RECORD_SOURCE_CD: record_source &= ~0x40; break;
-				case RECORD_SOURCE_VIDEO: record_source &= ~0x100; break;
-				case RECORD_SOURCE_AUX: record_source &= ~0x400; break;
-				case RECORD_SOURCE_LINE: record_source &= ~0x10; break;
-				case RECORD_SOURCE_STEREO_MIX: record_source &= ~0x1000; break;
-			}
-			val2 <<= 8;
-			val2 |= val1;
-			mcf548x_ac97_ioctl(AC97_DEVICE, SOUND_MIXER_WRITE_RECSRC, (void *)&val2);
-			return(record_source);
-		case SETPRESCALE:
-			if(data >= 0x8000)
-				return prescale_ste;
-			switch(data)
-			{
-				case PREMUTE:
-				case PRE640:
-				case PRE320:
-				case PRE160:
-					prescale_ste = data;
-					break;
-			}
-			return(prescale_ste);
-		case SETSMPFREQ: /* valid by bit 5 of cookie '_SND' */
-			if(data != 0xFFFF)
-			{
-				int i = 0, index = 0;
-				long d, mini = 999999;
-				data &= 0xffff;
-				while(i < sizeof(tab_freq_falcon)/sizeof(tab_freq_falcon[0]))
-				{
-					d = tab_freq_falcon[i++] - data;
-					if(d < 0)
-						d = -d;
-					if(d < mini)
-					{
-						mini = d;
-						index = i - 1;
-					}
-				}
-				frequency = tab_freq_falcon[index];
-			}
-			return(frequency);
-		case SETFMT8BITS: /* valid by bit 5 of cookie '_SND' */
-			return(1); /* signed */
-		case SETFMT16BITS: /* valid by bit 5 of cookie '_SND' */
-			return(5); /* signed motorola big endian */
-		/* WARNING: GSXB use attenuations and MilanBlaster gains ! */
-		case LTGAINMASTER: /* valid by bit 5 of cookie '_SND' */
-			if(data >= 0x8000)
-				return(get_left_volume(volume_master));
-			set_left_volume(data, &volume_master);
-			mcf548x_ac97_ioctl(AC97_DEVICE, SOUND_MIXER_WRITE_VOLUME, (void *)&volume_master);
-			return(data);
-		case RTGAINMASTER: /* valid by bit 5 of cookie '_SND' */
-			if(data >= 0x8000)
-				return(get_right_volume(volume_master));
-			set_right_volume(data, &volume_master);
-			mcf548x_ac97_ioctl(AC97_DEVICE, SOUND_MIXER_WRITE_VOLUME, (void *)&volume_master);
-			return(data);
-		case LTGAINMIC: /* valid by bit 5 of cookie '_SND' */
-			if(data >= 0x8000)
-				return(get_left_volume(volume_mic));
-			set_left_volume(data, &volume_mic);
-			mcf548x_ac97_ioctl(AC97_DEVICE, SOUND_MIXER_WRITE_MIC, (void *)&volume_mic);
-			return(data);
-		case RTGAINMIC: /* valid by bit 5 of cookie '_SND' */
-			if(data >= 0x8000)
-				return(get_right_volume(volume_mic));
-			set_right_volume(data, &volume_mic);
-			mcf548x_ac97_ioctl(AC97_DEVICE, SOUND_MIXER_WRITE_MIC, (void *)&volume_mic);
-			return(data);
-		case LTGAINFM: /* valid by bit 5 of cookie '_SND' */
-			if(data >= 0x8000)
-				return(get_left_volume(volume_fm));
-			set_left_volume(data, &volume_fm);
-			temp = volume_fm & 0xff;
-			mcf548x_ac97_ioctl(AC97_DEVICE, SOUND_MIXER_WRITE_SYNTH, (void *)&temp); // PC Beep
-			return(data);
-		case RTGAINFM: /* valid by bit 5 of cookie '_SND' */
-			if(data >= 0x8000)
-				return(get_right_volume(volume_fm));
-			set_right_volume(data, &volume_fm);
-			temp = volume_fm >> 8;
-			mcf548x_ac97_ioctl(AC97_DEVICE, SOUND_MIXER_WRITE_ENHANCE, (void *)&temp); // 3D Control
-			return(data);
-		case LTGAINLINE: /* valid by bit 5 of cookie '_SND' */
-			if(data >= 0x8000)
-				return(get_left_volume(volume_line));
-			set_left_volume(data, &volume_line);
-			mcf548x_ac97_ioctl(AC97_DEVICE, SOUND_MIXER_WRITE_LINE, (void *)&volume_line);
-			return(data);
-		case RTGAINLINE: /* valid by bit 5 of cookie '_SND' */
-			if(data >= 0x8000)
-				return(get_right_volume(volume_line));
-			set_right_volume(data, &volume_line);
-			mcf548x_ac97_ioctl(AC97_DEVICE, SOUND_MIXER_WRITE_LINE, (void *)&volume_line);
-			return(data);
-		case LTGAINCD: /* valid by bit 5 of cookie '_SND' */
-			if(data >= 0x8000)
-				return(get_left_volume(volume_cd));
-			set_left_volume(data, &volume_cd);
-			mcf548x_ac97_ioctl(AC97_DEVICE, SOUND_MIXER_WRITE_CD, (void *)&volume_cd);
-			return(data);
-		case RTGAINCD: /* valid by bit 5 of cookie '_SND' */
-			if(data >= 0x8000)
-				return(get_right_volume(volume_cd));
-			set_right_volume(data, &volume_cd);
-			mcf548x_ac97_ioctl(AC97_DEVICE, SOUND_MIXER_WRITE_CD, (void *)&volume_cd);
-			return(data);
-		case LTGAINVIDEO: /* valid by bit 5 of cookie '_SND' */
-			if(data >= 0x8000)
-				return(get_left_volume(volume_video));
-			set_left_volume(data, &volume_video);
-			mcf548x_ac97_ioctl(AC97_DEVICE, SOUND_MIXER_WRITE_LINE2, (void *)&volume_video);
-			return(data);
-		case RTGAINVIDEO: /* valid by bit 5 of cookie '_SND' */
-			if(data >= 0x8000)
-				return(get_right_volume(volume_video));
-			set_right_volume(data, &volume_video);
-			mcf548x_ac97_ioctl(AC97_DEVICE, SOUND_MIXER_WRITE_LINE2, (void *)&volume_video);
-			return(data);
-		case LTGAINAUX: /* valid by bit 5 of cookie '_SND' */
-			if(data >= 0x8000)
-				return(get_left_volume(volume_aux));
-			set_left_volume(data, &volume_aux);
-			mcf548x_ac97_ioctl(AC97_DEVICE, SOUND_MIXER_WRITE_LINE1, (void *)&volume_aux);
-			return(data);
-		case RTGAINAUX: /* valid by bit 5 of cookie '_SND' */
-			if(data >= 0x8000)
-				return(get_right_volume(volume_aux));
-			set_right_volume(data, &volume_aux);
-			mcf548x_ac97_ioctl(AC97_DEVICE, SOUND_MIXER_WRITE_LINE1, (void *)&volume_aux);
-			return(data);
-	}
-	return(-15); /* ENODEV */
-}
-
-long setbuffer(long reg, long begaddr, long endaddr)
-{
-	void *ptr[2];
-	if(endaddr <= begaddr)
-		return(1); // error
-#ifdef DEBUG
-	{
-		char buf[10];
-		display_string("setbuffer, reg: ");
-		ltoa(buf, reg, 10);
-		display_string(buf);
-		display_string(", begaddr: 0x");
-		ltoa(buf, (long)begaddr, 16);
-		display_string(buf);
-		display_string(", endaddr: 0x");
-		ltoa(buf, (long)endaddr, 16);
-		display_string(buf);
-		display_string("\r\n");
-	}
-#endif
-	switch(reg)
-	{
-		case SR_PLAY:
-			play_addr = begaddr;
-			end_play_addr = endaddr;
-			if(status_dma & SB_PLA_ENA)
-			{
-				ptr[0] = (void *)play_addr;
-				ptr[1] = (void *)end_play_addr;
-				mcf548x_ac97_playback_pointer(AC97_DEVICE, (void **)&ptr, 1);
-			}
-			return(0); // OK
-		case SR_RECORD:
-			record_addr = begaddr;
-			end_record_addr = endaddr;
-			if(status_dma & SB_REC_ENA)
-			{
-				ptr[0] = (void *)record_addr;
-				ptr[1] = (void *)end_record_addr;
-				mcf548x_ac97_capture_pointer(AC97_DEVICE, (void **)&ptr, 1);
-			}
-			return(0); // OK
-	}
-	return(1); // error
-}
-
-long setmode(long mode)
-{
-	switch(mode & 0xff)
-	{
-		case STEREO8:
-		case STEREO16:
-		case MONO8:
-		/* valid by bit 5 of cookie '_SND' */
-		case MONO16:
-			break;
-		return(1); // error
-	}
-	switch(mode & 0xff00)
-	{
-		case RECORD_STEREO16:
-		/* valid by bit 5 of cookie '_SND' */
-		case RECORD_STEREO8:
-		case RECORD_MONO8:
-		case RECORD_MONO16:
-    	break;
- 		default:
- 			return(1); // error
- 	}
-	mode_res = mode;
-	return(0); // OK
-}
-
-long settracks(long playtracks, long rectracks)
-{
-	nb_tracks_play = playtracks & 3;
-	nb_tracks_record = rectracks & 3; // not used actually
-	return(0); // OK
-}
-
-long setmontracks(long track)
-{
-	mon_track = track & 3; // not used actually
-	return(0); // OK
-}
-
-long setinterrupt(long src, long cause, void (*callback)())
-{
-#ifdef DEBUG
-	{
-		char buf[10];
-		display_string("setinterrupt, src: ");
-		ltoa(buf, src, 10);
-		display_string(buf);
-		display_string(", cause: ");
-		ltoa(buf, cause, 10);
-		display_string(buf);
-		if(src == SI_CALLBACK)
-		{
-			display_string(", callback: 0x");
-			ltoa(buf, (long)callback, 16);
-			display_string(buf);
-		}
-		display_string("\r\n");
-	}
-#endif
-	switch(src)
-	{
-		case SI_TIMERA:
-			switch(cause)
-			{
-				case SI_NONE:
-				case SI_PLAY:
-				case SI_RECORD:
-				case SI_BOTH:
-					cause_inter = cause;
-					return(0); // OK
-			}
-			break;
-		case SI_MFPI7:
-			switch(cause)
-			{
-				case SI_NONE:
-				case SI_PLAY:
-				case SI_RECORD:
-				case SI_BOTH:
-					cause_inter = cause | 0x100;
-					return(0); // OK
-			}
-			break;
-		case SI_CALLBACK: // valid by bit 5 of cookie '_SND'
-			switch(cause)
-			{
-				case SI_NONE: callback_play = callback_record = NULL; break; // disable interrupt
-				case SI_PLAY: callback_play = callback; break;	// int_addr called on eof DAC interrupts
-				case SI_RECORD: callback_record = callback;	break; // int_addr called on eof ADC interrupts
-				case SI_BOTH: callback_play = callback_record = callback; break; // int_addr called on eof DAC/ADC interrupts
-			}
-			mcf548x_ac97_playback_callback(AC97_DEVICE, callback_play);
-			mcf548x_ac97_capture_callback(AC97_DEVICE, callback_record);
-			cause_inter = 0;
-			return(0); // OK
-			break;
-	}
-	return(1); // error
-}
-
-long buffoper(long mode)
-{
-	void *ptr[2];
-	void *ptr_play, *ptr_record;
-#ifdef DEBUG
-	if(mode >= 0)
-	{
-		char buf[10];
-		display_string("buffoper, mode: ");
-		ltoa(buf, mode, 10);
-		display_string(buf);
-		display_string(", status_dma: ");
-		ltoa(buf, status_dma, 10);
-		display_string(buf);
-		display_string("\r\n");
-	}
-#endif
-	mcf548x_ac97_playback_pointer(AC97_DEVICE, &ptr_play, 0);
-	mcf548x_ac97_capture_pointer(AC97_DEVICE, &ptr_record, 0);
-	if(ptr_play == NULL)
-		stop_dma_play(); /* => status_dma update */
-	if(ptr_record == NULL)
-		stop_dma_record(); /* => status_dma update */
-	if(mode < 0)
-	  return(status_dma);
-	if((mode & SB_PLA_ENA) /* Play enable */
-	 && !(status_dma & SB_PLA_ENA))
-	{
-		if(!mcf548x_ac97_playback_open(AC97_DEVICE))
-		{
-			if(!mcf548x_ac97_playback_prepare(AC97_DEVICE, frequency, mode_res, mode))
-			{
-				ptr[0] = (void *)play_addr;
-				ptr[1] = (void *)end_play_addr;
-				if(!mcf548x_ac97_playback_pointer(AC97_DEVICE, (void **)&ptr, 1)
-				 && !mcf548x_ac97_playback_trigger(AC97_DEVICE, 1))
-			 		status_dma |= SB_PLA_ENA;
-		 	}
-		 	else
-				mcf548x_ac97_playback_close(AC97_DEVICE);
-		}
-	}
-	if(!(mode & SB_PLA_ENA) && (status_dma & SB_PLA_ENA))
-	{
-		stop_dma_play();
-		return(0);	
-	}
-	if((mode & SB_REC_ENA) /* Record enable */
-	 && !(status_dma & SB_REC_ENA))
-	{
-		if(!mcf548x_ac97_capture_open(AC97_DEVICE))
-		{
-			if(!mcf548x_ac97_capture_prepare(AC97_DEVICE, frequency, mode_res, mode))
-			{
-				ptr[0] = (void *)record_addr;
-				ptr[1] = (void *)end_record_addr;
-				if(!mcf548x_ac97_capture_pointer(AC97_DEVICE, (void **)&ptr, 1)
-				 && !mcf548x_ac97_capture_trigger(AC97_DEVICE, 1))
-					status_dma |= SB_REC_ENA;
-			}
-			else
-				mcf548x_ac97_capture_close(AC97_DEVICE);
-		}
-	}
-	if(!(mode & SB_REC_ENA) && (status_dma & SB_REC_ENA))
-	{
-		stop_dma_record();
-		return(0);	
-	}
-	return(0); // OK
-}
-
-long gpio(long mode, long data)
-{
-// bit0: 0: external clock 22.5792 Mhz for 44.1KHz, 1: clock 24.576 MHz for 48KHZ
-// bit1: 1 for quartz
-#ifdef DEBUG
-	char buf[10];
-	display_string("gpio, mode: ");
-	ltoa(buf, mode, 10);
-	display_string(buf);
-	display_string(", data: ");
-	ltoa(buf, data, 10);
-	display_string(buf);
-	display_string("\r\n");
-#endif
-	switch(mode)
-	{
-		case GPIO_READ:
-			return(flag_clock_44_48 ? 3 : 2);
-		case GPIO_WRITE:
-			flag_clock_44_48 = data & 1;
-   		break;
-	}
-	return(0); // OK
-}
-
-long devconnect(long src, long dest, long srcclk, long prescale, long protocol)
-{
-#ifdef DEBUG
-	char buf[10];
-	display_string("devconnect, src: ");
-	ltoa(buf, src, 10);
-	display_string(buf);
-	display_string(", dest: ");
-	ltoa(buf, dest, 10);
-	display_string(buf);
-	display_string(", srcclk: ");
-	ltoa(buf, srcclk, 10);
-	display_string(buf);
-	display_string(", prescale: ");
-	ltoa(buf, prescale, 10);
-	display_string(buf);
-	display_string("\r\n");
-#endif
-	switch(prescale)
-	{
-		case CLKOLD:
-		case CLK50K:
-		case CLK33K:
-		case CLK25K:
-		case CLK20K:
-		case CLK16K:
-		case CLK12K:
-		case CLK10K:
-		case CLK8K:
-			break;
-    default:
-    	return(1); // error
-	}
-	switch(srcclk)
-	{
-		case CLK25M:
-		  if(prescale == CLKOLD)
-		  	frequency = tab_freq_ste[prescale_ste & 3];
-		  else
-		  	frequency = tab_freq_falcon[prescale - 1];
-			break;		
-		case CLKEXT:
-		  if(prescale == CLKOLD)
-		  	frequency = (long)tab_freq_ste[prescale_ste & 3] & 0xFFFF;
-		  else
-		  {
-		  	if(!flag_clock_44_48)
-		  		frequency = (long)tab_freq_falcon[prescale + 11 - 1] & 0xFFFF;
-				else
-		  		frequency = (long)tab_freq_falcon[prescale + (11*2) - 1] & 0xFFFF;
-		 	}
-			break;
-		default:
-			return(1); // error
-	}
-	switch(src)
-	{
-		case DMAPLAY:
-		case ADC:
-			return(0); // OK
-		case DSPXMIT:
-		case EXTINP:
-		default:
-			return(1); // error
-	}
-/* dest: DMAREC 1, DSPRECV 2, EXTOUT 4, DAC 8 */
-}
-
-long sndstatus(long reset)
-{
-	long max = 189;
-	long min = 66;
-	switch(reset)
-	{
-		case SND_CHECK:
-			return(SS_OK);
-		case SND_RESET:
-			stop_dma_play();
-			stop_dma_record();
-			soundcmd(LTATTEN, 66);
-			soundcmd(RTATTEN, 66);
-			soundcmd(LTGAIN, 0);
-			soundcmd(RTGAIN, 0); 
-			/* WARNING: GSXB use attenuations and MilanBlaster gains ! */
-			if(flag_gsxb)
-			{
-				long temp = max;
-				max = min;
-				min = temp;
-			}
-			/* new calls */
-			soundcmd(LTGAINMASTER, max);
-			soundcmd(RTGAINMASTER, max); 
-			soundcmd(LTGAINMIC, min);
-			soundcmd(RTGAINMIC, min);
-			soundcmd(LTGAINLINE, flag_gsxb ? 0 : 255);
-			soundcmd(RTGAINLINE, flag_gsxb ? 0 : 255);
-			soundcmd(LTGAINCD, min);
-			soundcmd(RTGAINCD, min);
-			soundcmd(LTGAINVIDEO, min);
-			soundcmd(RTGAINVIDEO, min);
-			soundcmd(LTGAINAUX, min); // (Firebee PSG)
-			soundcmd(RTGAINAUX, min); // (Firebee PSG)
-			soundcmd(LTGAINFM, min); // PC Beep
-			soundcmd(RTGAINFM, min); // 3D Control
-			soundcmd(ADDERIN, ADCIN + MATIN + 0x41B4); /* + PCM / Aux / CD / Mic */
-			soundcmd(ADCINPUT, 0);
-			status_dma = 0;
-			nb_tracks_play = nb_tracks_record = mon_track = 0;
-			flag_clock_44_48 = prescale_ste = 0;
-			play_addr = record_addr = 0;
-			cause_inter = 0;
-			callback_play = callback_record = NULL;
-			mcf548x_ac97_ioctl(AC97_DEVICE, SOUND_MIXER_WRITE_POWERDOWN, NULL);
-			return(SS_OK);
-		/* extended values valid by bit 5 of cookie '_SND' */
-		case 2: // resolutions
-			return(3); // 8 & 16 bits
-		case 3: // MasterMix
-		  /* Bit 0: A/D (ADC-InMix bypass)   X
-		     Bit 1: D/A (DAC/Multiplexer)    X
-		     Bit 2: Mic                      X
-		     Bit 3: FM-Generator             X (PC Beep / 3D Control)
-		     Bit 4: Line                     X
-		     Bit 5: CD                       X
-		     Bit 6: Video                    X
-		     Bit 7: Aux1                     X
-		   */
-			return(0xff);
-		case 4: // record sources
-			/* Bit 0: Mic right                X
-			   Bit 1: Mic left                 X
-			   Bit 2: FM-Generator right
-			   Bit 3: FM-Generator left
-			   Bit 4: Line right               X
-			   Bit 5: Line left                X
-			   Bit 6: CD right                 X
-			   Bit 7: CD left                  X
-			   Bit 8: Video right              X
-			   Bit 9: Video left               X
-			   Bit 10: Aux1 right              X
-			   Bit 11: Aux1 left               X
-			   Bit 12: Mixer right (MasterMix) X
-			   Bit 13: Mixer left (MasterMix)  X
-			*/
-			return(0x3ff3);
-		case 5: // duplex
-			return(0);
-		case 8: // format8bits
-			return(1); // signed
-		case 9: // format16bits
-			return(5); // signed motorola big endian
-		default:
-			return(-15); /* ENODEV */
-	}
-}
-
-long buffptr(SndBufPtr *ptr)
-{
-	mcf548x_ac97_playback_pointer(AC97_DEVICE, (void **)&ptr->play, 0);
-	mcf548x_ac97_capture_pointer(AC97_DEVICE, (void **)&ptr->record, 0);
-#ifdef DEBUG
-	{
-		char buf[10];
-		display_string("buffptr, play: 0x");
-		ltoa(buf, (long)ptr->play, 16);
-		display_string(buf);
-		display_string(", record: 0x");
-		ltoa(buf, (long)ptr->record, 16);
-		display_string(buf);
-		display_string("\r\n");
-	}
-#endif
-	if(ptr->play == NULL)
-	{
-		ptr->play = (char *)play_addr;
-		stop_dma_play();
-	}
-	if(ptr->record == NULL)
-	{
-		ptr->record = (char *)record_addr;
-		stop_dma_record();
-	}
-	ptr->reserve1 = ptr->reserve2 = 0;
-	return(0); // OK
-}
-
-long InitSound(long type_gsxb)
-{
-	int i;
-	for(i = 0; i < 2; i++)
-	{
-		if(!mcf548x_ac97_install(AC97_DEVICE))
-		{
-			COOKIE mcsn;
-			COOKIE gsxb;
-			COOKIE *p = get_cookie('_SND');
-			if(p != 0)
-			{
-				p->v.l &= 0x9;  /* preserve PSG & DSP bits */
-#ifdef MCF547X
-				p->v.l |= 0x27; /* bit 5: extended mode, bit 2: 16 bits DMA, bit 1: 8 bits DMA, bit 0: YM2149 */
-#else
-				p->v.l |= 0x26; /* bit 5: extended mode, bit 2: 16 bits DMA, bit 1: 8 bits DMA */
-#endif
-			}
-			mcsn.ident = 'McSn';
-			mcsn.v.l = (long)&cookie_mac_sound;
-			add_cookie(&mcsn);
-			if(type_gsxb)
-			{
-				gsxb.ident = 'GSXB';
-				gsxb.v.l = 0;
-				add_cookie(&gsxb);
-			}
-			flag_snd_init = 1;
-			flag_gsxb = type_gsxb;
-			sndstatus(SND_RESET);
-			return(0); // OK
-		}
-	}
-	flag_snd_init = 0;
-	return(-1); // error
-}
-
-#else
-
-long InitSound(long gsxb)
-{
-	return(-1); // error
-}
-
-#endif /* SOUND_AC97 */
-
-#endif /* MCF5445X */
-#endif /* COLDFIRE */
 

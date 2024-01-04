@@ -408,17 +408,7 @@ void free_block(void *addr)
 
 static void cache_flush(void)
 {
-#ifdef COLDFIRE
-	asm volatile (" .chip 68060\n\t");
-#endif
 	asm volatile (" cpusha BC\n\t");
-#ifdef COLDFIRE
-#if (__GNUC__ > 3)
-	asm volatile (" .chip 5485\n\t");
-#else
-	asm volatile (" .chip 5200\n\t");
-#endif
-#endif
 }
 
 static long misc(long func, long par, const char *token)
@@ -452,11 +442,7 @@ Virtual *init_var_fvdi(void)
 	arc_max = 256;      /* Maximum */
 	loaded_palette = (short *)0;
 	access->vars.version=&Version;  /* fVDI Access structure */
-#ifdef COLDFIRE
-	access->vars.name="FIRETOS";
-#else
 	access->vars.name="CT60 TOS";
-#endif
 	access->funcs.copymem=copy_mem;
 	access->funcs.next_line=next_line;
 	access->funcs.skip_space=skip_space;

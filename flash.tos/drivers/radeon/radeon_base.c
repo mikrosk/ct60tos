@@ -320,12 +320,10 @@ static int round_div(int num, int den)
 	return(num + (den / 2)) / den;
 }
 
-#ifndef MCF5445X
 static unsigned long read_vline_crnt(struct radeonfb_info *rinfo)
 {
 	return((INREG(CRTC_VLINE_CRNT_VLINE) >> 16) & 0x3FF);
 }
-#endif
 
 static int radeon_map_ROM(struct radeonfb_info *rinfo)
 {
@@ -432,10 +430,6 @@ failed:
  */
 static int radeon_probe_pll_params(struct radeonfb_info *rinfo)
 {
-#ifdef MCF5445X /* MCF5445X has mo FPU */
-	if(rinfo);
-	return(-1); /* to do ... */
-#else /* MCF548X or ATARI */
 	unsigned char ppll_div_sel;
 	unsigned Ns, Nm, M;
 	unsigned sclk, mclk, tmp, ref_div;
@@ -450,19 +444,9 @@ static int radeon_probe_pll_params(struct radeonfb_info *rinfo)
 	DPRINT("radeonfb: radeon_probe_pll_params\r\n");
 	/* Flush PCI buffers ? */
 	tmp = INREG16(DEVICE_ID);
-#ifdef COLDFIRE
-	asm volatile (
-		" move.l D0,-(SP)\n\t"
-		" move.w SR,D0\n\t"
-		" move.w D0,save_d0\n\t"
-		" or.l #0x700,D0\n\t"   /* disable interrupts */
-		" move.w D0,SR\n\t"
-		" move.l (SP)+,D0\n\t" );
-#else
 	asm volatile (
 		" move.w SR,save_d0\n\t"
 		" or.w #0x700,SR\n\t" );   /* disable interrupts */
-#endif
 	start_tv = get_timer();
 	while(read_vline_crnt(rinfo) != 0)
 	{
@@ -496,20 +480,10 @@ static int radeon_probe_pll_params(struct radeonfb_info *rinfo)
 		}
 	}
 	stop_tv = get_timer();
-#ifdef COLDFIRE
-	asm volatile (
-		" move.w D0,-(SP)\n\t"
-		" move.w save_d0,D0\n\t"
-		" move.w D0,SR\n\t"
-		" move.w (SP)+,D0\n\t" );
-	if(timeout)  /* 10 sec */
-		return -1; /* error */
-#else
 	asm volatile (
 		"move.w save_d0,SR\n\t" );
 	if(timeout)  /* 10 sec */
 		return -1; /* error */
-#endif
 	hz = US_TO_TIMER(1000000.0) / (double)(stop_tv - start_tv);
   DPRINTVAL("radeonfb: radeon_probe_pll_params hz ", (long)hz);
 	hTotal = ((INREG(CRTC_H_TOTAL_DISP) & 0x1ff) + 1) * 8;
@@ -594,7 +568,6 @@ static int radeon_probe_pll_params(struct radeonfb_info *rinfo)
 	rinfo->pll.sclk = sclk;
 	rinfo->pll.mclk = mclk;
 	return 0;
-#endif /* MCF5445X */
 }
 
 /*
@@ -1273,20 +1246,9 @@ static void radeon_timer_func(void)
 	if((info->var.xres_virtual != info->var.xres)
 	 || (info->var.yres_virtual != info->var.yres))
 	{
-#ifdef COLDFIRE
-		asm volatile (
-			" clr.l -(SP)\n\t"
-			" move.l D0,-(SP)\n\t"
-			" move.w SR,D0\n\t"
-			" move.l D0,4(SP)\n\t"
-			" or.l #0x700,D0\n\t"   /* disable interrupts */
-			" move.w D0,SR\n\t"
-			" move.l (SP)+,D0\n\t" );
-#else
 		asm volatile (
 			" move.w SR,-(SP)\n\t"
 			" or.w #0x700,SR\n\t" ); /* disable interrupts */
-#endif
 		chg = 0;
 		x = info->var.xoffset;
 		y = info->var.yoffset;
@@ -1324,17 +1286,8 @@ static void radeon_timer_func(void)
 			if(disp)
 				RADEONShowCursor(info);
 		}
-#ifdef COLDFIRE
-		asm volatile (
-			" move.l D0,-(SP)\n\t"
-			" move.l 4(SP),D0\n\t"
-			" move.w D0,SR\n\t"
-			" move.l (SP)+,D0\n\t"
-			" addq.l #4,SP\n\t" );		
-#else
 			asm volatile (
 				" move.w (SP)+,SR\n\r" );
-#endif
 	}
 }
 
@@ -2108,13 +2061,6 @@ int radeonfb_pci_register(long handle, const struct pci_device_id *ent)
 		DPRINT("radeonfb: radeonfb_pci_register: run VGA BIOS\r\n");
 		run_bios(rinfo);
 	}
-#if defined(COLDFIRE) && defined(LWIP)
-	else /* abnormal */
-	{
-		extern void uif_cmd_reset(void);
-		uif_cmd_reset();
-	}
-#endif
 #endif /* DRIVER_IN_ROM */
 
 #if 1

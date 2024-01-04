@@ -25,9 +25,6 @@
 
 #undef DEBUG
 
-#ifdef COLDFIRE
-#define USE_BDOS
-#endif
 
 #ifdef USE_BDOS
 #define BIOS_H
@@ -991,15 +988,7 @@ fail:
     	memset((void *)pd->p_bbase, 0, (long)pd->p_hitpa - (long)pd->p_bbase); /* clear the whole heap */
 	}
 	cd_fclose(handle);
-#ifdef COLDFIRE
-#if (__GNUC__ > 3)
-	asm volatile (" .chip 68060\n\t cpusha BC\n\t .chip 5485\n\t"); /* flush from CF68KLIB */
-#else
-	asm volatile (" .chip 68060\n\t cpusha BC\n\t .chip 5200\n\t"); /* flush from CF68KLIB */
-#endif
-#else /* 68060 */
 	asm volatile (" cpusha BC\n\t");
-#endif /* COLDFIRE */
 #ifdef DEBUG
 	kprint("cd_pexec pd 0x%08X\r\n", pd);
 #endif

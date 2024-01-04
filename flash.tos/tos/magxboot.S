@@ -25,9 +25,6 @@
 
 	.text
 
-#ifdef COLDFIRE
-	.chip 68060
-#endif
 
 magxboot:
 

@@ -19,11 +19,6 @@
 
 #define SHBUF_SIZE 0x7FFE                        /* 32 KB */
 
-#ifdef COLDFIRE
-#include "fire.h"
-
-	.chip 68060
-#endif
 	.text
 
 	.align	2
@@ -339,119 +334,6 @@ begin35:
 	jsr	det_evnt_multi
 end35:
 
-#ifdef COLDFIRE
-
-	.chip	5200
-
-	.globl	_dsptch
-
-	.align	2
-	.long	0x3475A
-	.long	end36-begin36
-begin36:
-	jmp	_dsptch
-end36:
-
-	.globl	_savestate
-
-	.align	2
-	.long	0x34776
-	.long	end37-begin37
-begin37:
-	jmp	_savestate
-end37:
-
-	.globl	_switchto
-
-	.align	2
-	.long	0x347B8
-	.long	end38-begin38
-begin38:
-	jmp	_switchto
-end38:
-
-	.globl	_gotopgm
-
-	.align	2
-	.long	0x347E4
-	.long	end39-begin39
-begin39:
-	jmp	_gotopgm
-end39:
-
-	.globl	_psetup
-
-	.align	2
-	.long	0x34810
-	.long	end40-begin40
-begin40:
-	jmp	_psetup
-end40:
-
-	.chip	68060
-	
-	.align	2
-	.long	0x1F38C
-	.long	end41-begin41
-begin41:
-	move.l	#ustack_aes,SP
-end41:
-
-	.globl	det_aes
-
-	.align	2
-	.long	0x34432
-	.long	end42-begin42
-begin42:
-	move.l	#det_aes,0x88
-end42:
-
-	.align	2
-	.long	0x3443C
-	.long	end43-begin43
-begin43:
-	move.l	#det_aes,0x88
-end43:
-
-	.globl	_far_mchange
-
-	.align	2
-	.long	0x35664
-	.long	end44-begin44
-begin44:
-	jmp	_far_mchange
-end44:
-
-	.globl	_far_bchange
-
-	.align	2
-	.long	0x355D8
-	.long	end45-begin45
-begin45:
-	jmp	_far_bchange
-end45:
-
-	.globl	_forkq
-
-	.align	2
-	.long	0x21AD8
-	.long	end46-begin46
-begin46:
-	jmp	_forkq
-end46:
-
-#if 0
-	.globl	userdef_call
-
-	.align	2
-	.long	0x2C2DA
-	.long	end47-begin47
-begin47:
-	jsr	userdef_call
-end47:
-#endif
-
-#endif /* COLDFIRE */
 
 	.globl	patch_tran_check
 

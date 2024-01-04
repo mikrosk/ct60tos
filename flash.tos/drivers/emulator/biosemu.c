@@ -11,18 +11,9 @@
 
 #define USE_SDRAM
 
-#ifdef COLDFIRE
-//#ifdef LITTLE_ENDIAN_LANE_SWAPPED /* PCI BIOS */
-//#define DIRECT_ACCESS
-//#endif
-#ifndef PCI_XBIOS
-#define PCI_XBIOS // else sometimes system is locked ???
-#endif
-#else /* !COLDFIRE */
 #ifdef LITTLE_ENDIAN_LANE_SWAPPED /* PCI BIOS */
 #define DIRECT_ACCESS
 #endif
-#endif /* COLDFIRE */
 
 #define MEM_WB(where, what) wrb(where, what)
 #define MEM_WW(where, what) wrw(where, what)
@@ -666,7 +657,6 @@ void run_bios(struct radeonfb_info *rinfo)
 
 	if((rinfo->mmio_base == NULL) || (rinfo->io_base == NULL))
 		return;
-#ifndef COLDFIRE
 	/* try to not init the board with the X86 VGA BIOS, too long on CT60 (more than 20 seconds, 2 seconds on Coldfire) */
 	if(os_magic)
 		return;
@@ -674,7 +664,6 @@ void run_bios(struct radeonfb_info *rinfo)
 	 && (*memvalid == MEMVALID_MAGIC) && (*memval2 == MEMVAL2_MAGIC)
 	 && (*((unsigned long *) 0x51AL) == 0x5555AAAA)) /* memval3 */
 		return;
-#endif
 	rinfo_biosemu = rinfo;
 	config_address_reg = 0;
 	offset_port = 0x300;

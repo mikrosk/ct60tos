@@ -84,19 +84,6 @@ __extension__                               \
  *   switches off interrupts, SR saved to stack
  */
 
-#ifdef COLDFIRE
-#define ints_off()      \
-__extension__           \
-({__asm__ volatile      \
-  ("move.l d0,-(sp);    \
-    move.w sr,d0;       \
-    move.w d0,-(sp);    \
-    ori.l #0x700,d0;    \
-    move.w d0,sr;       \
-    move.l 2(sp),d0 "   \
-  );                    \
-})
-#else
 #define ints_off()      \
 __extension__           \
 ({__asm__ volatile      \
@@ -104,7 +91,6 @@ __extension__           \
     ori.w #0x0700, sr " \
   );                    \
 })
-#endif
 
 
 
@@ -113,22 +99,11 @@ __extension__           \
  *   switches interrupts on again, SR restored from stack
  */
 
-#ifdef COLDFIRE
-#define ints_on()       \
-__extension__           \
-({__asm__ volatile      \
-  ("move.l d0,2(sp);    \
-    move.w (sp)+,d0;    \
-    move.w d0,sr;       \
-    move.l (sp)+,d0 "); \
-})
-#else
 #define ints_on()         \
 __extension__             \
 ({__asm__ volatile        \
   ("move.w  (sp)+, sr "); \
 })
-#endif
 
 
 
@@ -156,23 +131,12 @@ __extension__                                   \
  *   Saves all registers to the stack, calls the function
  *   that addr points to, and restores the registers afterwards.
  */
-#ifdef COLDFIRE
-#define regsafe_call(addr)                          \
-__extension__                                       \
-({__asm__ volatile ("lea -60(sp),sp;                \
-          movem.l d0-d7/a0-a6,(sp) ");              \
-  ((void (*)(void))addr)();                         \
-  __asm__ volatile ("movem.l (sp),d0-d7/a0-a6;      \
-                     lea 60(sp),sp ");              \
-})
-#else
 #define regsafe_call(addr)                          \
 __extension__                                       \
 ({__asm__ volatile ("movem.l d0-d7/a0-a6,-(sp) ");  \
   ((void (*)(void))addr)();                         \
   __asm__ volatile ("movem.l (sp)+,d0-d7/a0-a6 ");  \
 })
-#endif
 
 
 #endif /* ASM_H */

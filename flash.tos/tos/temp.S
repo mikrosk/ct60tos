@@ -17,7 +17,6 @@
 *  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 */
 
-#ifndef COLDFIRE
 
 #include "ct60.h"
 
@@ -165,4 +164,3 @@ ct9:
 	movem.l (SP)+,D1-D3/A0-A2
 	rts
 	
-#endif /* !COLDFIRE */

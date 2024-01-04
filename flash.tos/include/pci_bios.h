@@ -5,36 +5,12 @@
 #define CHECK_PARITY
 #define SAME_CPU_PCI_MEM_ADDR // for fix DMA problems with some drivers
 
-#ifdef COLDFIRE
-#include "fire.h"
-// host bridge configuration
-#define PCI_RETRIES 0 // infinite (bug before date code XXX0445)
-#define PCI_CACHE_LINE 8
-#define PCI_MINGNT 1
-#define PCI_MAXLAT 42
-#else
 #define PCI_CACHE_LINE 8
 #define PCI_MINGNT 1
 #define PCI_MAXLAT 32
-#endif
 
 #define PCI_BIOS_REV          0x10000
 
-#ifdef COLDFIRE
-#undef PCI_DYNAMIC_MAPPING
-#define PCI_LOCAL_CONFIG  MCF_PCI_PCIIDR
-#ifdef MCF5445X
-#define PCI_MEMORY_OFFSET   0xA0000000
-#define PCI_MEMORY_SIZE     0x10000000   /* 256 MB */ 
-#define PCI_IO_OFFSET       0xB0000000
-#define PCI_IO_SIZE         0x10000000   /* 256 MB */
-#else /* MCF548X */
-#define PCI_MEMORY_OFFSET   0x80000000
-#define PCI_MEMORY_SIZE     0x40000000   /* 1024 MB */ 
-#define PCI_IO_OFFSET       0xD0000000
-#define PCI_IO_SIZE         0x10000000   /* 256 MB */
-#endif /* MCF5445X */ 
-#else /* ATARI - CTPCI */
 #define PCI_DYNAMIC_MAPPING
 /* note: Ethernat use 0x80000000-0x8000003F space and interrupts vectors 0xC4-0xC5 */
 /*       Supervidel registers are at 0x80010000                                    */
@@ -73,24 +49,10 @@
 #endif /* PCI_DYNAMIC_MAPPING */
 #define PCI_DRIVERS_OFFSET  0x21000000   /* RAM for drivers in flash */
 #define PCI_DRIVERS_SIZE    0x00050000   /* => also in pci.lk !!!    */
-#endif /* COLDFIRE */
 #define GRAPHIC_CARD_SIZE   0x10000000
 
 #define PCI_NOBODYHOME          0xFFFF
 
-#ifdef COLDFIRE
-
-#ifdef MCF547X                         /* FIREBEE */
-#define PCI_MAX_SLOT             (7+1) /* 7 slots on the Firebee + host bridge MCF547X */
-#else /* MCF548X - MCF5445X */   
-#define PCI_MAX_SLOT             (4+1) /* 4 slots on the M5484LITE/M5485EVB/M54455EVB + host bridge MCF548X/MCF5445X */
-#endif /* MCF547X */
-
-#define LAST_LOCAL_REGISTER  0x100
-
-#define LOCAL_REGISTERS_BIG // local registers are in Big Endian on the Coldfire
-
-#else /* PLX9054 */
 
 #define PCI_MAX_SLOT             (4+1) /* 4 slots on the CTPCI + host bridge PLX9054 */
 
@@ -181,7 +143,6 @@
 
 #define LAST_LOCAL_REGISTER  0x200
 
-#endif /* COLDFIRE */
 
 #define PCI_MAX_BUS                  4
 #define PCI_MAX_FUNCTION             4  /* 4 functions per PCI slot */

@@ -449,31 +449,13 @@ short V_OPNWK(char *adr_var_vdi, short *INTIN, short *INTOUT, short *PTSOUT)
 	CHC_MODE = 0;
 	STR_MODE = 0;
 	{
-#ifdef COLDFIRE
-		asm volatile (
-			" move.l D0,-(SP)\n\t"
-			" move.w SR,D0\n\t"
-			" move.w D0,save_d0\n\t"
-			" or.l #0x700,D0\n\t"   /* disable interrupts */
-			" move.w D0,SR\n\t"
-			" move.l (SP)+,D0" );
-#else
 		asm volatile (
 			" move.w SR,save_d0\n\t"
 			" or.w #0x700,SR" );   /* disable interrupts */
-#endif
 		USER_TIM = (long)empty;
 		NEXT_TIM = (long)Setexc(0x100, tick_int);
-#ifdef COLDFIRE
-		asm volatile (
-			" move.w D0,-(SP)\n\t"
-			" move.w save_d0,D0\n\t"
-			" move.w D0,SR\n\t"
-			" move.w (SP)+,D0" );
-#else
 		asm volatile (
 			" move.w save_d0,SR" );
-#endif
 	}
 	return(1);
 }

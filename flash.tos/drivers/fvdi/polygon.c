@@ -16,11 +16,7 @@
 #include <mint/osbind.h>
 
 #ifdef __GNUC__
-#ifdef COLDFIRE
-extern short SMUL_DIV(short x, short y, short z);
-#else
 #define SMUL_DIV(x,y,z)	((short)(((short)(x)*(long)((short)(y)))/(short)(z)))
-#endif
 #else
  #ifdef __PUREC__
   #define SMUL_DIV(x,y,z)	((short)(((x)*(long)(y))/(z)))

@@ -27,17 +27,6 @@
 _det_linea:
 
 	move.l 2(SP),A1
-#ifdef COLDFIRE
-	moveq #0,D2
-	move.w (A1)+,D2
-	and.l #0xFFF,D2          // 0xA00X are MAC instructions on Coldfire
-	cmp.l #0x920,D2
-	beq.s .l1                // 0xA92X
-	cmp.l #0x929,D2
-	beq.s .l2                // 0xA929
-	cmp.l #0x92A,D2
-	beq.s .l3                // 0xA92A
-#else
 	move.w (A1)+,D2
 	and.w #0xFFF,D2
 	beq.s .l1                // 0xA000
@@ -45,7 +34,6 @@ _det_linea:
 	beq.s .l2                // 0xA009
 	cmp.w #0x00A,D2
 	beq.s .l3                // 0xA00A
-#endif
 	move.l A1,2(SP)          // jump opcode
 	rte
 .l2:

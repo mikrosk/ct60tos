@@ -19,7 +19,6 @@
 
 #include "vars.h"
 
-#ifndef COLDFIRE
 
 	.globl init_speed_fan
 
@@ -95,5 +94,4 @@ inter_io3_mfp:
 	bclr #3,0xFFFFFA11       // ISRB
 	rte
 
-#endif /* !COLDFIRE */
 

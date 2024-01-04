@@ -60,18 +60,11 @@
 *-------*/
 _set_pixel:
 set_pixel:
-#ifndef COLDFIRE
 	movem.l		d0-d7/a0-a6,-(a7)	// Used to have -3/4/6 for normal/both/upto8
 
 	move.l		a0,a1
 
-#ifdef COLDFIRE
-	.chip		68060
-	jsr		([_write_pixel_r])
-	.chip		5200
-#else
 	ijsr		_write_pixel_r
-#endif
 	tst.l		d0
 	bgt		.write_done
 
@@ -89,20 +82,13 @@ set_pixel:
 	move.l		a2,2(a7)
 	move.l		6(a7),a1
 	move.l		10+0(a7),d0		// Fetch d0
-#ifdef COLDFIRE
-	.chip		68060
-	jsr		([_write_pixel_r])
-	.chip		5200
-#else
 	ijsr		_write_pixel_r
-#endif
 	subq.w		#1,(a7)
 	bne		.write_loop
 	add.w		#10,a7
 .write_done:
 
 	movem.l		(a7)+,d0-d7/a0-a6
-#endif
 	rts
 
 
@@ -120,21 +106,13 @@ set_pixel:
 *-------*/
 _get_pixel:
 get_pixel:
-#ifndef COLDFIRE
 	movem.l		d1-d7/a0-a6,-(a7)	// Used to have -3/4/6 for normal/both/upto8
 
 	move.l		a0,a1
 	
-#ifdef COLDFIRE
-	.chip		68060
-	jsr		([_read_pixel_r])
-	.chip		5200
-#else
 	ijsr		_read_pixel_r
-#endif
 
 	movem.l		(a7)+,d1-d7/a0-a6
-#endif
 	rts
 
 
@@ -161,19 +139,12 @@ get_pixel:
 *-------*/
 _line:
 line:
-#ifndef COLDFIRE
 	movem.l		d0-d7/a0-a6,-(a7)	// Used to have -3/4/6 for normal/both/upto8
 
 	move.l		a0,a1
 	exg		d0,d6
 
-#ifdef COLDFIRE
-	.chip		68060
-	jsr		([_line_draw_r])
-	.chip		5200
-#else
 	ijsr		_line_draw_r
-#endif	
 	tst.l		d0
 	lbgt		.line1
 	lbmi		.line2
@@ -228,13 +199,7 @@ line:
 	move.l		5*4(a7),d5		// Pattern
 	move.l		6*4(a7),d0		// Mode
 	movem.l		d7/a1-a2/a6,-(a7)
-#ifdef COLDFIRE
-	.chip		68060
-	jsr		([_line_draw_r])
-	.chip		5200
-#else
 	ijsr		_line_draw_r
-#endif
 	movem.l		(a7)+,d7/a1-a2/a6
 .no_draw:
 	tst.w		d7
@@ -263,7 +228,6 @@ line:
 .line_done:
 	jsr		_update_mono
 	movem.l		(a7)+,d0-d7/a0-a6
-#endif
 	rts
 
 
@@ -284,7 +248,6 @@ line:
 *-------*/
 _expand:
 expand:
-#ifndef COLDFIRE
 	movem.l		d0-d7/a0-a6,-(a7)	// Used to have -3(/6)/4(/6)/6 for normal/both/upto8
 
 	move.l		a0,a1
@@ -297,13 +260,7 @@ expand:
 	sub.w		d3,d0
 	addq.w		#1,d0
 
-#ifdef COLDFIRE
-	.chip		68060
-	jsr		([_expand_area_r])
-	.chip		5200
-#else
 	ijsr		_expand_area_r
-#endif
 	tst.l		d0
 	lbgt		.expand1
 	move.l		_fallback_expand,d0
@@ -311,7 +268,6 @@ expand:
 
 .expand1:
 	movem.l		(a7)+,d0-d7/a0-a6
-#endif
 	rts
 
 
@@ -339,7 +295,6 @@ expand:
 *-------*/
 _fill:
 fill:
-#ifndef COLDFIRE
 	movem.l		d0-d7/a0-a6,-(a7)	// Used to have -3/4/6 for normal/both/upto8
 
 	move.l		a0,a1
@@ -391,13 +346,7 @@ fill:
 
 	move.l		d5,d3
 
-#ifdef COLDFIRE
-	.chip		68060
-	jsr		([_fill_area_r])
-	.chip		5200
-#else
 	ijsr		_fill_area_r
-#endif
 	tst.l		d0
 	lbgt		.fill1
 	lbmi		.fill2
@@ -446,20 +395,13 @@ fill:
 	move.l		5*4(a7),d3
 	move.l		0(a7),d4
 	movem.l		a1-a2,-(a7)
-#ifdef COLDFIRE
-	.chip		68060
-	jsr		([_fill_area_r])
-	.chip		5200
-#else
 	ijsr		_fill_area_r
-#endif
 	movem.l		(a7)+,a1-a2
 	subq.w		#1,2*4(a7)
 	bne		.fill_loop
 .fill_done:
 	jsr		_update_mono
 	movem.l		(a7)+,d0-d7/a0-a6
-#endif
 	rts
 
 
@@ -488,7 +430,6 @@ fill:
 *-------*/
 _fillpoly:
 fillpoly:
-#ifndef COLDFIRE
 	movem.l		d0-d7/a0-a6,-(a7)	// Used to have -3/4/6 for normal/both/upto8
 
 	move.l		a0,a1
@@ -536,13 +477,7 @@ fillpoly:
 	move.l	d3,d2
 	move.l	d5,d3
 
-#ifdef COLDFIRE
-	.chip		68060
-	jsr		([_fill_poly_r])
-	.chip		5200
-#else
 	ijsr		_fill_poly_r
-#endif
 	tst.l		d0
 	lbgt		.fillpoly1
 
@@ -567,7 +502,6 @@ fillpoly:
     .endc
   .endc
 	movem.l		(a7)+,d0-d7/a0-a6
-#endif
 	rts
 
 
@@ -587,7 +521,6 @@ fillpoly:
 *-------*/
 _blit:
 blit:
-#ifndef COLDFIRE
 	movem.l		d0-d7/a0-a6,-(a7)	// Used to have -3/4/6 for normal/both/upto8
 
 	move.l		a0,a1
@@ -602,13 +535,7 @@ blit:
 	sub.w		d3,d0
 	addq.w		#1,d0
 
-#ifdef COLDFIRE
-	.chip		68060
-	jsr		([_blit_area_r])
-	.chip		5200
-#else
 	ijsr		_blit_area_r
-#endif
 	tst.l		d0
 	lbgt		.blit1
 	move.l		_fallback_blit,d0
@@ -616,7 +543,6 @@ blit:
 
 .blit1:
 	movem.l		(a7)+,d0-d7/a0-a6
-#endif
 	rts
 
 
@@ -637,7 +563,6 @@ blit:
 *-------*/
 _text:
 text:
-#ifndef COLDFIRE
 	movem.l		d0-d7/a0-a6,-(a7)	// Was d2-d7/a3-a6
 
 	move.l		a1,a4
@@ -647,13 +572,7 @@ text:
 	swap		d1
 	move.w		d1,d3
 
-#ifdef COLDFIRE
-	.chip		68060
-	jsr		([_text_area_r])
-	.chip		5200
-#else
 	ijsr		_text_area_r
-#endif
 	tst.l		d0
 	lbgt		.text1
 	move.l		_fallback_text,d0
@@ -661,7 +580,6 @@ text:
 
 .text1:
 	movem.l		(a7)+,d0-d7/a0-a6
-#endif
 	rts
 
 
@@ -681,13 +599,7 @@ text:
 *-------*/
 _mouse:
 mouse:
-#ifdef COLDFIRE
-	.chip		68060
-	jsr		([_mouse_draw_r])
-	.chip		5200
-#else
 	ijsr		_mouse_draw_r
-#endif
 	rts
 
 
@@ -702,19 +614,11 @@ mouse:
 *-------*/
 _set_palette:
 set_palette:
-#ifndef COLDFIRE
 	movem.l		d0-d7/a0-a6,-(a7)	// Overkill
 
-#ifdef COLDFIRE
-	.chip		68060
-	jsr		([_set_colours_r])
-	.chip		5200
-#else
 	ijsr		_set_colours_r
-#endif
 
 	movem.l		(a7)+,d0-d7/a0-a6
-#endif
 	rts
 
 
@@ -728,19 +632,11 @@ set_palette:
 *-------*/
 _colour:
 colour:
-#ifndef COLDFIRE
 	movem.l		d1-d7/a0-a6,-(a7)
 
-#ifdef COLDFIRE
-	.chip		68060
-	jsr		([_get_colour_r])
-	.chip		5200
-#else
 	ijsr		_get_colour_r
-#endif
 
 	movem.l		(a7)+,d1-d7/a0-a6
-#endif
 	rts
 
   .ifne	1
@@ -752,7 +648,6 @@ colour:
 * To be called from C
 *-------*/
 _initialize_palette:
-#ifndef COLDFIRE
 	movem.l		d0-d7/a0-a6,-(a7)	// Overkill
 
 	move.l		15*4+4(a7),a0
@@ -763,16 +658,9 @@ _initialize_palette:
 	move.l		15*4+16(a7),a1
 	move.l		15*4+20(a7),a2
 
-#ifdef COLDFIRE
-	.chip		68060
-	jsr		([_set_colours_r])
-	.chip		5200
-#else
 	ijsr		_set_colours_r
-#endif
 
 	movem.l		(a7)+,d0-d7/a0-a6
-#endif
 	rts
   .endc
   
@@ -787,7 +675,6 @@ _initialize_palette:
 * XXX:	d0
 *-------*/
 get_colour_masks:
-#ifndef COLDFIRE
 	lea		_mask,a3
   .ifne	upto8
 	move.w		d0,a2
@@ -805,10 +692,8 @@ get_colour_masks:
 	move.l		0(a3,d0.w),a2
 	move.l		4(a3,d0.w),a3
 	move.l		(a7)+,d0
-#endif
 	rts
 
-#ifndef COLDFIRE
 /*---------
 * Give up and try other function
 * This routine should only be branched to, it's not a subroutine!
@@ -823,4 +708,3 @@ give_up:
 .return:
 	movem.l	(a7)+,d0-d7/a0-a6
 	rts
-#endif

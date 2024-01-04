@@ -21,13 +21,7 @@
  	.text
 
 movep_e02b1e:
-#ifdef COLDFIRE
-	move.w	SR,D7
-	or.l	#0x700,D7
-	move.w	D7,SR
-#else
 	or.w	#0x700,SR
-#endif
 	move.b	0x28(A2),D7
 	lsl.l	#8,D7
 	move.b	0x2A(A2),D7

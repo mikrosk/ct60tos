@@ -18,11 +18,6 @@
 
 #include "config.h"
 #include "types.inc" /* fVDI structures */
-#ifdef COLDFIRE
-#ifdef DEBUG
-#include "../../include/fire.h"
-#endif
-#endif /* COLDFIRE */
 
 #undef XAAES_SEMAPHORE
 
@@ -235,9 +230,6 @@
 	.global _c_get_videoramaddress,_c_get_width_virtual,_c_get_height_virtual,_c_get_bpp_virtual
 	.global _eddi_cookie,_oldmouse,show_c,hide_c
 	.global _init_screen,_clear_screen,_move_screen,_print_screen,_memmove
-#ifdef COLDFIRE
-	.global _dma_transfer
-#endif
 	.global _c_blit_area,_c_line_draw,_default_line,_c_fill_area,_default_fill
 	.global _c_expand_area,_c_fill_polygon
 #ifdef DEBUG
@@ -253,12 +245,7 @@
 
 _init_det_vdi:
 
-#ifdef COLDFIRE
-	lea -24(SP),SP
-	movem.l D0-D2/A0-A2,(SP)
-#else
 	movem.l D0-D2/A0-A2,-(SP)
-#endif
 	move.l 28(SP),D0
 	move.l D0,fvdi_virtual_default
 	move.l D0,fvdi_virtual
@@ -266,20 +253,11 @@ _init_det_vdi:
 #ifdef XAAES_SEMAPHORE
 	clr.b semaphore
 #endif
-#ifdef COLDFIRE
-	jsr 0xE09512             // TOS404
-#else
 	dc.w 0xA000
-#endif
 	move.l A0,adr_var_vdi
 	move.l A1,adr_linea_fonts
 	move.l A2,adr_linea_atab
-#ifdef COLDFIRE
-	movem.l (SP),D0-D2/A0-A2
-	lea 24(SP),SP
-#else
 	movem.l (SP)+,D0-D2/A0-A2
-#endif
 	rts
 
 _end_vdi:
@@ -323,78 +301,18 @@ _display_string:
 
 	move.l 4(SP),A0
 
-#ifdef COLDFIRE // for interrupts
 
 display_string:
 
-	move.l D0,-(SP)
-	move.l A0,-(SP)
-.dds2:
-		move.b (A0)+,D0
-		beq.s .dds1
-		bsr display_char
-	bra.s .dds2
-.dds1:
-	move.l (SP)+,A0
-	move.l (SP)+,D0
-	rts
-
-hex_long:
-	move.l D0,-(SP)
-	swap D0
-	bsr.s hex_word
-	move.l (SP)+,D0
-hex_word:
-	move.w D0,-(SP)
-	lsr.l #8,D0          
-	bsr.s hex_byte     
-	move.w (SP)+,D0
-hex_byte:
-	move.w D0,-(SP)
-	lsr.l #4,D0        
-	bsr.s hex_char      
-	move.w (SP)+,D0      
-hex_char:
-	and.l #0xF,D0      
-	or.l #0x30,D0      
-	cmp.l #0x3A,D0     
-	bcs.s display_char  
-	addq.l #7,D0   
-
-display_char:
-
-	move.l D1,-(SP)
-.wait_uart:
-	move.b MCF_UART_USR0,D1
-	and.l  #MCF_UART_USR_TXRDY,D1
-	beq.s .wait_uart
-	move.b D0,MCF_UART_UTB0 // send the character
-	move.l (SP)+,D1
-	rts
-
-#else  /* !COLDFIRE */
-
-display_string:
-
-#ifdef COLDFIRE
-	move.l D0,-(SP)
-	move.l A0,-(SP)
-#else
 	movem.l D0/A0,-(SP)
 
-#endif
 .os2:
 		move.b (A0)+,D0
 		beq.s .os1
 		bsr display_char
 	bra.s .os2
 .os1:
-#ifdef COLDFIRE
-	move.l (SP)+,A0
-	move.l (SP)+,D0
-#else
 	movem.l (SP)+,D0/A0
-#endif
 	rts
 
 hex_long:
@@ -421,87 +339,31 @@ hex_char:
 
 display_char:
 
-#ifndef COLDFIRE
 	jmp vdu                  // debug.S
-#else
-#ifdef COLDFIRE
-	lea -24(SP),SP
-	movem.l D0-D2/A0-A2,(SP)
-#else
-	movem.l D0-D2/A0-A2,-(SP)
-#endif
-	move.w D0,-(SP)
-	move.w #2,-(SP)
-	move.w #3,-(SP)          // Bconout
-	trap #13
-	addq.l #6,SP
-#ifdef COLDFIRE
-	movem.l (SP),D0-D2/A0-A2
-	lea 24(SP),SP
-#else
-	movem.l (SP)+,D0-D2/A0-A2
-#endif
-	rts
-#endif
 	
-#endif // COLDFIRE
 
 display_tab:
 
-#ifdef COLDFIRE
-	move.l D1,-(SP)
-#endif
 	move.w D0,-(SP)
 	moveq #0,D0
 .dt1:
-#ifdef COLDFIRE
-		move.b (A0),D1
-		extb.l D1
-		cmp.l #-1,D1
-		beq.s .dt3
-		moveq #0,D1
-		move.w (SP),D1
-		cmp.l D1,D0
-#else
 		cmp.b #-1,(A0)
 		beq.s .dt3
 		cmp.w (SP),D0
-#endif
 		beq.s .dt4
 .dt2:
 		tst.b (A0)+
 		bne.s .dt2
-#ifdef COLDFIRE
-		addq.l #1,D0
-#else
 		addq.w #1,D0
-#endif
 	bra.s .dt1
 .dt4:
 	bsr display_string
 .dt3:
 	addq.l #2,SP
-#ifdef COLDFIRE
-	move.l (SP)+,D1
-#endif
 	rts
 
 wait_key:
 
-#ifdef COLDFIRE
-	lea -24(SP),SP
-	movem.l D0-D2/A0-A2,(SP)
-#if 0 // #ifdef DEBUG
-	move.w #1,-(SP)          // AUX
-#else
-	move.w #2,-(SP)          // CON
-#endif
-	move.w #2,-(SP)          // Bconin
-	trap #13
-	addq.l #4,SP
-	movem.l (SP),D0-D2/A0-A2
-	lea 24(SP),SP
-#else
 	movem.l D0-D2/A0-A2,-(SP)
 #if 0
 	move.w #7,-(SP)          // Crawcin
@@ -514,7 +376,6 @@ wait_key:
 	addq.l #4,SP
 #endif
 	movem.l (SP)+,D0-D2/A0-A2
-#endif
 	rts
 	
 debug1:	.asciz "v_opnwk 0x"
@@ -630,13 +491,7 @@ _GSX_ENTRY: /* for GDOS/Speedo/NVDI  */
 
 #ifdef XAAES_SEMAPHORE
 	moveq #0,D0
-#ifdef COLDFIRE
-	.chip 68060
-#endif
 	tas.b semaphore
-#ifdef COLDFIRE
-	.chip 5200
-#endif
 	bne.s .ge7               // another thread, hope that stack size is enough
 #endif /* XAAES_SEMAPHORE */
 	move.l SP,save_stack
@@ -646,12 +501,7 @@ _GSX_ENTRY: /* for GDOS/Speedo/NVDI  */
 .ge7:
 	move.w D0,-(SP)          // flag for restore stack
 #endif /* XAAES_SEMAPHORE */
-#ifdef COLDFIRE
-	lea -20(SP),SP
-	movem.l A0-A4,(SP)
-#else
 	movem.l A0-A4,-(SP)
-#endif /* COLDFIRE */
 	move.l D1,A1
 	move.l (A1),A3           // CONTRL
 	lea tab_vdi(PC),A4
@@ -669,36 +519,6 @@ _GSX_ENTRY: /* for GDOS/Speedo/NVDI  */
 	moveq #10,D0
 	bsr display_char
 #endif
-#ifdef COLDFIRE
-	moveq #0,D0
-	move.w (A3),D0           // opcode function
-	cmp.l #134,D0            // vex_wheelv
-	bhi.s .ge3               // end
-	move.w (A4,D0.l*2),D0
-	bmi.s .ge3               // TOS function
-	bclr #0,D0
-	bne.s .ge2               // v_opnwk or v_opnvwk
-	move.l D0,-(SP)
-	move.l D1,-(SP)
-	lea _virt_work,A2        // work_ptr
-	move.w 12(A3),D0         // VDI handle	
-.ge4:
-		moveq #0,D1
-		move.w HANDLE(A2),D1
-		cmp.l D1,D0
-		beq.s .ge5  // found handle
-		move.l NEXT_WORK(A2),A2
-	move.l A2,D1
-	bne.s .ge4
-	move.l (SP)+,D1
-	bra.s .ge1                // no workstation	
-.ge5:
-	move.l (SP)+,D1
-	move.l adr_var_vdi,A0
-	move.l A2,CUR_WORK(A0)
-	move.l FVDI_WORK(A2),D0
-	move.l D0,fvdi_virtual
-#else
 	move.w (A3),D0           // opcode function
 	cmp.w #134,D0            // vex_wheelv
 	bhi.s .ge3               // end
@@ -720,24 +540,14 @@ _GSX_ENTRY: /* for GDOS/Speedo/NVDI  */
 	move.l adr_var_vdi,A0
 	move.l A2,CUR_WORK(A0)
 	move.l FVDI_WORK(A2),fvdi_virtual
-#endif
 	move.l (SP)+,D0
 .ge2:
-#ifdef COLDFIRE
-	jsr (A4,D0.l)
-#else /* !COLDFIRE */
 	jsr (A4,D0.w)
-#endif /* COLDFIRE */
 	bra.s .ge3
 .ge1:
 	addq.l #4,SP
 .ge3:
-#ifdef COLDFIRE
-	movem.l (SP),A0-A4
-	lea 20(SP),SP
-#else /* !COLDFIRE */
 	movem.l (SP)+,A0-A4
-#endif /* COLDFIRE */
 #ifdef XAAES_SEMAPHORE
 	move.w (SP)+,D0
 	beq.s .ge6
@@ -751,21 +561,12 @@ _GSX_ENTRY: /* for GDOS/Speedo/NVDI  */
 	rts
 
 .v1:
-#ifdef COLDFIRE
-	cmp.l #-1,D0
-#else /* !COLDFIRE */
 	cmp.w #-1,D0
-#endif /* COLDFIRE */
 	bne .v6
 	move.l #_GSX_ENTRY,D0 /* for GDOS/NVDI */
 	rte
 .v11:
-#ifdef COLDFIRE
-	movem.l (SP),A0-A3
-	lea 16(SP),SP
-#else /* !COLDFIRE */
 	movem.l (SP)+,A0-A3
-#endif /* COLDFIRE */
 	moveq #0x73,D0
 #ifdef XAAES_SEMAPHORE
 	clr.b semaphore
@@ -779,27 +580,6 @@ _GSX_ENTRY: /* for GDOS/Speedo/NVDI  */
 
 _det_vdi:
 
-#ifdef COLDFIRE
-	ext.l D0
-	cmp.l #0x73,D0           // VDI
-	bne.s .v1
-#ifdef XAAES_SEMAPHORE
-	moveq #0,D0
-	.chip 68060
-	tas.b semaphore
-	.chip 5200
-	bne.s .v10               // another thread, hope that stack size is enough
-#endif
-	move.l SP,save_stack
-	lea vdi_stack,SP
-#ifdef XAAES_SEMAPHORE
-	moveq #-1,D0
-.v10:
-	move.w D0,-(SP)          // flag for restore stack
-#endif
-	lea -16(SP),SP
-	movem.l A0-A3,(SP)
-#else /* !COLDFIRE */
 	cmp.w #0x73,D0           // VDI
 	bne.s .v1
 #ifdef XAAES_SEMAPHORE
@@ -815,7 +595,6 @@ _det_vdi:
 	move.w D0,-(SP)          // flag for restore stack
 #endif /* XAAES_SEMAPHORE */
 	movem.l A0-A3,-(SP)
-#endif /* COLDFIRE */
 	move.l D1,A1
 	move.l (A1),A3           // CONTRL
 #ifdef DEBUG
@@ -847,36 +626,6 @@ _det_vdi:
 	bsr display_char
 .vx:
 #endif
-#ifdef COLDFIRE
-	moveq #0,D0
-	move.w (A3),D0           // opcode function
-	cmp.l #134,D0            // vex_wheelv
-	bhi.s .v5                // end
-	move.w tab_vdi(PC,D0.l*2),D0
-	bmi.s .v3                // TOS function
-	bclr #0,D0
-	bne.s .v2                // v_opnwk or v_opnvwk
-	move.l D0,-(SP)
-	move.l D1,-(SP)
-	lea _virt_work,A2        // work_ptr
-	move.w 12(A3),D0         // VDI handle	
-.v8:
-		moveq #0,D1
-		move.w HANDLE(A2),D1
-		cmp.l D1,D0
-		beq.s .v9  // found handle
-		move.l NEXT_WORK(A2),A2
-	move.l A2,D1
-	bne.s .v8
-	move.l (SP)+,D1
-	bra .v4                 // no workstation	
-.v9:
-	move.l (SP)+,D1
-	move.l adr_var_vdi,A0
-	move.l A2,CUR_WORK(A0)
-	move.l FVDI_WORK(A2),D0
-	move.l D0,fvdi_virtual
-#else
 	move.w (A3),D0           // opcode function
 	cmp.w #134,D0            // vex_wheelv
 	bhi.s .v5                // end
@@ -898,19 +647,11 @@ _det_vdi:
 	move.l adr_var_vdi,A0
 	move.l A2,CUR_WORK(A0)
 	move.l FVDI_WORK(A2),fvdi_virtual
-#endif
 	move.l (SP)+,D0
 .v2:
-#ifdef COLDFIRE
-	jsr tab_vdi(PC,D0.l)
-.v7:
-	movem.l (SP),A0-A3
-	lea 16(SP),SP
-#else /* !COLDFIRE */
 	jsr tab_vdi(PC,D0.w)
 .v7:
 	movem.l (SP)+,A0-A3
-#endif /* COLDFIRE */
 #ifdef XAAES_SEMAPHORE
 	move.w (SP)+,D0
 	beq.s .v12
@@ -1017,15 +758,8 @@ det_v_opnwk:
 
 	move.l D1,-(SP)
 	move.l D2,-(SP)
-#ifdef COLDFIRE
-	moveq #6,D0
-	move.w D0,4(A3)          // nb points PTSOUT
-	moveq #45,D0
-	move.w D0,8(A3)          // length tab INTOUT
-#else
 	move.w #6,4(A3)          // nb points PTSOUT
 	move.w #45,8(A3)         // length tab INTOUT
-#endif
 #ifdef DEBUG
 	lea debug1,A0
 	bsr display_string
@@ -1149,12 +883,7 @@ det_v_clswk:
 	
 det_v_clrwk:
 
-#ifdef COLDFIRE
-	lea -32(SP),SP
-	movem.l D1-D7/A4,(SP)
-#else
 	movem.l D1-D7/A4,-(SP)
-#endif
 	tst.b use_videl
 	bne.s .clrw6            // Videl driver
 	moveq #-1,D0
@@ -1170,14 +899,8 @@ det_v_clrwk:
 	jsr (A3)
 	move.l D0,D2
 	move.l adr_var_vdi,A0
-#ifdef COLDFIRE
-	moveq #0,D0
-	move.w V_PLANES(A0),D0   // nb planes
-	cmp.l #16,D0
-#else
 	move.w V_PLANES(A0),D0   // nb planes
 	cmp.w #16,D0
-#endif
 	bhi.s .clrw1
 	bcs.s .clrw5
 	swap D2
@@ -1191,14 +914,8 @@ det_v_clrwk:
 	asl.l #8,D2
 	move.b D0,D2
 .clrw1:
-#ifdef COLDFIRE
-	moveq #0,D0
-	move.w V_PLANES(A0),D0   // nb planes
-	lsr.l #3,D0              // / 8
-#else
 	move.w V_PLANES(A0),D0   // nb planes
 	lsr.w #3,D0              // / 8
-#endif
 	move.w V_REZ_HZ(A0),D1   // width screen
 	mulu D1,D0               // bytes / line
 	move.w V_REZ_VT(A0),D1   // height screen
@@ -1216,49 +933,18 @@ det_v_clrwk:
 	move.l D2,A0
 	bra.s .clrw4
 .clrw3:
-#ifdef COLDFIRE
-		lea -32(SP),SP
-		movem.l D1-A0,(A4)
-		lea -32(SP),SP
-		movem.l D1-A0,(A4)
-		lea -32(SP),SP
-		movem.l D1-A0,(A4)
-		lea -32(SP),SP
-		movem.l D1-A0,(A4)
-.clrw4:
-	subq.l #1,D0
-	bpl.s .clrw3
-#else
 		movem.l D1-A0,-(A4)
 		movem.l D1-A0,-(A4)
 		movem.l D1-A0,-(A4)
 		movem.l D1-A0,-(A4)
 .clrw4:
 	dbf D0,.clrw3
-#endif
 .clrw2:
-#ifdef COLDFIRE
-	movem.l (SP),D1-D7/A4
-	lea 32(SP),SP
-#else
 	movem.l (SP)+,D1-D7/A4
-#endif
 	rts
 
 det_escapes:
 
-#ifdef COLDFIRE
-	moveq #0,D0
-	move.w 10(A3),D0         // sub-function
-	subq.l #1,D0
-	bmi.s .de1
-	cmp.l #23,D0
-	bcc.s .de1
-	add.l D0,D0
-	move.w tab_escapes(PC,D0.l),D0
-	bmi.s .de2               // TOS function
-	jmp tab_escapes(PC,D0.l)
-#else /* !COLDFIRE */
 	move.w 10(A3),D0         // sub-function
 	subq.w #1,D0
 	bmi.s .de1
@@ -1268,7 +954,6 @@ det_escapes:
 	move.w tab_escapes(PC,D0.w),D0
 	bmi.s .de2               // TOS function
 	jmp tab_escapes(PC,D0.w)
-#endif /* COLDFIRE */
 .de1:
 	rts
 .de2:
@@ -1276,12 +961,7 @@ det_escapes:
 	cmp.l A4,A0
 	beq.s .de1               // call from _GSX_ENTRY
 	addq.l #4,SP             // pop return address
-#ifdef COLDFIRE
-	movem.l (SP),A0-A3
-	lea 16(SP),SP
-#else
 	movem.l (SP)+,A0-A3
-#endif
 #ifdef XAAES_SEMAPHORE
 	move.w (SP)+,D0
 	beq.s .de3
@@ -1322,12 +1002,7 @@ tab_escapes:
 
 det_vq_chcells:
 
-#ifdef COLDFIRE
-	moveq #2,D0
-	move.w D0,8(A3)          // length tab INTOUT
-#else
 	move.w #2,8(A3)          // length tab INTOUT
-#endif
 	move.l 12(A1),A3         // INTOUT
 	move.w V_CEL_MY(A0),D0
 	addq.l #1,D0
@@ -1339,30 +1014,15 @@ det_vq_chcells:
 
 det_v_exit_cur:
 
-#ifdef COLDFIRE
-	move.l D1,-(SP)
-	move.l D2,-(SP)
-#else
 	movem.l D1-D2,-(SP)
-#endif
 	bsr escf                 // hide cursor
 	bsr escE                 // clear screen and home cursor	
-#ifdef COLDFIRE
-	move.l (SP)+,D2
-	move.l (SP)+,D1
-#else
 	movem.l (SP)+,D1-D2
-#endif
 	rts
 
 det_v_enter_cur:
 
-#ifdef COLDFIRE
-	move.l D1,-(SP)
-	move.l D2,-(SP)
-#else
 	movem.l D1-D2,-(SP)
-#endif
 	tst.b use_videl
 	bne.s .vec1              // Videl driver
 	move.l A0,-(SP)
@@ -1374,163 +1034,73 @@ det_v_enter_cur:
 .vec1:
 	bsr escE                 // clear screen and home cursor	
 	bsr esce                 // enable cursor
-#ifdef COLDFIRE
-	move.l (SP)+,D2
-	move.l (SP)+,D1
-#else
 	movem.l (SP)+,D1-D2
-#endif
 	rts
 	
 det_v_curup:
 
-#ifdef COLDFIRE
-	move.l D1,-(SP)
-	move.l D2,-(SP)
-#else
 	movem.l D1-D2,-(SP)
-#endif
 	bsr escfn4               // alpha cursor up 
-#ifdef COLDFIRE
-	move.l (SP)+,D2
-	move.l (SP)+,D1
-#else
 	movem.l (SP)+,D1-D2
-#endif
 	rts
 
 det_v_curdown:
 
-#ifdef COLDFIRE
-	move.l D1,-(SP)
-	move.l D2,-(SP)
-#else
 	movem.l D1-D2,-(SP)
-#endif
 	bsr escfn5               // alpha cursor down
-#ifdef COLDFIRE
-	move.l (SP)+,D2
-	move.l (SP)+,D1
-#else
 	movem.l (SP)+,D1-D2
-#endif
 	rts
 	
 det_v_curright:
 
-#ifdef COLDFIRE
-	move.l D1,-(SP)
-	move.l D2,-(SP)
-#else
 	movem.l D1-D2,-(SP)
-#endif
 	bsr escfn6               // alpha cursor right 
-#ifdef COLDFIRE
-	move.l (SP)+,D2
-	move.l (SP)+,D1
-#else
 	movem.l (SP)+,D1-D2
-#endif
 	rts
 
 det_v_curleft:
 
-#ifdef COLDFIRE
-	move.l D1,-(SP)
-	move.l D2,-(SP)
-#else
 	movem.l D1-D2,-(SP)
-#endif
 	bsr escfn7               // alpha cursor left
-#ifdef COLDFIRE
-	move.l (SP)+,D2
-	move.l (SP)+,D1
-#else
 	movem.l (SP)+,D1-D2
-#endif
 	rts
 
 det_v_curhome:
 
-#ifdef COLDFIRE
-	move.l D1,-(SP)
-	move.l D2,-(SP)
-#else
 	movem.l D1-D2,-(SP)
-#endif
 	bsr escfn8               // home cursor	
-#ifdef COLDFIRE
-	move.l (SP)+,D2
-	move.l (SP)+,D1
-#else
 	movem.l (SP)+,D1-D2
-#endif
 	rts
 
 det_v_eeos:
 	
-#ifdef COLDFIRE
-	move.l D1,-(SP)
-	move.l D2,-(SP)
-#else
 	movem.l D1-D2,-(SP)
-#endif
 	bsr escfn9               // erase to end of screen
-#ifdef COLDFIRE
-	move.l (SP)+,D2
-	move.l (SP)+,D1
-#else
 	movem.l (SP)+,D1-D2
-#endif
 	rts
 	
 det_v_eeol:
 
-#ifdef COLDFIRE
-	move.l D1,-(SP)
-	move.l D2,-(SP)
-#else
 	movem.l D1-D2,-(SP)
-#endif
 	bsr escfn10              // erase to end of line
-#ifdef COLDFIRE
-	move.l (SP)+,D2
-	move.l (SP)+,D1
-#else
 	movem.l (SP)+,D1-D2
-#endif
 	rts
 	
 det_vs_curaddress:
 
-#ifdef COLDFIRE
-	move.l D1,-(SP)
-	move.l D2,-(SP)
-#else
 	movem.l D1-D2,-(SP)
-#endif
 	move.l 4(A1),A3          // INTIN
 	move.w (A3)+,D1
 	subq.l #1,D1             // y
 	move.w (A3),D0
 	subq.l #1,D0             // x
 	bsr move_cursor
-#ifdef COLDFIRE
-	move.l (SP)+,D2
-	move.l (SP)+,D1
-#else
 	movem.l (SP)+,D1-D2
-#endif
 	rts
 
 det_v_curtext:
 
-#ifdef COLDFIRE
-	move.l D1,-(SP)
-	move.l D2,-(SP)
-#else
 	movem.l D1-D2,-(SP)
-#endif
 	moveq #0,D0
 	move.w 6(A3),D0          // length tab INTIN
 	move.l 4(A1),A0          // INTIN -> character array.
@@ -1547,56 +1117,26 @@ ef12_loop:
 ef12_lend:
 	subq.l #1,D0
 	bpl.s ef12_loop
-#ifdef COLDFIRE
-	move.l (SP)+,D2
-	move.l (SP)+,D1
-#else
 	movem.l (SP)+,D1-D2
-#endif
 	rts
 
 det_v_rvon:
 
-#ifdef COLDFIRE
-	move.l D1,-(SP)
-	move.l D2,-(SP)
-#else
 	movem.l D1-D2,-(SP)
-#endif
 	bsr escfn13              // reverse video on
-#ifdef COLDFIRE
-	move.l (SP)+,D2
-	move.l (SP)+,D1
-#else
 	movem.l (SP)+,D1-D2
-#endif
 	rts
 	
 det_v_rvoff:
 
-#ifdef COLDFIRE
-	move.l D1,-(SP)
-	move.l D2,-(SP)
-#else
 	movem.l D1-D2,-(SP)
-#endif
 	bsr escfn14              // reverse video off
-#ifdef COLDFIRE
-	move.l (SP)+,D2
-	move.l (SP)+,D1
-#else
 	movem.l (SP)+,D1-D2
-#endif
 	rts
 
 det_vq_curaddress:
 
-#ifdef COLDFIRE
-	moveq #2,D0
-	move.w D0,8(A3)          // length tab INTOUT
-#else
 	move.w #2,8(A3)          // length tab INTOUT
-#endif
 	move.l 12(A1),A3         // INTOUT
 	move.w V_CUR_Y(A0),D0
 	addq.l #1,D0
@@ -1768,12 +1308,7 @@ escfn14:
  */
 escfn17:
 
-#ifdef COLDFIRE
-	lea -52(SP),SP
-	movem.l D1-D7/A1-A6,(SP)
-#else
 	movem.l D1-D7/A1-A6,-(SP)
-#endif
 #if 1
 
 	move.l dump_vec,A0
@@ -1785,12 +1320,7 @@ escfn17:
 	trap #14                 // XBIOS
 	addq.l #2,SP
 #endif
-#ifdef COLDFIRE
-	movem.l D1-D7/A1-A6,(SP)
-	lea 52(SP),SP
-#else
 	movem.l (SP)+,D1-D7/A1-A6
-#endif
 	rts
 	
 /*
@@ -1963,12 +1493,7 @@ ascii_lf:
  */
 p_sc_dwn:
 
-#ifdef COLDFIRE
-	lea -28(SP),SP
-	movem.l D0-D3/A0-A2,(SP)
-#else
 	movem.l D0-D3/A0-A2,-(SP)
-#endif
 	move.w V_LIN_WR(A0),D0   // line wrap
 	mulu V_CEL_HT(A0),D0     // * cell height => v_cel_wr
 	moveq #0,D3
@@ -2018,12 +1543,7 @@ videl_p_sc_dwn:
 	jsr _memmove
 	lea 12(SP),SP
 end_p_sc_dwn:
-#ifdef COLDFIRE
-	movem.l (SP),D0-D3/A0-A2
-	lea 28(SP),SP
-#else
 	movem.l (SP)+,D0-D3/A0-A2
-#endif
 	bra scr_out
 
 /*
@@ -2043,12 +1563,7 @@ end_p_sc_dwn:
  */
 p_sc_up:
 
-#ifdef COLDFIRE
-	lea -28(SP),SP
-	movem.l D0-D3/A0-A2,(SP)
-#else
 	movem.l D0-D3/A0-A2,-(SP)
-#endif
 	move.w V_LIN_WR(A0),D0   // line wrap
 	mulu V_CEL_HT(A0),D0     // * cell height => v_cel_wr cell wrap to temp
 	move.l D0,D3             // cell wrap to temp d3
@@ -2090,39 +1605,13 @@ videl_p_sc_up:
 	add.l D2,D0              // form (max-1) - top row # for total rows to move
 	lea.l (A1,D3.l),A2       // form source address from cell wrap + base address
 	mulu.l D0,D3             // form # of bytes to move in d3
-#ifdef COLDFIRE
-	moveq #0,D0
-	move.w V_PLANES(A0),D0
-	lsr.l #3,D0              // / 8
-	beq.s videl_p_sc_up2     // use memmove if < 256 colors
-	moveq #4,D0
-	move.l D0,-(SP)          // step
-	clr.l -(SP)              // dest_incr
-	clr.l -(SP)              // src_incr
-	clr.l -(SP)              // width
-	move.l D3,-(SP)          // size
-	move.l A1,-(SP)          // dest
-	move.l A2,-(SP)          // source
-	jsr _dma_transfer
-	move.l (SP)+,A2
-	move.l (SP)+,A1
-	lea 20(SP),SP
-	tst.l D0
-	beq.s end_p_sc_up        // OK
-videl_p_sc_up2:
-#endif     
 	move.l D3,-(SP)          // move memory
 	move.l A2,-(SP)          // source
 	move.l A1,-(SP)          // dest
 	jsr _memmove
 	lea 12(SP),SP
 end_p_sc_up:
-#ifdef COLDFIRE
-	movem.l (SP),D0-D3/A0-A2
-	lea 28(SP),SP
-#else
 	movem.l (SP)+,D0-D3/A0-A2
-#endif
 	move.w V_CEL_MY(A0),D1   // bottom line cell address y to top/left cell
 
 scr_out:
@@ -2389,12 +1878,7 @@ set_hide:
  */
 cell_xfer:
 
-#ifdef COLDFIRE
-	lea -52(SP),SP
-	movem.l D0-D6/A0-A5,(SP)
-#else
 	movem.l D0-D6/A0-A5,-(SP)
-#endif
 	moveq #0,D0
 	moveq #0,D4
 	moveq #0,D6
@@ -2537,12 +2021,7 @@ blk_xfer_bgc_tc:
 	subq.l #1,D4
 	bgt.s blk_xfer_tc
 end_xfer:
-#ifdef COLDFIRE
-	movem.l (SP),D0-D6/A0-A5
-	lea 52(SP),SP
-#else
 	movem.l (SP)+,D0-D6/A0-A5
-#endif
 	rts
 
 /*
@@ -2560,12 +2039,7 @@ end_xfer:
  */
 blnk_blt:
 
-#ifdef COLDFIRE
-	lea -36(SP),SP
-	movem.l D0-D5/A0-A2,(SP)
-#else
 	movem.l D0-D5/A0-A2,-(SP)
-#endif	
 	bsr hide_cursor
 	sub.l D1,D2              // form cell delta x, delta y in d2
 	move.w D1,D0             // cell x 
@@ -2797,24 +2271,14 @@ no_planesx_tc:
 end_blnk_blt:
 	bsr show_cursor
 
-#ifdef COLDFIRE
-	movem.l (SP),D0-D5/A0-A2
-	lea 36(SP),SP
-#else
 	movem.l (SP)+,D0-D5/A0-A2
-#endif
 	rts
 
 neg_cell:
 
 	tst.b use_videl
 	bne.s int_neg_cell       // Videl driver
-#ifdef COLDFIRE
-	lea -24(SP),SP
-	movem.l D0-D2/A0-A2,(SP)
-#else
 	movem.l D0-D2/A0-A2,-(SP)
-#endif
 	moveq #0,D0
 	move.w V_CEL_HT(A0),D0
 	move.l D0,-(SP)          // h
@@ -2832,22 +2296,12 @@ neg_cell:
         	move.l D0,-(SP)          // xor
 	jsr _clear_screen
 	lea 20(SP),SP
-#ifdef COLDFIRE
-	movem.l (SP),D0-D2/A0-A2
-	lea 24(SP),SP
-#else
 	movem.l (SP)+,D0-D2/A0-A2
-#endif
 	rts
 
 int_neg_cell:
 	// accelerated routine not used for interrupts => no semaphores
-#ifdef COLDFIRE
-	lea -32(SP),SP
-	movem.l D0-D4/A0-A2,(SP)
-#else
 	movem.l D0-D3/A0-A2,-(SP)
-#endif
 	move.l V_CUR_AD(A0),A2   // cursor address
 	moveq #0,D0
 	moveq #0,D1
@@ -2872,13 +2326,7 @@ plane_loop:
 	        move.l A2,A1
 	        move.l D1,D3
 neg_loop:
-#ifdef COLDFIRE
-			move.b (A1),D4
-			not.l D4
-			move.b D4,(A1)
-#else
 			not.b (A1)
-#endif
 			add.l D2,A1
 	        subq.l #1,D3
 	        bgt.s neg_loop
@@ -2933,12 +2381,7 @@ loop_pixel_32:
 	subq.l #1,D1
 	bgt.s loop_line_32
 end_neg_cell:
-#ifdef COLDFIRE
-	movem.l (SP),D0-D4/A0-A2
-	lea 32(SP),SP
-#else
 	movem.l (SP)+,D0-D3/A0-A2
-#endif
 	rts
 	
 /*
@@ -2974,19 +2417,9 @@ _bconout5:
 	move.b 7(SP),D1
 	move.l SP,save_stack4
 	lea conout_stack,SP
-#ifdef COLDFIRE
-	lea -44(SP),SP
-	movem.l D2-D7/A2-A6,(SP)
-#else
 	movem.l D2-D7/A2-A6,-(SP)
-#endif
 	bsr ascii_out
-#ifdef COLDFIRE
-	movem.l (SP),D2-D7/A2-A6
-	lea 44(SP),SP
-#else
 	movem.l (SP)+,D2-D7/A2-A6
-#endif
 	move.l save_stack4,SP
 	rts
 
@@ -3068,12 +2501,7 @@ _bconstat2:
 	jsr _print_screen
 	addq.l #4,SP
 	move.l save_stack4,SP
-#ifdef COLDFIRE
-	moveq #-1,D0
-	move.b D0,flush_bconout
-#else
 	st.b flush_bconout       // flush again after next character
-#endif
 .old_bconstat2:
 	move.l save_bconstat2,-(SP)
 	rts
@@ -3088,12 +2516,7 @@ _bconin2:
 	jsr _print_screen
 	addq.l #4,SP
 	move.l save_stack4,SP
-#ifdef COLDFIRE
-	moveq #-1,D0
-	move.b D0,flush_bconout
-#else
 	st.b flush_bconout       // flush again output after next character
-#endif
 .old_bconin2:
 	move.l save_bconin2,-(SP)
 	rts
@@ -3400,12 +2823,7 @@ bellsnd:
 
 det_v_pline:
 
-#ifdef COLDFIRE
-	lea -28(SP),SP
-	movem.l D1-D7,(SP)
-#else	
 	movem.l D1-D7,-(SP)
-#endif
 	move.l 8(A1),A0          // PTSIN
 	moveq #0,D6
 	move.w 2(A3),D6          // nb points PTSIN
@@ -3413,38 +2831,19 @@ det_v_pline:
 	bne .pl3                 // wide line
 	tst.w END_STYLE(A2)
 	bne .pl3                 // wide line
-#ifdef COLDFIRE
-	moveq #0,D0
-	move.w LINE_WIDTH(A2),D0
-	cmp.l #1,D0
-	bhi .pl3                 // wide line
-.pl4:
-	cmp.l #2,D6              // nb points PTSIN
-#else
 	cmp.w #1,LINE_WIDTH(A2)
 	bhi .pl3                 // wide line
 .pl4:
 	cmp.w #2,D6              // nb points PTSIN
-#endif
 	blt .pl1
 	moveq #0,D5
 	move.w USER_DEF_LINE_STYLE_PAT(A2),D5
-#ifdef COLDFIRE
-	moveq #0,D0
-	move.w LINE_TYPE(A2),D0
-	cmp.l #6,D0
-	bcc.s .pl2
-	lea tab_line_type,A3
-	add.l D0,D0
-	move.w (A3,D0.l),D5      // pattern
-#else
 	move.w LINE_TYPE(A2),D0
 	cmp.w #6,D0
 	bcc.s .pl2
 	lea tab_line_type,A3
 	add.w D0,D0
 	move.w (A3,D0.w),D5      // pattern
-#endif
 .pl2:
 	move.l A0,D1             // table address
 	move.w D6,D2             // table length
@@ -3498,21 +2897,11 @@ det_v_pline:
 	jsr (A3)                 // if no accel call default_line
 	bra .pl1
 .pl3:
-#ifdef COLDFIRE
-	lea -12(SP),SP
-	movem.l A0-A2,(SP)
-#else
 	movem.l A0-A2,-(SP)
-#endif
 	clr.l -(SP)              // get a memory block of any size (hopefully large)
 	jsr _allocate_block
 	addq.l #4,SP
-#ifdef COLDFIRE
-	movem.l (SP),A0-A2
-	lea 12(SP),SP
-#else
 	movem.l (SP)+,A0-A2
-#endif
 	tst.l D0
 	beq .pl4                 // error
 	move.l D0,-(SP)          // save for later
@@ -3534,33 +2923,16 @@ det_v_pline:
 	jsr _free_block
 	addq.l #4,SP
 .pl1:
-#ifdef COLDFIRE
-	movem.l (SP),D1-D7
-	lea 28(SP),SP
-#else
 	movem.l (SP)+,D1-D7
-#endif
 	rts
 
 det_v_pmarker:
 
-#ifdef COLDFIRE
-	lea -24(SP),SP
-	movem.l D1-D6,(SP)	
-#else
 	movem.l D1-D6,-(SP)
-#endif
 	move.l 8(A1),A0          // PTSIN
 	tst.w 2(A3)              // nb points PTSIN
 	beq .pm1
-#ifdef COLDFIRE
-	move.w (A0),D1
-	ext.l D1
-	move.w 2(A0),D2          // only a single dot for now
-	ext.l D2
-#else
 	movem.w (A0),D1-D2       // only a single dot for now
-#endif
 	move.l D1,D3
 	move.l D2,D4
 	move.l #0xffff,D5
@@ -3606,12 +2978,7 @@ det_v_pmarker:
 	move.l wk_r_line(A3),A3
 	jsr (A3)
 .pm1:
-#ifdef COLDFIRE
-	movem.l (SP),D1-D6
-	lea 24(SP),SP
-#else
 	movem.l (SP)+,D1-D6
-#endif
 	rts
 
 det_v_gtext:
@@ -3623,12 +2990,7 @@ det_v_gtext:
 	
 gtext:
 
-#ifdef COLDFIRE
-	move.l D1,-(SP)
-	move.l D2,-(SP)
-#else
 	movem.l D1-D2,-(SP)
-#endif
 	move.l A0,A3             // INTIN
 	move.l 8(A1),A0          // PTSIN
 	move.l (A0),D1           // X1,Y1 destination
@@ -3636,29 +2998,11 @@ gtext:
 	beq.s .vg2               // left justified
 	move.l D1,-(SP)
 	link A6,#-16
-#ifdef COLDFIRE
-	lea -12(SP),SP
-	movem.l D0/A0-A1,(SP)
-#else
 	movem.l D0/A0-A1,-(SP)
-#endif
 	move.l A3,A0             // INTIN
 	lea -16(A6),A1           // PTSOUT		
 	bsr vqt_extent
 	move.w -8(A6),D1         // X3
-#ifdef COLDFIRE
-	movem.l (SP),D0/A0-A1
-	lea 12(SP),SP
-	unlk A6
-	ext.l D1
-	moveq #0,D2
-	move.w HORIZONTAL_ALIGN(A2),D2
-	cmp.l #2,D2
-	beq.s .vg3               // right justified
-	asr.l #1,D1 
-.vg3:
-	neg.l D1
-#else
 	movem.l (SP)+,D0/A0-A1
 	unlk A6
 	cmp.w #2,HORIZONTAL_ALIGN(A2)
@@ -3666,7 +3010,6 @@ gtext:
 	lsr.w #1,D1 
 .vg3:
 	neg.w D1
-#endif
 	swap D1
 	clr.w D1
 	add.l (SP)+,D1           // X1,Y1 destination
@@ -3715,12 +3058,7 @@ gtext:
 	move.l wk_r_text(A3),A3
 	jsr (A3)
 .vg4:
-#ifdef COLDFIRE
-	move.l (SP)+,D2
-	move.l (SP)+,D1
-#else
 	movem.l (SP)+,D1-D2
-#endif
 .vg1:
 	rts
 
@@ -3728,12 +3066,7 @@ det_v_fillarea:
 
 	tst.w 2(A3)              // nb points PTSIN
 	beq .vfa1             
-#ifdef COLDFIRE
-	lea -28(SP),SP
-	movem.l D1-D7,(SP)
-#else
 	movem.l D1-D7,-(SP)
-#endif
 	move.l A1,-(SP)
 	move.l A2,-(SP)
 	move.l 8(A1),D1          // PTSIN
@@ -3800,21 +3133,11 @@ det_v_fillarea:
 	jsr (A3)
 	bra .vfa3
 .vfa2:
-#ifdef COLDFIRE
-	lea -20(SP),SP
-	movem.l D1-D2/A0-A2,(SP)
-#else
 	movem.l D1-D2/A0-A2,-(SP)
-#endif
 	clr.l -(SP)              // get a memory block of any size (hopefully large)
 	jsr _allocate_block
 	addq.l #4,SP
-#ifdef COLDFIRE
-	movem.l (SP),D1-D2/A0-A2
-	lea 20(SP),SP
-#else
 	movem.l (SP)+,D1-D2/A0-A2
-#endif
 	tst.l D0
 	beq.s .vfa3              // error
 	move.l D0,-(SP)          // save for later
@@ -3841,13 +3164,7 @@ det_v_fillarea:
 	move.l (SP)+,A1
 	tst.w FILL_PER_VISIB(A2)
 	beq .vfa6
-#ifdef COLDFIRE
-	moveq #0,D0
-	move.w FILL_INT_STYLE(A2),D0
-	cmp.l #1,D0              // color fill
-#else
 	cmp.w #1,FILL_INT_STYLE(A2)
-#endif
 	beq .vfa6                // nothing to do
 	move.l (A1),A3           // CONTRL
 	move.l 8(A1),D1          // PTSIN
@@ -3902,43 +3219,12 @@ det_v_fillarea:
 	move.l wk_r_line(A3),A3
 	jsr (A3)
 .vfa6:
-#ifdef COLDFIRE
-	movem.l (SP),D1-D7
-	lea 28(SP),SP
-#else
 	movem.l (SP)+,D1-D7
-#endif
 .vfa1:
 	rts
 	
 det_gdps:
 
-#ifdef COLDFIRE
-	moveq #0,D0
-	move.w 10(A3),D0         // sub-function
-	subq.l #1,D0
-	bmi.s .gd1
-	cmp.l #10,D0
-	bcc.s .gd1
-#ifdef DEBUG
-	move.l D0,-(SP)
-	move.l A0,-(SP)
-	lea tab_debug_gdps_f,A0
-	bsr display_tab
-	moveq #0x20,D0
-	bsr display_char
-	moveq #13,D0
-	bsr display_char
-	moveq #10,D0
-	bsr display_char
-	move.l (SP)+,A0
-	move.l (SP)+,D0
-#endif
-	add.l D0,D0
-	move.w tab_sub_vdi(PC,D0.l),D0
-	bmi.s .gd1
-	jmp tab_sub_vdi(PC,D0.l)
-#else
 	move.w 10(A3),D0         // sub-function
 	subq.w #1,D0
 	bmi.s .gd1
@@ -3962,7 +3248,6 @@ det_gdps:
 	move.w tab_sub_vdi(PC,D0.w),D0
 	bmi.s .gd1
 	jmp tab_sub_vdi(PC,D0.w)
-#endif
 .gd1:
 	rts
 
@@ -3991,18 +3276,9 @@ det_v_bar:
 	tst.w FILL_PER_VISIB(A2)
 	beq .vbar1
 .vbar2:
-#ifdef COLDFIRE
-	moveq #0,D0
-	move.w FILL_INT_STYLE(A2),D0
-	cmp.l #1,D0              // color fill
-	beq .vbar1               // nothing to do
-	lea -28(SP),SP
-	movem.l D1-D7,(SP)
-#else
 	cmp.w #1,FILL_INT_STYLE(A2)
 	beq .vbar1               // nothing to do
 	movem.l D1-D7,-(SP)
-#endif
 	link A6,#-20
 	lea -20(A6),A0
 	move.l 8(A1),A1          // PTSIN
@@ -4074,39 +3350,11 @@ det_v_bar:
 	jsr (A3)
 .vbar4:
 	unlk A6
-#ifdef COLDFIRE
-	movem.l (SP),D1-D7
-	lea 28(SP),SP
-#else
 	movem.l (SP)+,D1-D7
-#endif
 .vbar1:
 	rts
 	
 rectangle:
-#ifdef COLDFIRE
-	lea -48(SP),SP
-	movem.l D0-D7/A0-A3,(SP)
-	move.w (A0),D1           // X1
-	move.w 2(A0),D2          // Y1
-	move.w 4(A0),D3          // X2
-	move.w 6(A0),D4          // Y2
-	ext.l D1
-	ext.l D2
-	ext.l D3
-	ext.l D4
-	cmp.l D2,D4
-	bge.s .rec3
-	move.l D2,D0
-	move.l D4,D2
-	move.l D0,D4
-.rec3:
-	cmp.l D1,D3
-	bge.s .rec2
-	move.l D1,D0
-	move.l D3,D1
-	move.l D0,D3
-#else
 	movem.l D0-D7/A0-A3,-(SP)
 	movem.w (A0),D1-D4       // X1, Y1, X2, Y2
 	cmp.w D2,D4
@@ -4116,7 +3364,6 @@ rectangle:
 	cmp.w D1,D3
 	bge.s .rec2
 	exg D1,D3
-#endif
 .rec2:
 	bsr clip_rect
 	beq .rec1
@@ -4176,12 +3423,7 @@ rectangle:
 	move.l wk_r_fill(A3),A3
 	jsr (A3)
 .rec1:
-#ifdef COLDFIRE
-	movem.l (SP),D0-D7/A0-A3
-	lea 48(SP),SP
-#else
 	movem.l (SP)+,D0-D7/A0-A3
-#endif
 	rts
 	
 det_v_arc:
@@ -4192,28 +3434,6 @@ det_v_arc:
 
 det_v_ellarc:
        
-#ifdef COLDFIRE
-	move.l D1,-(SP)
-	move.l D2,-(SP)
-	move.l 4(A1),A0          // INTIN
-	move.w (A0),D0           // angles: begang
-	move.w 2(A0),D1          //         endang
-	ext.l D0
-	ext.l D1
-	move.l D1,-(SP)
-	move.l D0,-(SP)
-	move.l 8(A1),A0          // PTSIN
-	move.w 4(A0),D0          // radius: x
-	move.w 6(A0),D1          //         y
-	ext.l D0
-	ext.l D1
-	move.l D1,-(SP)
-	move.l D0,-(SP)
-	move.w (A0),D0            // center: x
-	move.w 2(A0),D1           //         y
-	ext.l D0
-	ext.l D1
-#else
 	movem.l D1-D2,-(SP)
 	move.l 4(A1),A0          // INTIN
 	movem.w (A0),D0-D1       // angles: begang, endang
@@ -4224,19 +3444,13 @@ det_v_ellarc:
 	move.l D1,-(SP)
 	move.l D0,-(SP)
 	movem.w (A0),D0-D1       // center: x, y
-#endif
 	move.l D1,-(SP)
 	move.l D0,-(SP)
 	move.l #6,-(SP)          // ellarc
 	move.l fvdi_virtual,-(SP)
 	jsr _ellipsearc          // vwk, gdp, xc, yc, xrad, yrad, b_ang, e_ang
 	lea 32(SP),SP
-#ifdef COLDFIRE
-	move.l (SP)+,D2
-	move.l (SP)+,D1
-#else
 	movem.l (SP)+,D1-D2
-#endif
 	rts
 
 det_v_pie:
@@ -4247,28 +3461,6 @@ det_v_pie:
 
 det_v_ellpie:
 
-#ifdef COLDFIRE
-	move.l D1,-(SP)
-	move.l D2,-(SP)
-	move.l 4(A1),A0          // INTIN
-	move.w (A0),D0           // angles: begang
-	move.w 2(A0),D1          //         endang
-	ext.l D0
-	ext.l D1
-	move.l D1,-(SP)
-	move.l D0,-(SP)
-	move.l 8(A1),A0          // PTSIN	
-	move.w 4(A0),D0          // radius: x
-	move.w 6(A0),D1          //         y
-	ext.l D0
-	ext.l D1
-	move.l D1,-(SP)
-	move.l D0,-(SP)
-	move.w (A0),D0           // center: x
-	move.w 2(A0),D1          //         y
-	ext.l D0
-	ext.l D1
-#else
 	movem.l D1-D2,-(SP)
 	move.l 4(A1),A0          // INTIN
 	movem.w (A0),D0-D1       // angles: begang, endang
@@ -4279,19 +3471,13 @@ det_v_ellpie:
 	move.l D1,-(SP)
 	move.l D0,-(SP)
 	movem.w (A0),D0-D1       // center: x, y
-#endif
 	move.l D1,-(SP)
 	move.l D0,-(SP)
 	move.l #7,-(SP)          // ellpie
 	move.l fvdi_virtual,-(SP)
 	jsr _ellipsearc          // vwk, gdp, xc, yc, xrad, yrad, b_ang, e_ang
 	lea 32(SP),SP
-#ifdef COLDFIRE
-	move.l (SP)+,D2
-	move.l (SP)+,D1
-#else
 	movem.l (SP)+,D1-D2
-#endif
 	rts
 	
 det_v_circle:
@@ -4302,23 +3488,6 @@ det_v_circle:
 	
 det_v_ellipse:
 
-#ifdef COLDFIRE
-	move.l D1,-(SP)
-	move.l D2,-(SP)
-	clr.l -(SP)              // dummy angles
-	clr.l -(SP)
-	move.l 8(A1),A0          // PTSIN	
-	move.w 4(A0),D0          // radius: x
-	move.w 6(A0),D1          //         y
-	ext.l D0
-	ext.l D1
-	move.l D1,-(SP)
-	move.l D0,-(SP)
-	move.w (A0),D0           // center: x
-	move.w 2(A0),D1          //         y
-	ext.l D0
-	ext.l D1
-#else
 	movem.l D1-D2,-(SP)
 	clr.l -(SP)              // dummy angles
 	clr.l -(SP)
@@ -4327,61 +3496,35 @@ det_v_ellipse:
 	move.l D1,-(SP)
 	move.l D0,-(SP)
 	movem.w (A0),D0-D1       // center: x, y
-#endif
 	move.l D1,-(SP)
 	move.l D0,-(SP)
 	move.l #5,-(SP)          // ellipse
 	move.l fvdi_virtual,-(SP)
 	jsr _ellipsearc          // vwk, gdp, xc, yc, xrad, yrad, b_ang, e_ang
 	lea 32(SP),SP
-#ifdef COLDFIRE
-	move.l (SP)+,D2
-	move.l (SP)+,D1
-#else
 	movem.l (SP)+,D1-D2
-#endif
 	rts
 	
 det_v_rbox:
 
-#ifdef COLDFIRE
-	move.l D1,-(SP)
-	move.l D2,-(SP)
-#else
 	movem.l D1-D2,-(SP)
-#endif
 	move.l 8(A1),-(SP)       // PTSIN, edges
 	move.l #8,-(SP)          // rbox
 	move.l fvdi_virtual,-(SP)
 	jsr _rounded_box         // vwk, gdb_code, points
 	lea 12(SP),SP
-#ifdef COLDFIRE
-	move.l (SP)+,D2
-	move.l (SP)+,D1
-#else
 	movem.l (SP)+,D1-D2
-#endif
 	rts
 	
 det_v_rfbox:
 
-#ifdef COLDFIRE
-	move.l D1,-(SP)
-	move.l D2,-(SP)
-#else
 	movem.l D1-D2,-(SP)
-#endif
 	move.l 8(A1),-(SP)       // PTSIN, edges
 	move.l #9,-(SP)          // rfbox
 	move.l fvdi_virtual,-(SP)
 	jsr _rounded_box         // vwk, gdb_code, points
 	lea 12(SP),SP
-#ifdef COLDFIRE
-	move.l (SP)+,D2
-	move.l (SP)+,D1
-#else
 	movem.l (SP)+,D1-D2
-#endif
 	rts
 
 det_v_justified:
@@ -4396,29 +3539,14 @@ det_v_justified:
 	addq.l #4,A0             // => string
 	bra gtext
 .vj2:
-#ifdef COLDFIRE
-	lea -12(SP),SP
-	movem.l A0-A2,(SP)
-#else
 	movem.l A0-A2,-(SP)
-#endif
 	move.l #4*1024,-(SP)
 	jsr _allocate_block
 	addq.l #4,SP
-#ifdef COLDFIRE
-	movem.l (SP),A0-A2
-	lea 12(SP),SP
-#else
 	movem.l (SP)+,A0-A2
-#endif
 	tst.l D0
 	beq .vj1
-#ifdef COLDFIRE
-	lea -36(SP),SP
-	movem.l D1-D7/A4-A5,(SP)
-#else
 	movem.l D1-D7/A4-A5,-(SP)
-#endif
 	move.l D0,A5
 	move.l A5,-(SP)
 	moveq #0,D0
@@ -4428,13 +3556,6 @@ det_v_justified:
 	move.l 4(A1),A0          // INTIN
 	lea 4(A0),A4             // string
 	move.l ADR_FONT(A2),A3
-#ifdef COLDFIRE
-	moveq #0,D3
-	moveq #0,D4
-	move.l D7,-(SP)
-	moveq #0,D6
-	moveq #0,D7
-#endif
 	move.w FIRST_ADE(A3),D3
 	move.w LAST_ADE(A3),D4
 	move.l CHAR_OFF_TABLE(A3),A3
@@ -4443,21 +3564,6 @@ det_v_justified:
 	moveq #0,D5              // spaces
 	bra.s .vj5
 .vj4:
-#ifdef COLDFIRE
-		moveq #0,D1
-		move.w (A4)+,D1
-		sub.l D3,D1 // negative numbers are higher
-		cmp.l D4,D1 // than code_high
-		bhi.s .vj5
-		cmp.l #0x20,D1 // space
-		bne.s .vj3
-		addq.l #1,D5
-.vj3:
-		move.w 2(A3,D1.l*2),D6
-		move.w (A3,D1.l*2),D7
-		sub.l D7,D6
-		add.l D6,D2
-#else
 		move.w (A4)+,D1
 		sub.w D3,D1 // negative numbers are higher
 		cmp.w D4,D1 // than code_high
@@ -4469,51 +3575,9 @@ det_v_justified:
 		move.w 2(A3,D1.w*2),D6
 		sub.w (A3,D1.w*2),D6
 		add.w D6,D2
-#endif
 		move.w D6,(A5)+
 		clr.w (A5)+
 .vj5:
-#ifdef COLDFIRE
-	subq.l #1,D0
-	bpl.s .vj4
-	move.l (SP)+,D7
-	move.l 8(A1),A3          // PTSIN
-	moveq #0,D6
-	move.w 4(A3),D6          // x size
-	sub.l D2,D6
-	beq .vj6
-	ext.l D6                 // amount to widen by (could be negative)
-	move.l D7,D4             // number of characters
-	sub.l D5,D4
-	tst.w (A0)               // any word spacing?
-	beq.s .vj9
-	move.l D5,D4
-	tst.w 2(A0)              // any character spacing?
-	beq .vj9
-	move.l D7,D4             // number of characters
-.vj9:
-	subq.l #1,D4             // number of positions to vary spacing at
-	beq .vj6
-	.chip 68000
-	divs D4,D6
-	.chip 5200
-	move.l D6,D2
-	swap D2
-	ext.l D2
-	bpl.s .vj10
-	move.l D2,D0
-	neg.l D0
-	move.w D0,D2
-.vj10:
-	moveq #0,D3
-	move.l (SP),A5
-	clr.l (A5)+              // first character at 0,0
-	move.l D7,D0             // number of characters
-	subq.l #1,D0             // skip first character
-	move.l D7,-(SP)
-	move.w D2,D7
-	ext.l D7
-#else
 	dbf D0,.vj4
 	move.l 8(A1),A3          // PTSIN
 	move.w 4(A3),D6          // x size
@@ -4543,35 +3607,11 @@ det_v_justified:
 	clr.l (A5)+              // first character at 0,0
 	move.w D7,D0             // number of characters
 	subq.w #1,D0             // skip first character
-#endif
 	lea 4(A0),A4             // string
 	addq.l #2,A4             // skip first character
 	bra.s .vj12
 .vj11:
 		move.w (A5),D5
-#ifdef COLDFIRE
-		ext.l D5
-		moveq #0,D1
-		move.w (A4)+,D1
-		cmp.l #0x20,D1 // space
-		bne.s .vj13
-		tst.w 2(A0)    // character spacing
-		bra.s .vj14
-.vj13:
-		tst.w (A0)     // word spacing
-.vj14:
-		beq.s .vj15
-		add.l D6,D5
-.vj15:
-		add.l D7,D3
-		cmp.l D4,D3
-		bcs.s .vj16
-		sub.l D4,D3
-		addq.l #1,D5
-		tst.l D2
-		bpl.s .vj16
-		subq.l #2,D5
-#else
 		move.w (A4)+,D1
 		cmp.b #0x20,D1 // space
 		bne.s .vj13
@@ -4591,38 +3631,21 @@ det_v_justified:
 		tst.l D2
 		bpl.s .vj16
 		subq.w #2,D5
-#endif
 .vj16:
 		move.w D5,(A5)
 		addq.l #4,A5
 .vj12:
-#ifdef COLDFIRE
-	subq.l #1,D0
-	bpl.s .vj11
-	move.l (SP)+,D7
-#else
 	dbf D0,.vj11
-#endif
 .vj6:
 	moveq #0,D1
 	tst.w HORIZONTAL_ALIGN(A2)
 	beq.s .vj7               // left justified
 	move.w 4(A3),D1          // x size
-#ifdef COLDFIRE
-	moveq #0,D0
-	move.w HORIZONTAL_ALIGN(A2),D0
-	cmp.l #2,D0
-	beq.s .vj8
-	lsr.l #1,D1 
-.vj8:
-	neg.l D1
-#else
 	cmp.w #2,HORIZONTAL_ALIGN(A2)
 	beq.s .vj8
 	lsr.w #1,D1 
 .vj8:
 	neg.w D1
-#endif
 	swap D1
 	clr.w D1
 .vj7:
@@ -4674,52 +3697,27 @@ det_v_justified:
 .vj17:
 	jsr _free_block          // address still on stack
 	addq.l #4,SP
-#ifdef COLDFIRE
-	movem.l (SP),D1-D7/A4-A5
-	lea 36(SP),SP
-#else
 	movem.l (SP)+,D1-D7/A4-A5
-#endif
 .vj1:
 	rts
 	
 det_vs_color:
 
-#ifdef COLDFIRE
-	move.l D1,-(SP)
-	move.l D2,-(SP)
-	move.l 4(A1),A1          // INTIN
-	move.w (A1)+,D1          // color index
-	blt .vco1
-	ext.l D1
-	moveq #0,D2
-	move.w DEV_TAB+26(A0),D2
-	cmp.l D2,D1              // nb colors
-#else
 	movem.l D1-D2,-(SP)
 	move.l 4(A1),A1          // INTIN
 	move.w (A1)+,D1          // color index
 	blt .vco1
 	cmp.w DEV_TAB+26(A0),D1  // nb colors
-#endif
 	bge .vco1
 	moveq #1,D0              // number of entries
 	swap D0
 	move.w D1,D0             // index
 	lea REQ_COL48(A0),A2
-#ifdef COLDFIRE
-	cmp.l #16,D2 // nb colors
-	ble.s .vco2
-	cmp.l #16,D1
-	blt.s .vco2
-	sub.l #16,D1
-#else
 	cmp.w #16,DEV_TAB+26(A0) // nb colors
 	ble.s .vco2
 	cmp.w #16,D1
 	blt.s .vco2
 	sub.w #16,D1
-#endif
 	lea REQ_COL48E(A0),A2
 .vco2:
 	mulu #6,D1
@@ -4746,36 +3744,20 @@ det_vs_color:
 	move.l wk_r_set_palette(A3),A3
 	jsr (A3)
 .vco1:
-#ifdef COLDFIRE
-	move.l (SP)+,D2
-	move.l (SP)+,D1
-#else
 	movem.l (SP)+,D1-D2
-#endif
 	rts
 
 det_vst_height:
 
 	move.l D1,-(SP)
-#ifdef COLDFIRE
-	moveq #4,D0
-	move.w D0,4(A3)          // length tab PTSOUT
-#else
 	move.w #4,4(A3)          // length tab PTSOUT
-#endif
 	move.l 8(A1),A3          // PTSIN
 	move.w 2(A3),D0          // nb points PTSIN
 	move.l ADR_FONT(A2),A3
 	move.l font_extra_first_size(A3),A3
 	move.l A3,ADR_FONT(A2)
 .vsh1:
-#ifdef COLDFIRE
-		move.w TOP_LINE(A3),D1
-		ext.l D1
-		cmp.l D1,D0
-#else
 		cmp.w TOP_LINE(A3),D0
-#endif
 		bcs.s .vsh2
 		move.l A3,ADR_FONT(A2)
 		move.l font_extra_next_size(A3),A3
@@ -4789,14 +3771,8 @@ det_vst_height:
 	move.w TOP_LINE(A3),D0
 	move.w D0,(A1)+          // height in pixels
 	move.w CELL_WIDTH(A3),(A1)+
-#ifdef COLDFIRE
-	addq.l #1,D0
-	move.w BOTTOM_LINE(A3),D1
-	add.l D1,D0
-#else
 	addq.w #1,D0
 	add.w BOTTOM_LINE(A3),D0
-#endif
 	move.w D0,(A1)           // height in pixels
 	bsr update_fvdi_fontinfo
 	move.l (SP)+,D1
@@ -4804,26 +3780,13 @@ det_vst_height:
 
 det_vst_rotation:
 
-#ifdef COLDFIRE
-	moveq #1,D0
-	move.w D0,8(A3)          // length tab INTOUT
-#else
 	move.w #1,8(A3)          // length tab INTOUT
-#endif
 	move.l ADR_FONT(A2),CUR_FONT(A0)
 	move.l 4(A1),A3          // INTIN
 	move.w (A3),D0           // rotation 1/10 degree
-#ifdef COLDFIRE
-	ext.l D0
-	add.l #450,D0
-	.chip 68000
-	divs #900,D0
-	.chip 5200
-#else
 	add.w #450,D0
 	ext.l D0
 	divs #900,D0
-#endif
 	muls #900,D0
 	move.l 12(A1),A3         // INTOUT
 	move.w D0,(A3)           // rotation selected‚
@@ -4835,22 +3798,12 @@ det_vst_rotation:
 
 det_vsl_type:
 
-#ifdef COLDFIRE
-	moveq #1,D0
-	move.w D0,8(A3)          // length tab INTOUT
-	move.l 4(A1),A0          // INTIN
-	move.w (A0),D0           // line type
-	subq.l #1,D0
-	blt.s .vt1
-	cmp.l #6,D0
-#else /* !COLDFIRE */
 	move.w #1,8(A3)          // length tab INTOUT
 	move.l 4(A1),A0          // INTIN
 	move.w (A0),D0           // line type
 	subq.w #1,D0
 	blt.s .vt1
 	cmp.w #6,D0
-#endif /* COLDFIRE */
 	ble.s .vt2
 .vt1:
 	moveq #0,D0
@@ -4865,23 +3818,6 @@ det_vsl_type:
 
 det_vsl_width:
 
-#ifdef COLDFIRE
-	move.l D1,-(SP)
-	moveq #1,D0
-	move.w D0,4(A3)          // nb points PTSOUT
-	move.l 8(A1),A3          // PTSIN
-	move.w (A3),D0           // line width
-	ble.s .vlw1
-	moveq #0,D1
-	move.w SIZ_TAB15+12(A0),D1
-	cmp.l D1,D0              // max width
-	blt.s .vlw3
-	move.l D1,D0             // max width
-.vlw3:
-	btst #0,D0
-	bne.s .vlw2              // odd
-	subq.l #1,D0
-#else /* !COLDFIRE */
 	move.w #1,4(A3)          // nb points PTSOUT
 	move.l 8(A1),A3          // PTSIN
 	move.w (A3),D0           // line width
@@ -4893,7 +3829,6 @@ det_vsl_width:
 	btst #0,D0
 	bne.s .vlw2              // odd
 	subq.w #1,D0
-#endif /* COLDFIRE */
 	bra.s .vlw2
 .vlw1:
 	moveq #1,D0              // min width
@@ -4903,31 +3838,17 @@ det_vsl_width:
 	move.w D0,LINE_WIDTH(A2)
 	move.l fvdi_virtual,A0
 	move.w D0,vwk_line_width(A0)
-#ifdef COLDFIRE
-	move.l (SP)+,D1
-#endif
 	rts
 
 det_vsl_color:
 
 	move.w D1,-(SP)
-#ifdef COLDFIRE
-	moveq #1,D1
-	move.w D1,8(A3)          // length tab INTOUT
-	move.l 4(A1),A3          // INTIN
-	move.w DEV_TAB+26(A0),D1 // nb colors
-	moveq #0,D0
-	move.w (A3),D0           // color index
-	blt.s .vlc1
-	cmp.l D1,D0
-#else
 	move.w #1,8(A3)          // length tab INTOUT
 	move.l 4(A1),A3          // INTIN
 	move.w DEV_TAB+26(A0),D1 // nb colors
 	move.w (A3),D0           // color index
 	blt.s .vlc1
 	cmp.w D1,D0
-#endif
 	blt.s .vlc2
 .vlc1:
 	moveq #1,D0              // default color index
@@ -4951,22 +3872,12 @@ det_vsl_color:
 
 det_vsm_type:
 
-#ifdef COLDFIRE
-	moveq #1,D0
-	move.w D0,8(A3)          // length tab INTOUT
-	move.l 4(A1),A0          // INTIN
-	move.w (A0),D0           // mark type
-	subq.l #1,D0
-	blt.s .vmt1
-	cmp.l #5,D0
-#else
 	move.w #1,8(A3)          // length tab INTOUT
 	move.l 4(A1),A0          // INTIN
 	move.w (A0),D0           // mark type
 	subq.w #1,D0
 	blt.s .vmt1
 	cmp.w #5,D0
-#endif
 	ble.s .vmt2
 .vmt1:
 	moveq #2,D0
@@ -4982,31 +3893,12 @@ det_vsm_type:
 det_vsm_height:
 
 	move.l D1,-(SP)
-#ifdef COLDFIRE
-	moveq #2,D0
-	move.w D0,4(A3)          // length tab PTSOUT
-	moveq #0,D1
-#else
 	move.w #2,4(A3)          // length tab PTSOUT
-#endif
 	move.l 4(A1),A3          // INTIN
 	move.w (A3),D0           // mark height
 	move.l fvdi_virtual,A0
 	move.l vwk_real_address(A0),A3
 	move.w wk_drawing_marker_size_height_min(A3),D1
-#ifdef COLDFIRE
-	lsr.l #1,D1
-	add.l D1,D0              // half the minimum height
-	.chip 68000
-	divu wk_drawing_marker_size_height_min(A3),D0 // w = 15n, h = 11n
-	.chip 5200
-	bne.s .dvh1
-	moveq #1,D0
-.dvh1:
-	move.w wk_drawing_marker_size_possibilities(A3),D1
-	ext.l D0
-	cmp.l D1,D0
-#else
 	lsr.w #1,D1
 	add.w D1,D0              // half the minimum height
 	divu wk_drawing_marker_size_height_min(A3),D0 // w = 15n, h = 11n
@@ -5014,7 +3906,6 @@ det_vsm_height:
 	moveq #1,D0
 .dvh1:
 	cmp.w wk_drawing_marker_size_possibilities(A3),D0
-#endif
 	bls.s .dvh2
 	moveq #1,D0
 .dvh2:
@@ -5034,23 +3925,12 @@ det_vsm_height:
 det_vsm_color:
 
 	move.w D1,-(SP)
-#ifdef COLDFIRE
-	moveq #1,D0
-	move.w D0,8(A3)          // length tab INTOUT
-	move.l 4(A1),A3          // INTIN
-	moveq #0,D1
-	move.w DEV_TAB+26(A0),D1 // nb colors
-	move.w (A3),D0           // color index
-	blt.s .dvmc1
-	cmp.l D1,D0
-#else /* !COLDFIRE */
 	move.w #1,8(A3)          // length tab INTOUT
 	move.l 4(A1),A3          // INTIN
 	move.w DEV_TAB+26(A0),D1 // nb colors
 	move.w (A3),D0           // color index
 	blt.s .dvmc1
 	cmp.w D1,D0
-#endif /* COLDFIRE */
 	blt.s .dvmc2
 .dvmc1:
 	moveq #1,D0              // default color index
@@ -5076,9 +3956,6 @@ det_vst_font:
 
 	move.l D1,-(SP)
 	move.l 4(A1),A3          // INTIN
-#ifdef COLDFIRE
-	moveq #0,D0
-#endif
 	move.w (A3),D0           // font
 	bne.s .dvf1
 	moveq #1,D0
@@ -5087,13 +3964,7 @@ det_vst_font:
 	move.l vwk_real_address(A0),A3
 	move.l wk_writing_first_font(A3),A3
 .dvf3:       // search
-#ifdef COLDFIRE
-		moveq #0,D1
-		move.w FACE_ID(A3),D1
-		cmp.l D1,D0
-#else
 		cmp.w FACE_ID(A3),D0
-#endif
 		beq.s .dvf2
 		move.l NEXT_FONT(A3),A3
 	move.l A3,D1
@@ -5114,17 +3985,6 @@ det_vst_font:
 det_vst_color:
 
 	move.w D1,-(SP)
-#ifdef COLDFIRE
-	moveq #1,D0
-	move.w D0,8(A3)          // length tab INTOUT
-	move.l ADR_FONT(A2),CUR_FONT(A0)
-	move.l 4(A1),A3          // INTIN
-	moveq #0,D1
-	move.w DEV_TAB+26(A0),D1 // nb colors
-	move.w (A3),D0           // color index
-	blt.s .vtc1
-	cmp.l D1,D0
-#else /* !COLDFIRE */
 	move.w #1,8(A3)          // length tab INTOUT
 	move.l ADR_FONT(A2),CUR_FONT(A0)
 	move.l 4(A1),A3          // INTIN
@@ -5132,7 +3992,6 @@ det_vst_color:
 	move.w (A3),D0           // color index
 	blt.s .vtc1
 	cmp.w D1,D0
-#endif /* COLDFIRE */
 	blt.s .vtc2
 .vtc1:
 	moveq #1,D0              // default color index
@@ -5156,20 +4015,11 @@ det_vst_color:
 
 det_vsf_interior:
 
-#ifdef COLDFIRE
-	moveq #1,D0
-	move.w D0,8(A3)          // length tab INTOUT
-	move.l 4(A1),A3          // INTIN
-	move.w (A3),D0           // fill type
-	blt.s .vfi2
-	cmp.l #4,D0              // user pattern
-#else
 	move.w #1,8(A3)          // length tab INTOUT
 	move.l 4(A1),A3          // INTIN
 	move.w (A3),D0           // fill type
 	blt.s .vfi2
 	cmp.w #4,D0              // user pattern
-#endif
 	ble.s .vfi1
 .vfi2:
 	moveq #0,D0
@@ -5183,34 +4033,6 @@ det_vsf_interior:
 	
 det_vsf_style:
 
-#ifdef COLDFIRE
-	move.l D1,-(SP)
-	moveq #1,D0
-	move.w D0,8(A3)          // length tab INTOUT
-	move.l 4(A1),A3          // INTIN
-	move.w (A3),D0           // fill pattern
-	move.l 12(A1),A3         // INTOUT
-	cmp.l #1,D0
-	blt.s .vsf2
-	moveq #0,D1
-	move.w FILL_INT_STYLE(A2),D1
-	cmp.l #2,D1              // fill type: frames
-	bne.s .vsf1
-	cmp.l #24,D0
-	ble.s .vsf3
-	bra.s .vsf2
-.vsf1:
-	cmp.l #12,D0
-	ble.s .vsf3
-.vsf2:
-	moveq #1,D0
-.vsf3:
-	move.w D0,(A3)           // fill pattern selected
-	move.l fvdi_virtual,A3
-	move.w D0,vwk_fill_style(A3)
-	subq.l #1,D0
-	move.l (SP)+,D1
-#else /* !COLDFIRE */
 	move.w #1,8(A3)          // length tab INTOUT
 	move.l 4(A1),A3          // INTIN
 	move.w (A3),D0           // fill pattern
@@ -5232,35 +4054,11 @@ det_vsf_style:
 	move.l fvdi_virtual,A3
 	move.w D0,vwk_fill_style(A3)
 	subq.w #1,D0
-#endif /* COLDFIRE */
 	move.w D0,FILL_STYLE_INDEX(A2) // index fill pattern
 
 choice_fill:
 
 	move.w FILL_INT_STYLE(A2),D0 // pattern type
-#ifdef COLDFIRE
-	cmp.l #4,D0              // user pattern
-	bne.s .vsf8
-	lea USER_DEF_FILL_PAT(A2),A1
-	bra.s .vsf9
-.vsf8:
-	cmp.l #3,D0              // pattern
-	bne.s .vsf4
-	lea tab_pattern,A1
-	bra.s .vsf7
-.vsf4:
-	cmp.l #2,D0              // frames
-	bne.s .vsf5
-	lea tab_frames,A1
-.vsf7:
-	move.w FILL_STYLE_INDEX(A2),D0 // index fill pattern
-	asl.l #5,D0              // *32
-	add.l D0,A1
-	bra.s .vsf9
-.vsf5:
-	lea tab_full_pattern,A1
-	cmp.l #1,D0              // color
-#else /* !COLDFIRE */
 	cmp.w #4,D0              // user pattern
 	bne.s .vsf8
 	lea USER_DEF_FILL_PAT(A2),A1
@@ -5282,7 +4080,6 @@ choice_fill:
 .vsf5:
 	lea tab_full_pattern,A1
 	cmp.w #1,D0              // color
-#endif /* COLDFIRE */
 	beq.s .vsf9
 	lea tab_empty_pattern,A1 // no fill
 .vsf9:
@@ -5305,23 +4102,12 @@ _init_choice_fill:
 det_vsf_color:
 
 	move.l D1,-(SP)
-#ifdef COLDFIRE
-	moveq #1,D0
-	move.w D0,8(A3)          // length tab INTOUT
-	move.l 4(A1),A3          // INTIN
-	moveq #0,D1
-	move.w DEV_TAB+26(A0),D1 // nb colors
-	move.w (A3),D0           // color index
-	blt.s .vfc1
-	cmp.l D1,D0
-#else /* !COLDFIRE */
 	move.w #1,8(A3)          // length tab INTOUT
 	move.l 4(A1),A3          // INTIN
 	move.w DEV_TAB+26(A0),D1 // nb colors
 	move.w (A3),D0           // color index
 	blt.s .vfc1
 	cmp.w D1,D0
-#endif /* COLDFIRE */
 	blt.s .vfc2
 .vfc1:
 	moveq #1,D0              // default color index
@@ -5345,23 +4131,11 @@ det_vsf_color:
 
 det_vq_color:
 
-#ifdef COLDFIRE
-	move.l D1,-(SP)
-	moveq #4,D0
-	move.w D0,8(A3)          // length tab INTOUT
-	move.l 4(A1),A3          // INTIN
-	move.w (A3)+,D0          // color index
-	blt.s .vqc1
-	moveq #0,D1
-	move.w DEV_TAB+26(A0),D1
-	cmp.l D1,D0              // nb colors
-#else /* !COLDFIRE */
 	move.w #4,8(A3)          // length tab INTOUT
 	move.l 4(A1),A3          // INTIN
 	move.w (A3)+,D0          // color index
 	blt.s .vqc1
 	cmp.w DEV_TAB+26(A0),D0  // nb colors
-#endif /* COLDFIRE */
 	bge.s .vqc1
 	move.l 12(A1),A2         // INTOUT
 	move.w D0,(A2)+
@@ -5384,9 +4158,6 @@ det_vq_color:
 	move.l (A1)+,(A2)+        // red & green level
 	move.w (A1)+,(A2)+        // blue level
 .vqc1:
-#ifdef COLDFIRE
-	move.l (SP)+,D1
-#endif
 	rts
 	
 gchc_key:	// 0: nothing happened, 1: choice value, 2: button pressed
@@ -5397,21 +4168,12 @@ gchc_key:	// 0: nothing happened, 1: choice value, 2: button pressed
 
 gchr_key:
 
-#ifdef COLDFIRE
-	lea -20(SP),SP
-	movem.l D1-D2/A0-A2,(SP)
-#else
 	movem.l D1-D2/A0-A2,-(SP)
-#endif
 	move.w #2,-(SP)          // CON
 	move.w #1,-(SP)          // Bconstat
 	trap #13
 	addq.l #4,SP
-#ifdef COLDFIRE
-	ext.l D0
-#else
 	tst.w D0                 // D0=0 => no character
-#endif
 	beq .no_char
 	move.w #2,-(SP)          // CON
 	move.w #2,-(SP)          // Bconin
@@ -5419,49 +4181,26 @@ gchr_key:
 	addq.l #4,SP
 	move.l D0,D1
 	swap D1
-#ifdef COLDFIRE
-	asl.l #8,D1              // D0 <07:00> <- ascii code
-	and.l #0xff00,D1
-	or.l D1,D0               // D0 <15:08> <- scan code
-#else
 	asl.w #8,D1              // D0 <07:00> <- ascii code
 	or.w D1,D0               // D0 <15:08> <- scan code
-#endif
 	move.l adr_var_vdi,A0
 	move.w D0,TERM_CH(A0)    // store character
 	moveq #1,D0              // indicate character present
 .no_char:
-#ifdef COLDFIRE
-	movem.l (SP),D1-D2/A0-A2
-	lea 20(SP),SP
-#else
 	movem.l (SP)+,D1-D2/A0-A2
-#endif
 	rts
 	
 gloc_key:	// get locator key
 
 	move.l D2,-(SP)
-#ifdef COLDFIRE
-	move.w SR,D2
-	move.w D2,-(SP)
-	or.l #0x700,D2           // mask interrupts
-	move.w D2,SR
-#else
 	move.w SR,-(SP)
 	or.w #0x700,SR           // mask interrupts
-#endif
 	move.b CUR_MS_STAT(A0),D0 
 	bclr #5,CUR_MS_STAT(A0)  // clearing state change flags indicates
 	bclr #6,CUR_MS_STAT(A0)  // that this data has been processed
 	bclr #7,CUR_MS_STAT(A0)
 	move.l G_CURX(A0),_X1(A0) // lastest X,Y
-#ifdef COLDFIRE
-	move.w (SP)+,D2
-	move.w D2,SR
-#else
 	move.w (SP)+,SR
-#endif
 	moveq #0,D2              // initial status: no change
 	btst #5,D2               // mouse move flag
 	beq.s .glk4
@@ -5577,93 +4316,24 @@ det_v_choice:
 	bsr gchr_key
 	move.w D0,8(A3)          // length
 	beq.s .vch3
-#ifdef COLDFIRE
-	cmp.l #2,D0
-#else
 	cmp.w #2,D0
-#endif
 	bhi.s .vch3
 	beq.s .vch4
 	move.l 12(A1),A3         // INTOUT
 	move.w TERM_CH(A0),D0
-#ifdef COLDFIRE
-	and.l #0xff,D0
-#else
 	and.w #0xff,D0
-#endif
 	move.w D0,(A3)           // tf_out
 	bra.s .vch3
 .vch4:
 	move.l 12(A1),A3         // INTOUT
 	move.w TERM_CH(A0),D0
-#ifdef COLDFIRE
-	and.l #0xff,D0
-#else
 	and.w #0xff,D0
-#endif
 	move.w D0,2(A3)          // tf_out
 .vch3:
 	rts
 
 det_v_string:
 
-#ifdef COLDFIRE
-	move.l D1,-(SP)
-	move.l D2,-(SP)
-	move.l D3,-(SP)
-	move.l #0xff,D1          // mask
-	move.l 4(A1),A2          // INTIN
-	move.w (A2),D3           // max length
-	ext.l D3
-	bpl.s .vrs1
-	neg.l D3
-	move.l #0xffff,D1        // mask
-.vrs1:
-	moveq #0,D2
-	move.l 12(A1),A2         // INTOUT
-	tst.w STR_MODE(A0)
-	bne.s .vrs2
-	clr.w TERM_CH(A0)
-.vrs6:
-		cmp.l D3,D2
-		bcc.s .vrs4     // max length
-		move.w TERM_CH(A0),D0
-		and.l #0xff,D0
-		cmp.l #13,D0
-		beq.s .vrs4
-.vrs5:
-		bsr gchr_key
-		beq.s .vrs5     // nothing  
-		move.w TERM_CH(A0),D0
-		and.l D1,D0
-		move.w D0,TERM_CH(A0)
-		move.w D0,(A2)+ // INTOUT
-		addq.l #1,D2
-	bra.s .vrs6
-.vrs4:
-	move.w TERM_CH(A0),D0
-	and.l #0xff,D0
-	cmp.l #13,D0
-	bne.s .vrs3
-	subq.l #1,D2
-	bra.s .vrs3
-.vrs2:	// sample mode
-		cmp.l D3,D2
-		bcc.s .vrs3     // max length
-		bsr gchr_key
-		beq.s .vrs3     // nothing
-		moveq #0,D0
-		move.w TERM_CH(A0),D0
-		and.l D1,D0
-		move.w D0,(A2)+ // INTOUT
-		addq.l #1,D2
-	bra.s .vrs2	    
-.vrs3:	
-	move.w D2,8(A3)          // length
-	move.l (SP)+,D3
-	move.l (SP)+,D2
-	move.l (SP)+,D1
-#else /* !COLDFIRE */
 	movem.l D1-D3,-(SP)
 	move.w #0xff,D1          // mask
 	move.l 4(A1),A2          // INTIN
@@ -5712,27 +4382,16 @@ det_v_string:
 .vrs3:	
 	move.w D2,8(A3)          // length
 	movem.l (SP)+,D1-D3
-#endif /* COLDFIRE */
 	rts
 
 det_vswr_mode:
 
-#ifdef COLDFIRE
-	moveq #1,D0
-	move.w D0,8(A3)           // length tab INTOUT
-	move.l 4(A1),A3           // INTIN
-	move.w (A3),D0            // graphic mode
-	subq.l #1,D0
-	blt.s .vrm1
-	cmp.l #3,D0
-#else
 	move.w #1,8(A3)           // length tab INTOUT
 	move.l 4(A1),A3           // INTIN
 	move.w (A3),D0            // graphic mode
 	subq.w #1,D0
 	blt.s .vrm1
 	cmp.w #3,D0
-#endif
 	ble.s .vrm2
 .vrm1:
 	moveq #0,D0
@@ -5748,24 +4407,6 @@ det_vswr_mode:
 
 det_vsin_mode:
 
-#ifdef COLDFIRE
-	moveq #1,D0
-	move.w D0,8(A3)          // length tab INTOUT
-	move.l 4(A1),A2          // INTIN
-	move.w (A2)+,D0
-	beq.s .vnm1
-	cmp.l #4,D0
-	bhi.s .vnm1
-	move.w (A2)+,D1
-	move.l 12(A1),A2         // INTOUT
-	move.w D1,(A2)
-	subq.l #1,D1
-	add.l D0,D0
-	lea tab_vin,A1
-	move.w (A1,D0.l),D0
-	ext.l D0
-	move.w D1,(A0,D0.l)
-#else /* !COLDFIRE */
 	move.w #1,8(A3)          // length tab INTOUT
 	move.l 4(A1),A2          // INTIN
 	move.w (A2)+,D0
@@ -5780,40 +4421,11 @@ det_vsin_mode:
 	lea tab_vin,A1
 	move.w (A1,D0.w),D0
 	move.w D1,(A0,D0.w)
-#endif /* COLDFIRE */
 .vnm1:
 	rts
 
 det_vql_attributes:
 
-#ifdef COLDFIRE
-	moveq #1,D0
-	move.w D0,4(A3)          // nb points PTSOUT
-	moveq #5,D0
-	move.w D0,8(A3)          // length tab INTOUT
-	move.l 16(A1),A3         // PTSOUT
-	move.w LINE_WIDTH(A2),(A3)+ // width line
-	clr.w (A3)
-	move.l 12(A1),A1         // INTOUT
-	move.w LINE_TYPE(A2),D0
-	addq.l #1,D0
-	move.w D0,(A1)+          // type line
-	move.w DEV_TAB+26(A0),D0 // nb colors
-	subq.l #1,D0
-	and.l #255,D0
-	move.l D0,A0
-	move.w LINE_COLOR_INDEX(A2),D0
-	cmp.l A0,D0
-	bne.s .vla1
-	move.w #255,D0
-.vla1:
-	lea tab_index_col_vdi,A0
-#ifdef TOS_TABLES
-	move.w (A0,D0.l*2),D0    // => VDI color index
-#else
-	move.b (A0,D0.l),D0      // => VDI color index
-#endif
-#else /* !COLDFIRE */
 	move.w #1,4(A3)          // nb points PTSOUT
 	move.w #5,8(A3)          // length tab INTOUT
 	move.l 16(A1),A3         // PTSOUT
@@ -5838,7 +4450,6 @@ det_vql_attributes:
 #else
 	move.b (A0,D0.w),D0      // => VDI color index
 #endif
-#endif /* COLDFIRE */
 	move.w D0,(A1)+          // color line
 	move.w WRT_MODE(A2),D0
 	addq.l #1,D0
@@ -5849,36 +4460,6 @@ det_vql_attributes:
 
 det_vqm_attributes:
 
-#ifdef COLDFIRE
-	moveq #1,D0
-	move.w D0,4(A3)          // nb points PTSOUT
-	moveq #3,D0
-	move.w D0,8(A3)          // length tab INTOUT
-	move.l 16(A1),A3         // PTSOUT
-	clr.w (A3)+              // width marker
-	move.w MARK_HEIGHT(A2),(A3) // height marker
-	move.l 12(A1),A1         // INTOUT
-	move.w MARK_TYPE(A2),(A1)+ // type marker
-	move.w DEV_TAB+26(A0),D0 // nb colors
-	subq.l #1,D0
-	and.l #255,D0
-	move.l D0,A0
-	move.w MARK_COLOR_INDEX(A2),D0
-	cmp.l A0,D0
-	bne.s .vma1
-	move.w #255,D0
-.vma1:
-	lea tab_index_col_vdi,A0
-#ifdef TOS_TABLES
-	move.w (A0,D0.l*2),D0    // => VDI color index
-#else
-	move.b (A0,D0.l),D0      // => VDI color index
-#endif
-	move.w D0,(A1)+          // color marker
-	move.w WRT_MODE(A2),D0
-	addq.l #1,D0
-	move.w D0,(A1)           // graphic mode
-#else /* !COLDFIRE */
 	move.w #1,4(A3)          // nb points PTSOUT
 	move.w #3,8(A3)          // length tab INTOUT
 	move.l 16(A1),A3         // PTSOUT
@@ -5905,32 +4486,10 @@ det_vqm_attributes:
 	move.w WRT_MODE(A2),D0
 	addq.l #1,D0
 	move.w D0,(A1)           // graphic mode
-#endif /* COLDFIRE */
 	rts
 
 det_vqf_attributes:
 
-#ifdef COLDFIRE
-	moveq #5,D0
-	move.w D0,8(A3)          // length tab INTOUT
-	move.l 12(A1),A1         // INTOUT
-	move.w FILL_INT_STYLE(A2),(A1)+ // fill type
-	move.w DEV_TAB+26(A0),D0 // nb colors
-	subq.l #1,D0
-	and.l #255,D0
-	move.l D0,A0
-	move.w FILL_COLOR_INDEX(A2),D0
-	cmp.l A0,D0
-	bne.s .vqfa1
-	move.w #255,D0
-.vqfa1:
-	lea tab_index_col_vdi,A0
-#ifdef TOS_TABLES
-	move.w (A0,D0.l*2),D0     // => VDI color index
-#else
-	move.b (A0,D0.l),D0      // => VDI color index
-#endif
-#else /* !COLDFIRE */
 	move.w #5,8(A3)          // length tab INTOUT
 	move.l 12(A1),A1         // INTOUT
 	move.w FILL_INT_STYLE(A2),(A1)+ // fill type
@@ -5949,7 +4508,6 @@ det_vqf_attributes:
 #else
 	move.b (A0,D0.w),D0      // => VDI color index
 #endif
-#endif /* COLDFIRE */
 	move.w D0,(A1)+          // fill color
 	move.w FILL_STYLE_INDEX(A2),D0
 	addq.l #1,D0
@@ -5962,42 +4520,6 @@ det_vqf_attributes:
 
 det_vqt_attributes:
 
-#ifdef COLDFIRE
-	move.l D1,-(SP)
-	moveq #2,D0
-	move.w D0,4(A3)          // nb points PTSOUT
-	moveq #6,D0
-	move.w D0,8(A3)          // length tab INTOUT
-	move.l ADR_FONT(A2),A0
-	move.l 16(A1),A3         // PTSOUT
-	move.w CHARACTER_WIDTH(A0),(A3)+ // character width, greatest char
-	move.w TOP_LINE(A0),D0   // top line distance
-	move.w D0,(A3)+          // height char
-	move.w CELL_WIDTH(A0),(A3)+ // cell width
-	move.w BOTTOM_LINE(A0),D1
-	ext.l D1
-	add.l D1,D0 // bottom line distance
-	addq.l #1,D0
-	move.w D0,(A3)           // cell height
-	move.l 12(A1),A3         // INTOUT
-	move.w FACE_ID(A0),(A3)+ // font identifier
-	move.l adr_var_vdi,A0
-	move.w DEV_TAB+26(A0),D0 // nb colors
-	subq.l #1,D0
-	and.l #255,D0
-	move.l D0,A0
-	move.w TEXT_COLOR_INDEX(A2),D0
-	cmp.l A0,D0
-	bne.s .dvqta1
-	move.w #255,D0
-.dvqta1:
-	lea tab_index_col_vdi,A0
-#ifdef TOS_TABLES
-	move.w (A0,D0.l*2),D0    // => VDI color index
-#else
-	move.b (A0,D0.l),D0      // => VDI color index
-#endif
-#else /* !COLDFIRE */
 	move.w #2,4(A3)          // nb points PTSOUT
 	move.w #6,8(A3)          // length tab INTOUT
 	move.l ADR_FONT(A2),A0
@@ -6027,7 +4549,6 @@ det_vqt_attributes:
 #else
 	move.b (A0,D0.w),D0      // => VDI color index
 #endif
-#endif /* COLDFIRE */
 	move.w D0,(A3)+          // text color
 	move.w CHUP(A2),(A3)+    // rotation
 	move.w HORIZONTAL_ALIGN(A2),(A3)+ // horizontal center
@@ -6035,23 +4556,10 @@ det_vqt_attributes:
 	move.w WRT_MODE(A2),D0
 	addq.l #1,D0
 	move.w D0,(A3)           // graphic mode
-#ifdef COLDFIRE
-	move.l (SP)+,D1
-#endif
 	rts
 
 det_vst_alignment:
 
-#ifdef COLDFIRE
-	moveq #2,D0
-	move.w D0,8(A3)          // length tab INTOUT
-	move.l ADR_FONT(A2),CUR_FONT(A0) // address current font
-	move.l 4(A1),A0          // INTIN
-	move.l 12(A1),A1         // INTOUT
-	move.w (A0)+,D0          // horizontal text alignment
-	blt.s .vsta1
-	cmp.l #2,D0              // right
-#else
 	move.w #2,8(A3)          // length tab INTOUT
 	move.l ADR_FONT(A2),CUR_FONT(A0) // address current font
 	move.l 4(A1),A0          // INTIN
@@ -6059,7 +4567,6 @@ det_vst_alignment:
 	move.w (A0)+,D0          // horizontal text alignment
 	blt.s .vsta1
 	cmp.w #2,D0              // right
-#endif
 	ble.s .vsta2
 .vsta1:
 	moveq #0,D0              // left
@@ -6070,11 +4577,7 @@ det_vst_alignment:
 	move.w D0,vwk_text_alignment_horizontal(A3)
 	move.w (A0)+,D0          // vertical text alignment
 	blt.s .vsta3
-#ifdef COLDFIRE
-	cmp.l #5,D0              // top line
-#else
 	cmp.w #5,D0              // top line
-#endif
 	ble.s .vsta4
 .vsta3:
 	moveq #0,D0              // middle inf
@@ -6088,15 +4591,8 @@ det_v_opnvwk:
 
 	move.l D1,-(SP)
 	move.l D2,-(SP)
-#ifdef COLDFIRE
-	moveq #6,D0
-	move.w D0,4(A3)          // nb points PTSOUT
-	moveq #45,D0
-	move.w D0,8(A3)          // length tab INTOUT
-#else
 	move.w #6,4(A3)          // nb points PTSOUT
 	move.w #45,8(A3)         // length tab INTOUT
-#endif
 	move.l 16(A1),-(SP)      // PTSOUT
 	move.l 12(A1),-(SP)      // INTOUT
 	move.l 4(A1),-(SP)       // INTIN
@@ -6166,15 +4662,8 @@ det_v_clsvwk:
 
 det_vq_extend:
 
-#ifdef COLDFIRE
-	moveq #6,D0
-	move.w D0,4(A3)          // nb points PTSOUT
-	moveq #45,D0
-	move.w D0,8(A3)          // length tab INTOUT
-#else
 	move.w #6,4(A3)          // nb points PTSOUT
 	move.w #45,8(A3)         // length tab INTOUT
-#endif
 	move.l 4(A1),A2          // INTIN
 	moveq #0,D0
 	move.w (A2),D0
@@ -6192,25 +4681,13 @@ det_vq_extend:
 	moveq #21,D0             // 45 parameters in INTOUT
 .ve4:
 		move.l (A0)+,(A2)+
-#ifdef COLDFIRE
-	subq.l #1,D0
-	bpl.s .ve4
-#else
 	dbf D0,.ve4
-#endif
 	move.w (A0)+,(A2)+
 	bra .ve2
 .ve1:
-#ifdef COLDFIRE
-	cmp.l #2,D0              // vq_scrninfo ?
-	bne.s .ve5
-	move.w 10(A3),D0
-	cmp.l #1,D0              // sub-function
-#else
 	cmp.w #2,D0              // vq_scrninfo ?
 	bne.s .ve5
 	cmp.w #1,10(A3)          // sub-function
-#endif
 	bne.s .ve5
 	move.l 12(A1),A2         // INTOUT
 	move.l fvdi_virtual,A0
@@ -6222,12 +4699,7 @@ det_vq_extend:
 	move.l #(dev_struct_size/2)-1,D0
 .ve6:
 		move.w (A3)+,(A2)+
-#ifdef COLDFIRE
-	subq.l #1,D0
-	bpl.s .ve6
-#else
 	dbf D0,.ve6
-#endif
 	bra.s .ve2
 .ve5:
 	move.l 16(A1),A2         // PTSOUT
@@ -6243,12 +4715,7 @@ det_vq_extend:
 	moveq #21,D0             // 45 parameters in INTOUT
 .ve3:
 		move.l (A0)+,(A2)+
-#ifdef COLDFIRE
-	subq.l #1,D0
-	bpl.s .ve3
-#else
 	dbf D0,.ve3
-#endif
 	move.w (A0)+,(A2)+
 	lea 863(A0),A0           // offset var VDI +171
 	lea -78(A2),A2           // INTOUT[6] nb op/S for resolution 16 * 16
@@ -6262,12 +4729,7 @@ det_vq_extend:
 
 det_v_contourfill:
 
-#ifdef COLDFIRE
-	move.l D1,-(SP)
-	move.l D2,-(SP)
-#else
 	movem.l D1-D2,-(SP)
-#endif
 	move.l 4(A1),A3          // INTIN
 	move.w (A3),D0           // color index (-1 for pixelread)
 	ext.l D0
@@ -6276,22 +4738,12 @@ det_v_contourfill:
 	move.l fvdi_virtual,-(SP)
 	jsr _contourfill         // vwk, search_color, points
 	lea 12(SP),SP
-#ifdef COLDFIRE
-	move.l (SP)+,D2
-	move.l (SP)+,D1
-#else
 	movem.l (SP)+,D1-D2
-#endif
 	rts
 
 det_vsf_perimeter:
 
-#ifdef COLDFIRE
-	moveq #1,D0
-	move.w D0,8(A3)          // length tab INTOUT
-#else
 	move.w #1,8(A3)          // length tab INTOUT
-#endif
 	move.l 4(A1),A0          // INTIN
 	move.w (A0),D0           // border
 	beq.s .vp1
@@ -6306,67 +4758,17 @@ det_vsf_perimeter:
 	
 det_v_get_pixel:
 
-#ifdef COLDFIRE
-	move.l D1,-(SP)
-	move.l D2,-(SP)
-	moveq #2,D0
-	move.w D0,8(A3)          // length tab INTOUT
-	move.l 8(A1),A3          // PTSIN
-	move.w (A3),D1           // X
-	move.w 2(A3),D2          // Y
-	move.l A0,-(SP)
-	move.l A1,-(SP)
-#else /* !COLDFIRE */
 	movem.l D1-D2,-(SP)
 	move.w #2,8(A3)          // length tab INTOUT
 	move.l 8(A1),A3          // PTSIN
 	movem.w (A3),D1-D2       // X, Y
 	movem.l A0-A1,-(SP) 
-#endif /* COLDFIRE */
 	ext.l D1
 	ext.l D2
 	move.l D2,-(SP)          // Y
 	move.l D1,-(SP)          // X
 	bsr _pixelread
 	addq.l #8,SP
-#ifdef COLDFIRE
-	move.l (SP)+,A1
-	move.l (SP)+,A0
-	move.l 12(A1),A3         // INTOUT
-	moveq #0,D1
-	move.w V_PLANES(A0),D1	
-	cmp.l #16,D1
-	bhi.s .vgp2
-	beq.s .vgp3
-	move.w D0,(A3)           // pixel color
-	move.w DEV_TAB+26(A0),D1 // nb colors
-	subq.l #1,D1
-	and.l #255,D1
-	ext.l D0
-	cmp.l D1,D0
-	bne.s .vgp4
-	move.w #255,D0
-.vgp4:
-	lea tab_index_col_vdi,A0
-#ifdef TOS_TABLES
-	move.w (A0,D0.l*2),D0
-#else
-	move.b (A0,D0.l),D0
-#endif
-	move.w D0,2(A3)          // index
-	bra.s .vgp1	
-.vgp3:
-	move.w D0,(A3)           // 16 bits color
-	moveq #-1,D0
-	move.w D0,2(A3)          // index not used
-	bra.s .vgp1
-.vgp2:
-	swap D0
-	move.l D0,(A3)           // 32 bits color
-.vgp1:
-	move.l (SP)+,D2
-	move.l (SP)+,D1
-#else /* !COLDFIRE */
 	movem.l (SP)+,A0-A1
 	move.l 12(A1),A3         // INTOUT
 	cmp.w #16,V_PLANES(A0)
@@ -6397,63 +4799,34 @@ det_v_get_pixel:
 	move.l D0,(A3)           // 32 bits color
 .vgp1:
 	movem.l (SP)+,D1-D2
-#endif /* COLDFIRE */
 	rts
 
 det_vst_effects:
 
-#ifdef COLDFIRE
-	move.l D1,-(SP)
-	moveq #1,D0
-	move.w D0,8(A3)          // length tab INTOUT
-	move.l 4(A1),A3          // INTIN
-	move.w (A3),D0           // effect
-	move.l ADR_FONT(A2),CUR_FONT(A0)
-	moveq #0,D1
-	move.w INQ_TAB+4(A0),D1
-	and.l D1,D0              // text effects
-#else /* !COLDFIRE */
 	move.l 4(A1),A3          // INTIN
 	move.w (A3),D0           // effect
 	move.l ADR_FONT(A2),CUR_FONT(A0)
 	and.w INQ_TAB+4(A0),D0   // text effects
-#endif /* COLDFIRE */
 	move.l 12(A1),A3         // INTOUT
 	move.w D0,(A3)           // effect selected
 	move.w D0,STYLE(A2)
 	move.w D0,_STYLE(A0)
 	move.l fvdi_virtual,A0
 	move.w D0,vwk_text_effects(A0)
-#ifdef COLDFIRE
-	move.l (SP)+,D1
-#endif
 	rts
 
 det_vst_point:
 
 	move.l D1,-(SP)
-#ifdef COLDFIRE
-	moveq #1,D0
-	move.w D0,8(A3)          // length tab INTOUT
-	moveq #4,D0
-	move.w D0,4(A3)          // length tab PTSOUT
-#else
 	move.w #1,8(A3)          // length tab INTOUT
 	move.w #4,4(A3)          // length tab PTSOUT
-#endif
 	move.l 4(A1),A3          // INTIN
 	move.w (A3),D0           // point
 	move.l ADR_FONT(A2),A3
 	move.l font_extra_first_size(A3),A3
 	move.l A3,ADR_FONT(A2)
 .vsp1:
-#ifdef COLDFIRE
-		moveq #0,D1
-		move.w FONT_SIZE(A3),D1
-		cmp.l D1,D0
-#else
 		cmp.w FONT_SIZE(A3),D0
-#endif
 		bcs.s .vsp2
 		move.l A3,ADR_FONT(A2)
 		move.l font_extra_next_size(A3),A3
@@ -6475,22 +4848,12 @@ det_vst_point:
 
 det_vsl_ends:
 
-#ifdef COLDFIRE
-	moveq #2,D0
-	move.w D0,8(A3)          // length tab INTOUT
-	movem.l 4(A1),A0         // INTIN
-	move.l 12(A1),A1         // INTOUT
-	move.w (A0)+,D0          // begin line
-	blt.s .vse1
-	cmp.l #2,D0
-#else
 	move.w #2,8(A3)          // length tab INTOUT
 	movem.l 4(A1),A0         // INTIN
 	move.l 12(A1),A1         // INTOUT
 	move.w (A0)+,D0          // begin line
 	blt.s .vse1
 	cmp.w #2,D0
-#endif
 	ble.s .vse2
 .vse1:
 	moveq #0,D0
@@ -6501,11 +4864,7 @@ det_vsl_ends:
 	move.w D0,vwk_line_ends_beginning(A3)
 	move.w (A0),D0           // end line
 	blt.s .vse3
-#ifdef COLDFIRE
-	cmp.l #2,D0
-#else
 	cmp.w #2,D0
-#endif
 	ble.s .vse4
 .vse3:
 	moveq #0,D0
@@ -6517,12 +4876,7 @@ det_vsl_ends:
 
 det_vro_cpyfm:
 
-#ifdef COLDFIRE
-	lea -28(SP),SP
-	movem.l D1-D7,(SP)
-#else
 	movem.l D1-D7,-(SP)
-#endif
 	moveq #0,D5              // not screen
 #if 1
 	move.l 14(A3),D0         // source MFDB
@@ -6689,12 +5043,7 @@ det_vro_cpyfm:
 	jsr (A3)
 	lea 16(SP),SP
 .vrc1:
-#ifdef COLDFIRE
-	movem.l (SP),D1-D7
-	lea 28(SP),SP
-#else
 	movem.l (SP)+,D1-D7
-#endif
 	rts
 
 det_vr_trnfm:
@@ -6760,21 +5109,10 @@ det_vsc_form:
 
 	tst.w _oldmouse
 	bne .vf6
-#ifdef COLDFIRE
-	move.l D1,-(SP)
-	move.l D2,-(SP)
-#else
 	movem.l D1-D2,-(SP)
-#endif
 //	bsr hide_c
 	move.l 4(A1),A2          // INTIN
-#ifdef COLDFIRE
-	move.b MOUSE_FLAG(A0),D0
-	addq.l #1,D0             // mask mouse interrupt routine
-	move.b D0,MOUSE_FLAG(A0)
-#else
 	addq.b #1,MOUSE_FLAG(A0) // mask mouse interrupt routine
-#endif
 	moveq #0xF,D0
 	move.w (A2)+,D1          // X action point
 	and.l D0,D1
@@ -6807,32 +5145,17 @@ det_vsc_form:
 #else
 	move.b (A3,D1.l),D1
 #endif
-#ifdef COLDFIRE
-	subq.l #1,D0             // nb colors -1
-	and.l D0,D1
-	move.w D1,M_CDB_FG(A0)
-	moveq #0,D1
-	move.w M_CDB_BG(A0),D1
-	and.l D0,D1
-	move.w D1,M_CDB_BG(A0)
-#else
 	subq.w #1,D0             // nb colors -1
 	and.w D0,M_CDB_BG(A0)
 	and.w D0,D1
 	move.w D1,M_CDB_FG(A0)
-#endif
 	lea MASKFORM(A0),A1	
 	lea 32(A2),A3            // 16 words form
 	moveq #15,D0
 .vf3:
 		move.w (A2)+,(A1)+ // word mask
 		move.w (A3)+,(A1)+ // word form
-#ifdef COLDFIRE
-	subq.l #1,D0
-	bpl.s .vf3
-#else
 	dbf D0,.vf3
-#endif
 /*--------
 * Draw the mouse
 * c_mouse_draw(Workstation *wk, long x, long y, Mouse *mouse)
@@ -6852,35 +5175,6 @@ det_vsc_form:
 	move.l G_CURX(A0),wk_mouse_position(A1)
 	move.l M_POS_HX(A0),wk_mouse_hotspot(A1)
 	lea tab_index_col_vdi,A2
-#ifdef COLDFIRE
-	moveq #0,D1
-	move.w DEV_TAB+26(A0),D1 // nb colors
-	subq.l #1,D1
-	and.l #255,D1
-	moveq #0,D0
-	move.w M_CDB_BG(A0),D0
-	cmp.l D1,D0
-	bne.s .vf7
-	move.w #255,D0
-.vf7:
-#ifdef TOS_TABLES
-	move.w (A2,D0.l*2),D0
-#else
-	move.b (A2,D0.l),D0
-#endif
-	swap D0	
-	moveq #0,D2
-	move.w M_CDB_FG(A0),D2
-	cmp.l D1,D2
-	bne.s .vf8
-	move.w #255,D2
-.vf8:
-#ifdef TOS_TABLES
-	move.w (A2,D2.l*2),D0
-#else
-	move.b (A2,D2.l),D0	
-#endif
-#else /* !COLDFIRE */
 	move.w DEV_TAB+26(A0),D1 // nb colors
 	subq.w #1,D1
 	and.w #255,D1
@@ -6905,39 +5199,23 @@ det_vsc_form:
 #else
 	move.b (A2,D0.w),D0	
 #endif
-#endif /* COLDFIRE */
 	move.l D0,wk_mouse_colour(A1)
 	move.l A0,-(SP)
 	lea MASKFORM(A0),A0
 	moveq #15,D2
-#ifdef COLDFIRE
-	lea wk_mouse_mask(A1),A2
-	lea wk_mouse_data(A1),A3
-.vf4:
-		move.w (A0)+,(A2)+
-		move.w (A0)+,(A3)+
-	subq.l #1,D2
-	bpl.s .vf4
-#else
 	moveq #0,D1
 .vf4:
 		move.w (A0)+,wk_mouse_mask(A1,D1.w)
 		move.w (A0)+,wk_mouse_data(A1,D1.w)
 		addq.w #2,D1
 	dbf D2,.vf4
-#endif
 	move.l (SP)+,A0
 	tst.l wk_r_mouse(A1)
 	beq.s .vf5               // no accel
 	lea wk_mouse(A1),A2
 	move.l wk_r_mouse(A1),A3
 	move.l A2,D2             // change shape (pointer to mouse struct)
-#ifdef COLDFIRE
-	move.w G_CURX(A0),D0
-	move.w G_CURY(A0),D1
-#else
 	movem.w G_CURX(A0),D0-D1
-#endif
 	swap D0
 	move.w mouse_op,D0
 	swap D0
@@ -6945,23 +5223,6 @@ det_vsc_form:
 	move.w D0,mouse_op       // what to try again
 .vf5:
 	move.l adr_var_vdi,A0
-#ifdef COLDFIRE
-	move.w SR,D0
-	move.w D0,-(SP)
-	or.l #0x700,D0           // mask interrupts
-	move.w D0,SR
-	move.l G_CURX(A0),CUR_X(A0) // actual position for the next drawing
-	bset #0,CUR_FLAG(A0)     // VBL redraw actived
-	move.w (SP)+,D0
-	move.w D0,SR
-	move.b MOUSE_FLAG(A0),D0
-	subq.l #1,D0             // remove mask mouse interrupt routine
-	move.b D0,MOUSE_FLAG(A0)
-//	moveq #1,D0              // no reset
-//	bsr show_c
-	move.l (SP)+,D2
-	move.l (SP)+,D1
-#else /* !COLDFIRE */
 	move.w SR,-(SP)
 	or.w #0x700,SR           // mask interrupts
 	move.l G_CURX(A0),CUR_X(A0) // actual position for the next drawing
@@ -6971,7 +5232,6 @@ det_vsc_form:
 //	moveq #1,D0              // no reset
 //	bsr show_c
 	movem.l (SP)+,D1-D2
-#endif /* COLDFIRE */
 .vf9:
 	rts
 .vf6:
@@ -6979,12 +5239,7 @@ det_vsc_form:
 	cmp.l A4,A0
 	beq.s .vf9               // call from _GSX_ENTRY => impossible to use old mouse
 	addq.l #4,SP             // pop return address
-#ifdef COLDFIRE
-	movem.l (SP),A0-A3
-	lea 16(SP),SP
-#else
 	movem.l (SP)+,A0-A3
-#endif
 #ifdef XAAES_SEMAPHORE
 	move.w (SP)+,D0
 	beq.s .vf10
@@ -7002,25 +5257,15 @@ det_vsf_updat:
 
 	move.l D1,-(SP)
 	move.l D2,-(SP)
-#ifdef COLDFIRE
-	moveq #0,D0
-	move.w 6(A3),D0          // length tab INTIN
-	lsr.l #1,D0
-#else
 	move.w 6(A3),D0          // length tab INTIN
 	lsr.w #1,D0
-#endif
 	move.l 4(A1),A3          // INTIN
 	lea USER_DEF_FILL_PAT(A2),A1
 	move.l A0,-(SP)
 	move.l fvdi_virtual,A0
 	move.l A1,vwk_fill_user_pattern_in_use(A0)
 	move.l (SP)+,A0
-#ifdef COLDFIRE
-	cmp.l #8,D0
-#else
 	cmp.w #8,D0
-#endif
 	bne.s .vfu3
 	move.l (A3)+,(A1)+       // fill pattern 16 * 16 for 1 plane => monochrome
 	move.l (A3)+,(A1)+
@@ -7033,46 +5278,6 @@ det_vsf_updat:
 	moveq #0,D0              // pattern fo 1 plane
 	bra.s .vfu1
 .vfu3:
-#ifdef COLDFIRE
-	cmp.l #256,D0
-	bhi.s .vfu6
-	subq.l #1,D0
-	bmi.s .vfu6
-	moveq #0,D1
-	move.w V_PLANES(A0),D1   // nb planes
-	cmp.l #16,D1
-	bne.s .vfu2              // <> 65K colors
-.vfu5:	
-		move.b 1(A3),D2 // red
-		asl.l #8,D2
-		and.l #0xF800,D2
-		move.b 2(A3),D1 // green
-		asl.l #3,D1
-		and.l #0x07E0,D1
-		or.l D1,D2
-		move.b 3(A3),D1 // blue
-		and.l #0x001F,D1
-		or.l D1,D2
-		move.w D2,(A1)+ // 65K colors
-		addq.l #4,A3
-	subq.l #1,D0
-	bpl.s .vfu5
-	bra.s .vfu4
-.vfu2:
-		move.l (A3)+,(A1)+
-	subq.l #1,D0
-	bpl.s .vfu2
-.vfu4:
-	moveq #1,D0
-.vfu1:
-	move.w D0,MULTIFILL(A2)
-	move.w D0,_MULTIFILL(A0) // pattern for X planes
-	move.l fvdi_virtual,A0
-	move.w D0,vwk_fill_user_multiplane(A0)
-.vfu6:
-	move.l (SP)+,D2
-	move.l (SP)+,D1
-#else /* !COLDFIRE */
 	cmp.w #256,D0
 	bhi.s .vfu6
 	subq.w #1,D0
@@ -7107,7 +5312,6 @@ det_vsf_updat:
 .vfu6:
 	move.l (SP)+,D2
 	move.l (SP)+,D1
-#endif /* COLDFIRE */
 	rts
 	
 det_vsl_udsty:
@@ -7124,20 +5328,6 @@ det_vr_recfl:
 
 det_vqin_mode:
 
-#ifdef COLDFIRE
-	moveq #1,D0
-	move.w D0,8(A3)          // length tab INTOUT
-	move.l 4(A1),A2          // INTIN
-	move.w (A2),D0
-	beq.s .vqm1
-	cmp.l #4,D0
-	bhi.s .vqm1
-	move.l 12(A1),A2         // INTOUT
-	add.l D0,D0
-	move.w tab_vin(PC,D0.l),D0
-	ext.l D0
-	move.w (A0,D0.l),(A2)
-#else /* !COLDFIRE */
 	move.w #1,8(A3)          // length tab INTOUT
 	move.l 4(A1),A2          // INTIN
 	move.w (A2),D0
@@ -7148,7 +5338,6 @@ det_vqin_mode:
 	add.l D0,D0
 	move.w tab_vin(PC,D0.w),D0
 	move.w (A0,D0.w),(A2)
-#endif /* COLDFIRE */
 .vqm1:
 	rts
 
@@ -7161,12 +5350,7 @@ tab_vin:
  
 det_vqt_extent:
 
-#ifdef COLDFIRE
-	moveq #4,D0
-	move.w D0,4(A3)          // length tab PTSOUT
-#else
 	move.w #4,4(A3)          // length tab PTSOUT
-#endif
 	move.w 6(A3),D0          // length tab INTIN
 	move.l 4(A1),A0          // INTIN	
 	move.l 16(A1),A1         // PTSOUT
@@ -7175,14 +5359,7 @@ det_vqt_extent:
 
 vqt_extent:
 
-#ifdef COLDFIRE
-	lea -24(SP),SP
-	movem.l D1-D4/A2-A3,(SP)
-	moveq #0,D1
-	moveq #0,D4
-#else
 	movem.l D1-D3/A2-A3,-(SP)
-#endif
 	move.w D0,D3             // length tab INTIN
 	swap D3
 	move.w D0,D3             // length tab INTIN
@@ -7195,22 +5372,6 @@ vqt_extent:
 	move.w FIRST_ADE(A3),D1  // lower ASCII code
 	bra.s .vte1
 .vte2:
-#ifdef COLDFIRE
-		moveq #0,D0
-		move.w (A0)+,D0 // char
-		sub.l D1,D0     // - ASCII base code
-		add.l D0,D0
-		move.w 2(A2,D0.l),D4
-		add.l D4,D2
-		move.w (A2,D0.l),D4
-		sub.l D4,D2
-.vte1:
-	move.w D3,D0
-	ext.l D0
-	subq.l #1,D0
-	move.w D0,D3
-	bpl.s .vte2
-#else /* !COLDFIRE */
 		move.w (A0)+,D0 // char
 		sub.w D1,D0     // - ASCII base code
 		add.w D0,D0
@@ -7218,7 +5379,6 @@ vqt_extent:
 		sub.w (A2,D0.w),D2
 .vte1:
 	dbf D3,.vte2             // next char
-#endif
 	move.l (SP)+,A2
 	swap D3                  // length tab INTIN
 	move.w STYLE(A2),D0      // style
@@ -7232,29 +5392,6 @@ vqt_extent:
 .vte3:
 	btst #2,D0               // italic
 	beq.s .vte4
-#ifdef COLDFIRE
-	move.w LEFT_OFFSET(A3),D4  // + left offset
-	ext.l D4
-	add.l D4,D2
-	move.w RIGTH_OFFSET(A3),D4 // + right offset
-	ext.l D4
-	add.l D4,D2
-.vte4:
-	move.w TOP_LINE(A3),D1   // top line distance
-	ext.l D1
-	move.w BOTTOM_LINE(A3),D4 // bottom line distance
-	ext.l D4
- 	add.l D4,D1 
-	addq.l #1,D1             // height border text
-#if 0 // fVDI outlined width/height <=> normal
-	btst #4,D0               // outlined
-	beq.s .vte6
-	ext.l D3
-	add.l D3,D3              // size tab INTIN = nb characters
-	add.l D3,D2
-	addq.l #2,D1
-#endif
-#else /* !COLDFIRE */
 	add.w LEFT_OFFSET(A3),D2 // + left offset
 	add.w RIGTH_OFFSET(A3),D2 // + right offset
 .vte4:
@@ -7268,7 +5405,6 @@ vqt_extent:
 	add.w D3,D2
 	addq.w #2,D1
 #endif
-#endif /* COLDFIRE */
 .vte6:
 	move.w CHUP(A2),D0       // rotation
 	bne.s .vte7
@@ -7281,12 +5417,7 @@ vqt_extent:
 	move.w D1,(A1)
 	bra.s .vte5
 .vte7:
-#ifdef COLDFIRE
-	ext.l D0
-	cmp.l #900,D0
-#else
 	cmp.w #900,D0
-#endif
 	bne.s .vte8
 	move.w D1,(A1)+
 	clr.w (A1)+
@@ -7297,11 +5428,7 @@ vqt_extent:
 	clr.l (A1)
 	bra.s .vte5
 .vte8:
-#ifdef COLDFIRE
-	cmp.l #1800,D0
-#else
 	cmp.w #1800,D0
-#endif
 	bne.s .vte9
 	move.w D2,(A1)+
 	move.w D1,(A1)+
@@ -7312,11 +5439,7 @@ vqt_extent:
 	clr.w (A1)
 	bra.s .vte5
 .vte9:
-#ifdef COLDFIRE
-	cmp.l #2700,D0
-#else
 	cmp.w #2700,D0
-#endif
 	bne.s .vte5
 	clr.w (A1)+
 	move.w D2,(A1)+
@@ -7326,27 +5449,14 @@ vqt_extent:
 	move.w D1,(A1)+
 	move.w D2,(A1)
 .vte5:
-#ifdef COLDFIRE
-	movem.l (SP),D1-D4/A2-A3
-	lea 24(SP),SP
-#else
 	movem.l (SP)+,D1-D3/A2-A3
-#endif
 	rts
 
 det_vqt_width:
 
 	move.l D1,-(SP)
-#ifdef COLDFIRE
-	move.l D2,-(SP)
-	moveq #1,D0
-	move.w D0,8(A3)          // length tab INTOUT
-	moveq #6,D0
-	move.w D0,4(A3)          // length tab PTSOUT
-#else
 	move.w #1,8(A3)          // length tab INTOUT
 	move.w #6,4(A3)          // length tab PTSOUT
-#endif
 	move.l 4(A1),A3          // INTIN
 	move.l 12(A1),A2         // INTOUT
 	move.l 16(A1),A1         // PTSOUT
@@ -7355,23 +5465,6 @@ det_vqt_width:
 	move.l CUR_WORK(A3),A3
 	move.l ADR_FONT(A3),A3
 	move.w FIRST_ADE(A3),D1
-#ifdef COLDFIRE
-	ext.l D1
-	neg.l D1
-	add.l D0,D1
-	move.w LAST_ADE(A3),D2
-	ext.l D2
-	cmp.l D2,D1
-	bhi.s .vqw2
-	move.w D0,(A2)           // character
-	add.l D1,D1
-	move.l CHAR_OFF_TABLE(A3),A0 // offset table of characters
-	move.w 2(A0,D1.l),D0
-	ext.l D0
-	move.w (A0,D1.l),D2
-	ext.l D2
-	sub.l D2,D0
-#else
 	neg.w D1
 	add.w D0,D1
 	cmp.w LAST_ADE(A3),D1
@@ -7381,22 +5474,13 @@ det_vqt_width:
 	move.l CHAR_OFF_TABLE(A3),A0 // offset table of characters
 	move.w 2(A0,D1.w),D0
 	sub.w (A0,D1.w),D0
-#endif
 	move.w D0,(A1)+          // cell width
 	clr.l (A1)+              // left delta
 	btst #1,FONTFLAGS+1(A3)
 	beq.s .vqw1
 	move.l HOR_OFF_TABLE(A3),A0 // horizontal offset table
-#ifdef COLDFIRE
-	move.w 2(A0,D1.l),D0
-	ext.l D0
-	move.w (A0,D1.l),D2
-	ext.l D2
-	sub.l D2,D0
-#else
 	move.w 2(A0,D1.w),D0
 	sub.w (A0,D1.w),D0
-#endif
 	move.w D0,-2(A1)         // left delta
 .vqw1:
 	clr.w (A1)+
@@ -7405,9 +5489,6 @@ det_vqt_width:
 .vqw2:
 	move.w #-1,(A2)          // invalid character
 .vqw3:
-#ifdef COLDFIRE
-	move.l (SP)+,D2
-#endif
 	move.l (SP)+,D1
 	rts
 
@@ -7423,12 +5504,7 @@ det_vex_time:
 det_vst_load_fonts:
 
 	move.l D1,-(SP)
-#ifdef COLDFIRE
-	moveq #1,D0
-	move.w D0,8(A3)          // length tab INTOUT
-#else
 	move.w #1,8(A3)          // length tab INTOUT
-#endif
 	move.l 12(A1),A0         // INTOUT
 	clr. (A0)
 	move.l (SP)+,D1
@@ -7440,12 +5516,7 @@ det_vst_unload_fonts:
 
 det_vrt_cpyfm:
 
-#ifdef COLDFIRE
-	lea -28(SP),SP
-	movem.l D1-D7,(SP)
-#else
 	movem.l D1-D7,-(SP)
-#endif
 	moveq #0,D5              // not screen
 	move.l 18(A3),D0         // target MFDB
 	beq.s .vrtc2             // target = screen
@@ -7539,12 +5610,7 @@ det_vrt_cpyfm:
 	jsr (A3)
 	lea 16(SP),SP
 .vrtc1:
-#ifdef COLDFIRE
-	movem.l (SP),D1-D7
-	lea 28(SP),SP
-#else
 	movem.l (SP)+,D1-D7
-#endif
 	moveq #0,D0
 	rts
 
@@ -7562,12 +5628,7 @@ det_v_show_c:
 	cmp.l A4,A0
 	beq.s .end_vsc           // call from _GSX_ENTRY => impossible to use old mouse
 	addq.l #4,SP             // pop return address
-#ifdef COLDFIRE
-	movem.l (SP),A0-A3
-	lea 16(SP),SP
-#else
 	movem.l (SP)+,A0-A3
-#endif
 #ifdef XAAES_SEMAPHORE
 	move.w (SP)+,D0
 	beq.s .vscx
@@ -7583,20 +5644,6 @@ det_v_show_c:
 
 show_c:
 
-#ifdef COLDFIRE
-	lea -24(SP),SP
-	movem.l D1-D2/A0-A3,(SP)
-	move.l adr_var_vdi,A0
-	move.w D0,-(SP)
-	move.b MOUSE_FLAG(A0),D0
-	addq.l #1,D0             // mask mouse interrupt routine
-	move.b D0,MOUSE_FLAG(A0)
-	move.w (SP)+,D0          // reset
-	beq.s .shc1              // reset cursor to on
-	move.w M_HID_CT(A0),D0
-	beq.s .shc3
-	subq.l #1,D0
-#else
 	movem.l D1-D2/A0-A3,-(SP)
 	move.l adr_var_vdi,A0
 	addq.b #1,MOUSE_FLAG(A0) // mask mouse interrupt routine
@@ -7605,7 +5652,6 @@ show_c:
 	move.w M_HID_CT(A0),D0
 	beq.s .shc3
 	subq.w #1,D0
-#endif
 	move.w D0,M_HID_CT(A0)
 	bgt.s .shc2
 	bra.s .shc4
@@ -7637,12 +5683,7 @@ show_c:
 	beq.s .shc3              // no accel
 	move.l D2,A3
 	moveq #3,D2              // show
-#ifdef COLDFIRE
-	move.w G_CURX(A0),D0
-	move.w G_CURY(A0),D1
-#else
 	movem.w G_CURX(A0),D0-D1
-#endif
 	swap D0
 	move.w mouse_op,D0
 	swap D0
@@ -7652,16 +5693,8 @@ show_c:
 	move.l adr_var_vdi,A0	
 	bclr #0,CUR_FLAG(A0)     // VBL redraw disabled
 .shc2:	
-#ifdef COLDFIRE
-	move.b MOUSE_FLAG(A0),D0
-	subq.l #1,D0             // remove mask mouse interrupt routine
-	move.b D0,MOUSE_FLAG(A0)
-	movem.l (SP),D1-D2/A0-A3
-	lea 24(SP),SP
-#else
 	subq.b #1,MOUSE_FLAG(A0) // remove mask mouse interrupt routine
 	movem.l (SP)+,D1-D2/A0-A3
-#endif
 	rts
 
 det_v_hide_c:
@@ -7676,12 +5709,7 @@ det_v_hide_c:
 	cmp.l A4,A0
 	beq.s .end_vhc           // call from _GSX_ENTRY => impossible to use old mouse
 	addq.l #4,SP             // pop return address
-#ifdef COLDFIRE
-	movem.l (SP),A0-A3
-	lea 16(SP),SP
-#else
 	movem.l (SP)+,A0-A3
-#endif
 #ifdef XAAES_SEMAPHORE
 	move.w (SP)+,D0
 	beq.s .vhcx
@@ -7697,25 +5725,11 @@ det_v_hide_c:
 	
 hide_c:
 	
-#ifdef COLDFIRE
-	lea -24(SP),SP
-	movem.l D1-D2/A0-A3,(SP)
-	move.l adr_var_vdi,A0
-	moveq #0,D0
-	move.b MOUSE_FLAG(A0),D0
-	addq.l #1,D0             // mask mouse interrupt routine
-	move.b D0,MOUSE_FLAG(A0)
-	move.w M_HID_CT(A0),D0
-	addq.l #1,D0
-	move.w D0,M_HID_CT(A0)
-             cmp.l #1,D0
-#else
 	movem.l D1-D2/A0-A3,-(SP)
 	move.l adr_var_vdi,A0
 	addq.b #1,MOUSE_FLAG(A0) // mask mouse interrupt routine
 	addq.w #1,M_HID_CT(A0)
 	cmp.w #1,M_HID_CT(A0)
-#endif
 	bhi.s .hic1              // cursor was hidden
 	// remove the cursor from screen
 /*--------
@@ -7734,22 +5748,12 @@ hide_c:
 	move.l fvdi_virtual,A1
 	move.l vwk_real_address(A1),A1
 	move.l G_CURX(A0),wk_mouse_position(A1)
-#ifdef COLDFIRE
-	moveq #1,D0
-	move.w D0,wk_mouse_hide(A1)
-#else
 	move.w #1,wk_mouse_hide(A1)
-#endif
 	move.l wk_r_mouse(A1),D2
 	beq.s .hic2              // no accel	
 	move.l D2,A3
 	moveq #2,D2              // hide
-#ifdef COLDFIRE
-	move.w G_CURX(A0),D0
-	move.w G_CURY(A0),D1
-#else
 	movem.w G_CURX(A0),D0-D1
-#endif
 	swap D0
 	move.w mouse_op,D0
 	swap D0
@@ -7759,16 +5763,8 @@ hide_c:
 	move.l adr_var_vdi,A0
 	bclr #0,CUR_FLAG(A0)     // VBL redraw disabled
 .hic1:
-#ifdef COLDFIRE
-	move.b MOUSE_FLAG(A0),D0
-	subq.l #1,D0             // remove mask mouse interrupt routine
-	move.b D0,MOUSE_FLAG(A0)
-	movem.l (SP),D1-D2/A0-A3
-	lea 24(SP),SP
-#else
 	subq.b #1,MOUSE_FLAG(A0) // remove mask mouse interrupt routine
 	movem.l (SP)+,D1-D2/A0-A3
-#endif
 	rts
 
 det_vq_mouse:
@@ -7777,24 +5773,12 @@ det_vq_mouse:
 	move.w D0,4(A3)          // nb points PTSOUT
 	move.w D0,8(A3)          // length tab INTOUT
 	move.l 12(A1),A2         // INTOUT
-#ifdef COLDFIRE
-	move.w SR,D0
-	move.w D0,-(SP)
-	or.l #0x700,D0           // mask interrupts
-	move.w D0,SR
-	move.w MOUSE_BT(A0),(A2)
-	move.l 16(A1),A2         // PTSOUT
-	move.l G_CURX(A0),(A2)
-	move.w (SP)+,D0
-	move.w D0,SR
-#else /* !COLDFIRE */
 	move.w SR,-(SP)
 	or.w #0x700,SR           // mask interrupts
 	move.w MOUSE_BT(A0),(A2)
 	move.l 16(A1),A2         // PTSOUT
 	move.l G_CURX(A0),(A2)
 	move.w (SP)+,SR
-#endif /* COLDFIRE */
 	rts
 
 _mousexy:
@@ -7807,17 +5791,9 @@ _mousexy:
 .mxy1:
 	move.l fvdi_virtual,D0
 	beq.s .mxy2
-#ifdef COLDFIRE
-	lea -16(SP),SP
-	movem.l D1-D2/A1-A2,(SP)
-	dc.w 0xA920              // 0xA000 used on Coldfire for MAC instruction
-	movem.l (SP),D1-D2/A1-A2
-	lea 16(SP),SP
-#else
 	movem.l D1-D2/A1-A2,-(SP)
 	dc.w 0xA000
 	movem.l (SP)+,D1-D2/A1-A2
-#endif
 	move.l G_CURX(A0),D0
 .mxy2:
 	rts
@@ -7845,40 +5821,20 @@ det_vex_wheelv:
 	
 change_vex:
 
-#ifdef COLDFIRE
-	move.w SR,D0
-	move.w D0,-(SP)
-	or.l #0x700,D0           // mask interrupts
-	move.w D0,SR
-	move.l (A0),18(A3)
-	move.l 14(A3),(A0)
-	move.w (SP)+,D0
-	move.w D0,SR
-#else /* !COLDFIRE */
 	move.w SR,-(SP)
 	or.w #0x700,SR           // mask interrupts
 	move.l (A0),18(A3)
 	move.l 14(A3),(A0)
 	move.w (SP)+,SR
-#endif /* COLDFIRE */
 	rts
  
 det_vq_key_s:
 
-#ifdef COLDFIRE
-	moveq #1,D0
-	move.w D0,8(A3)          // length tab INTOUT
-	move.l _sysbase,A0       // header ROM
-	move.l 0x24(A0),A0       // kbshift
-	move.b (A0),D0
-	and.l #0xF,D0
-#else /* !COLDFIRE */
 	move.w #1,8(A3)          // length tab INTOUT
 	move.l _sysbase,A0       // header ROM
 	move.l 0x24(A0),A0       // kbshift
 	move.b (A0),D0
 	and.w #0xF,D0
-#endif /* COLDFIRE */
 	move.l 12(A1),A0         // INTOUT
 	move.w D0,(A0)
 	rts
@@ -7891,31 +5847,6 @@ det_vs_clip:
 	move.w D0,_CLIP(A0)
 	move.w D0,CLIP(A2)       // clipping
 	move.w D0,vwk_clip_on(A3)
-#ifdef COLDFIRE
-	beq .vsc3                // not actived
-	lea -16(SP),SP
-	movem.l D1-D4,(SP)
-	move.l 8(A1),A1          // PTSIN
-	move.w (A1),D0
-	move.w 2(A1),D1
-	move.w 4(A1),D2
-	move.w 6(A1),D3
-	ext.l D0
-	ext.l D1
-	ext.l D2
-	ext.l D3
-	cmp.l D0,D2
-	bge.s .vsc1              // X2 >= X1
-	move.l D0,D4
-	move.l D2,D0
-	move.l D4,D2
-.vsc1:
-	cmp.l D1,D3
-	bge.s .vsc2              // Y2 >= Y1
-	move.l D1,D4
-	move.l D3,D1
-	move.l D4,D3
-#else
 	beq.s .vsc3              // not actived
 	movem.l D1-D3,-(SP)
 	move.l 8(A1),A1          // PTSIN
@@ -7927,7 +5858,6 @@ det_vs_clip:
 	cmp.w D1,D3
 	bge.s .vsc2              // Y2 >= Y1
 	exg D1,D3
-#endif
 .vsc2:
 	tst.w D0                 // X1
 	bpl.s .vsc5
@@ -7945,24 +5875,6 @@ det_vs_clip:
 	bpl.s .vsc10
 	moveq #0,D3
 .vsc10:
-#ifdef COLDFIRE
-	move.w DEV_TAB(A0),D4
-	ext.l D4 
-	cmp.l D4,D2              // width screen -1
-	ble.s .vsc7              // X2 < width screen
-	move.l D4,D2             // width screen -1
-.vsc7:
-	move.w DEV_TAB+2(A0),D4
-	ext.l D4
-	cmp.l D4,D3              // height screen -1
-	ble.s .vsc8              // Y2 < height screen
-	move.l D4,D3             // height screen -1
-.vsc8:
-	move.w D0,_XMN_CLIP(A0)
-	move.w D1,_XMN_CLIP+2(A0)
-	move.w D2,_XMN_CLIP+4(A0)
-	move.w D3,_XMN_CLIP+6(A0)
-#else
 	cmp.w DEV_TAB(A0),D2     // width screen -1
 	ble.s .vsc7              // X2 < width screen
 	move.w DEV_TAB(A0),D2    // width screen -1
@@ -7972,7 +5884,6 @@ det_vs_clip:
 	move.w DEV_TAB+2(A0),D3  // height screen -1
 .vsc8:
 	movem.w D0-D3,_XMN_CLIP(A0)
-#endif /* COLDFIRE */
 	move.w D0,XMN_CLIP(A2)   // clipping X1,X2,Y1,Y2
 	move.w D2,XMN_CLIP+2(A2) 
 	move.w D1,XMN_CLIP+4(A2)
@@ -7981,12 +5892,7 @@ det_vs_clip:
 	move.w D2,vwk_clip_rectangle_x2(A3)	
 	move.w D1,vwk_clip_rectangle_y1(A3)
 	move.w D3,vwk_clip_rectangle_y2(A3)	
-#ifdef COLDFIRE
-	movem.l (SP),D1-D4
-	lea 16(SP),SP
-#else
 	movem.l (SP)+,D1-D3
-#endif
 	bra.s .vsc4
 .vsc3:                                // clipping not actived
 	lea _XMN_CLIP(A0),A1
@@ -8007,16 +5913,8 @@ det_vs_clip:
 
 det_vqt_name:
 
-#ifdef COLDFIRE
-	move.l D1,-(SP)
-	move.l D2,-(SP)
-	move.l D3,-(SP)
-	moveq #33,D0
-	move.w D0,8(A3)          // length tab INTOUT
-#else
 	movem.l D1-D3,-(SP)
 	move.w #33,8(A3)         // length tab INTOUT
-#endif
 	move.l 4(A1),A3          // INTIN
 	moveq #0,D3
 	move.w (A3),D3           // element
@@ -8028,21 +5926,11 @@ det_vqt_name:
 		tst.l A3
 		beq.s .vqn6
 .vqn2:
-#ifdef COLDFIRE
-			move.w FACE_ID(A3),D0
-			ext.l D0
-			cmp.l D0,D1  // font_id
-			beq.s .vqn3
-			move.l D0,D1
-			addq.l #1,D2 // count
-			cmp.l D3,D2  // element
-#else
 			cmp.w FACE_ID(A3),D1  // font_id
 			beq.s .vqn3
 			move.l FACE_ID(A3),D1
 			addq.w #1,D2 // count
 			cmp.w D3,D2  // element
-#endif
 			beq.s .vqn5  // found element
 .vqn3:
 			move.l NEXT_FONT(A3),A3
@@ -8062,20 +5950,6 @@ det_vqt_name:
 .vqn7:
 		move.b (A1)+,D0
 		move.w D0,(A0)+
-#ifdef COLDFIRE
-		beq.s .vqn8
-	subq.l #1,D1
-	bpl.s .vqn7
-	bra.s .vqn1
-.vqn8:
-		clr.w (A0)+
-	subq.l #1,D1
-	bpl.s .vqn8
-.vqn1:
-	move.l (SP)+,D3
-	move.l (SP)+,D2
-	move.l (SP)+,D1
-#else /* !COLDFIRE */
 	dbeq d1,.vqn7
 	bne.s .vqn1
 .vqn8:
@@ -8083,20 +5957,12 @@ det_vqt_name:
 	dbf d1,.vqn8
 .vqn1:
 	movem.l (SP)+,D1-D3
-#endif /* COLDFIRE */
 	rts
 
 det_vqt_fontinfo:
 
-#ifdef COLDFIRE
-	moveq #5,D0
-	move.w D0,4(A3)          // nb points PTSOUT
-	moveq #2,D0
-	move.w D0,8(A3)          // length tab INTOUT
-#else
 	move.w #5,4(A3)          // nb points PTSOUT
 	move.w #2,8(A3)          // length tab INTOUT
-#endif
 	move.l ADR_FONT(A2),A3
 	move.w _STYLE(A0),D0
 	move.l 12(A1),A0         // INTOUT
@@ -8128,43 +5994,22 @@ det_vqt_fontinfo:
 	
 find_default_font:
 
-#ifdef COLDFIRE
-	lea -28(SP),SP
-	movem.l D0-D2/A0-A3,(SP)
-	moveq #0,D2
-#else
 	movem.l D0-D1/A0-A3,-(SP)
-#endif
 	move.l adr_var_vdi,A0
 	move.l CUR_WORK(A0),A2
 	move.l ADR_FONT(A2),A3
 	move.l FACE_ID(A3),D0    // font ID & size
 	move.w #10,D0
-#ifdef COLDFIRE
-	moveq #0,D1
-	move.w DEV_TAB+2(A0),D1
-	cmp.l #350,D1            // height workstation info
-	bhi.s .fdf5
-	move.w #9,D0
-#else
 	cmp.w #350,DEV_TAB+2(A0) // height workstation info
 	bhi.s .fdf5
 	subq.w #1,D0
-#endif
 .fdf5:
 	swap D0
 	move.l fvdi_virtual,A0	
 	move.l vwk_real_address(A0),A3
 	move.l wk_writing_first_font(A3),A3
 .fdf1:       // search ID
-#ifdef COLDFIRE
-		moveq #0,D1
-		move.w FACE_ID(A3),D1
-		move.w D0,D2
-		cmp.l D1,D2
-#else
 		cmp.w FACE_ID(A3),D0
-#endif
 		beq.s .fdf2
 		move.l NEXT_FONT(A3),A3
 	move.l A3,D1
@@ -8177,14 +6022,7 @@ find_default_font:
 	move.l font_extra_first_size(A3),A3
 	move.l A3,ADR_FONT(A2)
 .fdf3: // search size
-#ifdef COLDFIRE
-		moveq #0,D1
-		move.w FONT_SIZE(A3),D1
-		move.w D0,D2
-		cmp.l D1,D2
-#else
 		cmp.w FONT_SIZE(A3),D0
-#endif
 		bcs.s .fdf4
 		move.l A3,ADR_FONT(A2)
 		move.l font_extra_next_size(A3),A3
@@ -8195,76 +6033,12 @@ find_default_font:
 	move.l adr_var_vdi,A0
 	move.l A3,CUR_FONT(A0)
 	bsr update_fvdi_fontinfo
-#ifdef COLDFIRE
-	movem.l (SP),D0-D2/A0-A3
-	lea 28(SP),SP
-#else
 	movem.l (SP)+,D0-D1/A0-A3
-#endif
 	rts
 	
 clip_rect:  // D1:X1, D2:Y1, D3:X2, D4:Y2, return flag drawing if <> 0
             // and update D1-D4 for clipping
 
-#ifdef COLDFIRE
-	lea -12(SP),SP
-	movem.l D5-D7,(SP)
-	ext.l D1
-	ext.l D2
-	ext.l D3
-	ext.l D4
-	tst.w CLIP(A2)           // clipping
-	beq.s .clr2              // clipping off
-	move.w XMN_CLIP(A2),D0   // coords X1,X2,Y1,Y2 clipping
-	move.w XMN_CLIP+2(A2),D5
-	move.w XMN_CLIP+4(A2),D6
-	move.w XMN_CLIP+6(A2),D7
-	ext.l D0
-	ext.l D6
-	bra.s .clr4
-.clr2:
-	move.l A0,D0
-	move.l adr_var_vdi,A0
-	move.w DEV_TAB(A0),D5    // width and height screen -1
-	move.w DEV_TAB+2(A0),D7
-	move.l D0,A0
-	moveq #0,D0
-	moveq #0,D6	
-.clr4:
-	ext.l D5
-	ext.l D7
-	cmp.l D0,D1
-	bge.s .clr3              // X1 inside clipping
-	cmp.l D0,D3
-	blt.s .clr5              // X2 out of clipping
-	move.l D0,D1             // X1
-.clr3:
-	cmp.l D6,D2
-	bge.s .clr6              // Y1 inside clipping
-	cmp.l D6,D4
-	blt.s .clr5              // Y2 out of clipping
-	move.l D6,D2             // Y1
-.clr6:
-	cmp.l D5,D3
-	ble.s .clr7              // X2 inside clipping
-	cmp.l D5,D1
-	bgt.s .clr5              // X1 out of clipping
-	move.l D5,D3             // X2
-.clr7:
-	cmp.l D7,D4
-	ble.s .clr8              // Y2 inside clipping
-	cmp.l D7,D2
-	bgt.s .clr5              // Y1 out of clipping
-	move.l D7,D4             // Y2
-.clr8:
-	moveq #1,D0              // drawing with new coords
-	bra.s .clr1
-.clr5:
-	moveq #0,D0
-.clr1:
-	movem.l (SP),D5-D7
-	lea 12(SP),SP
-#else
 	movem.l D5-D7,-(SP)
 	tst.w CLIP(A2)           // clipping
 	beq.s .clr2              // clipping off
@@ -8317,7 +6091,6 @@ clip_rect:  // D1:X1, D2:Y1, D3:X2, D4:Y2, return flag drawing if <> 0
 	ext.l D4
 	tst.l D0
 	movem.l (SP)+,D5-D7
-#endif
 	rts
 	
 #if 0 // old code
@@ -8327,172 +6100,6 @@ coords_raster:
 // if D0.L < 0 => nothing to do
 // if 2 rasters are differents, source is used
 
-#ifdef COLDFIRE
-	lea -24(SP),SP
-	movem.l A0-A5,(SP)
-	clr.l -(SP)
-	moveq #0,D5              // flag clipping
-	move.l 18(A3),A0         // target MFDB
-	move.l (A0),D0           // target address
-	move.l 8(A1),A0          // PTSIN
-	beq.s .cr15              // target = screen
-	cmp.l _v_bas_ad,D0
-	bne.s .cr17              // target <> screen
-.cr15:
-	moveq #-1,D5
-	move.w CLIP(A2),2(SP)    // clipping
-.cr17:
-	move.l D5,A5
-	move.w 8(A0),D4          // target coords
-	move.w 10(A0),D5
-	move.w 12(A0),D6
-	move.w 14(A0),D7
-	ext.l D4
-	ext.l D5
-	ext.l D6
-	ext.l D7
-	cmp.l D4,D6
-	bge.s .cr14              // X2 target >= X1 target
-	move.l D4,D0
-	move.l D6,D4
-	move.l D0,D6             // X1,X2 target
-.cr14:
-	cmp.l D5,D7
-	bge.s .cr9               // Y2 target >= Y1 target
-	move.l D5,D0
-	move.l D7,D5
-	move.l D0,D7             // Y1,Y2 target
-.cr9:
-	move.w 4(A0),D0          // X2 source (fix target coords if error)
-	move.w (A0),D1           // X1 source
-	ext.l D0
-	ext.l D1
-	sub.l D1,D0
-	bge.s .cr21
-	neg.l D0
-.cr21:
-	move.l D4,D6             // X1 target
-	add.l D0,D6              // X2 target = width source + X1 target
-	move.w 6(A0),D0          // Y2 source
-	move.w 2(A0),D1          // Y1 source
-	ext.l D0
-	ext.l D1
-	sub.l D1,D0
-	bge.s .cr18
-	neg.l D0
-.cr18:
-	move.l D5,D7             // Y1 target
-	add.l D0,D7              // Y2 target = heigth source + Y1 target
-	tst.l (SP)
-	beq.s .cr5               // no clipping
-	move.w XMN_CLIP(A2),D0   // X1,X2,Y1,Y2 clipping coords
-	move.w XMN_CLIP+2(A2),D1
-	move.w XMN_CLIP+4(A2),D2
-	move.w XMN_CLIP+6(A2),D3	
-	ext.l D0
-	ext.l D1
-	ext.l D2
-	ext.l D3
-	move.l D4,A1             // save X1 target
-	move.l D5,A2             // save Y1 target
-	move.l D6,A3             // save X2 target
-	move.l D7,A4             // save Y2 target
-	cmp.l D0,D4
-	bge.s .cr8               // X1 inside clipping
-	cmp.l D0,D6
-	blt .cr4                 // X2 outside clipping
-	move.l D0,D4             // X1 target
-.cr8:
-	cmp.l D2,D5
-	bge.s .cr7               // Y1 inside clipping
-	cmp.l D2,D7
-	blt .cr4                 // Y2 outside clipping
-	move.l D2,D5             // Y1 target
-.cr7:
-	cmp.l D1,D6
-	ble.s .cr6               // X2 inside clipping
-	cmp.l D1,D4
-	bgt .cr4                 // X1 outside clipping
-	move.l D1,D6             // Y1 cible
-.cr6:
-	cmp.l D3,D7
-	ble.s .cr5               // Y2 inside clipping
-	cmp.l D3,D5
-	bgt .cr4                 // Y1 outside clipping
-	move.l D3,D7             // Y2 target
-.cr5:
-	move.w (A0),D0           // source coords
-	move.w 2(A0),D1
-	move.w 4(A0),D2
-	move.w 6(A0),D3
-	ext.l D0
-	ext.l D1
-	ext.l D2
-	ext.l D3
-	cmp.l D0,D2
-	bge.s .cr2               // X2 source >= X1 source
-	move.l D0,-(SP)
-	move.l D2,D0
-	move.l (SP)+,D2          // X1,X2 source
-.cr2:
-	cmp.l D1,D3
-	bge.s .cr3               // Y2 source >= Y1 source
-	move.l D1,-(SP)
-	move.l D3,D1
-	move.l (SP)+,D3          // Y1,Y2 source
-.cr3:
-	tst.l (SP)
-	beq.s .cr19              // no clipping
-	sub.l D4,A1
-	sub.l A1,D0              // X1 source fixed after target clipping
-	sub.l D5,A2
-	sub.l A2,D1              // Y1 source
-	sub.l D6,A3
-	sub.l A3,D2              // X2 source
-	sub.l D7,A4
-	sub.l A4,D3              // Y2 source
-.cr19:
-	move.l D2,-(SP)
-	cmp.l #0,A5
-	bpl.s .cr16              // target <> screen
-	move.l adr_var_vdi,A0
-	moveq #0,D2
-	move.w DEV_TAB(A0),D2
-	cmp.l D2,D6              // width screen
-	bcs.s .cr20
-	move.l D2,D6             // X2 target
-.cr20:
-	move.w DEV_TAB+2(A0),D2
-	cmp.l D2,D7              // height screen
-	bcs.s .cr16
-	move.l D2,D7             // Y2 target
-.cr16:
-	move.l (SP)+,D2
-	tst.l D0                 // X1 source
-	bpl.s .cr12
-	clr.l D0                 // X1 source
-.cr12:
-	tst.l D1                 // Y1 source
-	bpl.s .cr13
-	clr.l D1                 // Y1 source
-.cr13:
-	tst.l D4                 // X1 target
-	bpl.s .cr10
-	clr.l D4                 // X1 target
-.cr10:
-	tst.l D5                 // Y1 source
-	bpl.s .cr11
-	clr.l D5                 // Y1 target
-.cr11:
-	and.l #0xffff,D0
-	bra.s .cr1
-.cr4:
-	moveq #-1,D0             // nothing to do
-.cr1:
-	addq.l #4,SP
-	movem.l (SP),A0-A5
-	lea 24(SP),SP
-#else
 	movem.l A0-A5,-(SP)
 	moveq #0,D5              // flag clipping
 	move.l 18(A3),A0         // target MFDB
@@ -8613,7 +6220,6 @@ coords_raster:
 	moveq #-1,D0             // nothing to do
 .cr1:
 	movem.l (SP)+,A0-A5
-#endif
 	rts
 	
 coords_raster_vrt:
@@ -8622,174 +6228,6 @@ coords_raster_vrt:
 // if D0.L < 0 => nothing to do
 // if 2 rasters are differents, use adjusted target
 
-#ifdef COLDFIRE
-	lea -24(SP),SP
-	movem.l A0-A5,(SP)
-	clr.l -(SP)
-	moveq #0,D5              // flag clipping
-	move.l 18(A3),A0         // target MFDB
-	move.l (A0),D0           // target address
-	move.l 8(A1),A0          // PTSIN
-	beq.s .tcr15             // target = screen
-	cmp.l _v_bas_ad,D0
-	bne.s .tcr17             // target <> screen
-.tcr15:
-	moveq #-1,D5
-	move.w CLIP(A2),2(SP)    // clipping
-.tcr17:
-	move.l D5,A5
-	move.w 8(A0),D4          // target coords
-	move.w 10(A0),D5
-	move.w 12(A0),D6
-	move.w 14(A0),D7
-	ext.l D4
-	ext.l D5
-	ext.l D6
-	ext.l D7
-	cmp.l D4,D6
-	bge.s .tcr14             // X2 target >= X1 target
-	move.l D4,D0
-	move.l D6,D4
-	move.l D0,D6             // X1,X2 target
-.tcr14:
-	cmp.l D5,D7
-	bge.s .tcr9              // Y2 target >= Y1 target
-	move.l D5,D0
-	move.l D7,D5
-	move.l D0,D7             // Y1,Y2 target
-.tcr9:
-	tst.l (SP)
-	beq.s .tcr5              // no clipping
-	move.w XMN_CLIP(A2),D0   // X1,X2,Y1,Y2 clipping coords
-	move.w XMN_CLIP+2(A2),D1
-	move.w XMN_CLIP+4(A2),D2
-	move.w XMN_CLIP+6(A2),D3
-	ext.l D0
-	ext.l D1
-	ext.l D2
-	ext.l D3
-	move.l D4,A1             // save X1 target
-	move.l D5,A2             // save Y1 target
-	move.l D6,A3             // save X2 target
-	move.l D7,A4             // save Y2 target
-	cmp.l D0,D4
-	bge.s .tcr8              // X1 inside clipping
-	cmp.l D0,D6
-	blt .tcr4                // X2 outside clipping
-	move.l D0,D4             // X1 target
-.tcr8:
-	cmp.l D2,D5
-	bge.s .tcr7              // Y1 inside clipping
-	cmp.l D2,D7
-	blt .tcr4                // Y2 outside clipping
-	move.l D2,D5             // Y1 target
-.tcr7:
-	cmp.l D1,D6
-	ble.s .tcr6              // X2 inside clipping
-	cmp.l D1,D4
-	bgt .tcr4                // X1 outside clipping
-	move.l D1,D6             // Y1 cible
-.tcr6:
-	cmp.l D3,D7
-	ble.s .tcr5              // Y2 inside clipping
-	cmp.l D3,D5
-	bgt .tcr4                // Y1 outside clipping
-	move.l D3,D7             // Y2 target
-.tcr5:
-	move.w (A0),D0           // source coords
-	move.w 2(A0),D1
-	move.w 4(A0),D2
-	move.w 6(A0),D3
-	ext.l D0
-	ext.l D1
-	ext.l D2
-	ext.l D3
-	cmp.l D0,D2
-	bge.s .tcr2              // X2 source >= X1 source
-	move.l D0,-(SP)
-	move.l D2,D0
-	move.l (SP)+,D2          // X1,X2 source
-.tcr2:
-	cmp.l D1,D3
-	bge.s .tcr3              // Y2 source >= Y1 source
-	move.l D1,-(SP)
-	move.l D3,D1
-	move.l (SP)+,D3          // Y1,Y2 source
-.tcr3:
-	move.l D4,-(SP)
-	move.w 12(A0),D4         // X2 target (fix source coords if error)
-	move.w 8(A0),D3
-	ext.l D4
-	ext.l D3
-	sub.l D3,D4              // X1 target with target coors without clipping
-	bge .tcr21
-	neg.l D4
-.tcr21:
-	move.l D0,D2             // X1 source
-	add.l D4,D2              // X2 source
-	move.w 14(A0),D4         // Y2 cible
-	move.w 10(A0),D3
-	ext.l D4
-	ext.l D3
-	sub.l D3,D4              // Y1 cible
-	bge.s .tcr19
-	neg.l D4
-.tcr19:
-	move.l D1,D3             // Y1 source
-	add.l D4,D3              // Y2 source
-	move.l (SP)+,D4
-	tst.l (SP)
-	beq.s .tcr18             // no clipping
-	sub.l D4,A1
-	sub.l A1,D0              // X1 source fixed after target clipping
-	sub.l D5,A2
-	sub.l A2,D1              // Y1 source
-	sub.l D6,A3
-	sub.l A3,D2              // X2 source
-	sub.l D7,A4
-	sub.l A4,D3              // Y2 source
-.tcr18:
-	move.l D2,-(SP)
-	cmp.l #0,A5
-	bpl .tcr16               // target <> screen
-	move.l adr_var_vdi,A0
-	moveq #0,D2
-	move.w DEV_TAB(A0),D2
-	cmp.l D2,D6              // width screen
-	bcs.s .tcr20
-	move.l D2,D6             // X2 target
-.tcr20:
-	move.w DEV_TAB+2(A0),D2
-	cmp.l D2,D7              // height screen
-	bcs.s .tcr16
-	move.l D2,D7             // Y2 target
-.tcr16:
-	move.l (SP)+,D2
-	tst.l D0                 // X1 source
-	bpl.s .tcr12
-	clr.l D0                 // X1 source
-.tcr12:
-	tst.l D1                 // Y1 source
-	bpl.s .tcr13
-	clr.l D1                 // Y1 source
-.tcr13:
-	tst.l D4                 // X1 target
-	bpl.s .tcr10
-	clr.l D4                 // X1 target
-.tcr10:
-	tst.l D5                 // Y1 source
-	bpl.s .tcr11
-	clr.l D5                 // Y1 target
-.tcr11:
-	and.l #0xffff,D0
-	bra.s .tcr1
-.tcr4:
-	moveq #-1,D0             // nothing to do
-.tcr1:
-	addq.l #4,SP
-	movem.l (SP),A0-A5
-	lea 24(SP),SP
-#else
 	movem.l A0-A5,-(SP)
 	moveq #0,D5              // flag clipping
 	move.l 18(A3),A0         // target MFDB
@@ -8912,7 +6350,6 @@ coords_raster_vrt:
 	moveq #-1,D0             // nothing to do
 .tcr1:
 	movem.l (SP)+,A0-A5
-#endif
 	rts
 #endif
 	
@@ -8923,51 +6360,25 @@ get_pattern:
 	move.w FILL_INT_STYLE(A2),D0
 	move.w D0,D1
 	swap D0
-#ifdef COLDFIRE
-	ext.l D1
-	cmp.l #4,D1              // user pattern
-#else
 	cmp.w #4,D1              // user pattern
-#endif
 	bne.s .gp1
 	lea USER_DEF_FILL_PAT(A2),A0
 	bra.s .gp5
 .gp1:
-#ifdef COLDFIRE
-	cmp.l #3,D1              // pattern
-#else
 	cmp.w #3,D1              // pattern
-#endif
 	bne.s .gp2
 	lea tab_pattern,A0
 	bra.s .gp3
 .gp2:
-#ifdef COLDFIRE
-	cmp.l #2,D1              // frames
-#else
 	cmp.w #2,D1              // frames
-#endif
 	bne.s .gp4
 	lea tab_frames,A0
 .gp3:
-#ifdef COLDFIRE
-	moveq #0,D0
-	move.w FILL_STYLE_INDEX(A2),D0 // index fill pattern
-	asl.l #5,D0              // *32
-	add.l D0,A0
-	moveq #0,D0
-	move.w FILL_STYLE_INDEX(A2),D0
-	addq.l #1,D0
-	swap D0
-	move.w FILL_INT_STYLE(A2),D0
-	swap D0
-#else
 	move.w FILL_STYLE_INDEX(A2),D0 // index fill pattern
 	asl.w #5,D0              // *32
 	add.w D0,A0
 	move.w FILL_STYLE_INDEX(A2),D0
 	addq.w #1,D0
-#endif
 	bra.s .gp5
 .gp4:
 	lea tab_full_pattern,A0
@@ -8983,44 +6394,22 @@ mov_cur:
 	bne.s .mc1
 	swap D0
 	move.w D1,D0
-#ifdef COLDFIRE
-	move.w SR,D1
-	move.w D1,-(SP)
-	or.l #0x700,D1           // mask interrupts
-	move.w D1,SR
-	move.l D0,mouse_first
-	bset #0,CUR_FLAG(A0)     // VBL redraw actived
-	move.w (SP)+,D1
-	move.w D1,SR
-#else
 	move.w SR,-(SP)
 	or.w #0x700,SR           // mask interrupts
 	move.l D0,mouse_first
 	bset #0,CUR_FLAG(A0)     // VBL redraw actived
 	move.w (SP)+,SR
-#endif
 .mc1:
 	move.l (SP)+,A0
 	rts
 	
 vb_draw:	                         // VBL routine
 
-#ifdef COLDFIRE
-	move.l SP,save_stack2
-	lea vbl_stack,SP
-	lea -24(SP),SP
-	movem.l D0-D2/A0-A2,(SP)
-	move.w SR,D2
-	move.w D2,-(SP)
-	or.l #0x700,D2           // mask interrupts
-	move.w D2,SR
-#else
 	move.l SP,save_stack2
 	lea vbl_stack,SP
 	movem.l D0-D2/A0-A2,-(SP)
 	move.w SR,-(SP)
 	or.w #0x700,SR           // mask interrupts
-#endif
 	move.l adr_var_vdi,A0	
 	bclr #0,CUR_FLAG(A0)     // VBL redraw actived
 	beq .vd1
@@ -9036,12 +6425,7 @@ vb_draw:	                         // VBL routine
 	move.w D1,G_CURY(A0)
 	move.l G_CURX(A0),wk_mouse_position(A1)
 #if 0
-#ifdef COLDFIRE
-	move.w (SP),D2
-	move.w D2,SR
-#else
 	move.w (SP),SR
-#endif
 #endif
 	tst.b MOUSE_FLAG(A0)
 	bne.s .vd1               // mouse interrupt disabled
@@ -9072,49 +6456,26 @@ vb_draw:	                         // VBL routine
 .vd3:
 	move.w D0,mouse_op
 .vd1:
-#ifdef COLDFIRE
-	move.w (SP)+,D2
-	move.w D2,SR
-	movem.l (SP),D0-D2/A0-A2
-	lea 24(SP),SP
-	move.l save_stack2,SP
-#else
 	move.w (SP)+,SR
 	movem.l (SP)+,D0-D2/A0-A2
 	move.l save_stack2,SP
-#endif
 	rts
 
 _tick_int:
 
 	subq.l  #4,SP            // leave some room on the stack
-#ifdef COLDFIRE
-	lea -60(SP),SP
-	movem.l D0-A6,(SP)
-#else
 	movem.l D0-A6,-(SP)
-#endif
 	move.l adr_var_vdi,A1
 	move.l USER_TIM(A1),A0   // Invoke user routine
 	move.l NEXT_TIM(A1),A1
 	move.l A1,60(SP)         // store chained routine
 	jsr (A0)
-#ifdef COLDFIRE
-	movem.l (SP),D0-A6
-	lea 60(SP),SP
-#else
 	movem.l (SP)+,D0-A6
-#endif
 	rts                      // jump to next routine in chain
 
 init_var_vdi:
 
-#ifdef COLDFIRE
-	lea -44(SP),SP
-	movem.l D0-A2,(SP)
-#else
 	movem.l D0-A2,-(SP)
-#endif
 #ifdef DEBUG
 	lea debug6(PC),A0
 	bsr display_string
@@ -9122,20 +6483,12 @@ init_var_vdi:
 	jsr _c_get_width_virtual
 	move.l save_intout,A1
 	move.w D0,(A1)           // width in pixels
-#ifdef COLDFIRE
-	lsr.l #1,D0
-#else
 	lsr.w #1,D0
-#endif
 	move.w D0,mouse_first
 	jsr _c_get_height_virtual
 	move.l save_intout,A1
 	move.w D0,2(A1)          // height in pixels
-#ifdef COLDFIRE
-	lsr.l #1,D0
-#else
 	lsr.w #1,D0
-#endif
 	move.w D0,mouse_first+2
 	jsr _c_get_bpp_virtual
 	move.l adr_var_vdi,A0
@@ -9160,21 +6513,6 @@ init_var_vdi:
 	move.w D0,DEV_TAB+8(A0)  // heigth point in mm/1000
 #else
 	/* TODO ... the best is to get monitor specs */
-#ifdef COLDFIRE
-	move.l #744,D0
-	moveq #0,D1
-	move.w (A1),D1
-	cmp.l #400,D1            // width in pixels
-	bcs.s .ivv4
-	lsr.l #1,D0
-.ivv4:
-	move.w D0,DEV_TAB+6(A0)  // width point in mm/1000
-	move.l #744,D0
-	move.w 2(A1),D1
-	cmp.l #350,D1            // height in pixels
-	bcs.s .ivv3
-	lsr.l #1,D0
-#else /* !COLDFIRE */
 	move.w #744,D0
 	cmp.w #400,(A1)          // width in pixels
 	bcs.s .ivv4
@@ -9185,7 +6523,6 @@ init_var_vdi:
 	cmp.w #350,2(A1)         // height in pixels
 	bcs.s .ivv3
 	lsr.w #1,D0
-#endif /* COLDFIRE */
 .ivv3:
 	move.w D0,DEV_TAB+8(A0)  // heigth point in mm/1000
 #endif /* PATCH_NVDI */ 
@@ -9195,19 +6532,6 @@ init_var_vdi:
 .ivv2:
 		move.l (A1)+,(A2)+ // red, green
 		move.w (A1)+,(A2)+
-#ifdef COLDFIRE
-	subq.l #1,D0
-	bpl.s .ivv2
-	lea REQ_COL48E(A0),A2
-	move.l #239,D0
-.ivv1:
-		move.l (A1)+,(A2)+ // red, green
-		move.w (A1)+,(A2)+
-	subq.l #1,D0
-	bpl.s .ivv1	
-	movem.l (SP),D0-A2
-	lea 44(SP),SP
-#else
 	dbf D0,.ivv2
 	lea REQ_COL48E(A0),A2
 	move.w #239,D0
@@ -9216,27 +6540,16 @@ init_var_vdi:
 		move.w (A1)+,(A2)+
 	dbf D0,.ivv1	
 	movem.l (SP)+,D0-A2
-#endif
 	rts
 
 mouse_init:
 
 	tst.w _oldmouse
 	bne user_init
-#ifdef COLDFIRE
-	lea -24(SP),SP
-	movem.l D0-D2/A0-A2,(SP)
-	move.l adr_var_vdi,A0	
-	move.w SR,D2
-	move.w D2,-(SP)
-	or.l #0x700,D2           // mask interrupts
-	move.w D2,SR
-#else
 	movem.l D0-D2/A0-A2,-(SP)
 	move.l adr_var_vdi,A0	
 	move.w SR,-(SP)
 	or.w #0x700,SR           // mask interrupts
-#endif
 	lea user_init(PC),A1
 	move.l A1,USER_BUT(A0)   // button vector, default to no action (rts)
 	move.l A1,USER_MOT(A0)   // motion vector, default to no action (rts)
@@ -9268,12 +6581,7 @@ mouse_init:
 	move.l _vblqueue,A0      // insert the display routine
 	lea vb_draw(PC),A1
 	move.l A1,(A0)           // at the head of the queue
-#ifdef COLDFIRE
-	move.w (SP)+,D2
-	move.w D2,SR
-#else
 	move.w (SP)+,SR
-#endif
 	move.w #0x22,-(SP)       // Kdbvbase
 	trap #14                 // XBIOS
 	addq.l #2,SP
@@ -9288,15 +6596,8 @@ mouse_init:
 	clr.w -(SP)              // Initmous
 	trap #14                 // XBIOS
 	lea 12(SP),SP
-#ifdef COLDFIRE
-	move.l #0xCAFEFADE,D0
-	move.l D0,ok_statvec
-	movem.l (SP),D0-D2/A0-A2
-	lea 24(SP),SP
-#else         
 	move.l #0xCAFEFADE,ok_statvec
 	movem.l (SP)+,D0-D2/A0-A2
-#endif
 user_init:
 	rts
 	
@@ -9360,12 +6661,7 @@ mouse_rel:
 
 	move.l SP,save_stack3
 	lea mouse_stack,SP
-#ifdef COLDFIRE
-	lea -60(SP),SP
-	movem.l D0-A6,(SP)
-#else
 	movem.l D0-A6,-(SP)
-#endif
 	move.l adr_var_vdi,A2
 	moveq #0,D0
 	move.b (A0),D0           // get header from mouse buffer
@@ -9427,12 +6723,7 @@ new_coord:
 	move.l USER_CUR(A2),A1
 	jsr (A1)                 // call user cur display routine
 ms_done:
-#ifdef COLDFIRE
-	movem.l (SP),D0-A6
-	lea 60(SP),SP
-#else
 	movem.l (SP)+,D0-A6
-#endif
 	move.l save_stack3,SP
 	rts
 
@@ -9467,26 +6758,6 @@ dinit_mouse:
 
 	tst.w _oldmouse
 	bne user_init
-#ifdef COLDFIRE
-	lea -24(SP),SP
-	movem.l D0-D2/A0-A2,(SP)
-	move.l adr_var_vdi,A0	
-	move.w SR,D2
-	move.w D2,-(SP)
-	or.l #0x700,D2           // mask interrupts
-	move.w D2,SR
-	lea user_init(PC),A1
-	move.l A1,USER_BUT(A0)   // button vector
-	move.l A1,USER_MOT(A0)   // motion vector
-	move.l A1,USER_CUR(A0)   // cursor vector
-	move.l fvdi_virtual,A0
-	move.l vwk_real_address(A0),A0
-	move.l A1,wk_vector_wheel(A0) // wheel vector
-	move.l _vblqueue,A0      // remove the display routine
-	clr.l (A0)	
-	move.w (SP)+,D2
-	move.w D2,SR
-#else
 	movem.l D0-D2/A0-A2,-(SP)
 	move.l adr_var_vdi,A0	
 	move.w SR,-(SP)
@@ -9501,7 +6772,6 @@ dinit_mouse:
 	move.l _vblqueue,A0      // remove the display routine
 	clr.l (A0)	
 	move.w (SP)+,SR
-#endif
 	moveq #-1,D0
 	move.l D0,-(SP)          // discontinue mouse processing
 	move.l D0,-(SP)
@@ -9520,24 +6790,13 @@ dinit_mouse:
 	move.l old_statvec,(A0)
 .dm1:
 	clr.l ok_statvec
-#ifdef COLDFIRE
-	movem.l (SP),D0-D2/A0-A2
-	lea 24(SP),SP
-#else
 	movem.l (SP)+,D0-D2/A0-A2
-#endif
 	rts
 	
 _init_var_linea:
 
-#ifdef COLDFIRE
-	lea -48(SP),SP
-	movem.l D0-A3,(SP)
-	jsr 0xE09512             // TOS404
-#else
 	movem.l D0-A3,-(SP)
 	dc.w 0xA000
-#endif
 	tst.w _os_magic
 	beq.s .not_os_magic_linea
 	tst.l adr_var_vdi
@@ -9615,19 +6874,11 @@ _init_var_linea:
 	move.l (SP)+,A1
 	move.w D0,V_PLANES(A0)   // nb planes
 	move.w D0,INQ_TAB+8(A0)  // planes
-#ifdef COLDFIRE
-	lsr.l #3,D0
-#else
 	lsr.w #3,D0
-#endif
 	move.w D0,BYT_PER_PIX(A0)
 #ifdef PATCH_NVDI /* for font size ??? */
 	move.l 4(A1),A2          // 8 * 8 font characters
-#ifdef COLDFIRE
-	cmp.l #350,D7            // height in pixels
-#else
 	cmp.w #350,D7            // height in pixels
-#endif /* COLDFIRE */
 	bcs.s .ivl2
 	move.l 8(A1),A2          // 16 * 8 font characters
 .ivl2:
@@ -9637,19 +6888,6 @@ _init_var_linea:
 	move.w D0,DEV_TAB+8(A0)  // heigth point in mm/1000
 #else /* !PATCH_NVDI */
 	/* TODO ... the best is to get monitor specs */
-#ifdef COLDFIRE
-	move.l #744,D0
-	cmp.l #400,D6            // width in pixels
-	bcs.s .ivl1
-	lsr.l #1,D0
-.ivl1:
-	move.w D0,DEV_TAB+6(A0)  // width point in mm/1000
-	move.l 4(A1),A2          // 8 * 8 font characters
-	move.l #744,D0
-	cmp.l #350,D7            // height in pixels
-	bcs.s .ivl2
-	lsr.l #1,D0
-#else /* !COLDFIRE */ 
 	move.w #744,D0
 	cmp.w #400,D6
 	bcs.s .ivl1
@@ -9661,7 +6899,6 @@ _init_var_linea:
 	cmp.w #350,D7            // height in pixels
 	bcs.s .ivl2
 	lsr.w #1,D0
-#endif /* COLDFIRE */
 	move.l 8(A1),A2          // 16 * 8 font characters
 .ivl2:
 	move.l A1,sysfonts
@@ -9689,31 +6926,6 @@ _init_var_linea:
 	moveq #30,D0
 	move.b D0,V_CUR_CT(A0)
 	move.b D0,V_PERIOD(A0)   // cursor blink rate
-#ifdef COLDFIRE
-	move.l _v_bas_ad,D2
-	move.l D2,V_CUR_AD(A0)   // set cursor to begin of the screen
-	moveq #0,D2
-	move.w D6,D2
-	subq.l #1,D2
-	move.w D2,DEV_TAB(A0)    // width workstation info
-	move.w D7,D2
-	subq.l #1,D2
-	move.w D2,DEV_TAB+2(A0)  // height workstation info
-	move.w D7,V_REZ_VT(A0)   // height screen VDI ESC
-	move.l D7,D1
-	.chip 68000
-	divu V_CEL_HT(A0),D1     // height character VDI ESC
-	.chip 5200
-	ext.l D1
-	subq.l #1,D1
-	move.w D1,V_CEL_MY(A0)   // max line cursor VDI ESC
-	move.w D6,V_REZ_HZ(A0)   // width VDI ESC
-	move.l D6,D0
-	lsr.l #3,D0
-	move.l D0,D2
-	subq.l #1,D2
-	move.w D2,V_CEL_MX(A0)   // max column cursor VDI ESC
-#else
 	move.l _v_bas_ad,V_CUR_AD(A0) // set cursor to begin of the screen
 	move.w D6,DEV_TAB(A0)
 	subq.w #1,DEV_TAB(A0)    // width workstation info
@@ -9729,7 +6941,6 @@ _init_var_linea:
 	lsr.w #3,D0              // / 8
 	move.w D0,V_CEL_MX(A0)
 	subq.w #1,V_CEL_MX(A0)   // max column cursor VDI ESC
-#endif
 	mulu V_PLANES(A0),D0     // planes line A
 	move.w D0,V_LIN_WR(A0)   // bytes/line line A
 	move.w D0,BYTES_LN(A0)   // bytes/line VDI ESC
@@ -9791,13 +7002,7 @@ _init_var_linea:
 	lea PAL_MAP(A3),A1       // Bconout colors
 	moveq #0,D0
 	moveq #15,D1
-#ifdef COLDFIRE
-	moveq #0,D2
-	move.w V_PLANES(A0),D2   // nb planes
-	cmp.l #16,D2
-#else
 	cmp.w #16,V_PLANES(A0)   // nb planes
-#endif
 	beq.s .ivl6              // 65K colors
 	bhi.s .ivl4              // 16M colors
 	moveq #0,D0              // 256 colors
@@ -9806,12 +7011,7 @@ _init_var_linea:
 .ivl8:
 		move.l D0,(A1)+
 		addq.l #1,D0
-#ifdef COLDFIRE
-	subq.l #1,D1
-	bpl.s .ivl8
-#else
 	dbf D1,.ivl8
-#endif
 	subq.l #1,D0
 	move.w D0,V_COL_FG(A0)   // foreground color
 	move.l D0,VL_COL_FG(A0)
@@ -9826,12 +7026,7 @@ _init_var_linea:
 		move.w (A2)+,D0
 		move.w D0,(A1)+
 		move.w D0,(A1)+
-#ifdef COLDFIRE
-	subq.l #1,D1
-	bpl.s .ivl3
-#else
 	dbf D1,.ivl3
-#endif
 	move.w -2(A2),D0
 	move.w D0,V_COL_FG(A0)   // foreground color
 	move.l D0,VL_COL_FG(A0)
@@ -9841,39 +7036,18 @@ _init_var_linea:
 	move.l (A2),VL_COL_BG(A0) // background color
 .ivl7:
 		move.l (A2)+,(A1)+
-#ifdef COLDFIRE
-	subq.l #1,D1
-	bpl.s .ivl7
-#else
 	dbf D1,.ivl7
-#endif
 	move.l -4(A2),VL_COL_FG(A0) // foreground color
 .ivl5:
-#ifdef COLDFIRE
-	movem.l (SP),D0-A3
-	lea 48(SP),SP
-#else
 	movem.l (SP)+,D0-A3
-#endif
 	rts
 
 _linea_fonts:
 
-#ifdef COLDFIRE
-	move.l D2,-(SP)
-	move.l A2,-(SP)
-	jsr 0xE09512             // TOS404
-#else
 	movem.l D2/A2,-(SP)
 	dc.w 0xA000
-#endif
 	move.l A1,D0
-#ifdef COLDFIRE
-	move.l (SP)+,A2
-	move.l (SP)+,D2
-#else
 	movem.l (SP)+,D2/A2
-#endif
 	rts
 	
 _flip_words: // used inside fvdi/font.c
@@ -9882,24 +7056,11 @@ _flip_words: // used inside fvdi/font.c
 	move.l 8(SP),D0
 	bra .loopend
 .loop:
-#ifdef COLDFIRE
-		moveq #0,D0
-		move.w (A0),D1
-		move.l D1,D2
-		lsr.l #8,D1
-		lsl.l #8,D2
-		or.l D2,D1
-		move.w D1,(a0)+
-.loopend:
-	subq.l #1,D0
-	bpl.s .loop
-#else
 		move.w (A0),D1
 		rol.w #8,D1
 		move.w D1,(a0)+
 .loopend:
 	dbf D0,.loop
-#endif
 	rts
 
 _flip_longs: // used inside fvdi/font.c
@@ -9908,20 +7069,6 @@ _flip_longs: // used inside fvdi/font.c
 	move.l 8(SP),D0
 	bra .loopend_l
 .loop_l:
-#ifdef COLDFIRE
-		move.l (A0),D1
-		move.l D1,D2
-		lsr.l #8,D1
-		and.l #0x00ff00ff,D1
-		lsl.l #8,D2
-		and.l #0xff00ff00,D2
-		or.l D2,D1
-		swap D1
-		move.l D1,(A0)+
-.loopend_l:
-	subq.l #1,D0
-	bpl.s .loop_l
-#else
 		move.l (A0),D1
 		rol.w #8,D1
 		swap D1
@@ -9929,7 +7076,6 @@ _flip_longs: // used inside fvdi/font.c
 		move.l D1,(A0)+
 .loopend_l:
 	dbf D0,.loop_l
-#endif
 	rts
 
 _eddi_cookie:
@@ -9944,12 +7090,7 @@ _eddi_cookie:
 
 init_var_fvdi:
 
-#ifdef COLDFIRE
-	lea -44(SP),SP
-	movem.l D0-A2,(SP)
-#else
 	movem.l D0-A2,-(SP)
-#endif
 #ifdef DEBUG
 	lea debug7(PC),A0
 	bsr display_string
@@ -10020,12 +7161,7 @@ init_var_fvdi:
 	move.w XMN_CLIP+2(A2),vwk_clip_rectangle_x2(A0)	
 	move.w XMN_CLIP+4(A2),vwk_clip_rectangle_y1(A0)
 	move.w XMN_CLIP+6(A2),vwk_clip_rectangle_y2(A0)
-#ifdef COLDFIRE
-	movem.l (SP),D0-A2
-	lea 44(SP),SP
-#else
 	movem.l (SP)+,D0-A2
-#endif
 	rts
 	
 update_fvdi_fontinfo:
@@ -10034,20 +7170,6 @@ update_fvdi_fontinfo:
 	move.l fvdi_virtual,A0
 	move.l ADR_FONT(A2),A3
 	move.l A3,vwk_text_current_font(A0)
-#ifdef COLDFIRE
-	move.w CHARACTER_WIDTH(A3),vwk_text_character(A0) // character w/h in vwk
-	move.w CELL_WIDTH(A3),vwk_text_cell(A0) // cell w/h in vwk
-	move.w TOP_LINE(A3),D2
-	move.w D2,vwk_text_character+2(A0) // character w/h in vwk
-	ext.l D2
-	addq.l #1,D2
-	move.l D0,-(SP)
-	move.w BOTTOM_LINE(A3),D0
-	ext.l D0
-	add.l D0,D2
-	move.l (SP)+,D0
-	move.w D2,vwk_text_cell+2(A0) // cell w/h in vwk
-#else
 	move.w CHARACTER_WIDTH(A3),D2
 	swap D2
 	move.w TOP_LINE(A3),D2
@@ -10058,7 +7180,6 @@ update_fvdi_fontinfo:
 	addq.w #1,D2
 	add.w BOTTOM_LINE(A3),D2
 	move.l D2,vwk_text_cell(A0) // cell w/h in vwk
-#endif
 	move.l (SP)+,D2
 	rts
 	
@@ -10081,12 +7202,7 @@ update_fvdi_fontinfo:
 *-------*/
 _end_pts:
 
-#ifdef COLDFIRE
-	lea -44(SP),SP
-	movem.l D2-D7/A2-A6,(SP)
-#else
 	movem.l D2-D7/A2-A6,-(SP)
-#endif
 	move.l adr_var_vdi,A6
 	moveq #0,D0              // return value
 	moveq #0,D1
@@ -10235,12 +7351,7 @@ _end_pts:
 	beq.s .epp_ret0          // ret seg is of search color
 	bchg #0,D0               // ret seg not of search color
 .epp_ret0:
-#ifdef COLDFIRE
-	movem.l (SP),D2-D7/A2-A6
-	lea 44(SP),SP
-#else
 	movem.l (SP)+,D2-D7/A2-A6
-#endif
 	rts
 
 _get_color:
@@ -10254,12 +7365,7 @@ _get_color:
 	
 _pixelread:
 	
-#ifdef COLDFIRE
-	move.l D2,-(SP)
-	move.l A3,-(SP)
-#else
 	movem.l D2/A3,-(SP) 
-#endif
 	move.l 12(SP),D1         // X
 	move.l 16(SP),D2         // Y
 /*--------
@@ -10278,12 +7384,7 @@ _pixelread:
 	move.l SP,A0
 	jsr (A3)
 	addq.l #8,SP
-#ifdef COLDFIRE
-	move.l (SP)+,A3
-	move.l (SP)+,D2
-#else
 	movem.l (SP)+,D2/A3
-#endif
 	rts
 	
 /* fVDI subroutines calls, from Johan Klockars */
@@ -10291,12 +7392,7 @@ _pixelread:
 // fill_area(Virtual *vwk, long x1, long y1, long x2, long y2, long colour)
 _fill_area:
 
-#ifdef COLDFIRE
-	lea -28(SP),SP
-	movem.l D2-D7/A2,(SP)
-#else
 	movem.l D2-D7/A2,-(SP)
-#endif
 	move.l 32(SP),A0         // vwk
 	movem.l 36(SP),D1-D4     // x1, y1, x2, y2
 	bsr clip_rect
@@ -10309,12 +7405,7 @@ _fill_area:
 	move.l #0x00010000,D7    // Solid
 	jsr (A1)
 .end_fill_area:
-#ifdef COLDFIRE
-	movem.l (SP),D2-D7/A2
-	lea 28(SP),SP
-#else
 	movem.l (SP)+,D2-D7/A2
-#endif
 	rts
 
 // fill_poly(Virtual *vwk, short *pts, int n, int colour, short *pattern, short *points, long mode, long interior_style);
@@ -10333,12 +7424,7 @@ _fill_poly:
 	move.l vwk_real_address(A0),A1
 	move.l wk_r_fillpoly(A1),D0
 	beq.s .do_c_poly
-#ifdef COLDFIRE
-	lea -24(SP),SP
-	movem.l D2-D7,(SP)
-#else
 	movem.l D2-D7,-(SP)
-#endif
 	tst.b direct_call
 	beq.s .slower_fill_poly  // slower
 	move.l D1,D2             // number of points
@@ -10387,12 +7473,7 @@ _fill_poly:
 	move.l 6*4+32(SP),D7     // interior/style
 	jsr (A1)
 .end_fill_poly2:
-#ifdef COLDFIRE
-	movem.l (SP),D2-D7
-	lea 24(SP),SP
-#else
 	movem.l (SP)+,D2-D7
-#endif
 .end_fill_poly:
 	rts
 .do_c_poly:
@@ -10401,12 +7482,7 @@ _fill_poly:
 // fill_spans(Virtual *vwk, short *spans, long n, long colour, short *pattern, long mode, long interior_style)
 _fill_spans:
 
-#ifdef COLDFIRE
-	lea -44(SP),SP
-	movem.l D2-D7/A2-A6,(SP)
-#else
 	movem.l D2-D7/A2-A6,-(SP)
-#endif
 	move.l 44+4+0(SP),A0     // vwk
 	move.l 44+4+4(SP),D1     // spans
 	move.l 44+4+8(SP),D2     // n
@@ -10434,29 +7510,15 @@ _fill_spans:
 	addq.l #1,A0             // table operation
 	move.l wk_r_fill(A2),A2
 	jsr (A2)
-#ifdef COLDFIRE
-	movem.l (SP),D2-D7/A2-A6
-	lea 44(SP),SP
-#else
 	movem.l (SP)+,D2-D7/A2-A6
-#endif
 	rts
 
 // c_pline(Virtual *vwk, long numpts, long colour, short *pts)
 _c_pline:
 
-#ifdef COLDFIRE
-	lea -12(SP),SP
-	movem.l D2-D3/A2,(SP)
-	move.l 12+4(SP),A0       // vwk
-	moveq #0,D0
-	move.w vwk_line_width(A0),D0
-	cmp.l #1,D0
-#else
 	movem.l D2-D3/A2,-(SP)
 	move.l 12+4(SP),A0       // vwk
 	cmp.w #1,vwk_line_width(A0)
-#endif
 	bhi .cpl2
 	tst.w vwk_line_ends_beginning(A0)
 	bne .cpl2
@@ -10468,12 +7530,7 @@ _c_pline:
 	swap D2
 	clr.w D2                 // type - coordinate pairs
 	moveq #0,D3
-#ifdef COLDFIRE
-	lea -12(SP),SP
-	movem.l D4-D6,(SP)
-#else
 	movem.l D4-D6,-(SP)
-#endif
 	moveq #0,D4
 	move.l #0xffff,D5
 	moveq #0,D6
@@ -10518,12 +7575,7 @@ _c_pline:
 	move.l wk_r_line(A2),A2
 	jsr (A2)
 .cpl3:
-#ifdef COLDFIRE
-	movem.l (SP),D4-D6
-	lea 12(SP),SP
-#else
 	movem.l (SP)+,D4-D6
-#endif
 	bra .cpl1
 .cpl2:
 	clr.l -(SP)              // get a memory block of any size (hopefully large)
@@ -10550,12 +7602,7 @@ _c_pline:
 	jsr _free_block
 	addq.l #4,SP
 .cpl1:
-#ifdef COLDFIRE
-	movem.l (SP),D2-D3/A2
-	lea 12(SP),SP
-#else
 	movem.l (SP)+,D2-D3/A2
-#endif
 	rts
 	
 // void get_patternextent(Virtual *vwk, long length, short *text, short points[]);
@@ -10569,12 +7616,7 @@ _get_extent:
 	
 // void draw_text(Virtual *vwk, long x, long y, short *text, long length, long colour);
 _draw_text:
-#ifdef COLDFIRE
-	move.l A2,-(SP)
-	move.l A3,-(SP)
-#else
 	movem.l A2-A3,-(A7)
-#endif
 	lea 4+2*4(SP),A1
 	move.l (A1),A0
 	move.w 2+4(A1),D1
@@ -10595,12 +7637,7 @@ _draw_text:
 	move.l vwk_real_address(A0),A3
 	move.l wk_r_text(A3),A3
 	jsr (A3)
-#ifdef COLDFIRE
-	move.l (SP)+,A3
-	move.l (SP)+,A2
-#else
 	movem.l (SP)+,A2-A3
-#endif
 	rts
 
 /* lib_vrt_cpyfm 
@@ -10609,12 +7646,7 @@ _draw_text:
 */	
 lib_vrt_cpyfm:
 
-#ifdef COLDFIRE
-	lea -36(SP),SP
-	movem.l D1-D7/A2-A3,(SP)
-#else
 	movem.l D1-D7/A2-A3,-(SP)
-#endif
 	moveq #0,D5              // not screen
 	move.l 10(A1),D0         // target MFDB
 	beq.s .lvrtc2            // target = screen
@@ -10712,12 +7744,7 @@ lib_vrt_cpyfm:
 	jsr (A2)
 	lea 16(SP),SP
 .lvrtc1:
-#ifdef COLDFIRE
-	movem.l (SP),D1-D7/A2-A3
-	lea 36(SP),SP
-#else
 	movem.l (SP)+,D1-D7/A2-A3
-#endif
 	moveq #1,D0
 	rts
 	

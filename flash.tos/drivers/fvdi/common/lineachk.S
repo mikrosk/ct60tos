@@ -68,11 +68,6 @@ rline:	dc.l		0x80008000,0xc000c000,0xe000e000,0xf000f000
 row:	ds.l		1024
   .endc
 
-#ifdef COLDFIRE
-cookie_linea:
-	.asciz "A000"
-	.align 2
-#endif
 
 // This used to setup clip as x,y,w,h
 /* _check_linea - Initialization function
@@ -81,26 +76,8 @@ cookie_linea:
 * In:	4(a7)	Pointer to workstation struct
 */
 _check_linea:
-#ifdef COLDFIRE
-	lea		-36(a7),a7
-	movem.l		d0-d3/a0-a4,(a7)
-#else
 	movem.l		d0-d3/a0-a4,-(a7)
-#endif
 	move.l		4+9*4(a7),a4
-#ifdef COLDFIRE
-	clr.l		-(sp)
-	pea		cookie_linea(pc)
-	jsr		_Funcs_get_cookie
-	addq.l		#8,sp
-	tst.l		d0
-	ble.s		.no_cookie
-	move.l		d0,a0
-	jsr		(a0)
-	bra.s		.get_infos_linea
-.no_cookie:
-	bra.s		.no_cookie
-#endif
 	dc.w		0xa000
 .get_infos_linea:
 	move.l		a1,_font_table
@@ -124,21 +101,6 @@ _check_linea:
 	moveq		#0,d1
 	move.w		wk_screen_wrap(a4),d1
 
-#ifdef COLDFIRE
-	move.l		#1024-1,d7
-	lea		row(pc),a0
-
-.row_l:
-	move.l		d0,(a0)+
-	add.l		d1,d0
-	subq.l		#1,D7
-	bpl.s		d7
-.endc
-
-	movem.l		(a7),d0-d3/a0-a4
-	lea		36(a7),a7
-
-#else
 	move.w		#1024-1,d7
 	lea		row(pc),a0
 
@@ -149,7 +111,6 @@ _check_linea:
   .endc
   
 	movem.l		(a7)+,d0-d3/a0-a4
-#endif
 	rts
 
 	.lcomm _font_table,4	// Pointer to font head table (3)

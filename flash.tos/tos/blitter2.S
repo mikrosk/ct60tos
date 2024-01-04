@@ -30,15 +30,11 @@
 	
 #include "vars.h"
 
-#ifdef COLDFIRE
-#include "fire.h"
-#endif
 
 // #define DEBUG
 
 	.text
 	
-#ifndef COLDFIRE /* for reduce boot size, blitter not exist */
 	
 get_font_6x6_a0:
 
@@ -72,42 +68,18 @@ get_font_8x8_a1:
 
 	move.l phystop,A1
 	move.l adr_fonts+4(A1),A1
-#ifdef COLDFIRE
-#ifdef DEBUG
-	move.l A0,-(SP)
-	lea debug3(PC),A0
-	bsr debug_display_string
-	move.l (SP)+,A0
-#endif
-#endif
 	rts	
 
 get_font_8x16_a1:
 
 	move.l phystop,A1
 	move.l adr_fonts+8(A1),A1
-#ifdef COLDFIRE
-#ifdef DEBUG
-	move.l A0,-(SP)
-	lea debug4(PC),A0
-	bsr debug_display_string
-	move.l (SP)+,A0
-#endif
-#endif
 	rts	
 
 get_font_8x16_a1b:
 
 	move.l phystop,A1
 	move.l adr_fonts+12(A1),A1
-#ifdef COLDFIRE
-#ifdef DEBUG
-	move.l A0,-(SP)
-	lea debug4(PC),A0
-	bsr debug_display_string
-	move.l (SP)+,A0
-#endif
-#endif
 	rts
 
 get_font_ptr_a1:
@@ -118,58 +90,28 @@ get_font_ptr_a1:
 
 copy_fonts:
 
-#ifdef COLDFIRE
-	lea -28(SP),SP
-	movem.l D0-D3/A0-A2,(SP)
-#ifdef DEBUG
-	lea debug1(PC),A0
-	bsr debug_display_string
-#endif
-#else
 	movem.l D0-D3/A0-A2,-(SP)
-#endif
 	move.l phystop,D0
 	move.l D0,A1
 	move.l D0,D1
 	lea 0xE4AFEC,A0 // f6x6 FONT_HEAD
-#ifdef COLDFIRE
-	move.l #0xFFF,D0
-cf1:
-		move.l (A0)+,(A1)+
-	subq.l #1,D0
-	bpl.s cf1	
-#else
 	move.w #0xFFF,D0
 cf1:
 		move.l (A0)+,(A1)+
 	dbf D0,cf1	
-#endif
 	move.l A1,D2
 	lea 0xE09410,A0 // f16x32 FONT_HEAD
 	moveq #0x17,D0
 cf2:
 		move.l (A0)+,(A1)+
-#ifdef COLDFIRE
-	subq.l #1,D0
-	bpl.s cf2
-#else
 	dbf D0,cf2
-#endif
 	lea (0x2000-0x60)(A1),A1
 	move.l A1,D3
 	lea 0xE49434,A0 /* logo ATARI */
-#ifdef COLDFIRE
-	move.l #0x101,D0
-cf3:
-		move.l (A0)+,(A1)+
-	subq.l #1,D0
-	bpl cf3
-#else
 	move.w #0x101,D0
 cf3:
 		move.l (A0)+,(A1)+
 	dbf D0,cf3
-#endif
 	addq.l #4,A0 
 	move.l D3,(A1)+
 	move.l (A0)+,(A1)+
@@ -215,20 +157,13 @@ cf3:
 	movem.l D0/D3,0x48(A1)
 	move.l A1,(A2)+
 	clr.l (A2)+
-#ifdef COLDFIRE
-	movem.l (SP),D0-D3/A0-A2
-	lea 28(SP),SP
-#else
 	cpusha dc		
 	movem.l (SP)+,D0-D3/A0-A2
-#endif
 	rts
 	
-#endif /* COLDFIRE */
 	
 logo_atari:
 
-#ifndef COLDFIRE
 	cmp.l #0x01000000,_v_bas_ad
 	bcc.s .no_logo
 	move.l phystop,A0
@@ -236,62 +171,25 @@ logo_atari:
 	pea.l (A0)
 	jmp 0xE00666
 .no_logo:
-#endif
 	jmp 0xE0066E
 
-#ifndef COLDFIRE  /* for reduce boot size, blitter not exist */
 
 	dc.l 0x58425241          // XBRA
-#ifdef COLDFIRE
-	dc.l 0x5F43465F          // _CF_
-#else
 	dc.l 0x43543630          // CT60
-#endif
 	dc.l 0x00E1C22C          // TOS VDI entry point
 
 det_vdi:
 
-#ifdef COLDFIRE
-	ext.l D0
-	cmp.l #0x73,D0   // VDI
-	bne v1
-	lea -16(SP),SP
-	movem.l A0-A3,(SP)
-#else
 	cmp.w #0x73,D0   // VDI
 	bne v1
 	movem.l A0-A3,-(SP)
-#endif
 	move.l D1,A1
 	move.l (A1),A3   // CONTRL
-#ifdef COLDFIRE
-#ifdef DEBUG
-	move.l D0,-(SP)
-	move.l A0,-(SP)
-	lea debug2(PC),A0
-	bsr debug_display_string
-	move.w (A3),D0   // function
-	bsr debug_hex_word
-	moveq #13,D0
-	bsr debug_display_char
-	moveq #10,D0
-	bsr debug_display_char
-	move.l (SP)+,A0
-	move.l (SP)+,D0
-#endif
-	move.w (A3),D0
-	cmp.l #109,D0    // vro_cpyfm
-	beq.s v10
-	cmp.l #110,D0    // vr_trnfm
-	beq.s v10
-	cmp.l #121,D0    // vrt_cpyfm
-#else
 	cmp.w #109,(A3)  // vro_cpyfm
 	beq.s v10
 	cmp.w #110,(A3)  // vr_trnfm
 	beq.s v10
 	cmp.w #121,(A3)  // vrt_cpyfm
-#endif
 	bne v3
 v10:
 	move.l D2,-(SP)
@@ -302,24 +200,12 @@ v10:
 	move.l 14(A3),A0 // MFDB source
 	tst.l (A0)
 	beq.s v4         // source = screen
-#ifdef COLDFIRE
-	move.l (A0),D2
-	cmp.l #0xE00000,D2
-#else
 	cmp.l #0xE00000,(A0)
-#endif
 	bcs.s v4         // <> fast-ram or flash
 	move.l (A0),adr_source(A2)
  	moveq #15,D2
-#ifdef COLDFIRE
-	moveq #0,D0
-	move.w 4(A0),D0  // width
-	add.l D0,D2
- 	lsr.l #4,D2      // /16
-#else 
  	add.w 4(A0),D2   // width
  	lsr.w #4,D2      // /16
-#endif
 	mulu 12(A0),D2   // number of planes
 	mulu 6(A0),D2    // height
 	add.l D2,D2      // size in bytes
@@ -329,11 +215,7 @@ v10:
 	ble v7           // error
 	move.l D0,save_source(A2)
 	add.l #15,D0
-#ifdef COLDFIRE
-	and.l #0xFFFFFFF0,D0 // 16 bytes alignment
-#else
 	and.b #0xF0,D0   // 16 bytes alignment
-#endif
 	move.l D0,(A0)   // new source
 	move.l D0,A1
 	move.l adr_source(A2),A0 // source in fast-ram
@@ -351,24 +233,12 @@ v4:
 	move.l 18(A3),A0 // MFDB target
 	tst.l (A0)
 	beq.s v9         // target = screen
-#ifdef COLDFIRE
-	move.l (A0),D0
-	cmp.l #0xE00000,D0
-#else
 	cmp.l #0xE00000,(A0)
-#endif
 	bcs.s v9         // <> fast-ram or flash
 	move.l (A0),adr_target(A2)
  	moveq #15,D0
-#ifdef COLDFIRE
-	moveq #0,D2
-	move.w 4(A0),D2  // width
-	add.l D2,D0
- 	lsr.l #4,D0      // /16
-#else 
  	add.w 4(A0),D0   // width
  	lsr.w #4,D0      // /16
-#endif
 	mulu 12(A0),D0   // number of planes
 	mulu 6(A0),D0    // height
 	add.l D0,D0      // in bytes
@@ -377,39 +247,19 @@ v4:
 	ble v8
 	move.l D0,save_target(A2)
 	add.l #15,D0
-#ifdef COLDFIRE
-	and.l #0xFFFFFFF0,D0 // 16 bytes alignment
-#else
 	and.b #0xF0,D0   // 16 bytes alignment
-#endif
 	move.l D0,(A0)   // new target
 v9:
 	move.l (SP)+,D2
-#ifdef COLDFIRE
-	movem.l (SP),A0-A3
-	lea 16(SP),SP
-#else
 	movem.l (SP)+,A0-A3
 	moveq #0x73,D0
-#endif
 	clr.w -(SP)      // format if > 68000
 	pea.l v2(PC)
-#ifdef COLDFIRE
-	move.w SR,D0
-	move.w D0,-(SP)
-	moveq #0x73,D0	
-#else
 	move.w SR,-(SP)
-#endif
 	move.l det_vdi-4(PC),-(SP)
 	rts
 v2:
-#ifdef COLDFIRE
-	lea -28(SP),SP
-	movem.l D0-D2/A0-A3,(SP)  // return after vro_cpyfm
-#else
 	movem.l D0-D2/A0-A3,-(SP) // return after vro_cpyfm
-#endif
 	move.l phystop,A2
 	move.l save_contrl(A2),A3
 	tst.l adr_source(A2)
@@ -425,15 +275,8 @@ v5:
 	move.l 18(A3),A0 // MFDB target
 	move.l D0,A1     // target in fast-ram
  	moveq #15,D0
-#ifdef COLDFIRE
-	moveq #0,D1
-	move.w 4(A0),D1  // width
-	add.l D1,D0
- 	lsr.l #4,D0      // /16
-#else 
  	add.w 4(A0),D0   // width
  	lsr.w #4,D0      // /16
-#endif
 	mulu 12(A0),D0   // number of planes
 	mulu 6(A0),D0    // height
 	add.l D0,D0      // size in bytes
@@ -454,12 +297,7 @@ v13:
 	move.l adr_target(A2),(A1)
 	clr.l adr_target(A2)
 v6:
-#ifdef COLDFIRE
-	movem.l (SP),D0-D2/A0-A3
-	lea 28(SP),SP
-#else
 	movem.l (SP)+,D0-D2/A0-A3
-#endif
 	rte	 
 v8:
 	tst.l adr_source(A2)
@@ -471,20 +309,10 @@ v8:
 	clr.l adr_source(A2)
 v7:
 	move.l (SP)+,D2
-#ifdef COLDFIRE
-	movem.l (SP),A0-A3
-	lea 16(SP),SP
-#else
 	movem.l (SP)+,A0-A3
-#endif
 	rte
 v3:
-#ifdef COLDFIRE
-	movem.l (SP),A0-A3
-	lea 16(SP),SP
-#else
 	movem.l (SP)+,A0-A3
-#endif
 	moveq #0x73,D0
 v1:
 	move.l det_vdi-4(PC),-(SP)
@@ -492,132 +320,24 @@ v1:
 
 malloc_stram:
 
-#ifdef COLDFIRE
-	lea -20(SP),SP
-	movem.l D1-D2/A0-A2,(SP)
-#else
 	movem.l D1-D2/A0-A2,-(SP)
-#endif
 	clr.w -(SP)
 	move.l D0,-(SP)
 	move.w #0x44,-(SP)
 	trap #1
 	addq.l #8,SP
-#ifdef COLDFIRE
-	movem.l (SP),D1-D2/A0-A2
-	lea 20(SP),SP
-#else
 	movem.l (SP)+,D1-D2/A0-A2
-#endif
 	tst.l D0
 	rts
 
 free_stram:
 
-#ifdef COLDFIRE
-	lea -20(SP),SP
-	movem.l D1-D2/A0-A2,(SP)
-#else
 	movem.l D1-D2/A0-A2,-(SP)
-#endif
 	pea.l (A0)
 	move.w #0x49,-(SP)
 	trap #1
 	addq.l #6,SP
-#ifdef COLDFIRE
-	movem.l (SP),D1-D2/A0-A2
-	lea 20(SP),SP
-#else
 	movem.l (SP)+,D1-D2/A0-A2
-#endif
 	rts
 	
-#endif /* COLDFIRE */
 	
-#ifdef COLDFIRE
-#ifdef DEBUG
-
-debug1:	.ascii "Copy fonts in STRAM"
-	.byte 13,10,0
-debug2:	.asciz "VDI #0x"
-debug3:	.ascii "fonts 8x8"
-	.byte 13,10,0
-debug4:	.ascii "fonts 8x16"
-	.byte 13,10,0
-debug5:	.ascii "init_wk"
-	.byte 13,10,0
-debug6:	.ascii "text_init"
-	.byte 13,10,0
-debug7:	.ascii "INIT_G"
-	.byte 13,10,0	
-	
-	.align 2
-	
-debug_display_string:
-
-	move.l D0,-(SP)
-	move.l A0,-(SP)
-.dds2:
-		move.b (A0)+,D0
-		beq.s .dds1
-		bsr debug_display_char
-	bra.s .dds2
-.dds1:
-	move.l (SP)+,A0
-	move.l (SP)+,D0
-	rts
-	
-debug_hex_long:
-	move.l D0,-(SP)
-	swap D0
-	bsr.s debug_hex_word
-	move.l (SP)+,D0
-debug_hex_word:
-	move.w D0,-(SP)
-	lsr.l #8,D0          
-	bsr.s debug_hex_byte     
-	move.w (SP)+,D0
-debug_hex_byte:
-	move.w D0,-(SP)
-	lsr.l #4,D0        
-	bsr.s debug_hex_char      
-	move.w (SP)+,D0      
-debug_hex_char:
-	and.l #0xF,D0      
-	or.l #0x30,D0      
-	cmp.l #0x3A,D0     
-	bcs.s debug_display_char  
-	addq.l #7,D0   
-
-debug_display_char:
-
-	tst.b serial_mouse
-	bne.s .no_debug
-	move.l D1,-(SP)
-.wait_uart:
-	move.b MCF_UART_USR0,D1
-	and.l  #MCF_UART_USR_TXRDY,D1
-	beq.s .wait_uart
-	move.b D0,MCF_UART_UTB0 // send the character
-	move.l (SP)+,D1
-.no_debug:
-	rts
-	
-wait_key:
-
-	lea -24(SP),SP
-	movem.l D0-D2/A0-A2,(SP)
-#ifdef DEBUG
-	move.w #1,-(SP)          // AUX
-#else
-	move.w #2,-(SP)          // CON
-#endif
-	move.w #2,-(SP)          // Bconin
-	trap #13
-	addq.l #4,SP
-	movem.l (SP),D0-D2/A0-A2
-	lea 24(SP),SP
-	rts 
-	
-#endif /* DEBUG */
-#endif /* COLDFIRE */

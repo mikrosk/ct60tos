@@ -443,7 +443,6 @@ long atol(const char *text)
 }
 
 /****************************************************************/
-#ifndef MCF5445X /* MCF5445X has no FPU */
 float atof(const char *text)
 {
 	long n;
@@ -485,7 +484,6 @@ float atof(const char *text)
 		nf = -nf;
 	return(nf);
 }
-#endif /* MCF5445X */
 
 /****************************************************************/
 void ltoa(char *buf, long n, unsigned long base)
@@ -520,7 +518,6 @@ void ltoa(char *buf, long n, unsigned long base)
 }
 
 /****************************************************************/
-#ifndef MCF5445X /* MCF5445X has no FPU */
 typedef union
 { 
 	long	L; 
@@ -585,7 +582,6 @@ void ftoa(float f, int max, char *buf)
 	} 
 	*buf = '\0'; 
 } 
-#endif /* MCF5445X */
 
 /****************************************************************/
 char *strchr(const char *s, int c)

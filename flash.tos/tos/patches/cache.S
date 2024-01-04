@@ -19,108 +19,6 @@
 
 	.text
 
-#ifdef COLDFIRE
-
-#include "fire.h"
-
-	.globl	flush_caches
-	.globl	flush_data_cache
-	.globl	caches_disable
-	.globl	caches_enable
-
-	.align	2
-	.long	0x638
-	.long	end1-begin1
-begin1:
-	jsr	caches_enable
-	nop
-	nop
-end1:
-
-	.align	2
-	.long	0x908
-	.long	end2-begin2
-begin2:
-	.chip	68060
-	cpusha	bc
-	.chip	68060
-	nop
-end2:
-
-	.align	2
-	.long	0x92A
-	.long	end3-begin3
-begin3:
-	.chip	68060
-	cpusha	bc
-	.chip	5200
-	nop
-end3:
-
-	.align	2
-	.long	0x94A
-	.long	end4-begin4
-begin4:
-	.chip	68060
-	cpusha	bc
-	.chip	5200
-	nop
-end4:
-
-	.align	2
-	.long	0xDF6
-	.long	end5-begin5
-begin5:
-	.chip	68060
-	cpusha	bc
-	.chip	5200
-	nop
-end5:
-
-	.align	2
-	.long	0x43B4
-	.long	end6-begin6
-begin6:	// Floppy
-	.chip	68060
-	cpusha	bc
-	.chip	5200
-	nop
-end6:
-
-	.align	2
-	.long	0x46CC
-	.long	end7-begin7
-begin7:	// Floppy
-	.chip	68060
-	cpusha	bc
-	.chip	5200
-	nop
-end7:
-
-	.align	2
-	.long	0x85A
-	.long	end8-begin8
-begin8:
-	jmp	caches_disable
-end8:
-
-	.align	2
-	.long	0x18CA
-	.long	end9-begin9
-begin9:
-	jsr	flush_caches
-	bra.s	begin9-0x18CA+0x18DE
-end9:
-
-	.align	2
-	.long	0x1944
-	.long	end10-begin10
-begin10:
-	jsr	flush_data_cache
-	bra.s	begin10-0x18CA+0x18DE
-end10:
-
-#else /* 68060 */
 
 	.align	2
 	.long	0x638
@@ -209,7 +107,6 @@ begin10:
 	bra.s	begin10-0x18CA+0x18DE
 end10:
 
-#endif /* COLDFIRE */
 
 	.align	2
 	.long	0x3990
@@ -231,7 +128,6 @@ begin12:
 	nop
 end12:
 
-#ifndef COLDFIRE
 
 	.align	2
 	.long	0x990C
@@ -265,7 +161,6 @@ code13:
 	nop
 end13:
 
-#endif /* COLDFIRE */
 
 	.align	2
 	.long	0x11BCE
@@ -373,25 +268,6 @@ begin28:
 	rts
 end28:
 
-#ifdef COLDFIRE
-
-	.align	2
-	.long	0x44544
-	.long	end29-begin29
-begin29:
-	jsr	caches_enable
-	bra.s	begin29-0x44544+0x44578
-end29:
-
-	.align	2
-	.long	0x4454E
-	.long	end30-begin30
-begin30:
-	jsr	caches_disable
-	bra.s	begin30-0x4454E+0x44584
-end30:
-
-#else /* 68060 */
 
 	.align	2
 	.long	0x44528
@@ -411,15 +287,9 @@ begin30:
 	bra.s	begin30-0x44544+0x44584
 end30:
 
-#endif /* COLDFIRE */
 
 	.align	2
 	.long	0x250C8
-#ifdef COLDFIRE
-	.long	end31-begin31
-begin31:
-	jmp	caches_enable
-#else
 	.long	end31-begin31
 begin31:
 	move.w	SR,-(SP)
@@ -429,18 +299,13 @@ begin31:
 	movec.l	D0,CACR
 	move.w	(SP)+,SR
 	rts
-#endif
 end31:
 
 	.align	2
 	.long	0x4456E
 	.long	end32-begin32
 begin32:
-#ifdef COLDFIRE
-	cmp.l	#CACHE_ENABLE_MODE,D0
-#else
 	cmp.l	#0xA0808000,D0
-#endif
 end32:
 
 	.globl	fix_bug_nvdi

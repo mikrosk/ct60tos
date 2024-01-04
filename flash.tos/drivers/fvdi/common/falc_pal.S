@@ -58,9 +58,6 @@ get_colour:
 */
 _set_colours:
 	move.w	d0,d1
-#ifdef COLDFIRE
-	ext.l	d0
-#endif
 	mulu	#colour_struct_size,d1
 	add.l	d1,a2
 	bra	.loop1_end
@@ -75,31 +72,13 @@ _set_colours:
 	move.w	d3,(a2)+
 	mulu	#(1<<colour_bits)-1,d3
 	add.l	#500,d3
-#ifdef COLDFIRE
-	.chip	68000
 	divu	#1000,d3
-	.chip	5200
-#else
-	divu	#1000,d3
-#endif
 	move.w	d3,4(a2)	// This is not at all what should be there
-#ifdef COLDFIRE
-	or.l	d2,d3
-	move.b	d3,d2
-	subq.l	#1,d1
-	bpl.s	.loop
-#else
 	or.b	d3,d2
 	dbra	d1,.loop
-#endif
 	add.l	#colour_struct_size-colour_hw,a2
 .loop1_end:
-#ifdef COLDFIRE
-	subq.l	#1,d0
-	bpl.s	.loop
-#else
 	dbra	d0,.loop1
-#endif
 	rts
 
 

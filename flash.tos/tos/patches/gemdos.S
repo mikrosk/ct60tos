@@ -16,9 +16,6 @@
 *  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 */
 
-#ifdef COLDFIRE
-	.chip 68060
-#endif
 	.text
 	
 	.globl	flush_cache_pexec
@@ -49,35 +46,5 @@ begin3:
 	move.l	#det_vbl,0x70.w
 end3:
 
-#ifdef COLDFIRE
-
-	.globl	_gouser
-	
-	.align	2
-	.long	0x1C382
-	.long	end4-begin4
-begin4:
-	jmp	_gouser
-end4:
-	
-	.globl	_termuser
-
-	.align	2
-	.long	0x1C3C0
-	.long	end5-begin5
-begin5:
-	jmp	_termuser
-end5:
-	
-	.globl	_xsuper
-
-	.align	2
-	.long	0x1C3CC
-	.long	end6-begin6
-begin6:
-	jmp	_xsuper
-end6:
-
-#endif
 
 

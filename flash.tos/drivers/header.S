@@ -38,13 +38,9 @@ Start:
 	jmp	_dbug                   // 40 - 6
 	jmp	_event_aes              // 46 - 7
 	jmp	_disassemble_pc         // 52 - 8
-#if defined(COLDFIRE) && defined(LWIP)
-	jmp	_init_rtos              // 58 - 9
-#else
 	rts
 	nop
 	nop
-#endif /* defined(COLDFIRE) && defined(LWIP) */
 	jmp	_set_video              // 64 - 10
 	jmp	_init_after_autofolder  // 70 - 11
 	rts	                        // 76 - 12

@@ -338,15 +338,7 @@ long xexec(WORD flag, char *path, char *tail, char *env)
 #if 1
 				flush_cache_pexec(p, path);
 #else
-#ifdef COLDFIRE
-#if (__GNUC__ > 3)
-    		asm volatile (" .chip 68060\n\t cpusha BC\n\t .chip 5485\n\t"); /* flush from CF68KLIB */
-#else
-    		asm volatile (" .chip 68060\n\t cpusha BC\n\t .chip 5200\n\t"); /* flush from CF68KLIB */
-#endif
-#else /* 68060 */
     		asm volatile (" cpusha BC\n\t");
-#endif /* COLDFIRE */
 #endif
         proc_go(p);
         /* should not return ? */
@@ -506,15 +498,7 @@ long xexec(WORD flag, char *path, char *tail, char *env)
 #if 1
 		flush_cache_pexec(cur_p, path);
 #else
-#ifdef COLDFIRE
-#if (__GNUC__ > 3)
-    asm volatile (" .chip 68060\n\t cpusha BC\n\t .chip 5485\n\t"); /* flush from CF68KLIB */
-#else
-    asm volatile (" .chip 68060\n\t cpusha BC\n\t .chip 5200\n\t"); /* flush from CF68KLIB */
-#endif
-#else /* 68060 */
     asm volatile (" cpusha BC\n\t");
-#endif /* COLDFIRE */
 #endif
 
     if(flag != PE_LOAD)
@@ -646,12 +630,6 @@ static void proc_go(PD *p)
     sp->basepage = p;      /* the stack contains the basepage */
        
     sp->retaddr = p->p_tbase;    /* return address a3 is text start */
-#ifdef LWIP
-    {
-        extern void install_auto_breakpoint(long address);
-        install_auto_breakpoint(p->p_tbase);
-    }
-#endif
     sp->sr = 0;                  /* the process will start in user mode */
     
     /* the other stack is the supervisor stack */

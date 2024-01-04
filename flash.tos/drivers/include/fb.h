@@ -531,18 +531,8 @@ extern const struct fb_videomode vesa_modes[];
 
 /* timer */
 extern void udelay(long usec);
-#ifdef COLDFIRE
-#ifdef MCF5445X
-#define US_TO_TIMER(a) (a)
-#define TIMER_TO_US(a) (a)
-#else /* MCF548X */
-#define US_TO_TIMER(a) ((a)*100)
-#define TIMER_TO_US(a) ((a)/100)
-#endif
-#else
 #define US_TO_TIMER(a) (((a)*256)/5000)
 #define TIMER_TO_US(a) (((a)*5000)/256)
-#endif
 extern long get_timer(void);
 extern void start_timeout(void);
 extern int end_timeout(long msec);

@@ -223,14 +223,6 @@ int set_bpp(int bpp)
 	{
 #ifdef DRIVER_IN_ROM
 		extern short video_found;
-#ifdef COLDFIRE
-		if(!video_found) /* Videl driver */
-		{
-			mouse_draw_r = &mouse_draw;
-			Funcs_copy("Videl driver ", driver_name);
-		}
-		else
-#endif
 		if(video_found == 2) /* Lynx */
 		{
 			struct smifb_info * smiinfo = info_fvdi->par;
@@ -251,7 +243,6 @@ int set_bpp(int bpp)
 	{
 		/* indexed color modes */
 #ifdef DRIVER_IN_ROM
-#ifndef COLDFIRE
 		case 1:
 			graphics_mode = &mode[0];
 			read_pixel_r  = &c_read_pixel_1;
@@ -263,7 +254,6 @@ int set_bpp(int bpp)
 			fill_area_r   = &fill_area_1;
 			Funcs_cat("(mono)",driver_name);
 			break;
-#endif
 #endif /* DRIVER_IN_ROM */
 		case 8:
 			graphics_mode = &mode[1];

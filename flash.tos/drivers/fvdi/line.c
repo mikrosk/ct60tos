@@ -42,11 +42,7 @@
 #define ARROWED 1
 
 #if 1
-#ifdef COLDFIRE
-extern short SMUL_DIV(short x, short y, short z);
-#else
 #define SMUL_DIV(x,y,z)	((short)(((short)(x)*(long)((short)(y)))/(short)(z)))
-#endif
 #else
 int SMUL_DIV(int, int, int);   //   d0d1d0d2
 #pragma inline d0 = SMUL_DIV(d0, d1, d2) { "c1c181c2"; }

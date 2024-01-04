@@ -15,9 +15,6 @@
 #define  _MINT_OSTRUCT_H
 #include <osbind.h>
 #include "config.h"
-#ifdef LWIP
-#include "../../include/vars.h"
-#endif
 #include "portab.h"
 #include "asm.h"
 #include "fs.h"
@@ -452,12 +449,6 @@ long    xsetdrv(short drv)
     display_string(") => ");
 #endif
     {
-#ifdef LWIP
-        extern long pxCurrentTCB, tid_TOS;
-        if(pxCurrentTCB != tid_TOS)
-            drvmap = *(unsigned long *)_drvbits;
-        else       
-#endif
         drvmap = Drvmap();
     }
     

@@ -29,11 +29,9 @@
 
 #undef DISPLAY_SUBCLASS
 
-#ifndef COLDFIRE
 #define LOCAL_REGISTERS_BIG
 #define SAME_CPU_PCI_MEM_ADDR
 #define TARGET_NO_CACHE_PCI_MEM
-#endif
 
 	.globl _install_pci_bios
 	.globl dummy_function        // errata
@@ -44,12 +42,7 @@ _install_pci_bios:
 	ext.l D0
 	cmp.l #1,D0                  // init
 	blt display_devices
-#ifdef COLDFIRE
-	lea -56(SP),SP
-	movem.l D1-A6,(SP)
-#else
 	movem.l D1-A6,-(SP)
-#endif
 	lea 0,A6
 	subq.l #1,D0                 // (1) init, (2) init without PCI RESET
 	move.l D0,D7 
@@ -60,218 +53,13 @@ _install_pci_bios:
 	moveq #-1,D0                 // error
 	bra .end_install
 .abort_install2:
-#ifndef COLDFIRE
 #if 0 // #ifdef DEBUG
 	bsr dump_plx
 .abort_all:
 	bra.s .abort_all
 #endif /* DEBUG */
-#endif /* COLDFIRE */
 	moveq #-1,D0                 // error
 	bra .end_install
-#ifdef COLDFIRE
-.pci_cookie_not_found:
-#if 0	// CF PCI moved inside boot2.S before the CF68KLIB is called (init_cf)
-	// excepted interrupts
-#ifdef DEBUG
-	lea debug27(PC),A0
-	bsr debug_display_string	
-#endif
-	// Setup the arbiter
-	move.l #MCF_PCIARB_PACR_INTMPRI \
-	 + MCF_PCIARB_PACR_EXTMPRI(0x1F) \
-	 + MCF_PCIARB_PACR_INTMINTEN \
-	 + MCF_PCIARB_PACR_EXTMINTEN(0x1F),D0
-	move.l D0,MCF_PCIARB_PACR
-	// GNT and REQ
-#ifdef MCF547X
-	move.w #0x3F,D0 /* only BREQ0-2 are connected to PCI */
-#else
-	move.w #0x3FF,D0
-#endif
-	move.w D0,MCF_GPIO_PAR_PCIBG
-	move.w D0,MCF_GPIO_PAR_PCIBR
-	// Master Enable / Memory Space / MWI
-	move.l #MCF_PCI_PCISCR_M + MCF_PCI_PCISCR_B + MCF_PCI_PCISCR_MW,D0
-	move.l D0,MCF_PCI_PCISCR     // PCI Command Register
-#ifdef DEBUG
-	lea debug28(PC),A0
-	bsr debug_display_string	
-#endif
-	// Setup burst parameters
-	move.l #MCF_PCI_PCICR1_CACHELINESIZE(PCI_CACHE_LINE) + MCF_PCI_PCICR1_LATTIMER(32),D0
-	move.l D0,MCF_PCI_PCICR1
-	move.l #MCF_PCI_PCICR2_MINGNT(PCI_MINGNT) + MCF_PCI_PCICR2_MAXLAT(PCI_MAXLAT),D0
-	move.l D0,MCF_PCI_PCICR2
-	// Turn on error signaling
-	move.l #MCF_PCI_PCIICR_TAE + MCF_PCI_PCIICR_IAE /* + MCF_PCI_PCIICR_REE*/ + PCI_ RETRIES,D0
-	move.l D0,MCF_PCI_PCIICR
-	move.l #MCF_PCI_PCIGSCR_SEE,D0
-	or.l D0,MCF_PCI_PCIGSCR
-#ifdef DEBUG
-	lea debug29(PC),A0
-	bsr debug_display_string	
-#endif
-	// Configure Initiator Windows
-	move.l #PCI_MEMORY_OFFSET + ((PCI_MEMORY_SIZE - 1) >> 8),D0
-#ifdef SAME_CPU_PCI_MEM_ADDR
-	move.w #(PCI_MEMORY_OFFSET >> 16),D0
-#else
-	clr.w D0
-#endif
-	move.l D0,MCF_PCI_PCIIW0BTAR // Initiator Window 0 Base / Translation Address Register
-#if 0 // #ifdef DEBUG
-	lea debug37(PC),A0
-	bsr debug_display_string
-	bsr debug_hex_long
-	moveq #13,D0
-	bsr debug_display_char
-	moveq #10,D0
-	bsr debug_display_char		
-#endif
-	move.l #PCI_IO_OFFSET + ((PCI_IO_SIZE - 1) >> 8),D0
-	clr.w D0
-	move.l D0,MCF_PCI_PCIIW1BTAR // Initiator Window 1 Base / Translation Address Register
-	clr.l MCF_PCI_PCIIW2BTAR     // not used
-#if 0 // #ifdef DEBUG
-	lea debug37(PC),A0
-	bsr debug_display_string
-	bsr debug_hex_long
-	moveq #13,D0
-	bsr debug_display_char
-	moveq #10,D0
-	bsr debug_display_char	
-#endif
-	move.l #MCF_PCI_PCIIWCR_WINCTRL0_MEMRDLINE + MCF_PCI_PCIIWCR_WINCTRL1_IO,D0
-	move.l D0,MCF_PCI_PCIIWCR	   // Initiator Window Configuration Register
-	// Target zones
-#ifdef SAME_CPU_PCI_MEM_ADDR
-	move.l #0x40000000,D0
-	move.l D0,MCF_PCI_PCIBAR0    // 256 KB window
-#ifdef MCF5445X
-	move.l #0xFC000000 + MCF_PCI_PCITBATR0_EN,D0 
-#else
-	move.l #__MBAR + MCF_PCI_PCITBATR0_EN,D0
-#endif
-	move.l D0,MCF_PCI_PCITBATR0  // Target Base Address Translation Register 0
-	clr.l MCF_PCI_PCIBAR1        // 1 GB window ! 
-	move.l #MCF_PCI_PCITBATR1_EN,D0 
-	move.l D0,MCF_PCI_PCITBATR1  // Target Base Address Translation Register 1
-#else /* !SAME_CPU_PCI_MEM_ADDR */
-	move.l #0x80000000,D0
-	move.l D0,MCF_PCI_PCIBAR0    // 256 KB window
-#ifdef MCF5445X
-	move.l #0xFC000000 + MCF_PCI_PCITBATR0_EN,D0 
-#else
-	move.l #__MBAR + MCF_PCI_PCITBATR0_EN,D0
-#endif
-	move.l D0,MCF_PCI_PCITBATR0  // Target Base Address Translation Register 0
-	move.l #0x40000000,D0
-	move.l D0,MCF_PCI_PCIBAR1    // 1 GB window ! 
-	move.l #MCF_PCI_PCITBATR1_EN,D0 
-	move.l D0,MCF_PCI_PCITBATR1  // Target Base Address Translation Register 1
-#endif /* SAME_CPU_PCI_MEM_ADDR */
-//	move.l #MCF_PCI_PCITCR_P,D0  // prefetch reads for BAR1
-//	move.l D0,MCF_PCI_PCITCR     // Target Control Register
-#ifdef DEBUG
-	lea debug30(PC),A0
-	bsr debug_display_string	
-#endif
-	// Internal PCI controller interrupts
-#ifdef MCF5445X
-	pea int_pciarb(PC)
-	move.w #64+INT1_HI_PCI_ASR+64+OFFSET_INT_CF68KLIB,-(SP)
-	move.w #5,-(SP)              // Setexec
-	trap #13
-	addq.l #8,SP
-	moveq #5,D0                  // level 5
-	move.b D0,MCF_INTC_ICR1+INT1_HI_PCI_ASR
-	move.l #~INTC_IMRH_INT_MASK56,D0
-	and.l D0,MCF_INTC_IMRH1
-	/* Falling edge on IRQ1-7 EPORT */
-	move.w #MCF_EPORT_EPPAR_EPPA7(EPORT_EPPAR_EPPAx_FALLING) \
-	 + EPORT_EPPAR_EPPA6(MCF_EPORT_EPPAR_EPPAx_FALLING) \
-	 + EPORT_EPPAR_EPPA5(MCF_EPORT_EPPAR_EPPAx_FALLING) \
-	 + EPORT_EPPAR_EPPA4(MCF_EPORT_EPPAR_EPPAx_FALLING) \
-	 + EPORT_EPPAR_EPPA3(MCF_EPORT_EPPAR_EPPAx_FALLING) \
-	 + EPORT_EPPAR_EPPA2(MCF_EPORT_EPPAR_EPPAx_FALLING) \
-	 + EPORT_EPPAR_EPPA1(MCF_EPORT_EPPAR_EPPAx_FALLING),D0
-	move.w D0,MCF_EPORT_EPPAR
-	clr.b MCF_EPORT_EPDDR
-	clr.b MCF_EPORT_EPIER
-#else /* MCF548X */
-	pea int_pciarb(PC)
-	move.w #64+41+OFFSET_INT_CF68KLIB,-(SP)
-	move.w #5,-(SP)              // Setexec
-	trap #13
-	addq.l #8,SP
-	moveq #0x34,D0               // level 5, priority 4
-	move.b D0,MCF_INTC_ICR41     // PCIARB
-	move.l #~MCF_INTC_IMRH_INT_MASK41,D0
-	and.l D0,MCF_INTC_IMRH
-	pea int_xlbpci(PC)
-	move.w #64+43+OFFSET_INT_CF68KLIB,-(SP)
-	move.w #5,-(SP)              // Setexec
-	trap #13
-	addq.l #8,SP
-	moveq #0x34,D0               // level 5, priority 4
-	move.b D0,MCF_INTC_ICR43     // XLBPCI
-	move.l #~MCF_INTC_IMRH_INT_MASK43,D0
-	and.l D0,MCF_INTC_IMRH
-#ifdef MCF547X
-	/* Falling edge on IRQ1-7 EPORT */
-	move.w #MCF_EPORT_EPPAR_EPPA7(MCF_EPORT_EPPAR_EPPAx_FALLING) \
-	 + MCF_EPORT_EPPAR_EPPA6(MCF_EPORT_EPPAR_EPPAx_FALLING) \
-	 + MCF_EPORT_EPPAR_EPPA5(MCF_EPORT_EPPAR_EPPAx_LEVEL) \
-	 + MCF_EPORT_EPPAR_EPPA4(MCF_EPORT_EPPAR_EPPAx_FALLING) \
-	 + MCF_EPORT_EPPAR_EPPA3(MCF_EPORT_EPPAR_EPPAx_FALLING) \
-	 + MCF_EPORT_EPPAR_EPPA2(MCF_EPORT_EPPAR_EPPAx_FALLING) \
-	 + MCF_EPORT_EPPAR_EPPA1(MCF_EPORT_EPPAR_EPPAx_FALLING),D0
-#else
-	/* Falling edge on IRQ1-7 EPORT */
-	move.w #MCF_EPORT_EPPAR_EPPA7(MCF_EPORT_EPPAR_EPPAx_FALLING) \
-	 + MCF_EPORT_EPPAR_EPPA6(MCF_EPORT_EPPAR_EPPAx_FALLING) \
-	 + MCF_EPORT_EPPAR_EPPA5(MCF_EPORT_EPPAR_EPPAx_FALLING) \
-	 + MCF_EPORT_EPPAR_EPPA4(MCF_EPORT_EPPAR_EPPAx_FALLING) \
-	 + MCF_EPORT_EPPAR_EPPA3(MCF_EPORT_EPPAR_EPPAx_FALLING) \
-	 + MCF_EPORT_EPPAR_EPPA2(MCF_EPORT_EPPAR_EPPAx_FALLING) \
-	 + MCF_EPORT_EPPAR_EPPA1(MCF_EPORT_EPPAR_EPPAx_FALLING),D0
-#endif
-	move.w D0,MCF_EPORT_EPPAR
-	clr.b MCF_EPORT_EPDDR
-	clr.b MCF_EPORT_EPIER
-#endif /* MCF5445X */
-#ifdef DEBUG
-	lea debug31(PC),A0
-	bsr debug_display_string	
-#endif
-	/* Clear PCI Reset and wait for devices to reset */
-	move.l #~MCF_PCI_PCIGSCR_PR,D0
-	and.l D0,MCF_PCI_PCIGSCR
-#ifndef MCF5445X
-	move.l MCF_SLT_SCNT1,D2
-.delay_reset:
-		move.l D2,D1
-		sub.l MCF_SLT_SCNT1,D1
-	cmp.l #2000000*SYSTEM_CLOCK,D1
-	bcs.s .delay_reset
-#else /* MCF5445X */
-	move.l _hz_200,D2
-	add.l #400,D2                // tempo 2 S
-.delay_reset:
-		move.l _hz_200,D1
-	cmp.l D2,D1
-	blt.s .delay_reset
-#endif
-	moveq #0,D7                  // OK, start from reset
-#else /* end -- moved inside boot2.S before the CF68KLIB is called (init_cf) */
-	move.l #400,D2               // tempo 2 S from reset, maybe it's finished
-.delay_reset:
-		move.l _hz_200,D1
-	cmp.l D2,D1
-	blt.s .delay_reset
-#endif /* end -- moved inside boot2.S before the CF68KLIB is called (init_cf) */
-#else /* ATARI - CTCPI/PLX9054 */
 .no_hardware:
 	move.l A5,8                  // restore bus error
 	move.l A4,SP                 // restore ssp
@@ -694,7 +482,6 @@ _install_pci_bios:
 	cmp.l D2,D1
 	blt.s .tempo2
 #endif /* DEBUG */
-#endif /* COLDFIRE */
 #ifdef DEBUG
 	lea debug32(PC),A0
 	bsr debug_display_string	
@@ -731,13 +518,7 @@ _install_pci_bios:
 	move.l D0,A5                 // Ressource-Descriptors
 	move.l #PCI_MAX_BUS*PCI_MAX_DEVICE*PCI_MAX_FUNCTION*6,D0
 .init_desc:	
-#ifdef COLDFIRE
-		move.w PCI_RSC_DESC_FLAGS(A5),D1		
-		or.l #FLG_LAST,D1
-		move.w D1,PCI_RSC_DESC_FLAGS(A5)
-#else
 		or.w #FLG_LAST,PCI_RSC_DESC_FLAGS(A5)
-#endif	
 		add.l #PCI_RSC_DESC_SIZE,A5
 	subq.l #1,D0
 	bgt.s .init_desc
@@ -868,21 +649,10 @@ _install_pci_bios:
 	move.l A6,D1                 // value
 	move.l #0x5F504349,D0        // cookie _PCI
 	bsr add_cookie
-#ifdef COLDFIRE
-//#ifndef MCF547X
-	moveq #0,D0
-	bsr display_devices
-//#endif
-#endif
 .error_install:
 	move.l (SP)+,D0
 .end_install:
-#ifdef COLDFIRE
-	movem.l (SP),D1-A6
-	lea 56(SP),SP
-#else
 	movem.l (SP)+,D1-A6
-#endif
 	rts
 	
 // variables on stack used by init_devices:
@@ -983,11 +753,7 @@ init_devices:
 		tst.l D3
 		bne.s .not_primary_bus		
 		move.l D4,D0             // slot
-#if defined(COLDFIRE) && defined(MCF547X) // FIREBEE
-		subq.l #2,D0             // - bridge - internal USB (INTA-B-C)
-#else
 		subq.l #1,D0             // - bridge
-#endif
 		bpl.s .init_slot_offset_int
 		moveq #0,D0
 		bra.s .init_slot_offset_int
@@ -1026,28 +792,7 @@ init_devices:
 		bsr fast_read_config_longword // Device ID & Vendor ID
 #endif /* PCI_DYNAMIC_MAPPING */
 		move.l D0,DEVICE_VENDOR_ID(A6)
-#ifdef COLDFIRE
-#ifdef DEBUG
-		move.l D0,-(SP)
-		move.l A0,-(SP)
-		lea debug39(PC),A0
-		bsr debug_display_string
-		bsr debug_hex_long
-		moveq #13,D0
-		bsr debug_display_char
-		moveq #10,D0
-		bsr debug_display_char
-		move.l (SP)+,A0
-		move.l (SP)+,D0
-#endif
-#endif
-#ifdef COLDFIRE
-		moveq #0,D1
-		move.w D0,D1
-		cmp.l #PCI_NOBODYHOME,D1 // Vendor ID
-#else
 		cmp.w #PCI_NOBODYHOME,D0 // Vendor ID
-#endif
 		beq .no_device_found_here
 		moveq #PCIREV,D1
 		move.l D6,D0             // current function number
@@ -1055,21 +800,6 @@ init_devices:
 		swap D0
 		or.l D4,D0               // slot
 		bsr fast_read_config_longword // & class code
-#ifdef COLDFIRE
-#ifdef DEBUG
-		move.l D0,-(SP)
-		move.l A0,-(SP)
-		lea debug36(PC),A0
-		bsr debug_display_string
-		bsr debug_hex_long
-		moveq #13,D0
-		bsr debug_display_char
-		moveq #10,D0
-		bsr debug_display_char
-		move.l (SP)+,A0
-		move.l (SP)+,D0
-#endif
-#endif
 		clr.w D0
 		swap D0
 		cmp.l #PCI_CLASS_BRIDGE_PCI,D0
@@ -1207,11 +937,7 @@ init_devices:
 		moveq #PCI_BRIDGE_CONTROL,D1
 		move.l (SP),D0           // handle
 		bsr write_config_word
-#ifndef COLDFIRE
 		move.w #PCI_CMDREG_SERR + PCI_CMDREG_PERR + PCI_CMDREG_MEMWINV + PCI_CMDREG_MASTR + PCI_CMDREG_MEMSP + PCI_CMDREG_IOSP,D2
-#else
-		move.w #PCI_CMDREG_PERR + PCI_CMDREG_MEMWINV + PCI_CMDREG_MASTR + PCI_CMDREG_MEMSP + PCI_CMDREG_IOSP,D2
-#endif
 		moveq #PCICR,D1          // PCI Command Register
 		move.l (SP)+,D0          // handle
 		bsr write_config_word
@@ -1276,12 +1002,6 @@ init_devices:
 #endif /* LITTLE_ENDIAN_ADDRESSES_SWAPPED */
 #endif /* BIG_ENDIAN */
 		move.w D1,PCI_RSC_DESC_FLAGS(A5)
-#ifdef COLDFIRE
-		move.l #0x40000000,D1 // 1GB
-		move.l D1,PCI_RSC_DESC_LENGTH(A5)
-		move.l MCF_PCI_PCIBAR1,D1
-		and.l #PCI_BASE_M_ADDR_M,D1
-#else /* ATARI - CTPCI/PLX9054 */
 #ifdef TARGET_NO_CACHE_PCI_MEM
 		bsr get_no_cache_memory_size
 		move.l D0,PCI_RSC_DESC_LENGTH(A5)
@@ -1295,7 +1015,6 @@ init_devices:
 		move.l #0x40000000,D1
 #endif /* SAME_CPU_PCI_MEM_ADDR */
 #endif /* TARGET_NO_CACHE_PCI_MEM */ 
-#endif /* COLDFIRE */
 		move.l D1,PCI_RSC_DESC_START(A5) // offset memory resource
 #ifdef SAME_CPU_PCI_MEM_ADDR
 		moveq #0,D1
@@ -1348,12 +1067,6 @@ init_devices:
 		move.w D0,RESOURCE_INDEX(A6) // offset resource by handle
 		bra .end_area
 .devices:
-#ifdef COLDFIRE
-#ifdef DEBUG
-		lea debug41(PC),A0
-		bsr debug_display_string
-#endif
-#endif
 		moveq #PCIBAR0,D5        // reg
 		clr.w RESOURCE_INDEX(A6) // index resource by handle
 .loop_area:
@@ -1476,32 +1189,7 @@ init_devices:
 			swap D0
 			or.l D4,D0           // slot
 			bsr write_config_longword
-#ifdef COLDFIRE
-#ifdef DEBUG
-			move.l D0,-(SP)
-			moveq #0x30,D0
-			bsr debug_display_char	
-			moveq #0x78,D0
-			bsr debug_display_char
-			move.l D5,D1         // reg
-			move.l D6,D0         // function
-			add.l D3,D0          // bus number
-			swap D0
-			or.l D4,D0           // slot
-			bsr fast_read_config_longword
-			bsr debug_hex_long
-			moveq #0x20,D0
-			bsr debug_display_char
-			move.l (SP)+,D0
-#endif
-#endif
-#ifdef COLDFIRE
-			move.w RESOURCE_INDEX(A6),D0
-			addq.l #1,D0
-			move.w D0,RESOURCE_INDEX(A6) // index resource by handle
-#else
 			addq.w #1,RESOURCE_INDEX(A6) // index resource by handle
-#endif
 			bra .next_area
 .expansion_rom:
 			move.l #PCI_BASE_ROM_ADDR_M,D7
@@ -1661,32 +1349,7 @@ init_devices:
 			swap D0
 			or.l D4,D0           // slot
 			bsr write_config_longword
-#ifdef COLDFIRE
-#ifdef DEBUG
-			move.l D0,-(SP)
-			moveq #0x30,D0       // '0'
-			bsr debug_display_char	
-			moveq #0x78,D0       // 'x'
-			bsr debug_display_char
-			move.l D5,D1         // reg
-			move.l D6,D0         // function
-			add.l D3,D0          // bus number
-			swap D0
-			or.l D4,D0           // slot
-			bsr fast_read_config_longword
-			bsr debug_hex_long
-			moveq #0x20,D0
-			bsr debug_display_char
-			move.l (SP)+,D0
-#endif
-#endif
-#ifdef COLDFIRE
-			move.w RESOURCE_INDEX(A6),D0
-			addq.l #1,D0
-			move.w D0,RESOURCE_INDEX(A6) // index resource by handle
-#else
 			addq.w #1,RESOURCE_INDEX(A6) // index resource by handle
-#endif
 			bra .next_area
 .memory_64bit:
 			move.l D2,-(SP)
@@ -1769,32 +1432,7 @@ init_devices:
 			swap D0
 			or.l D4,D0           // slot
 			bsr write_config_longword
-#ifdef COLDFIRE
-#ifdef DEBUG
-			move.l D0,-(SP)
-			moveq #0x30,D0
-			bsr debug_display_char	
-			moveq #0x78,D0
-			bsr debug_display_char
-			move.l D5,D1         // reg
-			move.l D6,D0	        // function
-			add.l D3,D0          // bus number
-			swap D0
-			or.l D4,D0           // slot
-			bsr fast_read_config_longword
-			bsr debug_hex_long
-			moveq #0x20,D0
-			bsr debug_display_char
-			move.l (SP)+,D0
-#endif
-#endif
-#ifdef COLDFIRE
-			move.w RESOURCE_INDEX(A6),D0
-			addq.l #1,D0
-			move.w D0,RESOURCE_INDEX(A6) // index resource by handle
-#else
 			addq.w #1,RESOURCE_INDEX(A6) // index resource by handle
-#endif
 			moveq #0,D2
 			moveq #4,D1
 			add.l D5,D1          // reg + 4
@@ -1827,40 +1465,11 @@ init_devices:
 		moveq #PCISR,D1          // PCI Status Register
 		move.l (SP),D0           // handle
 		bsr write_config_word    // clear errors
-#ifndef COLDFIRE
 		move.w #PCI_CMDREG_SERR + PCI_CMDREG_PERR + PCI_CMDREG_MEMWINV + PCI_CMDREG_MASTR + PCI_CMDREG_MEMSP + PCI_CMDREG_IOSP,D2
-#else		
-		move.w #PCI_CMDREG_PERR + PCI_CMDREG_MEMWINV + PCI_CMDREG_MASTR + PCI_CMDREG_MEMSP + PCI_CMDREG_IOSP,D2
-#endif
 		moveq #PCICR,D1          // PCI Command Register
 		move.l (SP)+,D0
 		bsr write_config_word
 .end_area:
-#ifdef COLDFIRE
-#ifdef DEBUG
-		move.l D0,-(SP)
-		move.l A0,-(SP)
-		moveq #13,D0
-		bsr debug_display_char
-		moveq #10,D0
-		bsr debug_display_char
-		moveq #PCICR,D1
-		move.l D6,D0             // function
-		add.l D3,D0              // bus number
-		swap D0
-		or.l D4,D0               // slot
-		bsr fast_read_config_word
-		lea debug45(PC),A0
-		bsr debug_display_string
-		bsr debug_hex_word
-		moveq #13,D0
-		bsr debug_display_char
-		moveq #10,D0
-		bsr debug_display_char
-		move.l (SP)+,A0
-		move.l (SP)+,D0
-#endif
-#endif
 		move.l D4,D0             // device
 		mulu #PCI_MAX_FUNCTION,D0
 		add.l D6,D0
@@ -1880,23 +1489,12 @@ init_devices:
 		add.l D1,D0
 		move.l ERROR_CODE(A6),D1     // internal error code
 		bne.s .end_area_with_error
-#ifdef COLDFIRE
-		move.w (PCI_RSC_DESC_FLAGS-PCI_RSC_DESC_SIZE)(A5,D0.l),D1		
-		or.l #FLG_LAST,D1
-		move.w D1,(PCI_RSC_DESC_FLAGS-PCI_RSC_DESC_SIZE)(A5,D0.l)
-#else
 		or.w #FLG_LAST,(PCI_RSC_DESC_FLAGS-PCI_RSC_DESC_SIZE)(A5,D0.l)
-#endif
 		clr.w (PCI_RSC_DESC_NEXT-PCI_RSC_DESC_SIZE)(A5,D0.l)
 		bra.s .end_area_set_int
 .end_area_with_error:
 		move.l D1,PCI_RSC_DESC_ERROR(A5,D0.l) // internal error code
-#ifdef COLDFIRE
-		move.w #FLG_LAST,D1
-		move.w D1,PCI_RSC_DESC_FLAGS(A5,D0.l)
-#else
 		move.w #FLG_LAST,PCI_RSC_DESC_FLAGS(A5,D0.l)
-#endif
 		clr.w PCI_RSC_DESC_NEXT(A5,D0.l)
 .end_area_set_int:
 		move.l D6,D0             // function
@@ -1914,13 +1512,6 @@ init_devices:
 		moveq #PCIILR,D1         // Interrupt Line
 		move.l (SP)+,D0          // handle
 		bsr write_config_byte
-#ifdef COLDFIRE
-		tst.l D3                   
-		bne.s .set_lat           // <> bus 0
-		tst.l D4
-		beq .next_slot           // host bridge
-.set_lat:
-#endif
 		// Latency Timer Register is initialised with a useable
 		// value. The new revision also cares about the min and
 		// max values offered by the adapter in the MIN_GNT and
@@ -1975,12 +1566,6 @@ init_devices:
 		btst #23,D0
 		beq .next_slot
 		// now that we now we have a multi function card, iterate functions
-#ifdef COLDFIRE
-#ifdef DEBUG
-		lea debug46(PC),A0
-		bsr debug_display_string
-#endif
-#endif
 .next_function:
 		add.l #1,D6              // function
 		cmp.l #PCI_MAX_FUNCTION,D6
@@ -1999,12 +1584,6 @@ init_devices:
 		clr.l PCI_DEV_DES_START_IRQ(A4,D0.l)
 .next_slot:
 		moveq #0,D6              // function number
-#ifdef COLDFIRE
-#ifdef DEBUG
-		lea debug47(PC),A0
-		bsr debug_display_string
-#endif
-#endif
 		addq.l #1,D4             // device
 		moveq #PCI_MAX_SLOT,D0
 		tst.l D3                 // bus number
@@ -2018,31 +1597,6 @@ init_devices:
 	bne.s .end_init_pci_bios              // secondary bus
 	moveq #0,D4                           // INT bridge (0), INT-A-B-C-D (1-4)
 .loop_init_int:
-#ifdef COLDFIRE
-		tst.l D4                 // slot
-		beq.s .set_vector_ok     // bridge
-#ifdef MCF5445X
-		move.w #64+INT0_LO_EPORT3+OFFSET_INT_CF68KLIB,D0 // IRQ5 EPORT
-		lea int3_pci(PC),A0
-#else /* MCF548X */
-		move.w #64+5+OFFSET_INT_CF68KLIB,D0 // IRQ5 EPORT
-		lea int5_pci(PC),A0                 // INTC-D (M5484LITE)
-#ifndef MCF547X
-		cmp.l #2,D4                         // slot
-		bls.s .set_vector
-		// INT7 call by software INT2 (can be masked)
-		move.l A2,-(SP)
-		pea int2_pci(PC)                    // INTA-B (M5484LITE)
-		move.w #64+2+OFFSET_INT_CF68KLIB,-(SP) // IRQ2 EPORT
-		move.w #5,-(SP)          // Setexec
-		trap #13
-		addq.l #8,SP
-		move.l (SP)+,A2
-		move.w #64+7+OFFSET_INT_CF68KLIB,D0 // IRQ7 EPORT
-		lea int7_pci(PC),A0                 // INTA-B (M5484LITE)
-#endif /* MCF547X */
-#endif /* MCF5445X */
-#else /* ATARI - CTPCI/PLX9054 */
 		move.l #PCI_IRQ_BASE_VECTOR,D0
 		lea int_ctpci(PC),A0
 		tst.l D4                 // slot
@@ -2057,13 +1611,10 @@ init_devices:
 		cmp.l #3,D4
 		beq.s .set_vector
 		lea intd_ctpci(PC),A0
-#endif /* COLDFIRE */
 .set_vector:
 		move.l A2,-(SP)
 		pea (A0)
-#ifndef COLDFIRE
 		add.l D4,D0
-#endif
 		move.w D0,-(SP)
 		move.w #5,-(SP)          // Setexec
 		trap #13
@@ -2073,14 +1624,6 @@ init_devices:
 		addq.l #1,D4
 	cmp.l #4,D4
 	bls.s .loop_init_int
-#ifdef COLDFIRE
-	move.l MCF_PCI_PCIISR,D0
-	move.l D0,MCF_PCI_PCIISR // clear interrupt
-#ifndef MCF5445X
-	move.l #~MCF_INTC_IMRH_INT_MASK43,D0 // enable XLB PCI interrupt
-	and.l D0,MCF_INTC_IMRH
-#endif
-#endif /* COLDFIRE */
 	moveq #0,D0                  // OK
 .end_init_pci_bios:
 	lea RESERVE_STACK(SP),SP     // clear local variables
@@ -2104,17 +1647,7 @@ init_devices:
 	
 display_devices:
 
-#ifdef COLDFIRE
-	lea -32(SP),SP
-	movem.l D1-A0,(SP)
-#ifndef MCF5445X
-	move.l MCF_PCI_PCIICR,-(SP)
-	move.l #~(MCF_PCI_PCIICR_TAE + MCF_PCI_PCIICR_IAE + MCF_PCI_PCIICR_REE),D2
-	and.l D2,MCF_PCI_PCIICR  // disable PCI XLB interrupts
-#endif
-#else /* !COLDFIRE */
 	movem.l D1-A0,-(SP)
-#endif /* COLDFIRE */
 	move.l D0,D6                 // flag more infos
 	move.l #0x5F504349,D0        // _PCI
 	bsr get_cookie
@@ -2152,13 +1685,7 @@ display_devices:
 			move.l D0,D3
 			tst.l D7                 // bus number
 			beq.s .display_all_devices_primary_bus
-#ifdef COLDFIRE
-			moveq #0,D0
-			move.w D3,D0
-			cmp.l #PCI_NOBODYHOME,D0 // Vendor ID
-#else
 			cmp.w #PCI_NOBODYHOME,D3 // Vendor ID
-#endif      	
 			beq .next_slot_display   // on secondary bus display only devices found
 .display_all_devices_primary_bus:
 			// display bus
@@ -2175,13 +1702,7 @@ display_devices:
 			bsr display_string_single
 			// display slot
 			move.l D4,D0             // slot
-#ifdef COLDFIRE
-			.chip 68060
-#endif
 			divu #10,D0
-#ifdef COLDFIRE
-			.chip 5200
-#endif
 			move.l D0,D1
 			clr.w D1
 			swap D1
@@ -2219,13 +1740,7 @@ display_devices:
 			bsr display_char
 			lea separator(PC),A0
 			bsr display_string_single
-#ifdef COLDFIRE
-			moveq #0,D0
-			move.w D3,D0
-			cmp.l #PCI_NOBODYHOME,D0 // Vendor ID
-#else
 			cmp.w #PCI_NOBODYHOME,D3 // Vendor ID
-#endif      	
 			beq .no_device_found_here_display
     			moveq #0x20,D0           // " "
 			bsr display_char
@@ -2283,11 +1798,7 @@ display_devices:
 				beq.s .no_infos_desc
 				move.l D0,-(SP)
 				lea desc_io(PC),A0
-#ifdef COLDFIRE
-				and.l #FLG_IO,D0
-#else
 				and.w #FLG_IO,D0
-#endif
 				bne.s .is_desc_io
 				lea desc_mem(PC),A0		
 .is_desc_io:
@@ -2305,20 +1816,10 @@ display_devices:
 				bsr hex_long
 				move.l (SP)+,D0
 .no_infos_desc:
-#ifdef COLDFIRE
-				and.l #FLG_LAST,D0
-				bne.s .next_handle_3
-				move.w PCI_RSC_DESC_NEXT(A1),D0
-				ext.l D0
-				add.l D0,A1
-			subq.l #1,D1
-			bpl.s .loop_resource
-#else /* COLDFIRE */
 				and.w #FLG_LAST,D0
 				bne.s .next_handle_3
 				add.w PCI_RSC_DESC_NEXT(A1),A1
 			dbra D1,.loop_resource
-#endif /* COLDFIRE */
 .next_handle_3:
 			moveq #13,D0
 			bsr display_char
@@ -2391,27 +1892,12 @@ display_devices:
 	bcs .loop_handle_display
 	moveq #0,D0                  // OK
 .end_display_devices:
-#ifdef COLDFIRE
-#ifndef MCF5445X
-	move.l MCF_PCI_PCIISR,D1
-	move.l D1,MCF_PCI_PCIISR // clear interrupt
-	move.l (SP)+,MCF_PCI_PCIICR
-#endif
-	movem.l (SP),D1-A0
-	lea 32(SP),SP
-#else /* !COLDFIRE */
 	movem.l (SP)+,D1-A0
-#endif /* COLDFIRE */
 	rts
 
 display_infos_class:
 
-#ifdef COLDFIRE
-	lea -16(SP),SP
-	movem.l D0-D1/D4/A0,(SP)
-#else
 	movem.l D0-D1/D4/A0,-(SP)
-#endif
 	move.l D0,D4                 // class code
 	move.l D4,D1
 	swap D1
@@ -3091,12 +2577,7 @@ display_infos_class:
 	lea pciinfo999(PC),A0        // Device does not fit in any defined classes
 	bsr display_string_single
 .end_info_class:
-#ifdef COLDFIRE
-	movem.l (SP),D0-D1/D4/A0
-	lea 16(SP),SP
-#else
 	movem.l (SP)+,D0-D1/D4/A0
-#endif
 	rts
 
 _find_pci_device:
@@ -3106,31 +2587,19 @@ _find_pci_device:
 
 find_pci_device:
 
-#ifndef COLDFIRE
 #ifdef DEBUG
 	move.l A0,-(SP)
 	lea debug40(PC),A0
 	bsr debug_display_string
 	move.l (SP)+,A0
 #endif
-#endif
-#ifdef COLDFIRE
-	lea -28(SP),SP
-	movem.l D3-D7/A4-A5,(SP)
-#else /* !COLDFIRE */
 	movem.l D3-D7/A4-A5,-(SP)
-#endif /* COLDFIRE */
 	move.l D0,D3             // ID
 	move.w D1,D5             // index
 	ext.l D5
 	moveq #0,D4              // slot
 	moveq #0,D6              // function
 	moveq #0,D7              // bus
-#ifdef COLDFIRE
-	move.l #PCI_MAX_SLOT,-(SP)
-	ext.l D0
-	cmp.l #-1,D0
-#else
 	move.w SR,-(SP)
 	or.w #0x700,SR           // no interrupts
 	lea .no_pci_devices(PC),A0
@@ -3139,7 +2608,6 @@ find_pci_device:
 	move.l SP,A4             // save ssp
 	move.l #PCI_MAX_SLOT,-(SP)
 	cmp.w #-1,D3
-#endif
 	beq.s .loop_query_all_cards
 .loop_find_pci_device:                                           
 			moveq #PCIIDR,D1          // Device ID & Vendor ID
@@ -3189,13 +2657,7 @@ find_pci_device:
 			swap D0
 			or.l D4,D0               // slot
 			bsr fast_read_config_longword // Device ID & Vendor ID
-#ifdef COLDFIRE
-			moveq #0,D1
-			move.w D0,D1
-			cmp.l #PCI_NOBODYHOME,D1 // Vendor ID
-#else
 			cmp.w #PCI_NOBODYHOME,D0 // Vendor ID
-#endif
 			beq.s .next_slot_query_all_cards
 			tst.l D5             	// index
 			beq.s .end_index_pci_device
@@ -3226,35 +2688,22 @@ find_pci_device:
 	cmp.l #PCI_MAX_BUS,D7
 	bcs .loop_query_all_cards
 .no_pci_devices:
-#ifdef COLDFIRE
-	addq.l #4,SP
-#else
 	move.l A5,8              // restore bus error
 	move.l A4,SP             // restore ssp
 	move.w (SP)+,SR
-#endif
 	moveq #PCI_DEVICE_NOT_FOUND,D0
 	bra.s .end_find_pci_device
 .end_index_pci_device:
-#ifdef COLDFIRE
-	addq.l #4,SP
-#else
     	move.l A5,8              // restore bus error
 	move.l A4,SP             // restore ssp
 	move.w (SP)+,SR
-#endif
 	move.w D7,D0              // bus number
 	mulu #PCI_MAX_FUNCTION,D0
 	add.l D6,D0               // current function number
 	swap D0
 	or.l D4,D0                // slot => handle
 .end_find_pci_device:
-#ifdef COLDFIRE
-	movem.l (SP),D3-D7/A4-A5
-	lea 28(SP),SP
-#else /* !COLDFIRE */
 	movem.l (SP)+,D3-D7/A4-A5
-#endif /* COLDFIRE */
 	rts
 	
 _find_pci_classcode:
@@ -3264,20 +2713,13 @@ _find_pci_classcode:
 
 find_pci_classcode:
 
-#ifndef COLDFIRE
 #ifdef DEBUG
 	move.l A0,-(SP)
 	lea debug41(PC),A0
 	bsr debug_display_string
 	move.l (SP)+,A0
 #endif
-#endif
-#ifdef COLDFIRE
-	lea -20(SP),SP
-	movem.l D3-D7,(SP)
-#else /* !COLDFIRE */
 	movem.l D3-D7,-(SP)
-#endif /* COLDFIRE */
 	move.l D0,D4             // class
 	moveq #0,D5
 	move.w D1,D5             // index
@@ -3293,13 +2735,7 @@ find_pci_classcode:
 				swap D0
 				or.l D3,D0               // slot
 				bsr fast_read_config_longword // Device ID & Vendor ID
-#ifdef COLDFIRE
-				moveq #0,D1
-				move.w D0,D1
-				cmp.l #PCI_NOBODYHOME,D1 // Vendor ID
-#else
 				cmp.w #PCI_NOBODYHOME,D0 // Vendor ID
-#endif
 				beq.s .next_pci_classcode
 				move.l D4,D0
 				and.l #0x4000000,D0      // if 0 compare base class
@@ -3313,13 +2749,7 @@ find_pci_classcode:
 				bsr fast_read_config_byte
 				move.l D4,D1             // class
 				swap D1
-#ifdef COLDFIRE
-				extb.l D0
-				extb.l D1
-				cmp.l D1,D0              // base class code
-#else
 				cmp.b D1,D0              // base class code
-#endif
 				bne.s .next_pci_classcode
 .ignore_base_class:
 				move.l D4,D0             // class
@@ -3334,13 +2764,7 @@ find_pci_classcode:
 				bsr fast_read_config_byte
 				move.l D4,D1             // class
 				lsr.l #8,D1
-#ifdef COLDFIRE
-				extb.l D0
-				extb.l D1
-				cmp.l D1,D0              // subclass code
-#else
 				cmp.b D1,D0              // subclass code
-#endif
 				bne.s .next_pci_classcode
 .ignore_subclass:
 				move.l D4,D0
@@ -3353,13 +2777,7 @@ find_pci_classcode:
 				swap D0
 				or.l D3,D0               // device
 				bsr fast_read_config_byte
-#ifdef COLDFIRE
-				moveq #0,D1
-				move.b D4,D1
-				cmp.l D1,D0              // prog. if
-#else
 				cmp.b D4,D0              // prog. if
-#endif
 				bne.s .next_pci_classcode
 .ignore_prog_if:
 				tst.l D5                 // index
@@ -3401,12 +2819,7 @@ find_pci_classcode:
 	or.l D3,D0                // slot => handle
 .end_pci_classcode:
 	addq.l #4,SP
-#ifdef COLDFIRE
-	movem.l (SP),D3-D7
-	lea 20(SP),SP
-#else /* !COLDFIRE */
 	movem.l (SP)+,D3-D7
-#endif /* COLDFIRE */
 	rts
 	
 _read_config_byte:
@@ -3417,7 +2830,6 @@ _read_config_byte:
 
 read_config_byte:
 
-#ifndef COLDFIRE
 #ifdef DEBUG
 	move.l D3,-(SP)
 	move.l D0,D3
@@ -3442,14 +2854,6 @@ read_config_byte:
 	move.l (SP)+,D0
 .ccc:
 #endif
-#endif
-#ifdef COLDFIRE
-#ifndef MCF5445X
-	move.l MCF_PCI_PCIICR,-(SP)
-	move.l #~(MCF_PCI_PCIICR_TAE + MCF_PCI_PCIICR_IAE + MCF_PCI_PCIICR_REE),D2
-	and.l D2,MCF_PCI_PCIICR  // disable PCI XLB interrupts
-#endif
-#endif
 	move.l A0,A1             // address
 	move.l D0,D2
 	tst.l D0                 // handle
@@ -3464,26 +2868,13 @@ read_config_byte:
 	cmp.l #PCI_MAX_FUNCTION*PCI_MAX_BUS,D2
 	bcc .bad_handle_read_config_byte
 	move.l D3,-(SP)
-#ifdef COLDFIRE
-	move.w SR,D3
-	move.l D3,-(SP)
-	or.l #0x700,D3           // mask interrupts
-	move.w D3,SR
-#else
 	move.w SR,-(SP)
 	or.w #0x700,SR           // no interrupts
-#endif
 	moveq #3,D3
 	and.l D1,D3
 	move.l D3,-(SP)
 	move.l D2,D3
-#ifdef COLDFIRE
-	.chip 68060
-#endif
 	divu #PCI_MAX_FUNCTION,D3
-#ifdef COLDFIRE
-	.chip 5200
-#endif
 	swap D3
 	move.w D3,D2
 	ext.l D2                 // function
@@ -3509,14 +2900,9 @@ read_config_byte:
 	lsl.l D0,D2              // Device Number
 	or.l D1,D2
 	move.l D2,-(SP)
-#ifdef COLDFIRE
-	or.l #MCF_PCI_PCICAR_E,D2
-	move.l D2,MCF_PCI_PCICAR
-#else /* !COLDFIRE */
 	bset #31,D2              // Configuration Enable
 	move.l #DMCFGA,D1        // PCI Configuration Address Register for PCI Initiator-to-PCI I/O Config
 	bsr write_local_config_longword
-#endif /* COLDFIRE */
 #ifdef PCI_DYNAMIC_MAPPING
 	move.l phystop,A0
 	move.l pci_io_offset(A0),A0
@@ -3527,12 +2913,6 @@ read_config_byte:
 	move.b (A0,D2.l),(A1)    // address
 	move.l (SP)+,D2
 	addq.l #4,SP
-#ifdef COLDFIRE
-	nop
-	move.l D2,MCF_PCI_PCICAR
-	move.l (SP)+,D1
-	move.w D1,SR
-#else /* !COLDFIRE */
 	move.l #DMCFGA,D1        // PCI Configuration Address Register for PCI Initiator-to-PCI I/O Config
 	bsr write_local_config_longword
 	moveq #PCICSR,D1             // PCI Command / Status Register
@@ -3547,9 +2927,7 @@ read_config_byte:
 	moveq #PCICSR,D1             // PCI Command / Status Register
 	bsr write_local_config_longword // clear errors
 	move.w (SP)+,SR
-#endif /* COLDFIRE */
 	move.l (SP)+,D3
-#ifndef COLDFIRE
 #ifdef DEBUG
 	cmp.l #SLOT_TO_DEBUG,D3
 	bne.s .cccC
@@ -3562,7 +2940,6 @@ read_config_byte:
 	bsr debug_display_char
 	move.l (SP)+,D0
 .cccC:
-#endif
 #endif
 	moveq #PCI_SUCCESSFUL,D0
 	bra.s .end_read_config_byte
@@ -3580,17 +2957,8 @@ read_config_byte:
 .bad_handle_read_config_byte:
 	moveq #PCI_BAD_HANDLE,D0
 .end_read_config_byte:
-#ifdef COLDFIRE
-#ifndef MCF5445X
-	move.l MCF_PCI_PCIISR,D2
-	move.l D2,MCF_PCI_PCIISR // clear interrupt
-	move.l (SP)+,MCF_PCI_PCIICR
-#endif
-#endif
-#ifndef COLDFIRE
 #ifdef DEBUG
 	move.l (SP)+,D3
-#endif
 #endif
 	rts
 	
@@ -3602,7 +2970,6 @@ _read_config_word:
 
 read_config_word:
 
-#ifndef COLDFIRE
 #ifdef DEBUG
 	move.l D3,-(SP)
 	move.l D0,D3
@@ -3627,14 +2994,6 @@ read_config_word:
 	move.l (SP)+,D0	
 .ddd:
 #endif
-#endif
-#ifdef COLDFIRE
-#ifndef MCF5445X
-	move.l MCF_PCI_PCIICR,-(SP)
-	move.l #~(MCF_PCI_PCIICR_TAE + MCF_PCI_PCIICR_IAE + MCF_PCI_PCIICR_REE),D2
-	and.l D2,MCF_PCI_PCIICR  // disable PCI XLB interrupts
-#endif
-#endif
 	move.l A0,A1             // address
 	btst #0,D1               // PCI register
 	bne .bad_register_read_config_word
@@ -3651,26 +3010,13 @@ read_config_word:
 	cmp.l #PCI_MAX_FUNCTION*PCI_MAX_BUS,D2
 	bcc .bad_handle_read_config_word
 	move.l D3,-(SP)
-#ifdef COLDFIRE
-	move.w SR,D3
-	move.l D3,-(SP)
-	or.l #0x700,D3           // mask interrupts
-	move.w D3,SR
-#else
 	move.w SR,-(SP)
 	or.w #0x700,SR           // no interrupts
-#endif
 	moveq #2,D3
 	and.l D1,D3
 	move.l D3,-(SP)
 	move.l D2,D3
-#ifdef COLDFIRE
-	.chip 68060
-#endif
 	divu #PCI_MAX_FUNCTION,D3
-#ifdef COLDFIRE
-	.chip 5200
-#endif
 	swap D3
 	move.w D3,D2
 	ext.l D2                 // function
@@ -3696,14 +3042,9 @@ read_config_word:
 	lsl.l D0,D2              // Device Number
 	or.l D1,D2
 	move.l D2,-(SP)
-#ifdef COLDFIRE
-	or.l #MCF_PCI_PCICAR_E,D2
-	move.l D2,MCF_PCI_PCICAR
-#else /* !COLDFIRE */
 	bset #31,D2              // Configuration Enable
 	move.l #DMCFGA,D1        // PCI Configuration Address Register for PCI Initiator-to-PCI I/O Config
 	bsr write_local_config_longword
-#endif /* COLDFIRE */
 #ifdef PCI_DYNAMIC_MAPPING
 	move.l phystop,A0
 	move.l pci_io_offset(A0),A0
@@ -3715,25 +3056,11 @@ read_config_word:
 //	move.w (A0,D2.l),(A1)
 //#else
 	move.w (A0,D2.l),D0
-#ifdef COLDFIRE
-	moveq #0,D1
-	move.w D0,D1
-	lsr.l #8,D1
-	asl.l #8,D0
-	or.l D1,D0
-#else
 	ror.w #8,D0
-#endif /* COLDFIRE */
 	move.w D0,(A1)           // address
 //#endif
 	move.l (SP)+,D2
 	addq.l #4,SP
-#ifdef COLDFIRE
-	nop
-	move.l D2,MCF_PCI_PCICAR
-	move.l (SP)+,D1
-	move.w D1,SR
-#else /* !COLDFIRE */
 	move.l #DMCFGA,D1        // PCI Configuration Address Register for PCI Initiator-to-PCI I/O Config
 	bsr write_local_config_longword
 	moveq #PCICSR,D1             // PCI Command / Status Register
@@ -3748,9 +3075,7 @@ read_config_word:
 	moveq #PCICSR,D1             // PCI Command / Status Register
 	bsr write_local_config_longword // clear errors
 	move.w (SP)+,SR
-#endif /* COLDFIRE */
 	move.l (SP)+,D3
-#ifndef COLDFIRE
 #ifdef DEBUG
 	cmp.l #SLOT_TO_DEBUG,D3
 	bne.s .dddD
@@ -3763,7 +3088,6 @@ read_config_word:
 	bsr debug_display_char
 	move.l (SP)+,D0
 .dddD:
-#endif
 #endif
 	moveq #PCI_SUCCESSFUL,D0
 	bra.s .end_read_config_word
@@ -3781,17 +3105,8 @@ read_config_word:
 .bad_handle_read_config_word:
 	moveq #PCI_BAD_HANDLE,D0
 .end_read_config_word:
-#ifdef COLDFIRE
-#ifndef MCF5445X
-	move.l MCF_PCI_PCIISR,D2
-	move.l D2,MCF_PCI_PCIISR // clear interrupt
-	move.l (SP)+,MCF_PCI_PCIICR
-#endif
-#endif
-#ifndef COLDFIRE
 #ifdef DEBUG
 	move.l (SP)+,D3
-#endif
 #endif
 	rts
 	
@@ -3803,7 +3118,6 @@ _read_config_longword:
 
 read_config_longword:
 
-#ifndef COLDFIRE
 #ifdef DEBUG
 	move.l D3,-(SP)
 	move.l D0,D3
@@ -3828,14 +3142,6 @@ read_config_longword:
 	move.l (SP)+,D0
 .eee:
 #endif
-#endif
-#ifdef COLDFIRE
-#ifndef MCF5445X
-	move.l MCF_PCI_PCIICR,-(SP)
-	move.l #~(MCF_PCI_PCIICR_TAE + MCF_PCI_PCIICR_IAE + MCF_PCI_PCIICR_REE),D2
-	and.l D2,MCF_PCI_PCIICR  // disable PCI XLB interrupts
-#endif
-#endif
 	move.l A0,A1             // address
 	moveq #3,D2
 	and.l D1,D2              // PCI register
@@ -3852,36 +3158,9 @@ read_config_longword:
 	bmi .bad_handle_read_config_longword
 	cmp.l #PCI_MAX_FUNCTION*PCI_MAX_BUS,D2
 	bcc .bad_handle_read_config_longword
-#ifdef COLDFIRE /* device errata 4 */
-	swap D0                  // handle
-	move.w D2,D0             // function
-	swap D0
-	move.l A1,-(SP)          // pointer
-	move.l D0,-(SP)
-	move.l D1,-(SP)
-	bsr fast_read_config_word// lower 16 bits
-	move.w D0,D2
-	move.l (SP)+,D1
-	addq.l #2,D1
-	move.l (SP)+,D0
-	move.l (SP),A1
-	move.l D2,-(SP)
-	bsr fast_read_config_word// upper 16 bits
-	move.l (SP)+,D2
-	swap D0
-	move.w D2,D0
-	move.l (SP)+,A1          // pointe
-	move.l D0,(A1)
-#else /* !COLDFIRE errata */
 	move.l D3,-(SP)
 	move.l D2,D3
-#ifdef COLDFIRE
-	.chip 68060
-#endif
 	divu #PCI_MAX_FUNCTION,D3
-#ifdef COLDFIRE
-	.chip 5200
-#endif
 	swap D3
 	move.w D3,D2
 	ext.l D2                 // function
@@ -3907,24 +3186,12 @@ read_config_longword:
 	moveq #11,D0
 	asl.l D0,D2              // Device Number
 	or.l D1,D2
-#ifdef COLDFIRE
-	move.w SR,D1
-	move.l D1,-(SP)
-	or.l #0x700,D1           // mask interrupts
-	move.w D1,SR
-#else
 	move.w SR,-(SP)
 	or.w #0x700,SR           // no interrupts
-#endif
 	move.l D2,-(SP)
-#ifdef COLDFIRE
-	or.l #MCF_PCI_PCICAR_E,D2
-	move.l D2,MCF_PCI_PCICAR
-#else /* !COLDFIRE */
 	bset #31,D2              // Configuration Enable
 	move.l #DMCFGA,D1        // PCI Configuration Address Register for PCI Initiator-to-PCI I/O Config
 	bsr write_local_config_longword
-#endif /* COLDFIRE */
 #ifdef PCI_DYNAMIC_MAPPING
 	move.l phystop,A0
 	move.l pci_io_offset(A0),A0
@@ -3935,36 +3202,12 @@ read_config_longword:
 //	move.l (A0),(A1)
 //#else
 	move.l (A0),D0
-#ifdef COLDFIRE
-	move.l D0,D1
-	lsr.l #8,D1
-	asl.l #8,D0
-	and.l #0x00FF00FF,D1
-	and.l #0xFF00FF00,D0
-	or.l D1,D0
-	swap D0
-#else
 	ror.w #8,D0
 	swap D0
 	ror.w #8,D0
-#endif /* COLDFIRE */
 	move.l D0,(A1)           // address
 //#endif
 	move.l (SP)+,D2
-#ifdef COLDFIRE
-	nop
-	move.l D2,MCF_PCI_PCICAR
-#if 0 /* another solution for device errata 4 */	
-	or.l #MCF_PCI_PCICAR_E+0x00FF0000,D2 // enable config space acces with bad bus number
-	move.l D2,MCF_PCI_PCICAR
-	tst.l (A0)
-	and.l #~MCF_PCI_PCICAR_E,D2 // disable config space access with bad bus number
-	nop
-	move.l D2,MCF_PCI_PCICAR
-#endif	
-	move.l (SP)+,D1
-	move.w D1,SR
-#else /* !COLDFIRE */
 	move.l #DMCFGA,D1        // PCI Configuration Address Register for PCI Initiator-to-PCI I/O Config
 	bsr write_local_config_longword
 	moveq #PCICSR,D1         // PCI Command / Status Register
@@ -3979,9 +3222,6 @@ read_config_longword:
 	moveq #PCICSR,D1         // PCI Command / Status Register
 	bsr write_local_config_longword // clear errors
 	move.w (SP)+,SR
-#endif /* COLDFIRE */
-#endif /* COLDFIRE errata */
-#ifndef COLDFIRE
 #ifdef DEBUG
 	cmp.l #SLOT_TO_DEBUG,D3
 	bne.s .eeeE
@@ -3994,7 +3234,6 @@ read_config_longword:
 	bsr debug_display_char
 	move.l (SP)+,D0
 .eeeE:
-#endif
 #endif
 	moveq #PCI_SUCCESSFUL,D0
 	bra.s .end_read_config_longword
@@ -4012,17 +3251,8 @@ read_config_longword:
 .bad_handle_read_config_longword:
 	moveq #PCI_BAD_HANDLE,D0
 .end_read_config_longword:
-#ifdef COLDFIRE
-#ifndef MCF5445X
-	move.l MCF_PCI_PCIISR,D2
-	move.l D2,MCF_PCI_PCIISR // clear interrupt
-	move.l (SP)+,MCF_PCI_PCIICR
-#endif
-#endif
-#ifndef COLDFIRE
 #ifdef DEBUG
 	move.l (SP)+,D3
-#endif
 #endif
 	rts
 
@@ -4035,7 +3265,6 @@ fast_read_config_byte:
 
 	tst.l D0                 // handle
 	beq read_local_config_byte
-#ifndef COLDFIRE
 #ifdef DEBUG
 	move.l D0,-(SP)
 	cmp.l #SLOT_TO_DEBUG,D0
@@ -4059,21 +3288,8 @@ fast_read_config_byte:
 	move.l (SP)+,D0
 .fff:
 #endif
-#endif
-#ifdef COLDFIRE
-#ifndef MCF5445X
-	move.l MCF_PCI_PCIICR,-(SP)
-	move.l #~(MCF_PCI_PCIICR_TAE + MCF_PCI_PCIICR_IAE + MCF_PCI_PCIICR_REE),D2
-	and.l D2,MCF_PCI_PCIICR  // disable PCI XLB interrupts
-#endif
-	move.w SR,D2
-	move.l D2,-(SP)
-	or.l #0x700,D2           // mask interrupts
-	move.w D2,SR
-#else
 	move.w SR,-(SP)
 	or.w #0x700,SR           // no interrupts
-#endif /* COLDFIRE */
 	moveq #3,D2
 	and.l D1,D2
 	move.l D2,-(SP)
@@ -4083,13 +3299,7 @@ fast_read_config_byte:
 	move.l D3,-(SP)
 	ext.l D2
 	move.l D2,D3
-#ifdef COLDFIRE
-	.chip 68060
-#endif
 	divu #PCI_MAX_FUNCTION,D3
-#ifdef COLDFIRE
-	.chip 5200
-#endif
 	swap D3
 	move.w D3,D2
 	ext.l D2                 // function
@@ -4116,14 +3326,9 @@ fast_read_config_byte:
 	asl.l D0,D2              // Device Number
 	or.l D1,D2
 	move.l D2,-(SP)
-#ifdef COLDFIRE
-	or.l #MCF_PCI_PCICAR_E,D2
-	move.l D2,MCF_PCI_PCICAR
-#else /* !COLDFIRE */
 	bset #31,D2              // Configuration Enable
 	move.l #DMCFGA,D1        // PCI Configuration Address Register for PCI Initiator-to-PCI I/O Config
 	bsr write_local_config_longword
-#endif /* COLDFIRE */
 #ifdef PCI_DYNAMIC_MAPPING
 	move.l phystop,A0
 	move.l pci_io_offset(A0),A0
@@ -4135,12 +3340,6 @@ fast_read_config_byte:
 	move.b (A0,D2.l),D0
 	move.l (SP)+,D2
 	addq.l #4,SP
-#ifdef COLDFIRE
-	nop
-	move.l D2,MCF_PCI_PCICAR
-	move.l (SP)+,D1
-	move.w D1,SR
-#else /* !COLDFIRE */
 	move.l D0,-(SP)
 	move.l #DMCFGA,D1        // PCI Configuration Address Register for PCI Initiator-to-PCI I/O Config
 	bsr write_local_config_longword
@@ -4157,15 +3356,6 @@ fast_read_config_byte:
 	bsr write_local_config_longword // clear errors
 	move.l (SP)+,D0
 	move.w (SP)+,SR
-#endif /* COLDFIRE */
-#ifdef COLDFIRE
-#ifndef MCF5445X
-	move.l MCF_PCI_PCIISR,D2
-	move.l D2,MCF_PCI_PCIISR // clear interrupt
-	move.l (SP)+,MCF_PCI_PCIICR
-#endif
-#endif
-#ifndef COLDFIRE
 #ifdef DEBUG
 	move.l (SP)+,D2
 	cmp.l #SLOT_TO_DEBUG,D2
@@ -4179,7 +3369,6 @@ fast_read_config_byte:
 	move.l (SP)+,D0
 .fffF:
 #endif
-#endif
 	rts
 
 _fast_read_config_word:
@@ -4191,7 +3380,6 @@ fast_read_config_word:
 
 	tst.l D0                 // handle
 	beq read_local_config_word
-#ifndef COLDFIRE
 #ifdef DEBUG
 	move.l D0,-(SP)
 	cmp.l #SLOT_TO_DEBUG,D0
@@ -4215,21 +3403,8 @@ fast_read_config_word:
 	move.l (SP)+,D0	
 .ggg:
 #endif
-#endif
-#ifdef COLDFIRE
-#ifndef MCF5445X
-	move.l MCF_PCI_PCIICR,-(SP)
-	move.l #~(MCF_PCI_PCIICR_TAE + MCF_PCI_PCIICR_IAE + MCF_PCI_PCIICR_REE),D2
-	and.l D2,MCF_PCI_PCIICR  // disable PCI XLB interrupts
-#endif
-	move.w SR,D2
-	move.l D2,-(SP)
-	or.l #0x700,D2           // mask interrupts
-	move.w D2,SR
-#else
 	move.w SR,-(SP)
 	or.w #0x700,SR           // no interrupts
-#endif /* COLDFIRE */
 	moveq #2,D2
 	and.l D1,D2
 	move.l D2,-(SP)
@@ -4239,13 +3414,7 @@ fast_read_config_word:
 	move.l D3,-(SP)
 	ext.l D2
 	move.l D2,D3
-#ifdef COLDFIRE
-	.chip 68060
-#endif
 	divu #PCI_MAX_FUNCTION,D3
-#ifdef COLDFIRE
-	.chip 5200
-#endif
 	swap D3
 	move.w D3,D2
 	ext.l D2                 // function
@@ -4272,14 +3441,9 @@ fast_read_config_word:
 	asl.l D0,D2              // Device Number
 	or.l D1,D2
 	move.l D2,-(SP)
-#ifdef COLDFIRE
-	or.l #MCF_PCI_PCICAR_E,D2
-	move.l D2,MCF_PCI_PCICAR
-#else /* !COLDFIRE */
 	bset #31,D2              // Configuration Enable
 	move.l #DMCFGA,D1        // PCI Configuration Address Register for PCI Initiator-to-PCI I/O Config
 	bsr write_local_config_longword
-#endif /* COLDFIRE */
 #ifdef PCI_DYNAMIC_MAPPING
 	move.l phystop,A0
 	move.l pci_io_offset(A0),A0
@@ -4290,24 +3454,10 @@ fast_read_config_word:
 	move.l 4(SP),D2
 	move.w (A0,D2.l),D0
 //#ifndef BIG_ENDIAN
-#ifdef COLDFIRE
-	moveq #0,D1
-	move.w D0,D1
-	lsr.l #8,D1
-	asl.l #8,D0
-	or.l D1,D0
-#else
 	ror.w #8,D0
-#endif /* COLDFIRE */
 //#endif
 	move.l (SP)+,D2
 	addq.l #4,SP
-#ifdef COLDFIRE
-	nop
-	move.l D2,MCF_PCI_PCICAR
-	move.l (SP)+,D1
-	move.w D1,SR
-#else /* !COLDFIRE */
 	move.l D0,-(SP)
 	move.l #DMCFGA,D1        // PCI Configuration Address Register for PCI Initiator-to-PCI I/O Config
 	bsr write_local_config_longword
@@ -4324,15 +3474,6 @@ fast_read_config_word:
 	bsr write_local_config_longword // clear errors
 	move.l (SP)+,D0
 	move.w (SP)+,SR
-#endif /* COLDFIRE */
-#ifdef COLDFIRE
-#ifndef MCF5445X
-	move.l MCF_PCI_PCIISR,D2
-	move.l D2,MCF_PCI_PCIISR // clear interrupt
-	move.l (SP)+,MCF_PCI_PCIICR
-#endif
-#endif
-#ifndef COLDFIRE
 #ifdef DEBUG
 	move.l (SP)+,D2
 	cmp.l #SLOT_TO_DEBUG,D2
@@ -4346,7 +3487,6 @@ fast_read_config_word:
 	move.l (SP)+,D0
 .gggG:
 #endif
-#endif
 	rts
 	
 _fast_read_config_longword:
@@ -4358,7 +3498,6 @@ fast_read_config_longword:
 
 	tst.l D0                 // handle
 	beq read_local_config_longword
-#ifndef COLDFIRE
 #ifdef DEBUG
 	move.l D0,-(SP)
 	cmp.l #SLOT_TO_DEBUG,D0
@@ -4382,41 +3521,13 @@ fast_read_config_longword:
 	move.l (SP)+,D0
 .hhh:
 #endif
-#endif
-#ifdef COLDFIRE
-#ifndef MCF5445X
-	move.l MCF_PCI_PCIICR,-(SP)
-	move.l #~(MCF_PCI_PCIICR_TAE + MCF_PCI_PCIICR_IAE + MCF_PCI_PCIICR_REE),D2
-	and.l D2,MCF_PCI_PCIICR  // disable PCI XLB interrupts
-#endif
-#endif
-#ifdef COLDFIRE /* device errata 4 */
-	move.l D0,-(SP)          // bus/function(H)/slot(L)
-	move.l D1,-(SP)
-	bsr fast_read_config_word// lower 16 bits
-	move.w D0,D2
-	move.l (SP)+,D1
-	addq.l #2,D1
-	move.l (SP)+,D0          // bus/function(H)/slot(L)
-	move.l D2,-(SP)
-	bsr fast_read_config_word// upper 16 bits
-	move.l (SP)+,D2
-	swap D0
-	move.w D2,D0
-#else /* !COLDFIRE errata */
 	move.l D0,D2             // bus/function(H)/slot(L)
 	ext.l D0
 	swap D2
 	move.l D3,-(SP)
 	ext.l D2
 	move.l D2,D3
-#ifdef COLDFIRE
-	.chip 68060
-#endif
 	divu #PCI_MAX_FUNCTION,D3
-#ifdef COLDFIRE
-	.chip 5200
-#endif
 	swap D3
 	move.w D3,D2
 	ext.l D2                 // function
@@ -4442,24 +3553,12 @@ fast_read_config_longword:
 	moveq #11,D0
 	asl.l D0,D2              // Device Number
 	or.l D1,D2
-#ifdef COLDFIRE
-	move.w SR,D1
-	move.l D1,-(SP)
-	or.l #0x700,D1           // mask interrupts
-	move.w D1,SR
-#else
 	move.w SR,-(SP)
 	or.w #0x700,SR           // no interrupts
-#endif
 	move.l D2,-(SP)
-#ifdef COLDFIRE
-	or.l #MCF_PCI_PCICAR_E,D2	// enable config space access
-	move.l D2,MCF_PCI_PCICAR
-#else /* !COLDFIRE */
 	bset #31,D2              // Configuration Enable
 	move.l #DMCFGA,D1        // PCI Configuration Address Register for PCI Initiator-to-PCI I/O Config
 	bsr write_local_config_longword
-#endif /* COLDFIRE */
 #ifdef PCI_DYNAMIC_MAPPING
 	move.l phystop,A0
 	move.l pci_io_offset(A0),A0
@@ -4468,35 +3567,11 @@ fast_read_config_longword:
 #endif
 	move.l (A0),D0
 //#ifndef BIG_ENDIAN
-#ifdef COLDFIRE
-	move.l D0,D1
-	lsr.l #8,D1
-	asl.l #8,D0
-	and.l #0x00FF00FF,D1
-	and.l #0xFF00FF00,D0
-	or.l D1,D0
-	swap D0
-#else
 	ror.w #8,D0
 	swap D0
 	ror.w #8,D0
-#endif /* COLDFIRE */
 //#endif
 	move.l (SP)+,D2
-#ifdef COLDFIRE
-	nop
-	move.l D2,MCF_PCI_PCICAR
-#if 0 /* another solution for device errata 4 */	
-	or.l #MCF_PCI_PCICAR_E+0x00FF0000,D2 // enable config space acces with bad bus number
-	move.l D2,MCF_PCI_PCICAR
-	tst.l (A0)
-	and.l #~MCF_PCI_PCICAR_E,D2 // disable config space access with bad bus number
-	nop
-	move.l D2,MCF_PCI_PCICAR
-#endif	
-	move.l (SP)+,D1
-	move.w D1,SR
-#else /* !COLDFIRE */
 	move.l D0,-(SP)
 	move.l #DMCFGA,D1        // PCI Configuration Address Register for PCI Initiator-to-PCI I/O Config
 	bsr write_local_config_longword
@@ -4513,16 +3588,6 @@ fast_read_config_longword:
 	bsr write_local_config_longword // clear errors
 	move.l (SP)+,D0
 	move.w (SP)+,SR
-#endif /* COLDFIRE */
-#endif /* COLDFIRE errata */
-#ifdef COLDFIRE
-#ifndef MCF5445X
-	move.l MCF_PCI_PCIISR,D2
-	move.l D2,MCF_PCI_PCIISR // clear interrupt
-	move.l (SP)+,MCF_PCI_PCIICR
-#endif
-#endif
-#ifndef COLDFIRE
 #ifdef DEBUG
 	move.l (SP)+,D2
 	cmp.l #SLOT_TO_DEBUG,D2
@@ -4536,7 +3601,6 @@ fast_read_config_longword:
 	move.l (SP)+,D0
 .hhhH:
 #endif
-#endif
 	rts
 	
 _write_config_byte:
@@ -4547,7 +3611,6 @@ _write_config_byte:
 
 write_config_byte:
 
-#ifndef COLDFIRE
 #ifdef DEBUG
 	cmp.l #SLOT_TO_DEBUG,D0
 	bne.s .zzz
@@ -4572,27 +3635,12 @@ write_config_byte:
 	move.l (SP)+,A0
 .zzz:
 #endif
-#endif
 	move.l D3,-(SP)
 	move.l D4,-(SP)
-#ifdef COLDFIRE
-#ifndef MCF5445X
-	move.l MCF_PCI_PCIICR,-(SP)
-	move.l #~(MCF_PCI_PCIICR_TAE + MCF_PCI_PCIICR_IAE + MCF_PCI_PCIICR_REE),D3
-	and.l D3,MCF_PCI_PCIICR  // disable PCI XLB interrupts
-#endif
-#endif
 	move.l D0,D3             // handle
 	tst.l D0
 	bmi .bad_handle_write_config_byte
-#ifdef COLDFIRE
-	bne.s .write_config_byte_not_bridge
-	cmp.l #0x60,D1           // MCF need a PCI config cycle for reset bit in SR
-	bcc .write_local_config_byte
-.write_config_byte_not_bridge:
-#else
 	beq .write_local_config_byte
-#endif
 	ext.l D0
 	cmp.l #PCI_MAX_DEVICE,D0
 	bcc .bad_handle_write_config_byte
@@ -4601,26 +3649,13 @@ write_config_byte:
 	bmi .bad_handle_write_config_byte
 	cmp.l #PCI_MAX_FUNCTION*PCI_MAX_BUS,D3
 	bcc .bad_handle_write_config_byte
-#ifdef COLDFIRE
-	move.w SR,D4
-	move.l D4,-(SP)
-	or.l #0x700,D4           // mask interrupts
-	move.w D4,SR
-#else
 	move.w SR,-(SP)
 	or.w #0x700,SR           // no interrupts
-#endif
 	moveq #3,D4
 	and.l D1,D4
 	move.l D4,-(SP)
 	move.l D3,D4
-#ifdef COLDFIRE
-	.chip 68060
-#endif
 	divu #PCI_MAX_FUNCTION,D4
-#ifdef COLDFIRE
-	.chip 5200
-#endif
 	swap D4
 	move.w D4,D3
 	ext.l D3                 // function
@@ -4648,14 +3683,9 @@ write_config_byte:
 	move.l D1,-(SP)
 	move.l D2,-(SP)
 	move.l D1,D2
-#ifdef COLDFIRE
-	or.l #MCF_PCI_PCICAR_E,D2
-	move.l D2,MCF_PCI_PCICAR
-#else /* !COLDFIRE */
 	bset #31,D2              // Configuration Enable
 	move.l #DMCFGA,D1        // PCI Configuration Address Register for PCI Initiator-to-PCI I/O Config
 	bsr write_local_config_longword
-#endif /* COLDFIRE */
 	move.l (SP)+,D2
 #ifdef PCI_DYNAMIC_MAPPING
 	move.l phystop,A0
@@ -4665,17 +3695,8 @@ write_config_byte:
 #endif
 	move.l 4(SP),D1
 	move.b D2,(A0,D1.l)
-#ifdef COLDFIRE
-	jsr dummy_function       // errata, use D0
-#endif
 	move.l (SP)+,D2
 	addq.l #4,SP
-#ifdef COLDFIRE
-	nop
-	move.l D2,MCF_PCI_PCICAR
-	move.l (SP)+,D1
-	move.w D1,SR
-#else /* !COLDFIRE */
 	move.l #DMCFGA,D1        // PCI Configuration Address Register for PCI Initiator-to-PCI I/O Config
 	bsr write_local_config_longword
 	moveq #PCICSR,D1         // PCI Command / Status Register
@@ -4685,7 +3706,6 @@ write_config_byte:
 	moveq #PCICSR,D1         // PCI Command / Status Register
 	bsr write_local_config_longword // clear errors
 	move.w (SP)+,SR
-#endif /* COLDFIRE */
 	moveq #PCI_SUCCESSFUL,D0
 	bra.s .end_write_config_byte
 .write_local_config_byte:
@@ -4700,13 +3720,6 @@ write_config_byte:
 .bad_handle_write_config_byte:
 	moveq #PCI_BAD_HANDLE,D0
 .end_write_config_byte:
-#ifdef COLDFIRE
-#ifndef MCF5445X
-	move.l MCF_PCI_PCIISR,D3
-	move.l D3,MCF_PCI_PCIISR // clear interrupt
-	move.l (SP)+,MCF_PCI_PCIICR
-#endif
-#endif
 	move.l (SP)+,D4
 	move.l (SP)+,D3
 	rts
@@ -4719,7 +3732,6 @@ _write_config_word:
 
 write_config_word:
 
-#ifndef COLDFIRE
 #ifdef DEBUG
 	cmp.l #SLOT_TO_DEBUG,D0
 	bne.s .zzzz
@@ -4744,29 +3756,14 @@ write_config_word:
 	move.l (SP)+,A0
 .zzzz:
 #endif
-#endif
 	move.l D3,-(SP)
 	move.l D4,-(SP)
-#ifdef COLDFIRE
-#ifndef MCF5445X
-	move.l MCF_PCI_PCIICR,-(SP)
-	move.l #~(MCF_PCI_PCIICR_TAE + MCF_PCI_PCIICR_IAE + MCF_PCI_PCIICR_REE),D3
-	and.l D3,MCF_PCI_PCIICR  // disable PCI XLB interrupts
-#endif
-#endif
 	btst #0,D1               // PCI register       
 	bne .bad_register_write_config_word
 	move.l D0,D3
 	tst.l D0                 // handle
 	bmi .bad_handle_write_config_word
-#ifdef COLDFIRE
-	bne.s .write_config_word_not_bridge
-	cmp.l #0x60,D1           // MCF need a PCI config cycle for reset bit in SR
-	bcc .write_local_config_word
-.write_config_word_not_bridge:
-#else
 	beq .write_local_config_word
-#endif
 	ext.l D0
 	cmp.l #PCI_MAX_DEVICE,D0
 	bcc .bad_handle_write_config_word
@@ -4775,26 +3772,13 @@ write_config_word:
 	bmi .bad_handle_write_config_word
 	cmp.l #PCI_MAX_FUNCTION*PCI_MAX_BUS,D3
 	bcc .bad_handle_write_config_word
-#ifdef COLDFIRE
-	move.w SR,D4
-	move.l D4,-(SP)
-	or.l #0x700,D4           // mask interrupts
-	move.w D4,SR
-#else
 	move.w SR,-(SP)
 	or.w #0x700,SR           // no interrupts
-#endif
 	moveq #2,D4
 	and.l D1,D4
 	move.l D4,-(SP)
 	move.l D3,D4
-#ifdef COLDFIRE
-	.chip 68060
-#endif
 	divu #PCI_MAX_FUNCTION,D4
-#ifdef COLDFIRE
-	.chip 5200
-#endif
 	swap D4
 	move.w D4,D3
 	ext.l D3                 // function
@@ -4822,14 +3806,9 @@ write_config_word:
 	move.l D1,-(SP)
 	move.l D2,-(SP)
 	move.l D1,D2
-#ifdef COLDFIRE
-	or.l #MCF_PCI_PCICAR_E,D2
-	move.l D2,MCF_PCI_PCICAR
-#else /* !COLDFIRE */
 	bset #31,D2              // Configuration Enable
 	move.l #DMCFGA,D1        // PCI Configuration Address Register for PCI Initiator-to-PCI I/O Config
 	bsr write_local_config_longword
-#endif /* COLDFIRE */
 	move.l (SP)+,D2
 #ifdef PCI_DYNAMIC_MAPPING
 	move.l phystop,A0
@@ -4838,29 +3817,12 @@ write_config_word:
 	lea PCI_IO_OFFSET,A0
 #endif
 //#ifndef BIG_ENDIAN
-#ifdef COLDFIRE
-	moveq #0,D1
-	move.w D2,D1
-	lsr.l #8,D1
-	asl.l #8,D2
-	or.l D1,D2               // data to write
-#else
 	ror.w #8,D2              // data to write
-#endif /* COLDFIRE */
 //#endif
 	move.l 4(SP),D1
 	move.w D2,(A0,D1.l)
-#ifdef COLDFIRE
-	jsr dummy_function       // errata, use D0
-#endif
 	move.l (SP)+,D2
 	addq.l #4,SP
-#ifdef COLDFIRE
-	nop
-	move.l D2,MCF_PCI_PCICAR
-	move.l (SP)+,D1
-	move.w D1,SR
-#else /* !COLDFIRE */
 	move.l #DMCFGA,D1        // PCI Configuration Address Register for PCI Initiator-to-PCI I/O Config
 	bsr write_local_config_longword
 	moveq #PCICSR,D1         // PCI Command / Status Register
@@ -4870,7 +3832,6 @@ write_config_word:
 	moveq #PCICSR,D1         // PCI Command / Status Register
 	bsr write_local_config_longword // clear errors
 	move.w (SP)+,SR
-#endif /* COLDFIRE */
 	moveq #PCI_SUCCESSFUL,D0
 	bra.s .end_write_config_word
 .write_local_config_word:
@@ -4885,13 +3846,6 @@ write_config_word:
 .bad_handle_write_config_word:
 	moveq #PCI_BAD_HANDLE,D0
 .end_write_config_word:
-#ifdef COLDFIRE
-#ifndef MCF5445X
-	move.l MCF_PCI_PCIISR,D3
-	move.l D3,MCF_PCI_PCIISR // clear interrupt
-	move.l (SP)+,MCF_PCI_PCIICR
-#endif
-#endif
 	move.l (SP)+,D4
 	move.l (SP)+,D3
 	rts
@@ -4904,7 +3858,6 @@ _write_config_longword:
 	
 write_config_longword:
 
-#ifndef COLDFIRE
 #ifdef DEBUG
 	cmp.l #SLOT_TO_DEBUG,D0
 	bne.s .zzzzz
@@ -4929,29 +3882,14 @@ write_config_longword:
 	move.l (SP)+,A0
 .zzzzz:
 #endif
-#endif
 	move.l D3,-(SP)
-#ifdef COLDFIRE
-#ifndef MCF5445X
-	move.l MCF_PCI_PCIICR,-(SP)
-	move.l #~(MCF_PCI_PCIICR_TAE + MCF_PCI_PCIICR_IAE + MCF_PCI_PCIICR_REE),D3
-	and.l D3,MCF_PCI_PCIICR  // disable PCI XLB interrupts
-#endif
-#endif
 	moveq #3,D3
 	and.l D1,D3              // PCI register
 	bne .bad_register_write_config_longword
 	move.l D0,D3
 	tst.l D0                 // handle
 	bmi .bad_handle_write_config_longword
-#ifdef COLDFIRE
-	bne.s .write_config_longword_not_bridge
-	cmp.l #0x60,D1           // MCF need a PCI config cycle for reset bit in SR
-	bcc .write_local_config_longword
-.write_config_longword_not_bridge:
-#else
 	beq .write_local_config_longword
-#endif
 	ext.l D0
 	cmp.l #PCI_MAX_DEVICE,D0
 	bcc .bad_handle_write_config_longword
@@ -4962,13 +3900,7 @@ write_config_longword:
 	bcc .bad_handle_write_config_longword
 	move.l D4,-(SP)
 	move.l D3,D4
-#ifdef COLDFIRE
-	.chip 68060
-#endif
 	divu #PCI_MAX_FUNCTION,D4
-#ifdef COLDFIRE
-	.chip 5200
-#endif
 	swap D4
 	move.w D4,D3
 	ext.l D3                 // function
@@ -4994,26 +3926,14 @@ write_config_longword:
 	moveq #11,D0
 	asl.l D0,D3              // Device Number
 	or.l D3,D1
-#ifdef COLDFIRE
-	move.w SR,D3
-	move.l D3,-(SP)
-	or.l #0x700,D3           // mask interrupts
-	move.w D3,SR
-#else
 	move.w SR,-(SP)
 	or.w #0x700,SR           // no interrupts
-#endif
 	move.l D1,-(SP)
 	move.l D2,-(SP)
 	move.l D1,D2
-#ifdef COLDFIRE
-	or.l #MCF_PCI_PCICAR_E,D2
-	move.l D2,MCF_PCI_PCICAR
-#else /* !COLDFIRE */
 	bset #31,D2              // Configuration Enable
 	move.l #DMCFGA,D1        // PCI Configuration Address Register for PCI Initiator-to-PCI I/O Config
 	bsr write_local_config_longword
-#endif /* COLDFIRE */
 	move.l (SP)+,D2
 #ifdef PCI_DYNAMIC_MAPPING
 	move.l phystop,A0
@@ -5022,31 +3942,12 @@ write_config_longword:
 	lea PCI_IO_OFFSET,A0
 #endif
 //#ifndef BIG_ENDIAN
-#ifdef COLDFIRE
-	move.l D2,D0
-	lsr.l #8,D0
-	asl.l #8,D2
-	and.l #0x00FF00FF,D0
-	and.l #0xFF00FF00,D2
-	or.l D0,D2
-	swap D2
-#else
 	ror.w #8,D2              // data to write
 	swap D2
 	ror.w #8,D2
-#endif /* COLDFIRE */
 //#endif
 	move.l D2,(A0)
-#ifdef COLDFIRE
-	jsr dummy_function       // errata, use D0
-#endif
 	move.l (SP)+,D2
-#ifdef COLDFIRE
-	nop
-	move.l D2,MCF_PCI_PCICAR
-	move.l (SP)+,D1
-	move.w D1,SR
-#else /* !COLDFIRE */
 	move.l #DMCFGA,D1        // PCI Configuration Address Register for PCI Initiator-to-PCI I/O Config
 	bsr write_local_config_longword
 	moveq #PCICSR,D1             // PCI Command / Status Register
@@ -5056,7 +3957,6 @@ write_config_longword:
 	moveq #PCICSR,D1             // PCI Command / Status Register
 	bsr write_local_config_longword // clear errors
 	move.w (SP)+,SR
-#endif /* COLDFIRE */
 	moveq #PCI_SUCCESSFUL,D0
 	bra.s .end_write_config_longword
 .write_local_config_longword:
@@ -5071,13 +3971,6 @@ write_config_longword:
 .bad_handle_write_config_longword:
 	moveq #PCI_BAD_HANDLE,D0
 .end_write_config_longword:
-#ifdef COLDFIRE
-#ifndef MCF5445X
-	move.l MCF_PCI_PCIISR,D3
-	move.l D3,MCF_PCI_PCIISR // clear interrupt
-	move.l (SP)+,MCF_PCI_PCIICR
-#endif
-#endif
 	move.l (SP)+,D3
 	rts
 
@@ -5089,7 +3982,6 @@ _hook_interrupt:
 
 hook_interrupt:
 
-#ifndef COLDFIRE
 #ifdef DEBUG
 	cmp.l #SLOT_TO_DEBUG,D0
 	bne.s .iii
@@ -5105,7 +3997,6 @@ hook_interrupt:
 	move.l (SP)+,D0
 	move.l (SP)+,A0
 .iii:
-#endif
 #endif
 	move.l A2,-(SP)
 	move.l D0,-(SP)          // handle
@@ -5124,13 +4015,7 @@ hook_interrupt:
 	beq .general_error_hook_interrupt // not found
 	add.l #PCI_COOKIE_SIZE + PCI_RSC_HANDLESTOTALSIZE,D0
 	move.l D0,A2             // Status-Descriptors
-#ifdef COLDFIRE
-	.chip 68060
-#endif
 	divu #PCI_MAX_FUNCTION,D1
-#ifdef COLDFIRE
-	.chip 5200
-#endif
 	move.l D1,D2
 	swap D1
 	ext.l D1                 // function
@@ -5174,7 +4059,6 @@ _unhook_interrupt:
 	
 unhook_interrupt:
 
-#ifndef COLDFIRE
 #ifdef DEBUG
 	cmp.l #SLOT_TO_DEBUG,D0
 	bne.s .jjj
@@ -5183,7 +4067,6 @@ unhook_interrupt:
 	bsr debug_display_string
 	move.l (SP)+,A0
 .jjj:
-#endif
 #endif
 	move.l D0,-(SP)          // handle
 	move.l D0,D1
@@ -5203,13 +4086,7 @@ unhook_interrupt:
 	beq .general_error_unhook_interrupt // not found
 	add.l #PCI_COOKIE_SIZE+PCI_RSC_HANDLESTOTALSIZE,D0
 	move.l D0,A1             // Status-Descriptors
-#ifdef COLDFIRE
-	.chip 68060
-#endif
 	divu #PCI_MAX_FUNCTION,D1
-#ifdef COLDFIRE
-	.chip 5200
-#endif
 	move.l D1,D2
 	swap D1
 	ext.l D1                 // function
@@ -5241,13 +4118,11 @@ _special_cycle:
 	
 special_cycle:
 
-#ifndef COLDFIRE
 #ifdef DEBUG
 	move.l A0,-(SP)
 	lea debug53(PC),A0
 	bsr debug_display_string
 	move.l (SP)+,A0
-#endif
 #endif
 	moveq #PCI_FUNC_NOT_SUPPORTED,D0
 	rts
@@ -5258,7 +4133,6 @@ _get_routing:
 
 get_routing:
 
-#ifndef COLDFIRE
 #ifdef DEBUG
 	cmp.l #SLOT_TO_DEBUG,D0
 	bne.s .lll
@@ -5267,7 +4141,6 @@ get_routing:
 	bsr debug_display_string
 	move.l (SP)+,A0
 .lll:
-#endif
 #endif
 	ext.l D0                 // handle
 	bmi.s .bad_handle_set_routing
@@ -5286,7 +4159,6 @@ _set_interrupt:
 
 set_interrupt:
 
-#ifndef COLDFIRE
 #ifdef DEBUG
 	cmp.l #SLOT_TO_DEBUG,D0
 	bne.s .mmm
@@ -5296,17 +4168,13 @@ set_interrupt:
 	move.l (SP)+,A0
 .mmm:
 #endif
-#endif
 	ext.l D0                 // handle
 	bmi.s .bad_handle_set_interrupt
-#ifndef COLDFIRE
 	beq.s .local_set_interrupt
-#endif
 	cmp.l #PCI_MAX_DEVICE,D0
 	bcc.s .bad_handle_set_interrupt
 	moveq #PCI_FUNC_NOT_SUPPORTED,D0
 	rts
-#ifndef COLDFIRE
 .local_set_interrupt:
 	moveq #0,D2
 	btst #0,D1               // DMA Interrupt
@@ -5323,7 +4191,6 @@ set_interrupt:
 	move.l #INTCSR,D1        // Interrupt Control/Status
 	bsr write_local_config_longword
 	rts
-#endif
 .bad_handle_set_interrupt:
 	moveq #PCI_BAD_HANDLE,D0
 	rts
@@ -5334,7 +4201,6 @@ _get_resource:
 
 get_resource:
 
-#ifndef COLDFIRE
 #ifdef DEBUG
 	move.l D0,D2
 	cmp.l #SLOT_TO_DEBUG,D0
@@ -5354,7 +4220,6 @@ get_resource:
 	move.l (SP)+,D0
 .nnn:
 #endif
-#endif
 	move.l D0,D1             // slot
 	swap D1                  // function
 	ext.l D0
@@ -5365,13 +4230,7 @@ get_resource:
 	bmi.s .bad_handle_get_resource
 	cmp.l #PCI_MAX_FUNCTION*PCI_MAX_BUS,D1
 	bcc.s .bad_handle_get_resource	
-#ifdef COLDFIRE
-	.chip 68060
-#endif
 	divu #PCI_MAX_FUNCTION,D1
-#ifdef COLDFIRE
-	.chip 5200
-#endif
 	move.l D1,D2
 	swap D1
 	ext.l D1                 // function
@@ -5386,7 +4245,6 @@ get_resource:
 	mulu #PCI_RSC_DESC_TOTALSIZE,D1
 	add.l #PCI_COOKIE_SIZE,D0 // Ressource-Descriptors
 	add.l D1,D0	
-#ifndef COLDFIRE
 #ifdef DEBUG
 	cmp.l #SLOT_TO_DEBUG,D2
 	bne.s .nn
@@ -5410,7 +4268,6 @@ get_resource:
 	move.l (SP)+,D0
 .nn:
 #endif
-#endif
 	rts
 .general_error_get_resource:
 	moveq #PCI_GENERAL_ERROR,D0
@@ -5426,7 +4283,6 @@ _get_card_used:
 	
 get_card_used:
 
-#ifndef COLDFIRE
 #ifdef DEBUG
 	cmp.l #SLOT_TO_DEBUG,D0
 	bne.s .ooo
@@ -5441,7 +4297,6 @@ get_card_used:
 	move.l (SP)+,D0
 .ooo:
 #endif
-#endif
 	move.l D0,D1             // handle
 	swap D1                  // function
 	ext.l D0
@@ -5452,13 +4307,7 @@ get_card_used:
 	bmi.s .bad_handle_get_card_used
 	cmp.l #PCI_MAX_FUNCTION*PCI_MAX_BUS,D1
 	bcc.s .bad_handle_get_card_used
-#ifdef COLDFIRE
-	.chip 68060
-#endif
 	divu #PCI_MAX_FUNCTION,D1
-#ifdef COLDFIRE
-	.chip 5200
-#endif
 	move.l D1,D2
 	swap D1
 	ext.l D1                 // function
@@ -5490,7 +4339,6 @@ _set_card_used:
 	
 set_card_used:
 
-#ifndef COLDFIRE
 #ifdef DEBUG
 	cmp.l #SLOT_TO_DEBUG,D0
 	bne.s .ppp
@@ -5499,7 +4347,6 @@ set_card_used:
 	bsr debug_display_string
 	move.l (SP)+,A0
 .ppp:
-#endif
 #endif
 	move.l D0,D1             // handle
 	swap D1                  // function
@@ -5511,13 +4358,7 @@ set_card_used:
 	bmi.s .bad_handle_set_card_used
 	cmp.l #PCI_MAX_FUNCTION*PCI_MAX_BUS,D1
 	bcc.s .bad_handle_set_card_used
-#ifdef COLDFIRE
-	.chip 68060
-#endif
 	divu #PCI_MAX_FUNCTION,D1
-#ifdef COLDFIRE
-	.chip 5200
-#endif
 	move.l D1,D2
 	swap D1
 	ext.l D1                 // function
@@ -5564,7 +4405,6 @@ _read_mem_byte:
 	
 read_mem_byte:
 
-#ifndef COLDFIRE
 #ifdef DEBUG
 	cmp.l #SLOT_TO_DEBUG,D0
 	bne.s .qqq
@@ -5573,7 +4413,6 @@ read_mem_byte:
 	bsr debug_display_string
 	move.l (SP)+,A0
 .qqq:
-#endif
 #endif
 	move.l D0,D2
 	swap D2                  // function
@@ -5619,7 +4458,6 @@ _read_mem_word:
 
 read_mem_word:
 
-#ifndef COLDFIRE
 #ifdef DEBUG
 	cmp.l #SLOT_TO_DEBUG,D0
 	bne.s .rrr
@@ -5628,7 +4466,6 @@ read_mem_word:
 	bsr debug_display_string
 	move.l (SP)+,A0
 .rrr:
-#endif
 #endif
 	move.l D0,D2
 	swap D2                  // function
@@ -5662,15 +4499,7 @@ read_mem_word:
 #endif
 	move.w (A1,D1.l),D0
 #ifdef LITTLE_ENDIAN_LANE_SWAPPED
-#ifdef COLDFIRE
-	moveq #0,D1
-	move.w D0,D1
-	lsr.l #8,D1
-	asl.l #8,D0
-	or.l D1,D0
-#else
 	ror.w #8,D0
-#endif /* COLDFIRE */
 #endif
 	move.w D0,(A0)           // pointer to data in memory
 #endif
@@ -5691,7 +4520,6 @@ _read_mem_longword:
 	
 read_mem_longword:
 
-#ifndef COLDFIRE
 #ifdef DEBUG
 	cmp.l #SLOT_TO_DEBUG,D0
 	bne.s .sss
@@ -5700,7 +4528,6 @@ read_mem_longword:
 	bsr debug_display_string
 	move.l (SP)+,A0
 .sss:
-#endif
 #endif
 	move.l D0,D2
 	swap D2                  // function
@@ -5731,19 +4558,9 @@ read_mem_longword:
 #else
 	move.l (A1,D1.l),D0      // + address to access (in PCI memory address space)
 #ifdef LITTLE_ENDIAN_LANE_SWAPPED
-#ifdef COLDFIRE
-	move.l D0,D1
-	lsr.l #8,D1
-	asl.l #8,D0
-	and.l #0x00FF00FF,D1
-	and.l #0xFF00FF00,D0
-	or.l D1,D0
-	swap D0
-#else
 	ror.w #8,D0
 	swap D0
 	ror.w #8,D0
-#endif /* COLDFIRE */
 #endif
 	move.l D0,(A0)           // pointer to data in memory
 #endif
@@ -5762,7 +4579,6 @@ _fast_read_mem_byte:
 
 fast_read_mem_byte:
 
-#ifndef COLDFIRE
 #if 0 // #ifdef DEBUG
 	cmp.l #SLOT_TO_DEBUG,D0
 	bne.s .ttt
@@ -5771,7 +4587,6 @@ fast_read_mem_byte:
 	bsr debug_display_string
 	move.l (SP)+,A0
 .ttt:
-#endif
 #endif
 #ifdef SAME_CPU_PCI_MEM_ADDR
 	move.l D1,A0
@@ -5802,7 +4617,6 @@ _fast_read_mem_word:
 
 fast_read_mem_word:
 
-#ifndef COLDFIRE
 #if 0 // #ifdef DEBUG
 	cmp.l #SLOT_TO_DEBUG,D0
 	bne.s .uuu
@@ -5811,7 +4625,6 @@ fast_read_mem_word:
 	bsr debug_display_string
 	move.l (SP)+,A0
 .uuu:
-#endif
 #endif
 #ifdef SAME_CPU_PCI_MEM_ADDR
 	move.l D1,A0
@@ -5834,15 +4647,7 @@ fast_read_mem_word:
 #endif
 	move.w (A0,D1.l),D0
 #ifdef LITTLE_ENDIAN_LANE_SWAPPED
-#ifdef COLDFIRE
-	moveq #0,D1
-	move.w D0,D1
-	lsr.l #8,D1
-	asl.l #8,D0
-	or.l D1,D0
-#else
 	ror.w #8,D0              // read data
-#endif
 #endif
 #endif
 	rts
@@ -5853,7 +4658,6 @@ _fast_read_mem_longword:
 
 fast_read_mem_longword:
 
-#ifndef COLDFIRE
 #if 0 // #ifdef DEBUG
 	cmp.l #SLOT_TO_DEBUG,D0
 	bne.s .vvv
@@ -5862,7 +4666,6 @@ fast_read_mem_longword:
 	bsr debug_display_string
 	move.l (SP)+,A0
 .vvv:
-#endif
 #endif
 #ifdef SAME_CPU_PCI_MEM_ADDR
 	move.l D1,A0
@@ -5880,19 +4683,9 @@ fast_read_mem_longword:
 #else
 	move.l (A0,D1.l),D0      // + address to access (in PCI memory address space)
 #ifdef LITTLE_ENDIAN_LANE_SWAPPED
-#ifdef COLDFIRE
-	move.l D0,D1
-	lsr.l #8,D1
-	asl.l #8,D0
-	and.l #0x00FF00FF,D1
-	and.l #0xFF00FF00,D0
-	or.l D1,D0
-	swap D0                  // read data
-#else
 	ror.w #8,D0
 	swap D0
 	ror.w #8,D0              // read data
-#endif /* COLDFIRE */
 #endif
 #endif
 	rts
@@ -5944,7 +4737,6 @@ _write_mem_byte:
 	
 write_mem_byte: // faster for X86EMU
 
-#ifndef COLDFIRE
 #ifdef DEBUG
 	cmp.l #SLOT_TO_DEBUG,D0
 	bne.s .xxxx
@@ -5968,7 +4760,6 @@ write_mem_byte: // faster for X86EMU
 	move.l (SP)+,D0
 	move.l (SP)+,A0
 .xxxx:
-#endif
 #endif
 #ifdef SAME_CPU_PCI_MEM_ADDR
 	move.l D1,A0
@@ -6029,15 +4820,7 @@ _write_mem_word:
 	move.w D2,(A0,D1.l)
 #else
 #ifdef LITTLE_ENDIAN_LANE_SWAPPED
-#ifdef COLDFIRE
-	moveq #0,D0
-	move.w D2,D0
-	lsr.l #8,D0
-	asl.l #8,D2
-	or.l D0,D2               // data to write
-#else
 	ror.w #8,D2              // data to write
-#endif /* COLDFIRE */
 #endif
 #ifdef LITTLE_ENDIAN_ADDRESSES_SWAPPED
 	moveq #2,D0
@@ -6056,7 +4839,6 @@ _write_mem_word:
 	
 write_mem_word: // faster for X86EMU
 
-#ifndef COLDFIRE
 #ifdef DEBUG
 	cmp.l #SLOT_TO_DEBUG,D0
 	bne.s .xxxxx
@@ -6081,7 +4863,6 @@ write_mem_word: // faster for X86EMU
 	move.l (SP)+,A0
 .xxxxx:
 #endif
-#endif
 #ifdef SAME_CPU_PCI_MEM_ADDR
 	move.l D1,A0
 	moveq #0,D1
@@ -6097,15 +4878,7 @@ write_mem_word: // faster for X86EMU
 	move.w D2,(A0,D1.l)
 #else
 #ifdef LITTLE_ENDIAN_LANE_SWAPPED
-#ifdef COLDFIRE
-	moveq #0,D0
-	move.w D2,D0
-	lsr.l #8,D0
-	asl.l #8,D2
-	or.l D0,D2               // data to write
-#else
 	ror.w #8,D2              // data to write
-#endif /* COLDFIRE */
 #endif
 #ifdef LITTLE_ENDIAN_ADDRESSES_SWAPPED
 	moveq #2,D0
@@ -6153,19 +4926,9 @@ _write_mem_longword:
 	move.l D2,(A0,D1.l)
 #else
 #ifdef LITTLE_ENDIAN_LANE_SWAPPED
-#ifdef COLDFIRE
-	move.l D2,D0
-	lsr.l #8,D0
-	asl.l #8,D2
-	and.l #0x00FF00FF,D0
-	and.l #0xFF00FF00,D2
-	or.l D0,D2
-	swap D2
-#else
 	ror.w #8,D2              // data to write
 	swap D2
 	ror.w #8,D2
-#endif /* COLDFIRE */
 #endif
 	move.l D2,(A0,D1.l)      // + address to access (in PCI memory address space)
 #endif
@@ -6180,7 +4943,6 @@ _write_mem_longword:
 	
 write_mem_longword: // faster for X86EMU
 
-#ifndef COLDFIRE
 #ifdef DEBUG
 	cmp.l #SLOT_TO_DEBUG,D0
 	bne.s .xxxxxx
@@ -6205,7 +4967,6 @@ write_mem_longword: // faster for X86EMU
 	move.l (SP)+,A0
 .xxxxxx:
 #endif
-#endif
 #ifdef SAME_CPU_PCI_MEM_ADDR
 	move.l D1,A0
 	moveq #0,D1
@@ -6221,19 +4982,9 @@ write_mem_longword: // faster for X86EMU
 	move.l D2,(A0,D1.l)
 #else
 #ifdef LITTLE_ENDIAN_LANE_SWAPPED
-#ifdef COLDFIRE
-	move.l D2,D0
-	lsr.l #8,D0
-	asl.l #8,D2
-	and.l #0x00FF00FF,D0
-	and.l #0xFF00FF00,D2
-	or.l D0,D2
-	swap D2
-#else
 	ror.w #8,D2              // data to write
 	swap D2
 	ror.w #8,D2
-#endif /* COLDFIRE */
 #endif
 	move.l D2,(A0,D1.l)      // + address to access (in PCI memory address space)
 #endif
@@ -6248,7 +4999,6 @@ _read_io_byte:
 
 read_io_byte:
 
-#ifndef COLDFIRE
 #ifdef DEBUG
 	cmp.l #SLOT_TO_DEBUG,D0
 	bne.s .aaaa
@@ -6257,7 +5007,6 @@ read_io_byte:
 	bsr debug_display_string
 	move.l (SP)+,A0
 .aaaa:
-#endif
 #endif
 	move.l D0,D2
 	swap D2                  // function
@@ -6298,7 +5047,6 @@ _read_io_word:
 	
 read_io_word:
 
-#ifndef COLDFIRE
 #ifdef DEBUG
 	cmp.l #SLOT_TO_DEBUG,D0
 	bne.s .bbbb
@@ -6307,7 +5055,6 @@ read_io_word:
 	bsr debug_display_string
 	move.l (SP)+,A0
 .bbbb:
-#endif
 #endif
 	move.l D0,D2
 	swap D2                  // function
@@ -6336,15 +5083,7 @@ read_io_word:
 #endif
 	move.w (A1,D1.l),D0
 #ifdef LITTLE_ENDIAN_LANE_SWAPPED
-#ifdef COLDFIRE
-	moveq #0,D1
-	move.w D0,D1
-	lsr.l #8,D1
-	asl.l #8,D0
-	or.l D1,D0
-#else
 	ror.w #8,D0
-#endif /* COLDFIRE */
 #endif
 	move.w D0,(A0)           // pointer to data in memory
 #endif
@@ -6365,7 +5104,6 @@ _read_io_longword:
 
 read_io_longword:
 
-#ifndef COLDFIRE
 #ifdef DEBUG
 	cmp.l #SLOT_TO_DEBUG,D0
 	bne.s .cccc
@@ -6374,7 +5112,6 @@ read_io_longword:
 	bsr debug_display_string
 	move.l (SP)+,A0
 .cccc:
-#endif
 #endif
 	move.l D0,D2
 	swap D2                  // function
@@ -6400,19 +5137,9 @@ read_io_longword:
 #else
 	move.l (A1,D1.l),D0      // + address to access (in PCI I/O address space)
 #ifdef LITTLE_ENDIAN_LANE_SWAPPED
-#ifdef COLDFIRE
-	move.l D0,D1
-	lsr.l #8,D1
-	asl.l #8,D0
-	and.l #0x00FF00FF,D1
-	and.l #0xFF00FF00,D0
-	or.l D1,D0
-	swap D0
-#else
 	ror.w #8,D0
 	swap D0
 	ror.w #8,D0
-#endif /* COLDFIRE */
 #endif
 	move.l D0,(A0)           // pointer to data in memory
 #endif
@@ -6431,7 +5158,6 @@ _fast_read_io_byte:
 
 fast_read_io_byte:
 
-#ifndef COLDFIRE
 #if 0 // #ifdef DEBUG
 	cmp.l #SLOT_TO_DEBUG,D0
 	bne.s .dddd
@@ -6440,7 +5166,6 @@ fast_read_io_byte:
 	bsr debug_display_string
 	move.l (SP)+,A0
 .dddd:
-#endif
 #endif
 #ifdef PCI_DYNAMIC_MAPPING
 	move.l phystop,A0
@@ -6466,7 +5191,6 @@ _fast_read_io_word:
 
 fast_read_io_word:
 
-#ifndef COLDFIRE
 #if 0 // #ifdef DEBUG
 	cmp.l #SLOT_TO_DEBUG,D0
 	bne.s .eeee
@@ -6475,7 +5199,6 @@ fast_read_io_word:
 	bsr debug_display_string
 	move.l (SP)+,A0
 .eeee:
-#endif
 #endif
 #ifdef PCI_DYNAMIC_MAPPING
 	move.l phystop,A0
@@ -6493,15 +5216,7 @@ fast_read_io_word:
 #endif
 	move.w (A0,D1.l),D0
 #ifdef LITTLE_ENDIAN_LANE_SWAPPED
-#ifdef COLDFIRE
-	moveq #0,D1
-	move.w D0,D1
-	lsr.l #8,D1
-	asl.l #8,D0
-	or.l D1,D0               // read data
-#else
 	ror.w #8,D0              // read data
-#endif /* COLDFIRE */
 #endif
 #endif
 	rts
@@ -6512,7 +5227,6 @@ _fast_read_io_longword:
 	
 fast_read_io_longword:
 
-#ifndef COLDFIRE
 #if 0 // #ifdef DEBUG
 	cmp.l #SLOT_TO_DEBUG,D0
 	bne.s .ffff
@@ -6521,7 +5235,6 @@ fast_read_io_longword:
 	bsr debug_display_string
 	move.l (SP)+,A0
 .ffff:
-#endif
 #endif
 #ifdef PCI_DYNAMIC_MAPPING
 	move.l phystop,A0
@@ -6534,19 +5247,9 @@ fast_read_io_longword:
 #else
 	move.l (A0,D1.l),D0      // + address to access (in PCI I/O address space)
 #ifdef LITTLE_ENDIAN_LANE_SWAPPED
-#ifdef COLDFIRE
-	move.l D0,D1
-	lsr.l #8,D1
-	asl.l #8,D0
-	and.l #0x00FF00FF,D1
-	and.l #0xFF00FF00,D0
-	or.l D1,D0
-	swap D0                  // read data
-#else
 	ror.w #8,D0
 	swap D0
 	ror.w #8,D0              // read data
-#endif /* COLDFIRE */
 #endif
 #endif
 	rts
@@ -6585,9 +5288,6 @@ _write_io_byte:
 #endif
 	move.b D2,(A0,D1.l)      // data to write
 #endif
-#ifdef COLDFIRE
-	jsr dummy_function       // errata, use D0
-#endif
 	moveq #PCI_SUCCESSFUL,D0
 	rts
 .bad_handle_write_io_byte:
@@ -6596,7 +5296,6 @@ _write_io_byte:
 
 write_io_byte: // faster for X86EMU
 
-#ifndef COLDFIRE
 #ifdef DEBUG
 	cmp.l #SLOT_TO_DEBUG,D0
 	bne.s .yyyy
@@ -6621,7 +5320,6 @@ write_io_byte: // faster for X86EMU
 	move.l (SP)+,A0
 .yyyy:
 #endif
-#endif
 #ifdef PCI_DYNAMIC_MAPPING
 	move.l phystop,A0
 	move.l pci_io_offset(A0),A0
@@ -6636,9 +5334,6 @@ write_io_byte: // faster for X86EMU
 	eor.l D0,D1              // address to access (in PCI I/O address space)
 #endif
 	move.b D2,(A0,D1.l)      // data to write
-#endif
-#ifdef COLDFIRE
-	jsr dummy_function       // errata, use D0
 #endif
 	moveq #PCI_SUCCESSFUL,D0
 	rts
@@ -6674,15 +5369,7 @@ _write_io_word:
 	move.w D2,(A0,D1.l)
 #else 
 #ifdef LITTLE_ENDIAN_LANE_SWAPPED
-#ifdef COLDFIRE
-	moveq #0,D0
-	move.w D2,D0
-	lsr.l #8,D0
-	asl.l #8,D2
-	or.l D0,D2               // data to write
-#else
 	ror.w #8,D2              // data to write
-#endif /* COLDFIRE */
 #endif
 #ifdef LITTLE_ENDIAN_ADDRESSES_SWAPPED
 	moveq #2,D0
@@ -6690,9 +5377,6 @@ _write_io_word:
 #endif
 	move.w D2,(A0,D1.l)
 #endif /* BIG_ENDIAN */
-#ifdef COLDFIRE
-	jsr dummy_function       // errata, use D0
-#endif
 	moveq #PCI_SUCCESSFUL,D0
 	rts
 .bad_alignment_write_io_word:
@@ -6704,7 +5388,6 @@ _write_io_word:
 	
 write_io_word: // faster for X86EMU
 
-#ifndef COLDFIRE
 #ifdef DEBUG
 	cmp.l #SLOT_TO_DEBUG,D0
 	bne.s .yyyyy
@@ -6729,7 +5412,6 @@ write_io_word: // faster for X86EMU
 	move.l (SP)+,A0
 .yyyyy:
 #endif
-#endif
 #ifdef PCI_DYNAMIC_MAPPING
 	move.l phystop,A0
 	move.l pci_io_offset(A0),A0
@@ -6740,15 +5422,7 @@ write_io_word: // faster for X86EMU
 	move.w D2,(A0,D1.l)
 #else
 #ifdef LITTLE_ENDIAN_LANE_SWAPPED
-#ifdef COLDFIRE
-	moveq #0,D0
-	move.w D2,D0
-	lsr.l #8,D0
-	asl.l #8,D2
-	or.l D0,D2               // data to write
-#else
 	ror.w #8,D2              // data to write
-#endif /* COLDFIRE */
 #endif
 #ifdef LITTLE_ENDIAN_ADDRESSES_SWAPPED
 	moveq #2,D0
@@ -6756,9 +5430,6 @@ write_io_word: // faster for X86EMU
 #endif
 	move.w D2,(A0,D1.l)
 #endif /* BIG_ENDIAN */
-#ifdef COLDFIRE
-	jsr dummy_function       // errata, use D0
-#endif
 	moveq #PCI_SUCCESSFUL,D0
 	rts
 
@@ -6794,25 +5465,12 @@ _write_io_longword:
 	move.l D2,(A0,D1.l)
 #else
 #ifdef LITTLE_ENDIAN_LANE_SWAPPED
-#ifdef COLDFIRE
-	move.l D2,D0
-	lsr.l #8,D0
-	asl.l #8,D2
-	and.l #0x00FF00FF,D0
-	and.l #0xFF00FF00,D2
-	or.l D0,D2
-	swap D2
-#else
 	ror.w #8,D2              // data to write
 	swap D2
 	ror.w #8,D2
-#endif /* COLDFIRE */
 #endif
 	move.l D2,(A0,D1.l)      // + address to access (in PCI I/O address space)
 #endif /* BIG_ENDIAN */
-#ifdef COLDFIRE
-	jsr dummy_function       // errata, use D0
-#endif
 	moveq #PCI_SUCCESSFUL,D0
 	rts
 .bad_alignment_write_io_longword:
@@ -6824,7 +5482,6 @@ _write_io_longword:
 	
 write_io_longword: // faster for X86EMU
 
-#ifndef COLDFIRE
 #ifdef DEBUG
 	cmp.l #SLOT_TO_DEBUG,D0
 	bne.s .yyyyyy
@@ -6849,7 +5506,6 @@ write_io_longword: // faster for X86EMU
 	move.l (SP)+,A0
 .yyyyyy:
 #endif
-#endif
 #ifdef PCI_DYNAMIC_MAPPING
 	move.l phystop,A0
 	move.l pci_io_offset(A0),A0
@@ -6860,25 +5516,12 @@ write_io_longword: // faster for X86EMU
 	move.l D2,(A0,D1.l)
 #else
 #ifdef LITTLE_ENDIAN_LANE_SWAPPED
-#ifdef COLDFIRE
-	move.l D2,D0
-	lsr.l #8,D0
-	asl.l #8,D2
-	and.l #0x00FF00FF,D0
-	and.l #0xFF00FF00,D2
-	or.l D0,D2
-	swap D2
-#else
 	ror.w #8,D2              // data to write
 	swap D2
 	ror.w #8,D2
-#endif /* COLDFIRE */
 #endif
 	move.l D2,(A0,D1.l)      // + address to access (in PCI I/O address space)
 #endif /* BIG_ENDIAN */
-#ifdef COLDFIRE
-	jsr dummy_function       // errata, use D0
-#endif
 	moveq #PCI_SUCCESSFUL,D0
 	rts
 
@@ -6889,13 +5532,11 @@ get_machine_id:
 	// 1: Milan
 	// 2: PAK/Panther
 	// 3: Aranym
-#ifndef COLDFIRE
 #ifdef DEBUG
 	move.l A0,-(SP)
 	lea debug77(PC),A0
 	bsr debug_display_string
 	move.l (SP)+,A0
-#endif
 #endif
 	moveq #0,D0              // no ID available
 	rts
@@ -6903,13 +5544,11 @@ get_machine_id:
 _get_pagesize:
 get_pagesize:
 
-#ifndef COLDFIRE
 #ifdef DEBUG
 	move.l A0,-(SP)
 	lea debug78(PC),A0
 	bsr debug_display_string
 	move.l (SP)+,A0
-#endif
 #endif
 	moveq #0,D0              // paging not active
 	rts
@@ -6922,7 +5561,6 @@ _virt_to_bus:
 	
 virt_to_bus:
 
-#ifndef COLDFIRE
 #ifdef DEBUG
 	cmp.l #SLOT_TO_DEBUG,D0
 	bne.s .iiii
@@ -6931,7 +5569,6 @@ virt_to_bus:
 	bsr debug_display_string
 	move.l (SP)+,A0
 .iiii:
-#endif
 #endif
 	move.l D0,D2
 	swap D2                  // function
@@ -6974,7 +5611,6 @@ _bus_to_virt:
 
 bus_to_virt:
 
-#ifndef COLDFIRE
 #ifdef DEBUG
 	cmp.l #SLOT_TO_DEBUG,D0
 	bne.s .jjjj
@@ -6983,7 +5619,6 @@ bus_to_virt:
 	bsr debug_display_string
 	move.l (SP)+,A0
 .jjjj:
-#endif
 #endif
 	move.l D0,D2
 	swap D2                  // function
@@ -7025,13 +5660,11 @@ _virt_to_phys:
 
 virt_to_phys:
 
-#ifndef COLDFIRE
 #ifdef DEBUG
 	move.l A0,-(SP)
 	lea debug81(PC),A0
 	bsr debug_display_string
 	move.l (SP)+,A0
-#endif
 #endif
 	move.l D0,PCI_CONV_ADDR_ADDR(A0) // physical CPU virtual address
 	clr.l PCI_CONV_ADDR_LEN(A0) // length of contiguous mapped area
@@ -7045,13 +5678,11 @@ _phys_to_virt:
 
 phys_to_virt:
 
-#ifndef COLDFIRE
 #ifdef DEBUG
 	move.l A0,-(SP)
 	lea debug82(PC),A0
 	bsr debug_display_string
 	move.l (SP)+,A0
-#endif
 #endif
 	move.l D0,PCI_CONV_ADDR_ADDR(A0) // CPU virtual address
 	clr.l PCI_CONV_ADDR_LEN(A0) // length of contiguous mapped area
@@ -7060,7 +5691,6 @@ phys_to_virt:
 	
 _dma_setbuffer:
 
-#ifndef COLDFIRE
 	move.l 10(A0),-(SP)      // Transfer Size (Bytes)
 	move.l 6(A0),-(SP)       // Local Address
 	move.l 2(A0),D2          // PCI Address
@@ -7072,12 +5702,10 @@ _dma_setbuffer:
 	move.l (SP)+,D2          // Transfer Size (Bytes)
 	move.l #DMASIZ0,D1       // DMA Channel 0 Transfer Size (Bytes
 	bsr write_local_config_longword
-#endif
 	rts
 	
 _dma_buffoper:
 
-#ifndef COLDFIRE
 	move.w 2(A0),D0          // mode
 	bmi.s .status_dma_buffoper
 	moveq #4,D2              // abort
@@ -7117,13 +5745,11 @@ _dma_buffoper:
 	move.l D1,D0             // state	
 	rts
 .bad_mode_dma_buffoper:
-#endif
 	moveq #PCI_GENERAL_ERROR,D0
 	rts
 	
 _read_mailbox:
 
-#ifndef COLDFIRE
 	move.w 2(A0),D0          // mailbox 0-7
 	move.l 4(A0),A0          // pointer to data in memory
 	ext.l D0
@@ -7138,13 +5764,11 @@ _read_mailbox:
 	moveq #PCI_SUCCESSFUL,D0
 	rts
 .bad_register_read_mailbox:
-#endif
 	moveq #PCI_BAD_REGISTER_NUMBER,D0
 	rts
 	
 _write_mailbox:
 
-#ifndef COLDFIRE
 	move.w 2(A0),D0          // mailbox 0-7
 	move.l 4(A0),D1          // data to write
 	ext.l D0
@@ -7157,20 +5781,15 @@ _write_mailbox:
  	bsr write_local_config_longword
 	rts 	
 .bad_register_write_mailbox:
-#endif
 	moveq #PCI_BAD_REGISTER_NUMBER,D0
 	rts
 
-#ifdef COLDFIRE
-_dma_lock:
-#endif
 _dma_alloc:
 _dma_free:
 
 	moveq #0,D0
 	rts
 
-#ifndef COLDFIRE
 
 dma_lock:
 
@@ -7193,7 +5812,6 @@ _dma_lock:  /* CTPCI DMA freeze workaround */
 	moveq #-1,D0
 	rts
 
-#endif /* COLDFIRE */
 
 #if 1 // #ifdef COLDFIRE
 	
@@ -7457,16 +6075,6 @@ pci_interrupt:
 .interrupt_ok:
 				move.l D5,D0             // num int
 				bsr clear_interrupt
-#ifdef COLDFIRE /* problems with CTPCI */
-				move.l D5,D0             // num int
-				bsr test_interrupt
-#if 1
-				bne.s .interrupt_next_handle
-				rts                      // interrupt not active and finished
-#else /* was */
-				beq .loop_interrupt      // interrupt always active
-#endif
-#endif /* COLDFIRE */
 .interrupt_next_handle:
 				add.l #PCI_DEV_DES_SIZE,A2
 				addq.l #1,A4
@@ -7555,629 +6163,6 @@ test_int_not_used:
 	tst.l D0
 	rts
 
-#ifdef COLDFIRE
-
-#ifdef MCF5445X
-
-enable_interrupt:
-
-	moveq #0,D1
-	bset D0,D1
-	move.l FPGA_IRQEN,D0
-	or.l D1,D0
-	move.l D0,FPGA_IRQEN
-	rts
-	
-disable_interrupt:
-
-	moveq #-1,D1
-	bclr D0,D1
-	move.l FPGA_IRQEN,D0
-	and.l D1,D0
-	move.l D0,FPGA_IRQEN
-	rts
-	
-clear_interrupt:
-
-	moveq #INT0_LO_EPORT3,D0
-	bset.b D0,MCF_EPORT_EPFR
-	rts
-	
-test_interrupt:
-
-	move.l FPGA_IRQEN,D1
-	and.l FPGA_IRQSTATUS,D1
-	btst D0,D1
-	rts
-
-	dc.l 0x58425241          // XBRA
-	dc.l 0x5F504349          // _PCI
-	dc.l 0
-
-int_pciarb:
-
-	move.l D0,-(SP)
-	move.l MCF_PCIARB_PASR,D0
-	move.l D0,MCF_PCIARB_PASR
-	move.l (SP)+,D0
-	rte
-
-int3_pci:                             // same interrupt for 4 sources IntA-D
-	lea -60(SP),SP
-	movem.l D0-A6,(SP)
-	move.l FPGA_IRQEN,D1
-	and.l FPGA_IRQSTATUS,D1
-	and.l #IRQEN_PCI,D1
-	moveq #0,D0
-.loop_find_first_lsb:
-		addq.l #1,D0
-		lsr.l #1,D1 // search the first LSB to 1
-		bcs.s .found_first_lsb
-	bne.s .loop_find_first_lsb
-.found_first_lsb:
-	bsr pci_interrupt        // IntA-D
-	moveq #INT0_LO_EPORT3,D0
-	bset.b D0,MCF_EPORT_EPFR
-	movem.l (SP),D0-A6
-	lea 60(SP),SP
-	rte
-
-#else /* MCF548X-7X */
-
-#ifdef MCF547X /* FIREBEE */
-
-enable_interrupt:                     // D0.L: handle
-
-	move.l A0,-(SP)
-	move.l D1,-(SP)
-	move.w SR,D1
-	move.l D1,-(SP)
-	or.l #0x700,D1           // mask interrupts
-	move.w D1,SR
-	move.l D0,D1             // handle
-	beq .end_enable          // bridge
-	move.l #0x5F504349,D0    // _PCI
-	bsr get_cookie
-	beq .end_enable          // not found
-	add.l #PCI_COOKIE_SIZE+PCI_RSC_HANDLESTOTALSIZE+PCI_DEV_HANDLESTOTALSIZE,D0
-	move.l D0,A0             // used int table
-	move.l D1,D0             // bus/function(H)/slot(L)
-	mulu #PCI_MAX_FUNCTION,D0
-	add.l D0,A0              // offset slot
-	move.l D1,D0
-	swap D0
-	ext.l D0                 // bus/function
-#ifdef COLDFIRE
-	.chip 68060
-#endif
-	divu #PCI_MAX_FUNCTION,D0
-#ifdef COLDFIRE
-	.chip 5200
-#endif
-	move.l D0,-(SP)
-	ext.l D0                 // bus
-	mulu #PCI_MAX_FUNCTION*PCI_MAX_DEVICE,D0
-	add.l D0,A0              // offset bus
-	move.l (SP)+,D0
-	clr.w D0
-	swap D0                  // function
-	add.l D0,A0              // offset function
-	move.l A0,-(SP)
-	move.l D1,D0             // handle
-	moveq #PCIIPR,D1         // Interrupt Pin
-	bsr fast_read_config_byte// 0:no INT, 1:INTA, 2:INTB, 3:INTC, 4:INTD
-	moveq #0,D1
-	move.b D0,D1
-	move.l (SP)+,A0
-	tst.l D1
-	beq.s .end_enable
-	subq.l #1,D1
-	moveq #0,D0
-	move.b PCI_INT_HANDLESTOTALSIZE(A0),D0 // slot offset 0-3
-	add.l D0,D1
-	and.l #3,D1              // INTA-D
-	moveq #ACP_INT_PCI_INTA,D0
-	asl.l D1,D0
-	move.b D0,(A0)           // use INTx for this handle
-	or.l #ACP_INT_ACP_IRQ5,D0
-	or.l D0,ACP_INTERRUPT_ENABLE          
-	move.b MCF_EPORT_EPIER,D0
-	or.l #MCF_EPORT_EPIER_EPIE5,D0
-	move.b D0,MCF_EPORT_EPIER
-	moveq #5,D0
-	bset.b D0,MCF_EPORT_EPFR // clear interrupt
-	move.l #~(MCF_INTC_IMRL_INT_MASK5 + MCF_INTC_IMRL_MASKALL),D0
-	and.l D0,MCF_INTC_IMRL
-.end_enable:
-	move.l (SP)+,D1
-	move.w D1,SR
-	move.l (SP)+,D1
-	move.l (SP)+,A0
-	rts
-
-disable_interrupt:                    // D0.L: handle
-
-	move.l A1,-(SP)
-	move.l A0,-(SP)
-	move.l D1,-(SP)
-	move.w SR,D1
-	move.l D1,-(SP)
-	or.l #0x700,D1           // mask interrupts
-	move.w D1,SR
-	move.l D0,D1             // handle
-	beq .end_disable         // bridge
-	move.l #0x5F504349,D0    // _PCI
-	bsr get_cookie
-	beq .end_disable         // not found
-	add.l #PCI_COOKIE_SIZE+PCI_RSC_HANDLESTOTALSIZE+PCI_DEV_HANDLESTOTALSIZE,D0
-	move.l D0,A0
-	move.l D0,A1
-	move.l D1,D0             // bus/function(H)/slot(L)
-	mulu #PCI_MAX_FUNCTION,D0
-	add.l D0,A1              // offset slot
-	move.l D1,D0
-	swap D0
-	ext.l D0                 // bus/function
-#ifdef COLDFIRE
-	.chip 68060
-#endif
-	divu #PCI_MAX_FUNCTION,D0
-#ifdef COLDFIRE
-	.chip 5200
-#endif
-	move.l D0,-(SP)
-	ext.l D0                 // bus
-	mulu #PCI_MAX_FUNCTION*PCI_MAX_DEVICE,D0
-	add.l D0,A1              // offset bus
-	move.l (SP)+,D0
-	clr.w D0
-	swap D0                  // function
-	add.l D0,A1              // offset function
-	move.l A1,-(SP)
-	move.l A0,-(SP)
-	move.l D1,D0             // handle
-	moveq #PCIIPR,D1         // Interrupt Pin
-	bsr fast_read_config_byte// 0:no INT, 1:INTA, 2:INTB, 3:INTC, 4:INTD
-	moveq #0,D1
-	move.b D0,D1
-	move.l (SP)+,A0
-	move.l (SP)+,A1
-	tst.l D1
-	beq.s .end_disable
-	subq.l #1,D1
-	moveq #0,D0
-	move.b PCI_INT_HANDLESTOTALSIZE(A1),D0 // slot offset 0-3
-	add.l D0,D1
-	and.l #3,D1              // INTA-D
-	clr.b (A1)               // not use INTx for this handle
-	bsr test_int_not_used
-	bne.s .end_disable       // used on another handle
-	moveq #~ACP_INT_PCI_INTA,D0
-	asl.l D1,D0
-	and.l D0,ACP_INTERRUPT_ENABLE    
-.end_disable:
-	move.l (SP)+,D1
-	move.w D1,SR
-	move.l (SP)+,D1
-	move.l (SP)+,A0
-	move.l (SP)+,A1
-	rts
-
-clear_interrupt:
-
-	ext.l D0
-	bne.s .int_clear
-	rts
-.int_clear:
-	or.l D0,ACP_INTERRUPT_CLEAR // clear interrupt
-	rts
-
-test_interrupt:
-
-	ext.l D0
-	bne.s .test_int
-	move.l MCF_INTC_IPRH,D0
-	btst #41-32,D0
-	seq.b D0
-	and.l #1,D0              // 1: interrupt is finished
-	rts
-.test_int:
-	and.l ACP_INTERRUPT_CLEAR,D0
-	seq.b D0
-	and.l #1,D0              // 1: interrupt is finished
-	rts
-
-	dc.l 0x58425241          // XBRA
-	dc.l 0x5F504349          // _PCI
-	dc.l 0
-
-int5_pci:	                         // INTA-D
-
-	move.w #0x2700,SR        // for FreeRTOS native interrupts
-	lea -60(SP),SP
-	movem.l D0-A6,(SP)
-	moveq #3,D7
-	moveq #ACP_INT_PCI_INTA,D6
-.int_abcd_loop:
-		move.l ACP_INTERRUPT_CLEAR,D0 // state
-		and.l ACP_INTERRUPT_ENABLE,D0
-		and.l D6,D0
-		beq.s .next_int_abcd
-		move.l D7,-(SP)
-		move.l D6,-(SP)
-		bsr pci_interrupt
-		move.l (SP)+,D6
-		move.l (SP)+,D7
-.next_int_abcd:
-		add.l D6,D6
-	subq.l #1,D7
-	bpl .int_abcd_loop
-	moveq #ACP_INT_PCI_INTD+ACP_INT_PCI_INTC+ACP_INT_PCI_INTB+ACP_INT_PCI_INTA,D0
-	move.l D0,ACP_INTERRUPT_CLEAR
-	moveq #5,D0
-	bset.b D0,MCF_EPORT_EPFR // clear interrupt
-	movem.l (SP),D0-A6
-	lea 60(SP),SP
-	rte
-
-#else /* MCF548X - M5484LITE-M5485EVB */
-
-enable_interrupt:                     // D0.L: handle
-
-	move.l A0,-(SP)
-	move.l D1,-(SP)
-	move.w SR,D1
-	move.l D1,-(SP)
-	or.l #0x700,D1           // mask interrupts
-	move.w D1,SR
-	move.l D0,D1             // handle
-	beq .end_enable          // bridge
-	move.l #0x5F504349,D0    // _PCI
-	bsr get_cookie
-	beq .end_enable          // not found
-	add.l #PCI_COOKIE_SIZE+PCI_RSC_HANDLESTOTALSIZE+PCI_DEV_HANDLESTOTALSIZE,D0
-	move.l D0,A0             // used int table
-	move.l D1,D0             // bus/function(H)/slot(L)
-	mulu #PCI_MAX_FUNCTION,D0
-	add.l D0,A0              // offset slot
-	move.l D1,D0
-	swap D0
-	ext.l D0                 // bus/function
-#ifdef COLDFIRE
-	.chip 68060
-#endif
-	divu #PCI_MAX_FUNCTION,D0
-#ifdef COLDFIRE
-	.chip 5200
-#endif
-	move.l D0,-(SP)
-	ext.l D0                 // bus
-	mulu #PCI_MAX_FUNCTION*PCI_MAX_DEVICE,D0
-	add.l D0,A0              // offset bus
-	move.l (SP)+,D0
-	clr.w D0
-	swap D0                  // function
-	add.l D0,A0              // offset function
-	move.l D1,D0
-	ext.l D0                 // handle => slot
-	cmp.l #3,D0              // TODO: FIX for bus
-	bcc.s .slot_enable
-	// on board M5485EVB devices
-.enable_int5:
-	moveq #5,D0
-	move.b D0,(A0)           // use INT5 for this handle
-	move.b MCF_EPORT_EPIER,D0
-	or.l #MCF_EPORT_EPIER_EPIE5,D0
-	move.b D0,MCF_EPORT_EPIER
-	move.l #~(MCF_INTC_IMRL_INT_MASK5 + MCF_INTC_IMRL_MASKALL),D0
-	and.l D0,MCF_INTC_IMRL
-	bra.s .end_enable
-.slot_enable:                         // M5484LITE: INT7: INTA-B, INT5 INTC-D
-	move.l A0,-(SP)
-	move.l D0,-(SP)          // slot
-	move.l D1,D0             // handle
-	moveq #PCIIPR,D1         // Interrupt Pin
-	bsr fast_read_config_byte// 0:no INT, 1:INTA, 2:INTB, 3:INTC, 4:INTD
-	moveq #0,D1
-	move.b D0,D1
-	move.l (SP)+,D0          // slot
-	move.l (SP)+,A0
-	tst.l D1
-	beq.s .end_enable
-	// slot 3: INT7: INTA-B, INT5 INTC-D, slot4 (riser): INT7: INTB-A, INT5 INTD-C
-	subq.l #1,D1
-	cmpl #4,D0
-	bne.s .not_a_riser
-	bchg #0,D1
-.not_a_riser:
-	cmp.l #2,D1
-	bcc.s .enable_int5
-	moveq #7,D0
-	move.b D0,(A0)           // use INT7 for this handle
-	move.b MCF_EPORT_EPIER,D0
-	or.l #MCF_EPORT_EPIER_EPIE7,D0
-	move.b D0,MCF_EPORT_EPIER
-	move.l #~(MCF_INTC_IMRL_INT_MASK7 + MCF_INTC_IMRL_MASKALL),D0
-	and.l D0,MCF_INTC_IMRL
-.end_enable:
-	move.l (SP)+,D1
-	move.w D1,SR
-	move.l (SP)+,D1
-	move.l (SP)+,A0
-	rts
-
-disable_interrupt:                    // D0.L: handle
-
-	move.l A1,-(SP)
-	move.l A0,-(SP)
-	move.l D1,-(SP)
-	move.w SR,D1
-	move.l D1,-(SP)
-	or.l #0x700,D1           // mask interrupts
-	move.w D1,SR
-	move.l D0,D1             // handle
-	beq .end_disable         // bridge
-	move.l #0x5F504349,D0    // _PCI
-	bsr get_cookie
-	beq .end_disable         // not found
-	add.l #PCI_COOKIE_SIZE+PCI_RSC_HANDLESTOTALSIZE+PCI_DEV_HANDLESTOTALSIZE,D0
-	move.l D0,A0
-	move.l D0,A1
-	move.l D1,D0             // bus/function(H)/slot(L)
-	mulu #PCI_MAX_FUNCTION,D0
-	add.l D0,A1              // offset slot
-	move.l D1,D0
-	swap D0
-	ext.l D0                 // bus/function
-#ifdef COLDFIRE
-	.chip 68060
-#endif
-	divu #PCI_MAX_FUNCTION,D0
-#ifdef COLDFIRE
-	.chip 5200
-#endif
-	move.l D0,-(SP)
-	ext.l D0                 // bus
-	mulu #PCI_MAX_FUNCTION*PCI_MAX_DEVICE,D0
-	add.l D0,A1              // offset bus
-	move.l (SP)+,D0
-	clr.w D0
-	swap D0                  // function
-	add.l D0,A1              // offset function
-	move.l D1,D0
-	ext.l D0                 // handle => slot
-	cmp.l #3,D0              // TODO: FIX for bus
-	bcc.s .slot_disable
-	// on board M5485EVB devices
-.disable_int5:
-	clr.b (A1)               // not use INT5 for this handle
-	bsr test_int_not_used
-	bne .end_disable         // used on another handle
-	move.l #MCF_INTC_IMRL_INT_MASK5,D0
-	or.l D0,MCF_INTC_IMRL
-	move.b MCF_EPORT_EPIER,D0
-	and.l #~MCF_EPORT_EPIER_EPIE5,D0
-	move.b D0,MCF_EPORT_EPIER
-	bra.s .end_disable
-.slot_disable:
-	move.l A1,-(SP)
-	move.l A0,-(SP)
-	move.l D0,-(SP)          // slot
-	move.l D1,D0             // handle
-	moveq #PCIIPR,D1         // Interrupt Pin
-	bsr fast_read_config_byte// 0:no INT, 1:INTA, 2:INTB, 3:INTC, 4:INTD
-	moveq #0,D1
-	move.b D0,D1
-	move.l (SP)+,D0          // slot
-	move.l (SP)+,A0
-	move.l (SP)+,A1
-	tst.l D1
-	beq.s .end_disable
-	// slot 3: INT7: INTA-B, INT5 INTC-D, slot4 (riser): INT7: INTB-A, INT5 INTD-C
-	subq.l #1,D1
-	cmpl #4,D0
-	bne.s .not_a_riser2
-             bchg #0,D1
-.not_a_riser2:
-	cmp.l #2,D1
-	bcc.s .disable_int5
-	clr.b (A1)               // not use INT7 for this handle
-	bsr test_int_not_used
-	bne.s .end_disable       // used on another handle
-	move.l #MCF_INTC_IMRL_INT_MASK7,D0
-	or.l D0,MCF_INTC_IMRL
-	move.b MCF_EPORT_EPIER,D0
-	and.l #~MCF_EPORT_EPIER_EPIE7,D0
-	move.b D0,MCF_EPORT_EPIER
-.end_disable:
-	move.l (SP)+,D1
-	move.w D1,SR
-	move.l (SP)+,D1
-	move.l (SP)+,A0
-	move.l (SP)+,A1
-	rts
-
-clear_interrupt:
-
-	ext.l D0
-	bne.s .usb_clear
-	rts
-.usb_clear:
-	cmp.l #7,D0
-	beq.s .slot_clear
-	moveq #5,D0
-	bset.b D0,MCF_EPORT_EPFR
-	rts
-.slot_clear:
-	moveq #7,D0
-	bset.b D0,MCF_EPORT_EPFR
-	rts
-
-test_interrupt:
-
-	ext.l D0
-	bne.s .usb_test_interrupt
-	move.l MCF_INTC_IPRH,D0
-	btst #41-32,D0
-	seq.b D0
-	and.l #1,D0              // 1: interrupt is finished
-	rts
-.usb_test_interrupt:
-	cmp.l #7,D0
-	beq.s .slot_test_interrupt
-	move.l MCF_INTC_IPRL,D0
-	btst #5,D0
-	seq.b D0
-	and.l #1,D0              // 1: interrupt is finished
-	rts
-.slot_test_interrupt:
-	move.l MCF_INTC_IPRL,D0
-	btst #7,D0
-	seq.b D0
-	and.l #1,D0              // 1: interrupt is finished
-	rts
-
-	dc.l 0x58425241          // XBRA
-	dc.l 0x5F504349          // _PCI
-	dc.l 0
-
-	// INT7 call by software INT2 (can be masked)	
-int2_pci:	                         // INTA-B
-
-	move.w #0x2700,SR        // for FreeRTOS native interrupts
-	move.l D0,-(SP)
-	lea -56(SP),SP
-	movem.l D1-A6,(SP)
-	move.l #~MCF_INTC_INTFRCL_INTFRC2,D0
-	and.l D0,MCF_INTC_INTFRCL
-	moveq #7,D0
-	bsr pci_interrupt
-	movem.l (SP),D1-A6
-	lea 56(SP),SP
-    	move.l #MCF_INTC_IMRL_INT_MASK7,D0
-	and.l MCF_INTC_IMRL,D0
-	bne.s .not_int7          // INT7 disabled by the handler
-	move.b MCF_EPORT_EPIER,D0
-	or.l #MCF_EPORT_EPIER_EPIE7,D0 // enable
-	move.b D0,MCF_EPORT_EPIER
-.not_int7:
-	move.l (SP)+,D0
-	rte
-
-	dc.l 0x58425241          // XBRA
-	dc.l 0x5F504349          // _PCI
-	dc.l 0
-	
-int5_pci:	                         // INTC-D
-
-	move.w #0x2700,SR        // for FreeRTOS native interrupts
-	lea -60(SP),SP
-	movem.l D0-A6,(SP)
-	moveq #5,D0
-	bsr pci_interrupt
-	moveq #5,D0
-	bset.b D0,MCF_EPORT_EPFR // clear interrupt
-	movem.l (SP),D0-A6
-	lea 60(SP),SP
-	rte
-
-	dc.l 0x58425241          // XBRA
-	dc.l 0x5F504349          // _PCI
-	dc.l 0
-
-int7_pci:	                         // INTA-B
-
-	move.l D0,-(SP)
-	move.b MCF_EPORT_EPIER,D0
-	and.l #~MCF_EPORT_EPIER_EPIE7,D0 // disable
-	move.b D0,MCF_EPORT_EPIER
-	moveq #7,D0
-	bset.b D0,MCF_EPORT_EPFR // clear interrupt
-	move.l #MCF_INTC_INTFRCL_INTFRC2,D0
-	or.l D0,MCF_INTC_INTFRCL // force INT 2
-	move.l (SP)+,D0
-	rte
-	
-#endif /* MCF547X */
-
-	dc.l 0x58425241          // XBRA
-	dc.l 0x5F504349          // _PCI
-	dc.l 0
-
-int_pciarb:
-
-	move.l D0,-(SP)
-	move.l MCF_PCIARB_PASR,D0
-	move.l D0,MCF_PCIARB_PASR
-	move.l (SP)+,D0
-	rte
-
-	dc.l 0x58425241          // XBRA
-	dc.l 0x5F504349          // _PCI
-	dc.l 0
-
-int_xlbpci:
-
-	move.l D0,-(SP)
-	move.l D1,-(SP)
-	move.l D2,-(SP)
-	move.l MCF_PCI_PCIGSCR,D0 // PERR and SERR seems on this interrupt
-	move.l D0,MCF_PCI_PCIGSCR
-	move.l MCF_PCI_PCIISR,D0
-	move.l D0,MCF_PCI_PCIISR
-	moveq #0,D0              // bridge
-	moveq #PCICSR,D1         // PCI Command / Status Register
-	bsr fast_read_config_longword
-	move.l D0,-(SP)          // value
-	move.l D0,D2
-	moveq #0,D0              // bridge
-	moveq #PCICSR,D1         // PCI Command / Status Register
-	bsr write_config_longword // clear errors
-	move.l (SP)+,D0
-	move.l #MCF_PCI_PCISCR_PE,D1
-	and.l D0,D1
-	beq.s .no_parity_error
-#if 0 // #ifdef DEBUG
-	move.l A0,-(SP)
-	lea debug42(PC),A0
-	bsr debug_display_string
-	move.l (SP)+,A0
-#else
-	nop	
-#endif
-.no_parity_error:
-	move.l #MCF_PCI_PCISCR_MA,D1
-	and.l D0,D1
-	beq.s .no_initiator_abort
-#if 0 // #ifdef DEBUG
-	move.l A0,-(SP)
-	lea debug43(PC),A0
-	bsr debug_display_string
-	move.l (SP)+,A0
-#else
-	nop	
-#endif
-.no_initiator_abort:
-	move.l #MCF_PCI_PCISCR_TR,D1
-	and.l D0,D1
-	beq.s .no_target_abort
-#if 0 // #ifdef DEBUG	
-	move.l A0,-(SP)
-	lea debug44(PC),A0
-	bsr debug_display_string
-	move.l (SP)+,A0
-#else
-	nop
-#endif
-.no_target_abort:
-	move.l (SP)+,D2
-	move.l (SP)+,D1
-	move.l (SP)+,D0
-	rte
-	
-#endif /* MCF5445X */
-	
-#else  /* ATARI - CTPCI/PLX9054 */
 
 enable_interrupt:                     // D0.L: handle
 
@@ -8396,7 +6381,6 @@ intd_ctpci:
 	movem.l (SP)+,D0-A6
 	rte
 
-#endif /* COLDFIRE */
 	
 display_string:
 
@@ -8457,49 +6441,18 @@ hex_char:
 
 display_char:
 
-#ifdef COLDFIRE
-	lea -24(SP),SP
-	movem.l D0-D2/A0-A2,(SP)
-#else
 	movem.l D0-D2/A0-A2,-(SP)
-#endif
 	move.w D0,-(SP)
 	move.w #2,-(SP)
 	move.w #3,-(SP)          // Bconout
 	trap #13
 	addq.l #6,SP
-#ifdef COLDFIRE
-	movem.l (SP),D0-D2/A0-A2
-	lea 24(SP),SP
-#else
 	movem.l (SP)+,D0-D2/A0-A2
-#endif
 	rts   
 
 tab_pci_device:
-#ifdef COLDFIRE
-#ifdef MCF5445X
-	.byte 16                 // host bridge MCF5445X
-	.byte 17,18,19,20        // device number n where AD[n] select IDSEL
-#else /* MCF548X */
-#ifdef MCF547X /* FIREBEE */
-	.byte 16                 // host bridge MCF547X
-	// AD17 is the USB Controller
-	// AD18 and more are slots ?
-	.byte 17,18,19,20,21,22,23,24,25,26,27,28,29,30 // device number n where AD[n] select IDSEL
-#else /* MCF548X - M5484LITE/M5485EVB */
-	.byte 16                 // host bridge MCF548X
-	// on the Fire Engine AD17 is the USB Controller
-	//                    AD18 is the Graphic Controller (not on M5484LITE)
-	//                    AD20 is the 1st PCI slot
-	//                    AD21 is the 2nd PCI slot (not on M5484LITE)
-	.byte 17,18,20,21        // device number n where AD[n] select IDSEL
-#endif /* MCF547X */
-#endif /* MCF5445X */
-#else /* ATARI - CTPCI/PLX9054 */
 	.byte 20-11              // host bridge PLX9054
 	.byte 21-11,22-11,23-11,24-11 // device number n-11 where AD[n] select IDSEL
-#endif /* COLDFIRE */
 tab_pci_device2:
 	.byte  0, 1, 2, 3, 4, 5, 6, 7
 	.byte  8, 9,10,11,12,13,14,15
@@ -8669,21 +6622,12 @@ pciinfo174:	.asciz "(Management)"
 pciinfo999:	.asciz "Device does not fit in any defined classes"
 
 scanning_devices:
-#ifdef COLDFIRE
-	.byte 13,10
-	.ascii "Scanning PCI devices..."
-	.byte 13,10,0
-	.byte 13,10
-	.ascii "Recherche cartes PCI..."
-	.byte 13,10,0
-#else /* ATARI - CTPCI/PLX9054 */
 	.byte 13,10
 	.ascii "CTPCI found, scanning PCI devices..."
 	.byte 13,10,0
 	.byte 13,10
 	.ascii "CTPCI trouv‚e, recherche cartes PCI..."
 	.byte 13,10,0
-#endif
 separator:
 	.asciz " | "
 hor_separator:

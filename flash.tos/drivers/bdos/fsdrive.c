@@ -36,9 +36,6 @@
 #define  _MINT_OSTRUCT_H
 #include <osbind.h>
 #include "config.h"
-#ifdef LWIP
-#include "../../include/vars.h"
-#endif
 #include "portab.h"
 #include "asm.h"
 #include "fs.h"
@@ -103,16 +100,6 @@ long    ckdrv(short d)
 
     if (!(mask & drvsel))
     {       /*  drive has not been selected yet  */
-#ifdef LWIP
-        extern long pxCurrentTCB, tid_TOS;
-        if(pxCurrentTCB != tid_TOS)
-        {
-            BPB * (*p)(short);
-            p = (BPB * (*)(short))*(void **)hdv_bpb;
-            b = (*p)(d);
-        }
-        else       
-#endif
         b = (BPB *) Getbpb(d);
 
         if ( !(long)b )             /* M01.01.1007.01 */

@@ -31,7 +31,6 @@ loop1:	clr.b	24(a0,d0.l)
 	bne.s	loop1
 end1:
 
-#ifndef COLDFIRE
 
 	.align	2
 	.long	0x526
@@ -40,7 +39,6 @@ begin2:
 	bsr	begin2-0x526+0x25E0
 end2:
 
-#endif
 
 	.align	2
 	.long	0x2632

@@ -257,9 +257,6 @@ TEDINFO *rs_tedinfo;
 char **rs_strings;
 LISTE_RES *liste_rez;
 int offset_select, nb_res, sel_color, type_modes;
-#if defined(COLDFIRE) && defined(MCF547X) /* FIREBEE */
-extern unsigned long videl_modedb_len;
-#endif
 
 /* global variables VDI & AES */
 
@@ -318,10 +315,6 @@ short set_video(void)
 			type_modes = MODES_VESA;
 		else if(GET_DEVID(modecode) < (34 + total_modedb))
 			type_modes = MODES_RADEON;
-#if defined(COLDFIRE) && defined(MCF547X) /* FIREBEE */
-		else if(!video_found && videl_modedb_len)
-			type_modes = MODES_MON1;
-#endif
 		else if((video_found == 1) && rinfo->mon1_dbsize)
 			type_modes = MODES_MON1;
 		else if((video_found == 2) && smiinfo->mon1_dbsize)
@@ -803,9 +796,6 @@ int init_rsc(void)
 		 		rs_object_menu2[MODMON1].ob_state |= DISABLED;
 		 	break;
 		default:
-#if defined(COLDFIRE) && defined(MCF547X) /* FIREBEE */
-			if(!videl_modedb_len)
-#endif
 				rs_object_menu2[MODMON1].ob_state |= DISABLED;
 			break;
 	}		

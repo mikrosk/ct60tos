@@ -2633,15 +2633,7 @@ int vixPlaybackCopyFrame(vidix_dma_t *dmai)
 		return(E2BIG);
 	if((dmai->flags & BM_DMA_SYNC) == BM_DMA_SYNC)
 		while(vixQueryDMAStatus() != 0);
-#ifdef COLDFIRE
-#if (__GNUC__ > 3)
-		asm volatile (" .chip 68060\n\t cpusha DC\n\t .chip 5485\n\t"); /* from CF68KLIB */
-#else
-		asm volatile (" .chip 68060\n\t cpusha DC\n\t .chip 5200\n\t"); /* from CF68KLIB */
-#endif
-#else /* 68060 */
 		asm volatile (" cpusha DC\n\t");
-#endif /* COLDFIRE */
 
 //	n = dmai->size / 4096;
 //	if(dmai->size % 4096)
