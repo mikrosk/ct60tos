@@ -131,13 +131,14 @@ clean:
 	rm -rf $(OBJDIR)
 	rm -f $(BINHEX_BINARY) $(COMPRESS_BINARY) $(HEX) drivers.map $(DRIVERFVDI)
 
-$(HEX):	$(OBJS)
+temp.bin: #$(OBJS)
 	$(LD) --oformat srec -Map drivers.map --cref -T drivers.lk \
-	--entry Start -o $(HEX) $(OBJS)
-	#./$(COMPRESS_BINARY) $(HEX) temp.bin
-	mv $(HEX) temp.bin
+	--entry Start -o uncompressed_$(HEX) $(OBJS)
+	./$(COMPRESS_BINARY) uncompressed_$(HEX) temp.bin
+
+$(HEX):	temp.bin
 	objcopy --verbose -I binary -O srec --adjust-vma=$(FLASH_DRIVERS) temp.bin $(HEX)
-	rm temp.bin 
+	#rm temp.bin 
 
 $(DRIVERFVDI):	$(OBJDIR)/video/spec.o $(OBJDIR)/video/accel.o $(OBJDIR)/radeon/radeon_base.o $(OBJDIR)/timer.o $(OBJSDRIVERFVDI)
 	$(LD) $(LDFLAGS) -o $(DRIVERFVDI) $(OBJDIR)/video/spec.o $(OBJDIR)/video/accel.o $(OBJDIR)/radeon/radeon_base.o $(OBJDIR)/timer.o $(OBJSDRIVERFVDI)
