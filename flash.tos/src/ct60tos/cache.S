@@ -31,6 +31,8 @@ begin1:
 // [00e00638] 203c 0000 3111            move.l    #$00003111,d0
 // [00e0063e] 4e7b 0002                 movec     d0,cacr
 	bsr.l	begin1-0x638+0x250C8
+	nop
+	nop
 end1:
 
 	.align	2
@@ -88,23 +90,25 @@ begin7:
 end7:
 
 	.align	2
-	.long	0x860
+	.long	0x85A
 	.long	end8-begin8
 begin8:
 // flushCaches: (this has changed its purpose on 060, it's not called to flush but to flush and disable caches, callers are not the same anymore!)
 // [00e0085a] 40e7                      move.w    sr,-(a7)
 // [00e0085c] 007c 0700                 ori.w     #$0700,sr
-// [00e00860] 4e7a 0002               > movec     cacr,d0
-// [00e00864] 80bc 0000 0808          > or.l      #$00000808,d0
-// [00e0086a] 4e7b 0002               > movec     d0,cacr
+// [00e00860] 4e7a 0002                 movec     cacr,d0
+// [00e00864] 80bc 0000 0808            or.l      #$00000808,d0
+// [00e0086a] 4e7b 0002                 movec     d0,cacr
 // [00e0086e] 46df                      move.w    (a7)+,sr
 // [00e00870] 4e75                      rts
+	move.w	sr,-(sp)
+	or.w	#0x700,sr
 	cpusha	dc
 	clr.l	d0
 	movec.l	d0,cacr
 	cinva	bc
-	nop
-	nop
+	move.w	(sp)+,sr
+	rts
 end8:
 
 	.align	2
@@ -136,8 +140,7 @@ begin10:
 // [00e01956] 46df                      move.w    (a7)+,sr
 // [00e01958] 31c1 8606                 move.w    d1,($FFFF8606).w
 	cpusha	dc
-// jumps to 0x00e01958
-	bra.s	begin10-0x18CA+0x18DE
+	bra.s	begin10-0x1944+0x1958
 end10:
 
 	.align	2
@@ -170,12 +173,33 @@ end12:
 	.long	0x990C
 	.long	end13-begin13
 begin13:
-// VDI (clear instruction cache - CI)
-// [00e0990c] 4e7a 2002                 movec     cacr,d2
-// [00e09910] 08c2 0003                 bset      #3,d2
-// [00e09914] 4e7b 2002                 movec     d2,cacr
-	cinva	ic
-	bra.s	begin13-0x990C+0x9918
+	// v_pline, thanks to Roger Burrows
+	subq.w	#1,d3
+	movem.w	code13(pc),D0/D1/A1
+	movea.l	a2,a0
+	move.l	0x652(a4),d2
+loop13:
+	roxr.l	#1,d2
+	bcs.s	set13
+	move.w	d0,(a0)+
+	dbf	d3,loop13
+	move.w	a1,(a0)+
+	cpusha	bc
+	rts
+set13:
+	move.w	d1,(a0)+
+	dbf	d3,loop13
+	move.w	a1,(a0)+
+	cpusha	bc
+	rts
+code13:
+	and.w	d0,(a5)+
+	or.w	d1,(a5)+
+	jmp	(a3)
+	nop
+	nop
+	nop
+	nop
 end13:
 
 	.align	2
