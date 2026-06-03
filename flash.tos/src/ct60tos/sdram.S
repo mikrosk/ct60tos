@@ -4330,7 +4330,7 @@ add_sdram:
 	moveq #10,D0
 	bsr display_char
 .not_infos:
-	move.l #0x01000000,D1
+	move.l #0x01002000,D1    // skip 8K for the supervisor stack
 	move.l ramtop,D0
 	sub.l D1,D0
 	ble .not_sdram

@@ -43,4 +43,23 @@ begin3:
 	.short	0x11
 end3:
 
+/* Move the supervisor/exception stack base from ST-RAM ($8870) into TT-RAM.
+ * Stack region [0x01000000,0x01002000) (8K, page 0 of SDRAM); SP top = 0x01002000.
+ * add_sdram (sdram.S) raises the Maddalt start to 0x01002000 so Mxalloc never
+ * hands out this region; the destructive RAM test still zeroes it (harmless).
+ */
+	.align	2
+	.long	0x1208			// lea 0x8870,sp -> lea 0x01002000,sp
+	.long	end4-begin4
+begin4:
+	.word	0x4ff9			// lea (abs.l),sp
+	.long	0x01002000
+end4:
 
+	.align	2
+	.long	0x1F0D8			// move.l #0x8870,(a0) -> #0x01002000
+	.long	end5-begin5
+begin5:
+	.word	0x20bc			// move.l #imm,(a0)
+	.long	0x01002000
+end5:
