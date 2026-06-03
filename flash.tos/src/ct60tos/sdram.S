@@ -1571,6 +1571,7 @@ boot_drive:
 
 	movem.l D0-A5,-(SP)
 	link A6,#-18
+	bsr init_cookie_ct60
 	clr.l -(SP)
 	move.l #CT60_BOOT_ORDER,-(SP)
 	move.w #CT60_MODE_READ,-(SP)
@@ -4483,7 +4484,6 @@ add_sdram:
 	move.l #0x752019F3,memvalid
 	move.l #0x237698AA,memval2
 	move.l #0x5555AAAA,memval3
-	bsr init_cookie_ct60
 	moveq #3,D0
 	jsr 0xE00BD2
 	move.l hdv_boot,A0
