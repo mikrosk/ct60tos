@@ -109,19 +109,7 @@ cf1:
 	move.w #0x17,D0
 cf2:
 		move.l (A0)+,(A1)+
-	dbf D0,cf2	
-	lea (0x2000-0x60)(A1),A1
-	move.l A1,D3
-	lea 0xE49434,A0 /* logo ATARI */
-	move.w #0x101,D0
-cf3:
-		move.l (A0)+,(A1)+
-	dbf D0,cf3
-	addq.l #4,A0 
-	move.l D3,(A1)+
-	move.l (A0)+,(A1)+
-	move.l (A0)+,(A1)+		
-	move.w (A0)+,(A1)+
+	dbf D0,cf2
 	move.l phystop,A2
 	clr.l flag_cache(A2)
 	clr.l save_hz_200(A2)
@@ -166,12 +154,51 @@ cf3:
 	movem.l (SP)+,D0-D3/A0-A2
 	rts
 	
-logo_atari:
+#define	logoaddr 0xe49434
+#define	dstY 4
+#define	srcX 96
+#define	srcY 86
 
-	move.l _memtop,A0
-	add.l #0x6408,A0
-	pea.l (A0)
-	jmp 0xE00666
+logo_atari:
+	movem.l	d0-d7/a0-a6,-(sp)
+	dc.w	0xa000
+	movem.w	(a0),d6/d7	// d6=planes	d7=bytes/line
+	lea	logoaddr,a0
+	move.l	0x44e.w,a1
+
+	move.w	#dstY,d0
+	mulu.w	d7,d0
+	add.w	d0,a1
+	subq	#1,d6
+blit_plane:
+	move.w	#(srcY-1),d4
+.linelp:
+	move.l	a1,a2
+	move.w	#(srcX/16)-1,d5
+.planelp:
+	move.w	(a0)+,d0
+	move.w	d6,d3
+	cmp.w	#15,d6
+	bne.s	.bpllp
+
+.tclp:
+	asl.w	#1,d0
+	scc.b	d2
+	ext.w	d2
+	move.w	d2,(a2)+
+	dbra	d3,.tclp
+	bra.s	.bpldone
+.bpllp:	move.w	d0,(a2)+
+	dbra	d3,.bpllp
+.bpldone:
+	dbra	d5,.planelp
+	add.w	d7,a1
+	dbra	d4,.linelp
+
+blitdone:
+	movem.l	(sp)+,d0-d7/a0-a6
+
+	jmp 0xE0066C            // skip ROM blitter logo draw (0xE00666)
 	
 	
 	dc.l 0x58425241  /* XBRA */
