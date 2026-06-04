@@ -451,6 +451,30 @@ set_external_clock:
 
 	movem.l D0-D2/A0-A1,-(SP)
 	lea.l 0xFFFF8200,A0     // VIDEL
+	bsr detect_supervidel   // SuperVidel present ?
+	beq.s .no_supervidel    // no => measure VIDEL clocks
+	bclr #0,0xA(A0)         // SuperVidel: force internal (VGA) clock, skip measure
+	move.l cookie,D1        // build _FRQ=25 / _FRE=0 cookies
+	beq.s .sv_done          // no cookie jar
+	move.l D1,A1
+.sv_find_cookie:
+		tst.l (A1)
+		beq.s .sv_cookie_free
+		addq.w #8,A1
+	bra.s .sv_find_cookie
+.sv_cookie_free:
+	move.l 4(A1),12(A1)     // _FRQ internal clock = 25 MHz (VGA)
+	move.l #0x5F465251,(A1)+
+	move.l #25,(A1)+
+	clr.l (A1)
+	move.l 4(A1),12(A1)     // _FRE external clock = 0 (none)
+	move.l #0x5F465245,(A1)+
+	clr.l (A1)+
+	clr.l (A1)
+.sv_done:
+	movem.l (SP)+,D0-D2/A0-A1
+	rts
+.no_supervidel:
 	move.w 0xC0(A0),D0      // vco_hi
 	move.w D0,D2
 	bclr #2,D0              // 32 MHz
@@ -489,7 +513,34 @@ set_external_clock:
 	move.w D2,0xC0(A0)      // restore vco_hi
 	movem.l (SP)+,D0-D2/A0-A1
 	rts
-	
+
+detect_supervidel:
+	move.w SR,-(SP)
+	or.w #0x0700,SR         // mask interrupts
+	move.l A0,-(SP)
+	move.l A1,-(SP)
+	movec.l vbr,A0
+	move.l 8(A0),-(SP)      // save bus error vector
+	lea .sv_buserr(PC),A1
+	move.l A1,8(A0)         // install temp handler (PC-relative => relocatable)
+	move.l SP,A1            // SP marker to unwind the exception frame
+	moveq #1,D0             // assume present
+	nop
+	tst.b 0x80010000        // probe SuperVidel SV_CTRL
+	nop
+	bra.s .sv_restore
+.sv_buserr:
+	move.l A1,SP            // bus error => discard 060 access frame
+	moveq #0,D0             // SuperVidel absent
+.sv_restore:
+	movec.l vbr,A0
+	move.l (SP)+,8(A0)      // restore bus error vector
+	move.l (SP)+,A1
+	move.l (SP)+,A0
+	move.w (SP)+,SR
+	tst.b D0
+	rts
+
 measure_clock_videl:                 // return value in MHz
                         
 	movem.l D1-A6,-(SP)
