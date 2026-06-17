@@ -111,8 +111,6 @@ cf2:
 		move.l (A0)+,(A1)+
 	dbf D0,cf2
 	move.l phystop,A2
-	clr.l flag_cache(A2)
-	clr.l save_hz_200(A2)
 	clr.l flag_statvec(A2)
 	clr.l power_flag(A2)
 	lea adr_fonts(A2),A2
