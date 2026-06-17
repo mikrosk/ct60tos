@@ -46,9 +46,10 @@ picture_boot:
 	
 fix_modecode:
 
-	move.l D1,-(SP)
+	movem.l D1/D2,-(SP)
 	move.w modecode,D0
 	and.w #0x1FF,D0                           // valid bits
+	move.w D0,D2                              // save NVRAM mode (for VGA-change test)
 	move.b 0xFFFF8006,D1
 	lsr.w #6,D1                               // 0:ST nomo, 1:ST col, 2:VGA, 3:TV
 	bclr #4,D0                                // VGA
@@ -59,12 +60,12 @@ fix_modecode:
 	moveq #7,D1	
 	and.w D0,D1                               // bits/pixel code
 	btst #7,D0                                // STMODES
-	beq.s .normal_mode
+	beq.s .falcon_mode
 	bclr #6,D0                                // no OVERSCAN with STMODES
 	cmp.w #3,D1
 	bcs.s .st_modes
 	bclr #7,D0                                // remove STMODES in 256 or 65K colors
-	bra.s .normal_mode
+	bra.s .falcon_mode
 .st_modes:
 	tst.w D1
 	bne.s .not_640x400
@@ -86,13 +87,20 @@ fix_modecode:
 	btst #4,D0                                // VGA
 	bne.s .normal_mode
 	bclr #8,D0                                // VERTFLAG
+	bra.s .normal_mode
+.falcon_mode:                                 // Falcon mode: adapt VERTFLAG to the monitor
+	move.w D0,D1                              // corrected mode
+	eor.w D2,D1                               // bit4 set when the VGA bit changed (monitor != NVRAM)
+	btst #4,D1
+	beq.s .normal_mode                        // same monitor type => keep VERTFLAG
+	bchg #8,D0                                // flip VERTFLAG: double-line <-> interlace
 .normal_mode:
 	btst #4,D0                                // VGA
 	beq.s .no_vga
 	bclr #6,D0                                // no OVERSCAN in VGA
 .no_vga:
 	move.w D0,modecode
-	move.l (SP)+,D1
+	movem.l (SP)+,D1/D2
 	rts
 	
 picture_build:                                         // target A0
