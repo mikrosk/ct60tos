@@ -161,10 +161,12 @@ _060_real_divbyzero:
 _060_real_trace:
 _060_real_access:
 _060_isp_done:
+	rte
 _060_real_lock_page:
 _060_real_unlock_page:
-	rte
-	
+	clr.l D0
+	rts
+
 _060_real_fline:
 	jmp ([0x7F4])
 
