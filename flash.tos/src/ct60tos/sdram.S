@@ -1192,13 +1192,13 @@ message15:	.byte 27
 	.ascii "."
 	.byte ((VERSION/16) & 0xF) + 0x30
 	.byte (VERSION & 0xF) + 0x30
-	.asciz "c "
+	.asciz "e "
 message15b:	
-	.ascii "2005 July "
+	.ascii "2026 June "
 	.byte 27
 	.ascii "q"
 	.byte 13,10,0
-	.ascii "Juillet 2005 "
+	.ascii "Juin 2026 "
 	.byte 27
 	.ascii "q"
 	.byte 13,10,0

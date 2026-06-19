@@ -454,7 +454,7 @@ char *rs_strings[] = {
 	"OK",
 	"Annule",
 	
-	"CT60 Configuration V1.03c Juillet 2005","","",
+	"CT60 Configuration V1.03e Juin 2026","","",
 	"Ce CPX et systäme:","","",
 	"Didier MEQUIGNON","","",
 	"aniplay@wanadoo.fr","","",
@@ -579,7 +579,7 @@ char *rs_strings_en[] = {
 	"OK",
 	"Cancel",
 
-	"CT60 Configuration V1.03c July 2005","","",
+	"CT60 Configuration V1.03e June 2026","","",
 	"This CPX and system:","","",
 	"Didier MEQUIGNON","","",
 	"aniplay@wanadoo.fr","","",

@@ -1,4 +1,4 @@
-This is CT60 TOS 1.03d based on 1.03c with modifications by Willy. It contains the complete archive with updated both sources and binaries. Please note that the TOS still announces itself as 1.03c, I left this to preserve 1:1 binary compatibility with Willy's release.
+This is CT60 TOS 1.03e based on 1.03c with modifications by Willy and my own changes. It contains the complete archive with updated both sources and binaries.
 
 Releases from 1.03c onwards are available in the [releases section](https://github.com/mikrosk/ct60tos/releases). All the official releases can be accessed as [separate commits](https://github.com/mikrosk/ct60tos/commits/master) (click on `<>` button, then `Clone or download` and `Download ZIP`).
 
