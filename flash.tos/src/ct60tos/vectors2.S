@@ -193,42 +193,36 @@ _060_real_snan:
 	fsave -(SP)
 	move.w #0x6000,2(SP)
 	frestore (SP)+
-	fmovem.l #0,FPCR
 	jmp ([0x7DC])
 	
 _060_real_operr:
 	fsave -(SP)
 	move.w #0x6000,2(SP)
 	frestore (SP)+
-	fmovem.l #0,FPCR
 	jmp ([0x7E0])
 	
 _060_real_ovfl:
 	fsave -(SP)
 	move.w #0x6000,2(SP)
 	frestore (SP)+
-	fmovem.l #0,FPCR
 	jmp ([0x7E4])
 	
 _060_real_unfl:
 	fsave -(SP)
 	move.w #0x6000,2(SP)
 	frestore (SP)+
-	fmovem.l #0,FPCR
 	jmp ([0x7E8])
 
 _060_real_dz:
 	fsave -(SP)
 	move.w #0x6000,2(SP)
 	frestore (SP)+
-	fmovem.l #0,FPCR
 	jmp ([0x7EC])
 
 _060_real_inex:
 	fsave -(SP)
 	move.w #0x6000,2(SP)
 	frestore (SP)+
-	fmovem.l #0,FPCR
 	jmp ([0x7F0])
 	
 _060_real_fpu_disabled:
