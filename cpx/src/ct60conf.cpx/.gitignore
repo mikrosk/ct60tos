@@ -1,0 +1,6 @@
+*.O
+*.PDB
+CT60TEMP.APP
+CONVERT.PRG
+ct60temp.hex
+CT60CONF.CP

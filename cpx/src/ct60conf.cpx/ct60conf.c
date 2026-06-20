@@ -13,6 +13,11 @@
 #include "ct60.h"
 #include "ct60ctcm.h"
 
+#define CDECL cdecl
+#define CLOCKS_PER_SEC CLK_TCK
+#define NVMaccess(op,start,count,buf) \
+	(int)xbios(0x2e,(int)(op),(int)(start),(int)(count),(char*)(buf))
+
 /* #define LIGHT */					/* without language & video */
 /* #define ALERT_INSTALL_CT60TEMP */
 /* #define DEBUG */

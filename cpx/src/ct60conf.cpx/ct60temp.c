@@ -32,6 +32,7 @@
 #define Suptime(uptime,avenrun) gemdos(0x13f,(long)(uptime),(long)(avenrun))
 #define Sync() gemdos(0x150)
 #define Shutdown(mode) gemdos(0x151,(long)(mode))
+#define CLOCKS_PER_SEC CLK_TCK
 
 typedef struct
 {
