@@ -239,7 +239,9 @@ extern int read_i2c(long device_address);
 
 HEAD config={0,2,2,0x11,'/',1,0x1b2,0x87,0,50,0,0,1,0,1,1,MIN_FREQ,1,1};
 
+#if 0
 #include "ct60temp.hex"
+#endif
 
 /* global variables */
 
@@ -1337,6 +1339,7 @@ CPXINFO* CDECL cpx_init(XCPB *xcpb)
 	else										/* single task system */
 	{
 		if((ap_id=appl_find("XCONTROL"))<0
+		 && (ap_id=appl_find("XCNTROL6"))<0
 		 && (ap_id=appl_find("ZCONTROL"))<0
 		 && (ap_id=appl_find("COPS    "))<0
 		 && (ap_id=appl_find("FREEDOM2"))<0)
@@ -4710,7 +4713,7 @@ long cdecl temp_thread(unsigned int *param)				/* used with MagiC > 4.5 */
 int start_temp(unsigned int *param1,unsigned int *param2,unsigned int *param3,unsigned int *param4)
 
 {
-	register int ret,err,i,j;
+	register int ret = -1,err,i,j;
 	static unsigned int param[4];
 	THREADINFO thi;
 	static char path_app[256],path_acc[256];
@@ -4752,6 +4755,7 @@ int start_temp(unsigned int *param1,unsigned int *param2,unsigned int *param3,un
 			thread=1;
 		return(temp_id);
 	}
+#if 0
 	else
 	{
 		strcpy(path_app,"*.ACC");
@@ -4843,6 +4847,7 @@ int start_temp(unsigned int *param1,unsigned int *param2,unsigned int *param3,un
 			}
 		}
 	}
+#endif
 	return(-1);
 }
 
