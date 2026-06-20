@@ -76,7 +76,7 @@ typedef struct
 	unsigned int daystop;
 	unsigned int timestop;
 	unsigned char blitterspeed;
-	unsigned char cachedelay;
+	unsigned char cachedelay;	/* unused; retained for header layout compatibility */
 	unsigned char bootorder;
 	unsigned char cpufpu;
 	unsigned long frequency;
@@ -267,7 +267,7 @@ USERBLK spec_cpuload={0,0};
 int ed_objc,new_objc,ed_pos,new_pos;
 int start_lang,flag_bubble,selection;
 int language,keyboard,datetime,vmode,bootpref,bootdelay,scsi,cpufpu;
-int tosram,blitterspeed,cachedelay,bootorder,bootlog,nv_magic_code;
+int tosram,blitterspeed,bootorder,bootlog,nv_magic_code;
 unsigned int trigger_temp,daystop,timestop,beep;
 char *buffer_bubble=NULL;
 char *buffer_path=NULL;
@@ -1055,15 +1055,6 @@ char *spec_blitter_speed[2][2]={"Lent","Rapide","Slow","Fast"};
 char *blitter_speed[2][2]={"  Lent   ","  Rapide ","  Slow ","  Fast "};
 char *spec_tos_ram[2][2]={"Non","Oui","No","Yes"};
 char *tos_ram[2][2]={"  Non ","  Oui ","  No  ","  Yes "};
-char *spec_cache_delay[2][4]={"Normal","Cache 5","Alerte","Cache 5","Normal","Cache 5","Alert","Cache 5"};
-char *cache_delay[2][4]={"  Cache normal / Sans alerte copyback ",
-                         "  Cache delais 5 S / Sans alerte      ",
-                         "  Cache normal / Alerte copyback      ",
-                         "  Cache delais 5 S / Alerte copyback  ",
-                         "  Normal cache / No copyback alert    ",
-                         "  Delay cache 5 S / No copyback alert ",
-                         "  Normal cache / Copyback alert       ",
-                         "  Delay cache 5 S / Copyback alert    "};
 char *spec_boot_order[2][8]={"SCSI0-7 -> IDE0-1","IDE0-1 -> SCSI0-7","SCSI7-0 -> IDE1-0","IDE1-0 -> SCSI7-0",
                              "SCSI0-7 -> IDE0-1","IDE0-1 -> SCSI0-7","SCSI7-0 -> IDE1-0","IDE1-0 -> SCSI7-0",
                              "SCSI0-7 -> IDE0-1","IDE0-1 -> SCSI0-7","SCSI7-0 -> IDE1-0","IDE1-0 -> SCSI7-0",
@@ -1212,9 +1203,6 @@ struct bubblegem bubbletab[NB_BUB] = {
 	{MENUBTOSRAM,
 	"Transfert du TOS 4.0x en RAM|avec utilisation de la PMMU",
 	"Copy TOS 4.0x to RAM|using the PMMU"},
-	{MENUBCACHE,
-	"Coupe les caches pendant 5 secondes|lors du lancement d'un programme|sous TOS",
-	"Disable the caches for 5 seconds|when a program is started|under TOS"},
 	{MENUBBOOTLOG,
 	"Redirige l'affichage des programmes|du dossier AUTO vers un fichier boot.log",
 	"Redirect displays of the AUTO folder's|programs to a file boot.log"},
@@ -1578,7 +1566,6 @@ int CDECL cpx_call(GRECT *work)
 	{
 		tosram=(int)ct60_rw_parameter(CT60_MODE_READ,CT60_PARAM_TOSRAM,0L)&1;
 		blitterspeed=(int)ct60_rw_parameter(CT60_MODE_READ,CT60_BLITTER_SPEED,0L)&1;
-		cachedelay=(int)ct60_rw_parameter(CT60_MODE_READ,CT60_CACHE_DELAY,0L)&3;
 		bootorder=(int)ct60_rw_parameter(CT60_MODE_READ,CT60_BOOT_ORDER,0L)&7;
 		bootlog=(int)ct60_rw_parameter(CT60_MODE_READ,CT60_BOOT_LOG,0L)&1;
 		cpufpu=(int)ct60_rw_parameter(CT60_MODE_READ,CT60_CPU_FPU,0L)&1;
@@ -1590,7 +1577,6 @@ int CDECL cpx_call(GRECT *work)
 		stack=Super(0L);
 		tosram=(int)ct60_rw_param(CT60_MODE_READ,CT60_PARAM_TOSRAM,0L)&1;
 		blitterspeed=(int)ct60_rw_param(CT60_MODE_READ,CT60_BLITTER_SPEED,0L)&1;
-		cachedelay=(int)ct60_rw_param(CT60_MODE_READ,CT60_CACHE_DELAY,0L)&3;
 		bootorder=(int)ct60_rw_param(CT60_MODE_READ,CT60_BOOT_ORDER,0L)&7;
 		bootlog=(int)ct60_rw_param(CT60_MODE_READ,CT60_BOOT_LOG,0L)&1;
 		cpufpu=(int)ct60_rw_param(CT60_MODE_READ,CT60_CPU_FPU,0L)&1;
@@ -1617,8 +1603,6 @@ int CDECL cpx_call(GRECT *work)
 	t_edinfo->te_ptext=spec_blitter_speed[start_lang][blitterspeed];
 	t_edinfo=rs_object[MENUBTOSRAM].ob_spec.tedinfo;
 	t_edinfo->te_ptext=spec_tos_ram[start_lang][tosram];
-	t_edinfo=rs_object[MENUBCACHE].ob_spec.tedinfo;
-	t_edinfo->te_ptext=spec_cache_delay[start_lang][cachedelay];
 	t_edinfo=rs_object[MENUBBOOTORDER].ob_spec.tedinfo;
 	t_edinfo->te_ptext=spec_boot_order[start_lang][bootorder];
 	t_edinfo=rs_object[MENUBBOOTLOG].ob_spec.tedinfo;
@@ -2579,19 +2563,6 @@ void CDECL cpx_button(MRETS *mrets,int nclicks,int *event)
 					tosram=ret;
 				}
 				break;
-			case MENUBCACHE:
-				objc_offset(rs_object,MENUBCACHE,&menu.g_x,&menu.g_y);
-				menu.g_w=rs_object[MENUBCACHE].ob_width;
-				menu.g_h=rs_object[MENUBCACHE].ob_height;
-				ret=(*Xcpb->Popup)(cache_delay[start_lang],4,cachedelay,IBM,&menu,Work);
-				if(ret>=0 && ret!=cachedelay)
-				{
-					t_edinfo=rs_object[MENUBCACHE].ob_spec.tedinfo;
-					t_edinfo->te_ptext=spec_cache_delay[start_lang][ret];
-					display_objc(MENUBCACHE,Work);				
-					cachedelay=ret;
-				}
-				break;
 			case MENUBBOOTLOG:
 				objc_offset(rs_object,MENUBBOOTLOG,&menu.g_x,&menu.g_y);
 				menu.g_w=rs_object[MENUBBOOTLOG].ob_width;
@@ -2645,7 +2616,7 @@ void CDECL cpx_button(MRETS *mrets,int nclicks,int *event)
 				header->bootdelay=(unsigned char)atoi(t_edinfo->te_ptext);
 				header->blitterspeed=(unsigned char)blitterspeed;
 				header->tosram=(unsigned char)tosram;
-				header->cachedelay=(unsigned char)cachedelay;
+				header->cachedelay=0;
 				header->bootorder=(unsigned char)bootorder;
 				header->bootlog=(unsigned char)bootlog;
 				header->cpufpu=(unsigned char)cpufpu;
@@ -2872,9 +2843,6 @@ void CDECL cpx_button(MRETS *mrets,int nclicks,int *event)
 					tosram=(int)header->tosram;
 					t_edinfo=rs_object[MENUBTOSRAM].ob_spec.tedinfo;
 					t_edinfo->te_ptext=spec_tos_ram[start_lang][tosram];
-					cachedelay=(int)header->cachedelay;
-					t_edinfo=rs_object[MENUBCACHE].ob_spec.tedinfo;
-					t_edinfo->te_ptext=spec_cache_delay[start_lang][cachedelay];
 					bootorder=(int)header->bootorder;					
 					t_edinfo=rs_object[MENUBBOOTORDER].ob_spec.tedinfo;
 					t_edinfo->te_ptext=spec_boot_order[start_lang][bootorder];
@@ -2935,7 +2903,6 @@ _ok_:
 				{
 					tosram=(int)ct60_rw_parameter(CT60_MODE_WRITE,CT60_PARAM_TOSRAM,(long)tosram);
 					blitterspeed=(int)ct60_rw_parameter(CT60_MODE_WRITE,CT60_BLITTER_SPEED,(long)blitterspeed);
-					cachedelay=(int)ct60_rw_parameter(CT60_MODE_WRITE,CT60_CACHE_DELAY,(long)cachedelay);
 					bootorder=(int)ct60_rw_parameter(CT60_MODE_WRITE,CT60_BOOT_ORDER,(long)bootorder);
 					bootlog=(int)ct60_rw_parameter(CT60_MODE_WRITE,CT60_BOOT_LOG,(long)bootlog);
 					cpufpu=(int)ct60_rw_parameter(CT60_MODE_WRITE,CT60_CPU_FPU,(long)cpufpu);
@@ -2959,7 +2926,6 @@ _ok_:
 					stack=Super(0L);
 					tosram=(int)ct60_rw_param(CT60_MODE_WRITE,CT60_PARAM_TOSRAM,(long)tosram);
 					blitterspeed=(int)ct60_rw_param(CT60_MODE_WRITE,CT60_BLITTER_SPEED,(long)blitterspeed);
-					cachedelay=(int)ct60_rw_param(CT60_MODE_WRITE,CT60_CACHE_DELAY,(long)cachedelay);
 					bootorder=(int)ct60_rw_param(CT60_MODE_WRITE,CT60_BOOT_ORDER,(long)bootorder);
 					bootlog=(int)ct60_rw_param(CT60_MODE_WRITE,CT60_BOOT_LOG,(long)bootlog);
 					cpufpu=(int)ct60_rw_param(CT60_MODE_WRITE,CT60_CPU_FPU,(long)cpufpu);
@@ -2979,9 +2945,9 @@ _ok_:
 #endif
 					Super((void *)stack);
 				}
-				if(tosram<0 || blitterspeed<0 || cachedelay<0 || bootorder<0 || bootlog<0 || cpufpu<0)
+				if(tosram<0 || blitterspeed<0 || bootorder<0 || bootlog<0 || cpufpu<0)
 				{
-					if(tosram==-15 || blitterspeed==-15 || cachedelay==-15
+					if(tosram==-15 || blitterspeed==-15
 					 || bootorder==-15 || bootlog==-15 || cpufpu==-15)   /* error device */
 					{
 						if(!start_lang)
@@ -3168,8 +3134,8 @@ int init_rsc(void)
 			rs_object[MENUBBLITTER].ob_y-=(h-6);
 			rs_object[MENUBTOSRAM-1].ob_y+=(h-7);
 			rs_object[MENUBTOSRAM].ob_y+=(h-7);
-			rs_object[MENUBCACHE-1].ob_y+=(h-7);
-			rs_object[MENUBCACHE].ob_y+=(h-7);
+			rs_object[MENUBCACHE-1].ob_flags |= HIDETREE;
+			rs_object[MENUBCACHE].ob_flags |= HIDETREE;	/* cache 5s delay option removed */
 			rs_object[MENUBBOOTLOG-1].ob_y+=(h-4);
 			rs_object[MENUBBOOTLOG].ob_y+=(h-4);
 
