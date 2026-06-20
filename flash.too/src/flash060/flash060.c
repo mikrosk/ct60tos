@@ -49,6 +49,15 @@
 #define MAX_PATH 1024
 #define MAX_NAME 256
 
+#define SMALLER       0x4000
+#define WF_ICONIFY    26
+#define WF_UNICONIFY  27
+#define WM_BOTTOM     33
+#define WM_BOTTOMED   WM_BOTTOM
+#define WM_ICONIFY    34
+#define WM_UNICONIFY  35
+#define WM_ALLICONIFY 36
+
 #define	DESK 0                             /* desktop window */
 #define	WINDOW (NAME|CLOSER|MOVER|SMALLER) /* window options */
 
