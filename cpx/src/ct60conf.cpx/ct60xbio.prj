@@ -1,11 +1,11 @@
-;CT60XBIO.PRJ for Pure C
+;CPX.PRJ for Pure C
 
-CT60XBIO.PRG
+C:\AUTO\CT60XBIO.PRG
 .C [ -2 -P]
 .S [ -4 -S]
 =
 
-PCSTART.S          ; startup code
+PCSTART.O          ; startup code
 
 CT60XBIO.C
 DETXBIOS.S

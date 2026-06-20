@@ -1,6 +1,6 @@
 	
 /* CT60 TEMPerature - Pure C */
-/* Didier MEQUIGNON - v1.04 - August 2006 */
+/* Didier MEQUIGNON - v1.03c - June 2005 */
 
 #include <portab.h>
 #include <tos.h>
@@ -10,9 +10,6 @@
 #include <string.h>
 #include <time.h>
 #include "ct60.h"
-#include "compat.h"
-
-#define ID_CF (long)'_CF_'
 
 #define ITIME 1000L	/* mS */
 #define MAX_CPULOAD 10000
@@ -99,7 +96,6 @@ COOKIE *ncookie(COOKIE *p);
 COOKIE *get_cookie(long id);
 extern long ct60_read_temp(void);
 extern long ct60_stop(void);
-extern long cf_stop(void);
 
 /* global variables */
 
@@ -233,9 +229,7 @@ int main(int argc,const char *argv[])
 	}
 	else
 	{
-		if((p=get_cookie(ID_CT60))==0)
-			p=get_cookie(ID_CF);
-		if(p!=0)
+		if((p=get_cookie(ID_CT60))!=0)
 		{
 			ct60_arg=(CT60_COOKIE *)p->v.l;
 			if(ct60_arg!=NULL)
@@ -301,7 +295,7 @@ int main(int argc,const char *argv[])
 		MT_appl_exit(myglobal);
 		return(0);
 	}
-	if(!get_cookie(ID_CT60) && !get_cookie(ID_CF))
+	if(!get_cookie(ID_CT60))
 		flag_xbios=0;
 	cpu_060=0;
 	if(((p=get_cookie('_CPU'))!=0) && (p->v.l==0x3C))
@@ -554,11 +548,11 @@ int main(int argc,const char *argv[])
 						}
 					 	if(!start_lang)
 							sprintf(mess_alert,
-							"[0][      CT60 TEMPERATURE       |V1.04 MEQUIGNON Didier 08/2006| |Temp.: %d øC     Seuil: %d øC |Lien avec processus %d %s][OK]",
+							"[0][      CT60 TEMPERATURE       |V1.03c MEQUIGNON Didier 06/2005| |Temp.: %d øC     Seuil: %d øC |Lien avec processus %d %s][OK]",
 							temp,trigger_temp,app_id,app_name);
 						else
 							sprintf(mess_alert,
-							"[0][      CT60 TEMPERATURE       |V1.04 MEQUIGNON Didier 08/2006| |Temp.: %d øC Threshold: %d øC |Link with process %d %s][OK]",
+							"[0][      CT60 TEMPERATURE       |V1.03c MEQUIGNON Didier 06/2005| |Temp.: %d øC Threshold: %d øC |Link with process %d %s][OK]",
 							temp,trigger_temp,app_id,app_name);
 						MT_form_xalert(1,mess_alert,ITIME*10L,0L,myglobal);
 						break;
@@ -752,8 +746,8 @@ int MT_form_xalert(int fo_xadefbttn,char *fo_xastring,long time_out,void (*call)
 			break;
 		default:
 			alert_tree[ALERTB1].ob_flags |= DEFAULT;
-			alert_tree[ALERTB2].ob_flags &= ~DEFAULT;
-			alert_tree[ALERTB3].ob_flags &= ~DEFAULT;			
+			alert_tree[ALERTB2].ob_state &= ~DEFAULT;
+			alert_tree[ALERTB3].ob_state &= ~DEFAULT;			
 			break;
 	}
 	if(fo_xastring[0]!='[' || fo_xastring[2]!=']' || fo_xastring[3]!='[')
@@ -876,12 +870,7 @@ int MT_form_xalert(int fo_xadefbttn,char *fo_xastring,long time_out,void (*call)
 			if(flag_img)
 				alert_tree[ALERTLINE1+i].ob_x+=alert_tree[ALERTNOTE].ob_width;
 			alert_tree[ALERTLINE1+i].ob_width=max_length_lines*gr_hwchar;
-			j=0;
-			while(*fo_xastring!='|' && *fo_xastring!=']' && j<60)
-			{
-				line[i][j++] = *fo_xastring;
-				fo_xastring++;
-			}
+			for(j=0;*fo_xastring!='|' && *fo_xastring!=']' && j<60;line[i][j++]=*fo_xastring++);
 			line[i][j]=0;
 			fo_xastring++;
 		}
@@ -897,12 +886,7 @@ int MT_form_xalert(int fo_xadefbttn,char *fo_xastring,long time_out,void (*call)
 		if(i<nb_buttons)
 		{
 			alert_tree[ALERTB1+i].ob_flags &= ~HIDETREE;
-			j=0;
-			while(*fo_xastring!='|' && *fo_xastring!=']' && j<20)
-			{
-				button[i][j++] = *fo_xastring;
-				fo_xastring++;
-			}
+			for(j=0;*fo_xastring!='|' && *fo_xastring!=']' && j<20;button[i][j++]=*fo_xastring++);
 			button[i][j]=0;
 			fo_xastring++;
 		}
@@ -1065,12 +1049,7 @@ void stop_60(void)
 	Sync();
 	Shutdown(0L);
 	if(((p=get_cookie('_CPU'))!=0) && (p->v.l==60L))
-	{
-		if(get_cookie(ID_CF))
-			Supexec(cf_stop);
-		else
-			Supexec(ct60_stop);
-	}
+		Supexec(ct60_stop);	
 	while(1);
 }
 
@@ -1079,9 +1058,6 @@ int read_temp(void)
 {
 	register int temp,temperature,i;
 	static int old_temp[8]={0,0,0,0,0,0,0,0};
-	static int ct63=0;
-	if(ct63)
-		return(0);
 	if(flag_xbios)
 		temp=(int)ct60_read_core_temperature(CT60_CELCIUS);
 	else
@@ -1097,8 +1073,6 @@ int read_temp(void)
 		temperature>>=3;
 		return(temperature);
 	}
-	else if(temp==0)
-		ct63=1;
 	return(temp);
 }
 

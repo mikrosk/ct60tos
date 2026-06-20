@@ -5,7 +5,7 @@ CONVERT.PRG
 .S [ -4 -S]
 =
 
-PCSTART.S          ; startup code
+PCSTART.O          ; startup code
 
 CONVERT.C
 

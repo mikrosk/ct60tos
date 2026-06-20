@@ -6,7 +6,7 @@ CT60TEMP.APP
 .L [-S=32768]
 =
 
-PCSTART.S          ; startup code
+PCSTART.O          ; startup code
 
 CT60TEMP.C
 TEMP.S
