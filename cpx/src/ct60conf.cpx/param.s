@@ -169,11 +169,11 @@ ct60_rw_param: ; D0.W: mode, D1.L: type_param, D2.L: value
 	moves.l (A2),D0                                     ; Manufacturer code / Device code
 .read_id_060:
 	moves.w D1,(A2)                                     ; Read/Reset command
-	lea.l devices(PC),A3
+	lea.l devices+2(PC),A3
 .loop_dev:
-		tst.l (A3)
+		tst.w (A3)
 		beq .no_dev
-		cmp.l (A3),D0
+		cmp.w (A3),D0
 		beq.s .found_dev
 		addq.l #8,A3
 	bra.s .loop_dev
@@ -183,7 +183,7 @@ ct60_rw_param: ; D0.W: mode, D1.L: type_param, D2.L: value
 	bra .program_param_end
 .found_dev:
 	lea.l devices(PC),A1
-	add.l 4(A3),A1                                      ; sector of device
+	add.l 2(A3),A1                                      ; sector of device
 	movem.l (A1),A2-A4                                  ; sector, flash_unlock1, flash_unlock2
 	add.l D6,A2                                         ; offset free block
 	tst.w D7
