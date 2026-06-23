@@ -22,6 +22,7 @@
  */
 
 #include <stdio.h>
+#include <stdlib.h>
 #include <mint/cookie.h>
 #include <mint/osbind.h>
 

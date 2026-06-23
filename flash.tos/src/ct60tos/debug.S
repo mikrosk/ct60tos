@@ -23,7 +23,7 @@
 	
 	.align	2
 	.long	0x100C
-	.long	end1-begin1+0x80000000
+	.long	end1-begin1
 begin1:
 	jmp	exception
 end1:

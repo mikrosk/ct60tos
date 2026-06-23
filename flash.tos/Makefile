@@ -21,23 +21,27 @@
 #
 #
 
-CROSS=		N
+CROSS=		Y
 
-CROSSBINDIR_IS_Y=	m68k-atari-mint-
+CROSSBINDIR_IS_Y= m68k-atari-mint-
 CROSSBINDIR_IS_N=
 
 CROSSBINDIR=	$(CROSSBINDIR_IS_$(CROSS))
 
+PLATFORM_IS_Y=	LINUX
+PLATFORM_IS_N=	ATARI
+PLATFORM=	$(PLATFORM_IS_$(CROSS))
+
 CC=		$(CROSSBINDIR)gcc
+LD=		$(CROSSBINDIR)ld
 STRIP=		$(CROSSBINDIR)strip
 STACK=		$(CROSSBINDIR)stack
+
+HOSTCC=		gcc
 
 SRCDIR=		./src
 INCDIR=		./include
 OBJDIR=		./obj
-
-SUBOBJDIRS=	\
-		$(OBJDIR)/ct60tos
 
 INCLUDE=	-I$(INCDIR)
 CFLAGS=		-m68060 -msoft-float -Wall -O2 -fomit-frame-pointer
@@ -46,69 +50,20 @@ CFLAGS_TOS=	-m68060 -msoft-float -Wall -O2 -fomit-frame-pointer
 
 PROGRAM=	flash
 
-FLASH_BINARY=		$(PROGRAM).ttp
-FLASH_STACKSIZE=	64k
+FLASH_BINARY=	$(PROGRAM).ttp
+FLASH_STACKSIZE=64k
 FLASH_OBJS=	\
 		$(OBJDIR)/flash.o \
 		$(OBJDIR)/write.o
 
-GENTOS_BINARY=	gentos.ttp
-GENTOS_STACKSIZE=	64k
-GENTOS_OBJS=	\
-		$(OBJDIR)/gentos.o \
-		\
-		$(OBJDIR)/ct60tos/start.o \
-		\
-		$(OBJDIR)/ct60tos/pmmu.o \
-		$(OBJDIR)/ct60tos/cookies.o \
-		$(OBJDIR)/ct60tos/dsp.o \
-		$(OBJDIR)/ct60tos/periph.o \
-		$(OBJDIR)/ct60tos/cache.o \
-		$(OBJDIR)/ct60tos/movep.o \
-		$(OBJDIR)/ct60tos/boot.o \
-		$(OBJDIR)/ct60tos/init_par.o \
-		$(OBJDIR)/ct60tos/blitter.o \
-		$(OBJDIR)/ct60tos/bios.o \
-		$(OBJDIR)/ct60tos/xbios.o \
-		$(OBJDIR)/ct60tos/gemdos.o \
-		$(OBJDIR)/ct60tos/aes.o \
-		$(OBJDIR)/ct60tos/vectors.o \
-		$(OBJDIR)/ct60tos/videl.o \
-		$(OBJDIR)/ct60tos/debug.o \
-		\
-		$(OBJDIR)/ct60tos/half.o \
-		\
-		$(OBJDIR)/ct60tos/version.o \
-		\
-		$(OBJDIR)/ct60tos/movep2.o \
-		\
-		$(OBJDIR)/ct60tos/blitter2.o \
-		\
-		$(OBJDIR)/ct60tos/bios2.o \
-		\
-		$(OBJDIR)/ct60tos/xbios2.o \
-		\
-		$(OBJDIR)/ct60tos/gemdos2.o \
-		\
-		$(OBJDIR)/ct60tos/aes2.o \
-		\
-		$(OBJDIR)/ct60tos/vectors2.o \
-		\
-		$(OBJDIR)/ct60tos/debug2.o \
-		\
-		$(OBJDIR)/ct60tos/ataboot.o \
-		$(OBJDIR)/ct60tos/extvidel.o \
-		\
-		$(OBJDIR)/ct60tos/magxboot.o \
-		\
-		$(OBJDIR)/ct60tos/sdram.o \
-		$(OBJDIR)/ct60tos/pmmu2.o \
-		\
-		$(OBJDIR)/ct60tos/videl2.o \
-		\
-		$(OBJDIR)/ct60tos/end.o
+GENTOS=		gentos
+TOS_PATCHES=	tos_patches.bin
 
-TOS=	ct60tos.bin
+# ct60.ld picks the files it needs, we don't care about order here
+TOS_OBJS=	$(patsubst $(SRCDIR)/ct60tos/%,$(OBJDIR)/ct60tos/%.o, \
+			$(basename $(wildcard $(SRCDIR)/ct60tos/*.[Sc])))
+
+TOS=		ct60tos.bin
 
 BINARCHIVE=	$(PROGRAM).zip
 BINDISTDIR=	./$(PROGRAM)
@@ -133,7 +88,7 @@ NFDISTFILES=	\
 		$(NFDISTDIR)/tos404.bin \
 		$(NFDISTDIR)/sparrow.out
 
-all:	 $(FLASH_BINARY) $(TOS)
+all:	 	$(FLASH_BINARY) $(TOS)
 
 bindist:	$(BINARCHIVE)
 $(BINARCHIVE):	$(BINDISTFILES)
@@ -149,7 +104,8 @@ $(NFARCHIVE):	$(NFDISTFILES)
 
 clean:
 	rm -rf $(OBJDIR)
-	rm -f $(FLASH_BINARY) $(GENTOS_BINARY) $(TOS)
+	rm -f $(FLASH_BINARY) $(GENTOS) $(TOS)
+	rm -f $(TOS_PATCHES)
 	rm -f $(BINARCHIVE) $(SRCARCHIVE) $(NFARCHIVE)
 
 $(FLASH_BINARY):	$(FLASH_OBJS)
@@ -157,31 +113,24 @@ $(FLASH_BINARY):	$(FLASH_OBJS)
 	$(STRIP) $(FLASH_BINARY)
 	$(STACK) -S $(FLASH_STACKSIZE) $(FLASH_BINARY)
 
-$(GENTOS_BINARY):	$(GENTOS_OBJS)
-	$(CC) $(GENTOS_OBJS) -o $(GENTOS_BINARY)
-	$(STRIP) $(GENTOS_BINARY)
-	$(STACK) -S $(GENTOS_STACKSIZE) $(GENTOS_BINARY)
+$(TOS_PATCHES):	$(TOS_OBJS) ct60.ld
+	cd $(OBJDIR)/ct60tos && $(LD) -T ../../ct60.ld -o ../../$@
+
+$(GENTOS):	$(SRCDIR)/gentos.c
+	$(HOSTCC) -Wall -O2 $(INCLUDE) -D$(PLATFORM) -o $@ $(SRCDIR)/gentos.c
 
 tos:	$(TOS)
-$(TOS):	$(GENTOS_BINARY) $(NFDISTFILES)
-	./$(GENTOS_BINARY) $(NFDISTFILES) $(TOS)
-
-define CREATEOBJDIRS
-	@for d in $(OBJDIR) $(SUBOBJDIRS); do \
-		if [ ! -d $$d ] ; then \
-			mkdir $$d ; \
-		fi ; \
-	done
-endef
+$(TOS):	$(NFDISTFILES) $(TOS_PATCHES) $(GENTOS)
+	./$(GENTOS) --tos $(NFDISTDIR)/tos404.bin --tospatch $(TOS_PATCHES) --tests $(NFDISTDIR)/sparrow.out --out $(TOS)
 
 $(OBJDIR)/%.o:	$(SRCDIR)/%.c
-	$(CREATEOBJDIRS)
+	@mkdir -p $(@D)
 	$(CC) $(INCLUDE) $(CFLAGS) -c $< -o $@
 
 $(OBJDIR)/ct60tos/%.o:	$(SRCDIR)/ct60tos/%.S
-	$(CREATEOBJDIRS)
+	@mkdir -p $(@D)
 	$(CC) $(INCLUDE) $(CFLAGS_TOS) -c $< -o $@
 
 $(OBJDIR)/%.o:	$(SRCDIR)/%.S
-	$(CREATEOBJDIRS)
+	@mkdir -p $(@D)
 	$(CC) $(INCLUDE) $(CFLAGS) -c $< -o $@

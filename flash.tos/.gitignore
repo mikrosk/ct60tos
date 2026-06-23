@@ -1,3 +1,4 @@
 obj/
-nonfree/tos404.bin
 *.ttp
+gentos
+tos_patches.bin

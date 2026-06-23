@@ -22,7 +22,7 @@
 
 	.align	2
 	.long	0xEBE
-	.long	end1-begin1+0xC0000000
+	.long	end1-begin1
 begin1:
 	.long	_bconout2
 end1:
@@ -31,7 +31,7 @@ end1:
 
 	.align	2
 	.long	0xECA
-	.long	end2-begin2+0xC0000000
+	.long	end2-begin2
 begin2:
 	.long	_bconout5
 end2:
@@ -40,7 +40,7 @@ end2:
 
 	.align	2
 	.long	0x1094C
-	.long	end3-begin3+0xC0000000
+	.long	end3-begin3
 begin3:
 	.long	normal_ascii
 end3:
@@ -49,7 +49,7 @@ end3:
 	
 	.align	2
 	.long	0xD18
-	.long	end4-begin4+0xC0000000
+	.long	end4-begin4
 begin4:
 	.long	_blink
 end4:

@@ -22,7 +22,7 @@
 
 	.align	2
 	.long	0x1F164                /* Pexec */
-	.long	end1-begin1+0x80000000
+	.long	end1-begin1
 begin1:
 	jsr	flush_cache_pexec
 end1:

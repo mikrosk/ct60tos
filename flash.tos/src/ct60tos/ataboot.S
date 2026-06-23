@@ -7202,7 +7202,7 @@ islower:
 	.long	0,0,0,0,0,0,0,0,0,0,0,0
 
 rotchar:
-	.long	0x7C2F2D5C // |/-\
+	.long	0x7C2F2D5C /* |/-\ */
 	
 	.align	2
 

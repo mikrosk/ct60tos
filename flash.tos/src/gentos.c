@@ -1,187 +1,180 @@
-/*  Flashing tool for the CT60 board
- *  Copyright (C) 2000 Xavier Joubert
+/*
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
- *  This program is free software; you can redistribute it and/or modify
- *  it under the terms of the GNU General Public License as published by
- *  the Free Software Foundation; either version 2 of the License, or
- *  (at your option) any later version.
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
  *
- *  This program is distributed in the hope that it will be useful,
- *  but WITHOUT ANY WARRANTY; without even the implied warranty of
- *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- *  GNU General Public License for more details.
- *
- *  You should have received a copy of the GNU General Public License
- *  along with this program; if not, write to the Free Software
- *  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
- *
- *
- *  To contact author write to Xavier Joubert, 5 Cour aux Chais, 44 100 Nantes,
- *  FRANCE or by e-mail to xavier.joubert@free.fr.
- *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
+
+#define TOS4_SIZE	(512*1024)	// 512 KB
+
+#define FLASH_ADR	0x00E00000	// TOS area (2x512 KB)
+#define FLASH_SIZE  (1024*1024)	// 1MB
+#define TESTS_SIZE  (128*1024)	// 128 KB
+#define PARAM_SIZE	(64*1024)	// 64 KB
 
 #include <stdio.h>
 #include <stdlib.h>
-#include <mint/osbind.h>
+#include <string.h>
+#include <stdarg.h>
+#include <stdint.h>
+#include <time.h>
 
-#include "main.h"
-#include "gentos.h"
-#include "ct60tos.h"
+#include "endianness.h"
 
-char *program_name;
-
-void
-gentos_error(char *error, char *solution)
+static void showHelp( const char* sProgramName )
 {
-  fprintf(stderr, "%s: Error: %s\n", program_name, error);
-  if(solution != NULL)
-    fprintf(stderr, "%s: Solution: %s\n", program_name, solution);
-  exit(1);
+	fprintf( stderr, "%s [--help] --tos <path> --tospatch <path> [--tests <path>] --out <path>\n", sProgramName );
+	fprintf( stderr, "--help:     this help\n" );
+	fprintf( stderr, "--tos:      path to unmodified TOS 4.04 image\n" );
+	fprintf( stderr, "--tospatch: path to binary with TOS patches\n" );
+	fprintf( stderr, "--tests:    path to binary with tests  (optional)\n" );
+	fprintf( stderr, "--out:      path to final TOS image\n" );
 }
 
-Bit32u
-apply_patch(Bit8u *buffer, Bit8u *patch)
+static void waitAndExit( void )
 {
-  Bit8u *p=patch;
-  Bit8u *adr;
-  Bit32u len;
-  Bit8u *top=buffer;
-
-  adr=buffer+(*((Bit32u *)p)++);
-  while(adr != (buffer-1))
-  {
-    len=*((Bit32u *)p)++;
-    if(len&0x80000000)
-    {
-      len&=0x7FFFFFFF;
-			if(len&0x40000000)
-	    {
-      	len&=0x3FFFFFFF;
-      	*((Bit32u *)p)+=(0xE80000-(Bit32u)ct60tos_half_flash);
-			}
-			else
-      	*((Bit32u *)(p+2))+=(0xE80000-(Bit32u)ct60tos_half_flash);
-    }
-    while(len--)
-      *adr++=*p++;
-    top=(adr > top ? adr : top);
-    if((Bit32u)p & 3)
-      p=(Bit8u *)(((Bit32u)p & 0xFFFFFFFC)+4);
-    adr=&buffer[*((Bit32u *)p)++];
-  }
-
-  return (top-buffer);
+	fprintf( stderr, "Press Enter to exit.\n" );
+#ifdef ATARI
+	getchar();
+#endif
+	exit( 1 );
 }
 
-Bit32u
-modify_tos(Bit8u *buffer)
+static void showError( const char* fmt, ... )
 {
-  Bit32u size=TOS4_SIZE;
-  Bit32u sizepatch;
-  Bit32u time;
-  Bit32u day,month,year,year1,year2;
+	va_list argptr;
 
-  time=Gettime();
-  day=(time>>16)&0x1F;
-  month=(time>>21)&0xF;
-  year=(time>>25)+1980;
-  buffer[24]=(Bit8u)(((month/10)<<4)+(month%10)); 
-  buffer[25]=(Bit8u)(((day/10)<<4)+(day%10)); 
-  year1=year/100;
-  year2=year%100;
-  buffer[26]=(Bit8u)(((year1/10)<<4)+(year1%10)); 
-  buffer[27]=(Bit8u)(((year2/10)<<4)+(year2%10));
+	va_start( argptr, fmt );
+	fprintf( stderr, "Error: " );
+	vfprintf( stderr, fmt, argptr );
+	fprintf( stderr, "\n" );
+	va_end( argptr );
 
-  sizepatch=apply_patch(buffer, (Bit8u *)ct60tos_patch);
-
-  size=(sizepatch > size ? sizepatch : size);
-
-  return size;
+	waitAndExit();
 }
 
-Bit32u
-load_file(char *filename, Bit8u *buffer, Bit32u length)
+static void* allocMemory( size_t size )
 {
-  Bit16u handle;
-  Bit32u return_value;
+	void* p = malloc( size );
+	if( p == NULL )
+	{
+		showError( "Not enough memory for allocating %d bytes!", size );
+	}
 
-  if((return_value=Fopen(filename, 0)) < 0)
-  {
-    char error[MAX_ERROR_LENGTH];
-    snprintf(error, MAX_ERROR_LENGTH, "Unable to open file %s.", filename);
-    gentos_error(error, NULL);
-  }
-  handle=(Bit16u)return_value;
-
-  return_value=Fread(handle, length, buffer);
-
-  Fclose(handle);
-
-  if(return_value < 0)
-  {
-    char error[MAX_ERROR_LENGTH];
-    snprintf(error, MAX_ERROR_LENGTH, "Unable to read file %s.", filename);
-    gentos_error(error, NULL);
-  }
-
-  return return_value;
+	return p;
 }
 
-Bit32u
-load_tests(char *filename, Bit8u *buffer, Bit32u length)
+static size_t loadFile( const char* sPath, void* pBuffer, size_t bufferSize, size_t expectedSize )
 {
-  if((length=load_file(filename, buffer, length)) >= TESTS_SIZE)
-  {
-    char error[MAX_ERROR_LENGTH];
-    snprintf(error, MAX_ERROR_LENGTH, "File %s is not a valid tests image.", filename);
-    gentos_error(error, NULL);
-  }
-  return length;
+	size_t readBytes;
+
+	FILE* pFs = fopen( sPath, "rb" );
+	if( pFs == NULL )
+	{
+		showError( "Unable to open file %s!", sPath );
+	}
+
+	readBytes = fread( pBuffer, 1, bufferSize, pFs );
+	if( expectedSize != -1 && readBytes != expectedSize )
+	{
+		showError( "File size for '%s' is %d instead of %d!",
+			   sPath, readBytes, expectedSize );
+	}
+
+	fclose( pFs );
+
+	return readBytes;
 }
 
-void
-load_tos(char *filename, Bit8u *buffer, Bit32u length)
+static size_t saveFile( const char* sPath, const void* pBuffer, size_t bufferSize )
 {
-  if((load_file(filename, buffer, length) != TOS4_SIZE) ||
-     (buffer[2]!=0x04) ||
-     (buffer[3]!=0x04))
-  {
-    char error[MAX_ERROR_LENGTH];
-    snprintf(error, MAX_ERROR_LENGTH, "File %s is not a valid TOS 4.04 image.", filename);
-    gentos_error(error, NULL);
-  }
+	size_t writeBytes;
+
+	FILE* pFs = fopen( sPath, "wb" );
+	if( pFs == NULL )
+	{
+		showError( "Unable to open file %s!", sPath );
+	}
+
+	writeBytes = fwrite( pBuffer, 1, bufferSize, pFs );
+	if( writeBytes != bufferSize )
+	{
+		showError( "Failed to write %d bytes, disk full?", bufferSize );
+	}
+
+	fclose( pFs );
+
+	return writeBytes;
 }
 
-void
-save_tos(char *filename, Bit8u *buffer, Bit32u length)
+static size_t patchTos( unsigned char* pTos, const unsigned char* pPatches )
 {
-  Bit16u handle;
-  Bit32u return_value;
+	int year;
 
-  if((return_value=Fcreate(filename, 0)) < 0)
-  {
-    char error[MAX_ERROR_LENGTH];
-    snprintf(error, MAX_ERROR_LENGTH, "Unable to create file %s.", filename);
-    gentos_error(error, NULL);
-  }
-  handle=(Bit16u)return_value;
+	unsigned char* p;
+	uint32_t       len;
 
-  if(Fwrite(handle, length, buffer) != length)
-  {
-    char error[MAX_ERROR_LENGTH];
-    Fclose(handle);
-    snprintf(error, MAX_ERROR_LENGTH, "Unable to write file %s.", filename);
-    gentos_error(error, NULL);
-  }
+	unsigned char* top = NULL;
 
-  Fclose(handle);
+	time_t timeSec;
+	time( &timeSec );
+	struct tm* pTime = localtime( &timeSec );
+
+	// write new TOS date ...
+	pTos[24] = (unsigned char)( ( ( pTime->tm_mon / 10 ) << 4 ) + ( pTime->tm_mon % 10 ) );
+	pTos[25] = (unsigned char)( ( ( pTime->tm_mday / 10 ) << 4 ) + ( pTime->tm_mday % 10 ) );
+
+	year = ( pTime->tm_year + 1900 ) / 100;
+	pTos[26] = (unsigned char)( ( ( year / 10 ) << 4 ) + ( year % 10 ) );
+	year = ( pTime->tm_year + 1900 ) % 100;
+	pTos[27] = (unsigned char)( ( ( year / 10 ) << 4 ) + ( year % 10 ) );
+
+	// patch TOS ... input buffer consists of 4-byte aligned blocks with header:
+	// .long target_address
+	// .long length
+	do
+	{
+		uint32_t addr = BE32( *(uint32_t*)pPatches );
+		pPatches += sizeof( uint32_t );
+		if( addr >= FLASH_ADR )		// a full flash address -> buffer offset
+			addr -= FLASH_ADR;
+		p = &pTos[addr];
+
+		len = BE32( *(uint32_t*)pPatches );
+		pPatches += sizeof( len );
+
+		memcpy( p, pPatches, len );
+		p += len;
+		pPatches += len;
+
+		top = p > top ? p : top;
+
+		if( (uintptr_t)pPatches & 3 )
+		{
+			pPatches = (unsigned char*)( ( (uintptr_t)pPatches & ~(uintptr_t)3 ) + 4 );
+		}
+	}
+	while( *(uint32_t*)pPatches != 0xffffffff );
+
+	return top - pTos;
 }
- 
-int
-main(int argc, char **argv)
+
+static void createChecksum( unsigned char* pBuffer )
 {
-	static Bit16u crctab[256] = {
+	unsigned short crc;
+	unsigned short crc2;
+	int i;
+
+	static unsigned short crctab[256] =
+	{
 		0x0000,0x1021,0x2042,0x3063,0x4084,0x50a5,0x60c6,0x70e7,
 		0x8108,0x9129,0xa14a,0xb16b,0xc18c,0xd1ad,0xe1ce,0xf1ef,
 		0x1231,0x0210,0x3273,0x2252,0x52b5,0x4294,0x72f7,0x62d6,
@@ -213,41 +206,130 @@ main(int argc, char **argv)
 		0xfd2e,0xed0f,0xdd6c,0xcd4d,0xbdaa,0xad8b,0x9de8,0x8dc9,
 		0x7c26,0x6c07,0x5c64,0x4c45,0x3ca2,0x2c83,0x1ce0,0x0cc1,
 		0xef1f,0xff3e,0xcf5d,0xdf7c,0xaf9b,0xbfba,0x8fd9,0x9ff8,
-		0x6e17,0x7e36,0x4e55,0x5e74,0x2e93,0x3eb2,0x0ed1,0x1ef0 };
-  Bit32u length;
-  Bit8u *buffer;
-  Bit16u crc,crc2;
-  Bit32u i;
+		0x6e17,0x7e36,0x4e55,0x5e74,0x2e93,0x3eb2,0x0ed1,0x1ef0
+	};
 
-  program_name=argv[0];
-  if(argc != 4)
-  {
-    fprintf(stderr, "Usage: %s tos404.bin sparrow.out ct60tos.bin\n", program_name);
-    exit(1);
-  }
-  
-  if((buffer=(Bit8u *)malloc(FLASH_SIZE-PARAM_SIZE)) == NULL)
-    gentos_error("Not enough memory for work buffer.", NULL);
-  for(i=0;i<(FLASH_SIZE-PARAM_SIZE);buffer[i++]=0xFF);
-    
-  load_tos(argv[1], buffer, FLASH_SIZE-PARAM_SIZE-TESTS_SIZE);
-  length=modify_tos(buffer);
+	for( i = 0, crc = 0; i < FLASH_SIZE/2 - 2; i++ )
+	{
+		crc2 = crctab[pBuffer[i] ^ (unsigned char)( crc >> 8 )];
+		crc <<= 8;
+		crc ^= crc2;
+	}
+	pBuffer[i++] = (unsigned char)( crc >> 8 );
+	pBuffer[i]   = (unsigned char)( crc      );
+}
 
-  if(length>(FLASH_SIZE-PARAM_SIZE-TESTS_SIZE))
-    gentos_error("Not enough flash space for load tests.", NULL);
-    
-  crc=0;
-  for(i=0;i < (FLASH_SIZE/2)-2;i++)
-  {
-			crc2 = crctab[buffer[i] ^ (Bit8u)(crc>>8)];
-			crc <<= 8;
-			crc ^= crc2;
-  }
-  buffer[i++] = (Bit8u)(crc>>8);
-  buffer[i] = (Bit8u)crc;
-  
-  length=load_tests(argv[2],buffer+FLASH_SIZE-PARAM_SIZE-TESTS_SIZE,TESTS_SIZE);
-  save_tos(argv[3], buffer, FLASH_SIZE-PARAM_SIZE-TESTS_SIZE+length);
-  
-  return 0;
+int main( int argc, char* argv[] )
+{
+	int i;
+
+	size_t flashSize;
+
+	char*          sPathTos = NULL;
+	char*	sPathTosPatches = NULL;
+	char*        sPathTests = NULL;
+	char*          sPathOut = NULL;
+
+	unsigned char* pBufferFlash;
+	unsigned char* pBufferPatches;
+
+	for( i = 1; i < argc; ++i )
+	{
+		if( strcmp( "--tos", argv[i] ) == 0 )
+		{
+			if( ++i < argc )
+			{
+				sPathTos = argv[i];
+				continue;
+			}
+		}
+		else if( strcmp( "--tospatch", argv[i] ) == 0 )
+		{
+			if( ++i < argc )
+			{
+				sPathTosPatches = argv[i];
+				continue;
+			}
+		}
+		else if( strcmp( "--tests", argv[i] ) == 0 )
+		{
+			if( ++i < argc )
+			{
+				sPathTests = argv[i];
+				continue;
+			}
+		}
+		else if( strcmp( "--out", argv[i] ) == 0 )
+		{
+			if( ++i < argc )
+			{
+				sPathOut = argv[i];
+				continue;
+			}
+		}
+		else
+		{
+			showHelp( argv[0] );
+			waitAndExit();
+		}
+	}
+
+	if( sPathTos == NULL )
+	{
+		showHelp( argv[0] );
+		showError( "Path to TOS image is missing!" );
+	}
+	else if( sPathTosPatches == NULL )
+	{
+		showHelp( argv[0] );
+		showError( "Path to TOS patches is missing!" );
+	}
+	else if( sPathOut == NULL )
+	{
+		showHelp( argv[0] );
+		showError( "Output path is missing!" );
+	}
+
+	pBufferFlash = allocMemory( FLASH_SIZE - PARAM_SIZE );
+	memset( pBufferFlash, 0xff, FLASH_SIZE - PARAM_SIZE );
+	loadFile( sPathTos, pBufferFlash, FLASH_SIZE - PARAM_SIZE, TOS4_SIZE );
+	if( pBufferFlash[2] != 0x04 || pBufferFlash[3] != 0x04 )
+	{
+		showError( "File '%s' is not a valid TOS 4.04 image!", sPathTos );
+	}
+
+	pBufferPatches = allocMemory( FLASH_SIZE - PARAM_SIZE );
+	loadFile( sPathTosPatches, pBufferPatches, FLASH_SIZE - PARAM_SIZE, -1 );	// TODO: check if patches file size <= FLASH_SIZE - PARAM_SIZE
+
+	flashSize = patchTos( pBufferFlash, pBufferPatches );
+	flashSize = TOS4_SIZE > flashSize ? TOS4_SIZE : flashSize;	// in case we patch only some small portions of original TOS
+
+	createChecksum( pBufferFlash );
+
+	if( sPathTests != NULL )
+	{
+		if( flashSize > FLASH_SIZE - PARAM_SIZE - TESTS_SIZE )
+		{
+			showError( "TOS with patches takes 0x%x bytes, no space for tests, missing %d bytes", flashSize, flashSize -( FLASH_SIZE - PARAM_SIZE - TESTS_SIZE ) );
+		}
+		else
+		{
+			// patched TOS image (TOS4_SIZE bytes)                        + FLASH_ADR
+			// new code (flashSize - TOS4_SIZE bytes)                     |
+			// (possible empty space)                                     |
+			// tests (max TESTS_SIZE bytes)                                |
+			// params (PARAM_SIZE bytes)                                  v FLASH_ADR + FLASH_SIZE
+			size_t testsSize;
+
+			testsSize = loadFile( sPathTests, pBufferFlash + ( FLASH_SIZE - PARAM_SIZE - TESTS_SIZE ), TESTS_SIZE, -1 );	// TODO: check if tests file size <= TESTS_SIZE
+			saveFile( sPathOut, pBufferFlash, FLASH_SIZE - PARAM_SIZE - TESTS_SIZE + testsSize );
+		}
+	}
+	else
+	{
+		printf( "TOS with patches takes 0x%zx bytes.\n", flashSize );
+		saveFile( sPathOut, pBufferFlash, flashSize );
+	}
+
+	return 0;
 }
