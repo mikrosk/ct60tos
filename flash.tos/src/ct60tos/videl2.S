@@ -17,6 +17,7 @@
 */
 
 	.globl	picture_boot
+	.globl	fix_mono_shift
 
 #include "vars.h"
 
@@ -50,59 +51,46 @@ fix_modecode:
 	move.w modecode,D0
 	and.w #0x1FF,D0                           // valid bits
 	move.w D0,D2                              // save NVRAM mode (for VGA-change test)
+	and.w #7,D2
+	moveq #0,D1
 	move.b 0xFFFF8006,D1
 	lsr.w #6,D1                               // 0:ST nomo, 1:ST col, 2:VGA, 3:TV
-	bclr #4,D0                                // VGA
-	cmp.w #2,D1                               // VGA
-	bne.s .no_vga_monitor
-	bset #4,D0                                // VGA
-.no_vga_monitor:	
-	moveq #7,D1	
-	and.w D0,D1                               // bits/pixel code
-	btst #7,D0                                // STMODES
-	beq.s .falcon_mode
-	bclr #6,D0                                // no OVERSCAN with STMODES
-	cmp.w #3,D1
-	bcs.s .st_modes
-	bclr #7,D0                                // remove STMODES in 256 or 65K colors
-	bra.s .falcon_mode
-.st_modes:
-	tst.w D1
-	bne.s .not_640x400
-	bset #3,D0                                // COL80
-	bclr #8,D0                                // VERTFLAG
-	btst #4,D0                                // VGA
-	bne.s .normal_mode
-	bset #8,D0                                // VERTFLAG interlaced
-	bra.s .normal_mode
-.not_640x400:
-	cmp.w #1,D1
-	bne.s .not_640x200
-	bset #3,D0                                // COL80
-	bra.s .x200
-.not_640x200:
-	bclr #3,D0                                // no COL80 
-.x200:
-	bset #8,D0                                // VERTFLAG double line
-	btst #4,D0                                // VGA
-	bne.s .normal_mode
-	bclr #8,D0                                // VERTFLAG
-	bra.s .normal_mode
-.falcon_mode:                                 // Falcon mode: adapt VERTFLAG to the monitor
-	move.w D0,D1                              // corrected mode
-	eor.w D2,D1                               // bit4 set when the VGA bit changed (monitor != NVRAM)
-	btst #4,D1
-	beq.s .normal_mode                        // same monitor type => keep VERTFLAG
-	bchg #8,D0                                // flip VERTFLAG: double-line <-> interlace
-.normal_mode:
-	btst #4,D0                                // VGA
-	beq.s .no_vga
-	bclr #6,D0                                // no OVERSCAN in VGA
+	tst.w D2                                  // monochrome?
+	bne.s .not_mono
+	bset #3,D0                                // set COL80
+.not_mono:
+	cmp.w #2,D1                               // VGA?
+	bne.s .no_vga
+	bclr #6,D0                                // no OVERSCAN on VGA
+	cmp.w #4,D2                               // hicolor+vga?
+	bne.s .no_vga
+	bclr #3,D0                                // clear COL80
 .no_vga:
 	move.w D0,modecode
 	movem.l (SP)+,D1/D2
 	rts
-	
+
+fix_mono_shift:                              // Replaces "move.w #0x400,0xFFFF8266"
+	movem.l D0-D2,-(SP)
+	bsr .wait_vbl_8266
+	clr.w 0xFFFF8266
+	bsr .wait_vbl_8266
+	move.w #0x400,0xFFFF8266                  // 2 colors
+	movem.l (SP)+,D0-D2
+	rts
+.wait_vbl_8266:
+	move.l _frclock,D0                        // VBL frame counter
+	move.l _hz_200,D1                         // 200 Hz time base
+.wv8266:
+		cmp.l _frclock,D0
+		bne.s .wv8266_end                // a VBL occured
+		move.l _hz_200,D2
+		sub.l D1,D2
+		cmp.l #20,D2                      // ~100 ms time-out
+		blt.s .wv8266
+.wv8266_end:
+	rts
+
 picture_build:                                         // target A0
 
 	movem.l D0-D4/A0-A3,-(SP)

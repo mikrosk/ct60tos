@@ -19,6 +19,7 @@
 	.text
 
 	.globl	picture_boot
+	.globl	fix_mono_shift
 
 	.align	2
 	.long	0x57E
@@ -26,3 +27,11 @@
 begin1:
 	jsr	picture_boot
 end1:
+
+	.align	2
+	.long	0x849C
+	.long	end2-begin2
+begin2:
+	jsr	fix_mono_shift
+	nop
+end2:
