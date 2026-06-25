@@ -129,7 +129,7 @@ static size_t patchTos( unsigned char* pTos, const unsigned char* pPatches )
 	struct tm* pTime = localtime( &timeSec );
 
 	// write new TOS date ...
-	pTos[24] = (unsigned char)( ( ( pTime->tm_mon / 10 ) << 4 ) + ( pTime->tm_mon % 10 ) );
+	pTos[24] = (unsigned char)( ( ( ( pTime->tm_mon + 1 ) / 10 ) << 4 ) + ( ( pTime->tm_mon + 1 ) % 10 ) );	// tm_mon is 0-based
 	pTos[25] = (unsigned char)( ( ( pTime->tm_mday / 10 ) << 4 ) + ( pTime->tm_mday % 10 ) );
 
 	year = ( pTime->tm_year + 1900 ) / 100;
