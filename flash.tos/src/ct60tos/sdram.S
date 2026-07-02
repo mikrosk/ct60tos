@@ -212,6 +212,86 @@ init_060:
 .end_init_060:
 	jmp 0x00E000C8
 
+// Entered with interrupts already masked (SR=0x2700) and the MMU off.
+// Builds a one-page tree mapping logical 0x40000000 -> physical 0x50000000,
+// enables the paged MMU and PLPARs the logical address:
+//   paged MMU present (LC/full): A0 := 0x50000000 (table search)
+//   no paged MMU (EC):           A0 stays 0x40000000 (transparent)
+// 0x40000000 misses the ITT/DTT set up by init_060, forcing a table search;
+// PLPAR only translates, it does not access L or P, so it cannot fault here.
+// Returns D0=1 if a paged MMU is present, else 0 (also 0 when no SDRAM).
+probe_paged_mmu:
+	movem.l D1-D4/A0-A2,-(SP)
+	moveq #0,D0              // default: no paged MMU / no scratch
+	move.l ramtop,D1         // top of SDRAM ($5A4); 0 if no SDRAM
+	beq .ppm_exit
+	sub.l #8192,D1           // scratch = top 8K page (8K-aligned)
+	move.l D1,A0             // A0 = root table base
+	movec.l CACR,D3          // run the probe with the data cache OFF
+	move.l D3,D2             // (the ct60_write_param pattern) so the
+	cpusha DC                // descriptor writes and the table walk stay
+	bclr.l #31,D2            // coherent and we never cpusha BC, which
+	movec.l D2,CACR          // would invalidate the I-cache mid-flight
+	cinva DC
+	move.l A0,A1             // zero root(512)+pointer(512) tables
+	move.w #(1024/4)-1,D2
+.ppm_zero:
+	clr.l (A1)+
+	dbf D2,.ppm_zero
+	lea 512(A0),A1          // pointer table
+	move.l A1,D2
+	addq.l #3,D2            // resident table descriptor
+	move.l D2,128(A0)       // root[32]   (0x40000000 >> 25)
+	lea 1024(A0),A2         // page table
+	move.l A2,D2
+	addq.l #3,D2
+	move.l D2,(A1)          // pointer[0]
+	move.l #0x50000001,(A2) // page[0] = 0x50000000 | resident
+	movec.l TC,D1           // save MMU state
+	move.l D1,-(SP)
+	movec.l URP,D1
+	move.l D1,-(SP)
+	movec.l SRP,D1
+	move.l D1,-(SP)
+	move.l A0,D1            // point both root pointers at our tree
+	movec.l D1,URP
+	movec.l D1,SRP
+	movec.l DFC,D2          // PLPA translates in the DFC address space
+	moveq #5,D1             // (68060UM 4-9): DFC=0 after reset = undefined
+	movec.l D1,DFC          // space, no walk! -> select supervisor data
+	move.l #0x0000C210,D1   // enable, 8K pages, default cache-inhibit
+	movec.l D1,TC
+	pflusha
+	nop                     // sync pipeline
+	move.l #0x40000000,A0   // L: misses the TTRs, mapped by our tree
+	plpar (A0)             // A0 := phys(L) if a paged MMU is present
+	nop
+	movec.l D2,DFC         // restore DFC
+	moveq #0,D1            // restore: disable MMU first
+	movec.l D1,TC
+	pflusha
+	move.l (SP)+,D1
+	movec.l D1,SRP
+	move.l (SP)+,D1
+	movec.l D1,URP
+	move.l (SP)+,D1
+	movec.l D1,TC          // original TC (E=0)
+	move.l (A2),D4         // page descriptor readback: a real table walk
+	                       // sets the U-bit (bit 3) in memory, whatever
+	                       // PLPA did to A0 -- second, independent witness
+	cinva DC               // re-enable the data cache (restore CACR)
+	movec.l D3,CACR
+	move.l #0x40000000,D1
+	cmp.l A0,D1            // PLPA loaded the physical address into A0?
+	bne.s .ppm_yes
+	btst #3,D4             // or the walker set the descriptor U-bit?
+	beq.s .ppm_exit        // neither -> no paged MMU (EC)
+.ppm_yes:
+	moveq #1,D0            // paged MMU present (LC/full)
+.ppm_exit:
+	movem.l (SP)+,D1-D4/A0-A2
+	rts
+
 init_sdram:
 
 	movem.l D1-A6,-(SP)
@@ -687,7 +767,11 @@ init_sdram:
 	moveq #0,D7
 	movec.l PCR,D0
 	btst #16,D0
-	bne.s .end_sdram         // EC or LC
+	beq.s .has_paged_mmu     // PCR=0x0430: full 68060 (FPU+MMU)
+	bsr probe_paged_mmu      // PCR=0x0431: LC or EC -> probe for paged MMU
+	tst.l D0
+	beq.s .end_sdram         // EC -> no paged MMU, skip
+.has_paged_mmu:
 	move.l _sysbase,A0       // header ROM
 	move.l 0x24(A0),A0       // kbshift
 	move.b (A0),D0
