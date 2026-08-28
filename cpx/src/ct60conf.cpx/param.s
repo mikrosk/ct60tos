@@ -183,13 +183,17 @@ ct60_rw_param: ; D0.W: mode, D1.L: type_param, D2.L: value
 	bra .program_param_end
 .found_dev:
 	lea.l devices(PC),A1
-	add.l 2(A3),A1                                      ; sector of device
+	add.l 2(A3),A1                                      ; sectors of device
 	movem.l (A1),A2-A4                                  ; sector, flash_unlock1, flash_unlock2
 	add.l D6,A2                                         ; offset free block
 	tst.w D7
 	beq.s .erase_sector_end
+	move.l A2,-(SP)                                     ; address to program
+	move.l A1,A0                                        ; first sector of the parameter area
 	move.w #CMD_SECTOR_ERASE1,D5
 	move.w #CMD_SECTOR_ERASE2,D6
+.erase_sector_loop:
+	move.l (A0),A2                                      ; sector to erase
 	moves.w D3,(A3)
 	moves.w D4,(A4)
 	moves.w D5,(A3)
@@ -203,7 +207,7 @@ ct60_rw_param: ; D0.W: mode, D1.L: type_param, D2.L: value
 		moves.w (A2),D0
 .wait_erase_sector_060:
 		btst.l #7,D0
-		bne.s .erase_sector_end
+		bne.s .erase_sector_next
 	btst.l #5,D0
 	beq.s .wait_erase_loop
 	move.w (A2),D0
@@ -212,10 +216,15 @@ ct60_rw_param: ; D0.W: mode, D1.L: type_param, D2.L: value
 	moves.w (A2),D0
 .test_erase_sector_060:
 	btst.l #7,D0
-	bne.s .erase_sector_end
-	addq.w #4,SP
+	bne.s .erase_sector_next
+	addq.w #8,SP
 	moveq #-10,D0                                       ; write error
-	bra.s .program_param_loop_end
+	bra .program_param_loop_end
+.erase_sector_next:
+	lea.l 12(A0),A0
+	tst.l (A0)                                          ; next sector of the parameter area
+	bne.s .erase_sector_loop
+	move.l (SP)+,A2                                     ; address to program
 .erase_sector_end:
 	lea -MAX_PARAM_FLASH*4(A6),A0                       ; buffer
 	move.w #CMD_PROGRAM,D5
@@ -294,17 +303,27 @@ ct60_rw_param: ; D0.W: mode, D1.L: type_param, D2.L: value
 	movem.l (SP)+,D1-A5
 	rts
 	
-devices:
+devices:                                    ; the manufacturer code is ignored, only the device code is compared
 	dc.l 0x000422AB, fujitsu_mbm29f400bc-devices
 	dc.l 0x00042258, fujitsu_mbm29f800ba-devices
 	dc.l 0x00012258, amd_am29f800bb-devices
+	dc.l 0x000122D6, amd_am29f800bt-devices
 	dc.l 0
 	
 fujitsu_mbm29f400bc:
 	dc.l FLASH_ADR+0xF0000, FLASH_UNLOCK1, FLASH_UNLOCK2
+	dc.l 0
 
 fujitsu_mbm29f800ba:
 amd_am29f800bb:
 	dc.l FLASH_ADR+0xF0000, FLASH_UNLOCK1, FLASH_UNLOCK2
+	dc.l 0
+
+amd_am29f800bt:                             ; top boot block: the parameter area is split in 32 + 8 + 8 + 16 KB
+	dc.l FLASH_ADR+0xF0000, FLASH_UNLOCK1, FLASH_UNLOCK2
+	dc.l FLASH_ADR+0xF8000, FLASH_UNLOCK1, FLASH_UNLOCK2
+	dc.l FLASH_ADR+0xFA000, FLASH_UNLOCK1, FLASH_UNLOCK2
+	dc.l FLASH_ADR+0xFC000, FLASH_UNLOCK1, FLASH_UNLOCK2
+	dc.l 0
 
 	end

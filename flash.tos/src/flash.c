@@ -67,7 +67,7 @@ write_flash(Bit8u *buffer, Bit32u size)
   i=0;
   while(supported_devices[i].sectors != NULL)
   {
-    if(device == supported_devices[i].device)
+    if((device & 0xFFFF) == (supported_devices[i].device & 0xFFFF))
       sectors = supported_devices[i].sectors;
     i++;
   }
