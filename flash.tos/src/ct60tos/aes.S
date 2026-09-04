@@ -389,3 +389,24 @@ begin38:
 	jsr	fix_cicon_colours
 	.long	0x670000A0	/* beq.w past the 16-plane conversion */
 end38:
+
+/*
+   LARGE.S, expand_data():
+
+	amask:	move.l	mask(a6),a4	; now AND mask to all planes
+		subq	#1,d5		; dbra count of dplanes
+		cmp.w	#15,d5
+		beq.b	pixpac		; (unless pixel packed...)
+
+	e34b66: 5345       subq.w #1,d5
+	e34b68: ba7c 000f  cmp.w  #15,d5
+	e34b6c: 6712       beq.s  0xe34b80
+
+   d5 holds the plane count minus one, hence 15 rather than 16.
+*/
+	.align	2
+	.long	0x34B6C
+	.long	end39-begin39
+begin39:
+	.word	0x6C12		/* bge.s replaces beq.s: 16 planes or more */
+end39:
