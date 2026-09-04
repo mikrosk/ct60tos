@@ -342,3 +342,25 @@ end35:
 begin36:
 	jsr	det_evnt_multi
 end36:
+
+/*
+   GEMOBLIB.C, gr_cicon():
+
+	if ( ( gl_nplanes == 16 ) && ( color ) )
+	    gsx_blt(pmask, ..., MD_TRANS, 1, fgcol);
+	else
+	    gsx_blt(pmask, ..., MD_TRANS, bgcol, fgcol);
+	...
+	gsx_cblt(pdata, ..., S_OR_D, color->num_planes);
+
+	e2de3c: 0c79 0010 0000 9eb4  cmpi.w #16,gl_nplanes
+	e2de44: 6600 0048            bne.w  0xe2de8e
+	e2de50: 2f3c 0002 0001       move.l #$00020001   ; MD_TRANS, pen 1
+	e2dee4: 3f3c 0007            move.w #7,-(sp)     ; S_OR_D
+*/
+	.align	2
+	.long	0x2DE44
+	.long	end37-begin37
+begin37:
+	.long	0x6D000048	/* blt.w replaces bne.w: 16 planes or more */
+end37:
