@@ -364,3 +364,28 @@ end36:
 begin37:
 	.long	0x6D000048	/* blt.w replaces bne.w: 16 planes or more */
 end37:
+
+/*
+   GEMOBLIB.C, tran_check():
+
+	my_trans( saddr, w/8, daddr, w/8, h, nplanes );
+
+	if ( nplanes == 16 ) {
+	    ...
+		case 0x0000: wptr[i] = 0xFFFF; break;
+		case 0xFFFF: wptr[i] = 0x0000; break;
+		default:     wptr[i] = get_rgb( wptr[i] ); break;
+	}
+
+	e2e91a: 0c6e 0010 0018  cmpi.w #16,24(a6)
+	e2e920: 6600 00a0       bne.w  0xe2e9c2
+*/
+	.globl	fix_cicon_colours
+
+	.align	2
+	.long	0x2E91A
+	.long	end38-begin38
+begin38:
+	jsr	fix_cicon_colours
+	.long	0x670000A0	/* beq.w past the 16-plane conversion */
+end38:
