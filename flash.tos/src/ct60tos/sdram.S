@@ -4420,6 +4420,8 @@ add_sdram:
 	ble .not_sdram
 	move.l D0,-(SP)          // size
 	move.l D1,-(SP)          // start
+	tst.b dspin              // spinup delay (NVRAM offset 0x0A) in seconds
+	beq .ram_valid           // 0 => fast boot wanted, skip the clear
 	cmp.l #0x752019F3,memvalid
 	bne.s .not_valid
 	cmp.l #0x237698AA,memval2

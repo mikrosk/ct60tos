@@ -46,6 +46,7 @@
 #define cookie     0x5A0
 #define ramtop     0x5A4
 #define ramvalid   0x5A8
+#define dspin      0xA82
 
 // line A offset vars
 #define dev_tab -692
