@@ -17,6 +17,7 @@
 */
 
 	.globl	picture_boot
+	.globl	detect_supervidel
 	.globl	fix_mono_shift
 
 #include "vars.h"
@@ -40,6 +41,17 @@ picture_boot:
 	move.l #0x8000,D0                         // instruction cache
 	movec.l D0,CACR
 	move.w #0x2300,SR                         // enable interrupts
+	
+	move.l A0,-(SP)                           // earliest CT60 code in the boot
+	move.l phystop,A0                         // that any of this can reach, so
+	move.l #-1,sv_present(A0)                 // set the variables up here
+	clr.l sv_xbios_entry(A0)
+	clr.l old_v_bas_ad(A0)
+	move.l #-1,sdram_size(A0)
+	clr.l ct60_info_shown(A0)
+	clr.l sdram_warning(A0)
+	move.l (SP)+,A0
+
 	bsr fix_modecode
 	bsr screen_ntc_boot
 	moveq #0,D0
@@ -110,7 +122,8 @@ picture_build:                                         // target A0
 	move.w 6(A1),-(SP)                        // pattern
 	move.w 4(A1),-(SP)                        // planes
 	pea (A0)                                  // target = screen
-	move.w 2(A1),D0                           // header size in words
+	moveq #0,D0                               // the index below is a long, and
+	move.w 2(A1),D0                           // this only writes the low word
 	add.w D0,D0
 	pea (A1,D0)                               // compressed data
 	bsr decompress_img
@@ -511,6 +524,24 @@ set_external_clock:
 	rts
 
 detect_supervidel:
+	move.l A0,-(SP)
+	move.l phystop,A0
+	move.l sv_present(A0),D0
+	bpl.s .sv_answer         // 0 or 1: asked already
+	bsr.s sv_probe
+	move.l phystop,A0
+	move.l D0,sv_present(A0)
+.sv_answer:
+	move.l (SP)+,A0
+	tst.b D0
+	rts
+
+/* Read SV_CTRL with a bus error handler in place; D0 comes back 1 or 0.
+ * Safe this early because init_060 leaves DTT0/ITT0 at 0x807FE040, which makes
+ * everything from 0x80000000 up cache inhibited and precise, so an unclaimed
+ * address faults synchronously.
+ */
+sv_probe:
 	move.w SR,-(SP)
 	or.w #0x0700,SR         // mask interrupts
 	move.l A0,-(SP)
@@ -534,7 +565,6 @@ detect_supervidel:
 	move.l (SP)+,A1
 	move.l (SP)+,A0
 	move.w (SP)+,SR
-	tst.b D0
 	rts
 
 measure_clock_videl:                 // return value in MHz

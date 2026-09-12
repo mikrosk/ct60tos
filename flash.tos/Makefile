@@ -86,7 +86,8 @@ NFARCHIVE=	$(PROGRAM)_nf.tgz
 NFDISTDIR=	./nonfree
 NFDISTFILES=	\
 		$(NFDISTDIR)/tos404.bin \
-		$(NFDISTDIR)/sparrow.out
+		$(NFDISTDIR)/sparrow.out \
+		$(NFDISTDIR)/sv_xbios.bin
 
 all:	 	$(FLASH_BINARY) $(TOS)
 
@@ -126,6 +127,8 @@ $(TOS):	$(NFDISTFILES) $(TOS_PATCHES) $(GENTOS)
 $(OBJDIR)/%.o:	$(SRCDIR)/%.c
 	@mkdir -p $(@D)
 	$(CC) $(INCLUDE) $(CFLAGS) -c $< -o $@
+
+$(OBJDIR)/ct60tos/svxbios.o:	$(NFDISTDIR)/sv_xbios.bin
 
 $(OBJDIR)/ct60tos/%.o:	$(SRCDIR)/ct60tos/%.S
 	@mkdir -p $(@D)

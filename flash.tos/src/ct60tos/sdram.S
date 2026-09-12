@@ -36,6 +36,17 @@
 // #define DEBUG
 // #define INIT_SDRAM_MOVE16
 // #define RESET // removed because not works with some motherboards/SDR60 versions
+/* The boot display is indented to leave the leftmost columns of the screen to
+ * the Atari logo.  Move the cursor there with VT52 rather than writing spaces:
+ * a space is a character like any other and paints its cell, so an indent
+ * written that way wipes out whatever the logo has already put underneath it.
+ */
+	.macro	indent
+	.rept 12
+	.byte 27,0x43            // ESC C, cursor right
+	.endr
+	.endm
+
 #define XFRB_SIZE 0x10000
 #define SPEED_BUFFER_SIZE 0x10000 // mini 512 bytes
 #define NB_COOKIES 128
@@ -327,60 +338,7 @@ init_sdram:
 	beq.s .blitter_slow
 	bset #2,0xFFFF8007       // blitter 16 MHz
 .blitter_slow:
-	lea spaces(PC),A0
-	bsr display_string_single
-	lea message0(PC),A0
-	cmp.w #2,0x3E86          // number of planes
-	bhi.s .title_colors
-	lea message0b(PC),A0
-.title_colors:
-	bsr display_string_single
-	lea spaces(PC),A0
-	bsr display_string_single
-	movec.l PCR,D0
-	swap D0
-	lea message8(PC),A0      // 68060
-	cmp.w #0x0430,D0
-	beq.s .full_060
-	lea message9(PC),A0
-	cmp.w #0x0431,D0
-	beq.s .ec_lc_060
-	lea message10(PC),A0
-.full_060:
-.ec_lc_060:
-	bsr display_string
-	clr.w D0
-	swap D0
-	lsr.w #8,D0              // revision
-	divu #10,D0
-	and.w #7,D0
-	beq.s .rev_less_10
-	or.w #0x30,D0
-	bsr display_char
-.rev_less_10:
-	swap D0
-	or.w #0x30,D0
-	bsr display_char
-	movec.l PCR,D0
-	move.l D0,D1
-	lsr.l #8,D1
-	lea message11(PC),A0
-	and.w #0x1FF,D1
-	beq.s .display_mask      // revision 0, mask D00W/D11W
-	lea message13(PC),A0
-	cmp.w #2,D1              // revision 2, mask F84W
-	beq.s .display_mask
-	lea message14(PC),A0	
-	cmp.w #6,D1              // revision 1,5 mask F43G/G65V 
-	bcc.s .display_mask      // revision 6 and more mask E41J ?
-	bset #5,D0               // disable store/load bypass (masks 1,3,4,5)
-	movec.l D0,PCR
-	lea message12(PC),A0
-.display_mask:
-	btst #8,D1
-	bne.s .mask_060_ok       // mask info only for 060 full
-	bsr display_string
-.mask_060_ok:
+	bsr fix_store_load_bypass
 	moveq #0,D7
 	clr.l -(SP)
 	move.l #CT60_CLOCK,-(SP)
@@ -389,9 +347,9 @@ init_sdram:
 	trap #14
 	lea 12(SP),SP
 	cmp.l #MIN_FREQ_DALLAS/2,D0
-	bcs.s .measure_mhz
+	bcs.s .clock_done
 	cmp.l #MAX_FREQ,D0
-	bhi.s .measure_mhz
+	bhi.s .clock_done
 	move.l _sysbase,A0       // header ROM
 	move.l 0x24(A0),A0       // kbshift
 	moveq #0xC,D1            // ALT or CTRL
@@ -401,7 +359,7 @@ init_sdram:
 	bsr ct60_configure_clock
 	move.l D0,D7
 	bsr tempo_20ms
-	bra.s .measure_mhz
+	bra.s .clock_done
 .reset_clock:
  	moveq #0,D2
 	moveq #0,D1
@@ -409,34 +367,9 @@ init_sdram:
 	bsr ct60_rw_clock
 	move.l D0,D7 
 	bsr tempo_20ms
-.measure_mhz:
-	link A6,#-6
-	bsr measure_cpu_frequency
-	move.l D0,-4(A6)         // CPU frequency in MHz * 10
-	move.l #0x43543630,D0    // CT60
-	bsr get_cookie
-	move.l A0,D0
-	beq.s .no_cookie_ct60
-	move.l -4(A6),4(A0)      // value
-.no_cookie_ct60:
-	move.l -4(A6),D0
-	clr.w -2(A6)
-	cmp.w #1000,D0
-	bcs.s .low_100
-	move.l D0,-(SP)
-	moveq #0x20,D0
-	bsr display_char
-	move.l (SP)+,D0
-.low_100:     
-	lea -6(A6),A0
-	moveq #4,D1
-	bsr conv_ascii_value
-	move.b -3(A6),-2(A6)
-	move.b #0x2E,-3(A6)
-	bsr display_string_single
-	unlk A6
-	lea message18(PC),A0     // MHz
-	bsr display_string_single
+.clock_done:
+	move.l phystop,A0        // the boot display wants it, and runs later
+	move.l D7,clock_error(A0)
 	link A6,#-48
 	pea -48(A6)              // buffer
 	move.w #48,-(SP)         // size
@@ -455,7 +388,7 @@ init_sdram:
 	cmp.l #0x41000000,D0
 	beq.s .code_hard
 	cmp.l #0x53000000,D1
-	bne .no_code
+	bne .codes_written
 .code_hard:
 	cmp.l #0x41000000,D0
 	bne.s .no_abe_code
@@ -477,7 +410,7 @@ init_sdram:
 	move.l D4,D1
 	and.l #0xFF000000,D1
 	cmp.l #0x53000000,D1
-	bne.s .no_code
+	bne.s .codes_written
 	clr.l -(SP)
 	move.l #CT60_SDR_CODE,-(SP)
 	move.w #CT60_MODE_READ,-(SP)
@@ -485,114 +418,14 @@ init_sdram:
 	trap #14
 	lea 12(SP),SP 
 	cmp.l D0,D4
-	beq.s .no_code
+	beq.s .codes_written
 	move.l D4,-(SP)
 	move.l #CT60_SDR_CODE,-(SP)
 	move.w #CT60_MODE_WRITE,-(SP)
 	move.w #rw_parameter,-(SP)
 	trap #14
 	lea 12(SP),SP 
-.no_code:
-	clr.l -(SP)
-	move.l #CT60_ABE_CODE,-(SP)
-	move.w #CT60_MODE_READ,-(SP)
-	move.w #rw_parameter,-(SP)
-	trap #14
-	lea 12(SP),SP
-	move.l D0,D3 
-	clr.l -(SP)
-	move.l #CT60_SDR_CODE,-(SP)
-	move.w #CT60_MODE_READ,-(SP)
-	move.w #rw_parameter,-(SP)
-	trap #14
-	lea 12(SP),SP
-	move.l D0,D4
-	move.l D3,D0
-	move.l D4,D1
-	and.l #0xFF000000,D0
-	and.l #0xFF000000,D1
-	moveq #0,D6              // flag display hardware
-	cmp.l #0x41000000,D0
-	beq.s .code_hard_display
-	cmp.l #0x53000000,D1
-	bne.s .no_code_display
-.code_hard_display:
-	moveq #-1,D6             // flag display hardware
-	lea message38(PC),A0
-	bsr display_string_single
-	cmp.l #0x41000000,D0
-	bne.s .no_abe_code_display
-	lea message39(PC),A0
-	bsr display_string_single
-	move.w D3,D0
-	lsr.w #8,D0
-	bsr display_char
-	move.w D3,D0
-	and.w #0xFF,D0
-	bsr display_char
-.no_abe_code_display:
-	cmp.l #0x53000000,D1
-	bne.s .no_code_display
-	lea message40(PC),A0
-	bsr display_string_single
-	move.w D4,D0
-	lsr.w #8,D0
-	bsr display_char
-	move.w D4,D0
-	and.w #0xFF,D0
-	bsr display_char
-.no_code_display:
-	clr.l -(SP)
-	move.l #CT60_CLOCK,-(SP)
-	move.w #CT60_MODE_READ,-(SP)
-	move.w #rw_parameter,-(SP)
-	trap #14
-	lea 12(SP),SP
-	cmp.l #MIN_FREQ_DALLAS/2,D0
-	bcs.s .no_pclock_display
-	cmp.l #MAX_FREQ,D0
-	bhi.s .no_pclock_display
-	tst.w D6
-	bne.s .no_display_hard
-	lea message38(PC),A0
-	bsr display_string_single
-.no_display_hard:
-	tst.l D7                 // error code programmable clock generator
-	bpl.s .pclock_ok
-	moveq #0x20,D0
-	bsr display_char
-	lea error12(PC),A0
-	cmp.w #CT60_CALC_CLOCK_ERROR,D7
-	beq.s .pclock_error
-	lea error11(PC),A0
-.pclock_error:
-	bsr display_string
-	bra.s .no_pclock_display
-.pclock_ok:
-	lea message99(PC),A0
-	bsr display_string_single
-	cmp.l #100000,D0         // KHz
-	bcs.s .low_100000
-	move.l D0,-(SP)
-	moveq #0x20,D0
-	bsr display_char
-	move.l (SP)+,D0
-.low_100000:	
-	link A6,#-8
-	clr.w -2(A6)
-	lea -8(A6),A0
-	moveq #6,D1
-	bsr conv_ascii_value
-	move.b -4(A6),-3(A6)
-	move.b -5(A6),-4(A6)
-	move.b #0x2E,-5(A6)
-	bsr display_string_single
-	unlk A6
-	lea message18(PC),A0     // MHz
-	bsr display_string_single
-.no_pclock_display:
-	lea crlf(PC),A0
-	bsr display_string_single
+.codes_written:
 	clr.l ramtop
 	clr.l ramvalid
 	move.l phystop,D0
@@ -629,6 +462,7 @@ init_sdram:
 	beq.s .error_sdram
 	lea error1(PC),A0	
 .error_sdram:
+	bsr display_ct60_info    // nothing is going to replace the screen now
 	move.l A0,-(SP)
 	lea crlf_spaces(PC),A0
 	bsr display_string_single
@@ -666,27 +500,11 @@ init_sdram:
 	bra.s .halt_no_sdram
 .ok_sdram:
 	move.l D0,D4
+	move.l phystop,A0        // the boot display wants it, and runs later
+	move.l D4,sdram_size(A0)
 	add.w #26,D0             // size 0-3 for 64MB-512MB
 	moveq #0,D5
 	bset D0,D5
-	lea crlf_spaces(PC),A0
-	bsr display_string_single
-	lea message1(PC),A0
-	bsr display_string_single
-	lea message5(PC),A0
-	cmp.w #3,D4
-	beq.s .ok_sdram2
-	lea message4(PC),A0
-	cmp.w #2,D4
-	beq.s .ok_sdram2
-	lea message3(PC),A0
-	cmp.w #1,D4
-	beq.s .ok_sdram2
-	lea message2(PC),A0
-.ok_sdram2:
-	bsr display_string_single
-	lea message6(PC),A0
-	bsr display_string
 	lea 0x1000000,A0
 	move.l A0,A1
 	add.l D5,A1              // end SDRAM
@@ -733,10 +551,12 @@ init_sdram:
 	bmi .test_ok             // error
 	cmp.b #0x70,D0
 	bls.s .test_ok           // PC150
-	lea message54(PC),A0     // warning CAS latency
-	bsr display_string
+	lea message54(PC),A0     // warning CAS latency, said with the rest of it
+	move.l phystop,A1
+	move.l A0,sdram_warning(A1)
  	bra.s .test_ok
 .error_test:
+	bsr display_ct60_info
 	move.l A0,-(SP)
 	lea error10(PC),A0
 	bsr display_string
@@ -784,10 +604,31 @@ init_sdram:
 	jsr (A0)
 	tst.l D0
 	beq.s .end_sdram
+	moveq #-1,D7             // TOS in RAM, said below with the rest of it
+.end_sdram:
+	jsr detect_supervidel
+	beq.s .no_sv_driver      // no board: nothing reserved, nothing relocated,
+	move.l _sysbase,A0       // and TOS draws the boot logo
+	move.l 0x24(A0),A0       // kbshift.  Interrupts are enabled by the
+	moveq #0xF,D0            // instruction picture_boot replaces, so no key
+	and.b (A0),D0            // has been reported before this point.  Left
+	cmp.b #2,D0              // shift on its own: answer the rest of the boot
+	bne.s .use_sv_driver     // as if no board were fitted
+	move.l phystop,A0
+	clr.l sv_present(A0)
+	bra.s .no_sv_driver
+.use_sv_driver:
+	jsr sv_xbios_reserve     // all of it before the display, so that the
+	jsr load_sv_xbios        // screen the display lands on is the one the
+	jsr install_sv_xbios     // boot keeps
+.no_sv_driver:
+	bsr display_ct60_info
+	bsr display_sdram_info
+	tst.w D7
+	beq.s .no_tos_in_ram_yet
 	lea message51(PC),A0     // TOS in RAM
 	bsr display_string
-	moveq #-1,D7
-.end_sdram:
+.no_tos_in_ram_yet:
 	clr.l -(SP)
 	move.l #CT60_SAVE_NVRAM_1,-(SP)
 	move.w #CT60_MODE_READ,-(SP)
@@ -1223,9 +1064,11 @@ error8:	.asciz "SDRAM type error"
 error9:	.asciz "SDRAM refresh rate error"
 	.asciz "SDRAM refresh rate error"
 error10:	.byte 13,10
-	.asciz "            SDRAM read failure at $"
+	indent
+	.asciz "SDRAM read failure at $"
 	.byte 13,10
-	.asciz "            SDRAM erreur v‚rification en $"
+	indent
+	.asciz "SDRAM erreur v‚rification en $"
 error11:	.asciz "CTCM not found"
 	.asciz "CTCM non trouv‚e"
 error12:	.asciz "CTCM frequency error"
@@ -1248,7 +1091,8 @@ message0b:	.ascii "ATARI FALCON/CT60 TOS4.04"
 crlf:	.byte 13,10,0
 separator:	.asciz ", "
 crlf_spaces:	.byte 13,10
-spaces:	.asciz "            "
+spaces:	indent
+	.byte 0
 message1:	.asciz "SDRAM "
 message2:	.asciz "64"
 message3:	.asciz "128"
@@ -1270,7 +1114,7 @@ message13:	.asciz " Mask F84W"      // revision 2
 	.asciz " Masque F84W"
 message14:	.asciz " Mask E41J"      // revision 6
 	.asciz " Masque E41J" 
-message15:	.byte 27 
+message15:	.byte 13,10,27
 	.ascii "p Boot v"
 	.byte ((VERSION/256) & 0xF) + 0x30
 	.ascii "."
@@ -1381,7 +1225,8 @@ message37:	.byte 13,10
 	.byte 13,10
 	.asciz "Octet 21, Attributs du module : $" 
 message38:	.byte 13,10
-	.asciz "            CT60 hardware"
+	indent
+	.asciz "CT60 hardware"
 message39:	.asciz " ABEv"
 message40:	.asciz " SDRv"
 message41:	.byte 13,10
@@ -1403,11 +1248,11 @@ message49:	.asciz " -> "
 message50:	.asciz "no XBRA"
 	.asciz "pas de XBRA"
 message51:	.byte 13,10
-//	.asciz "            TOS copied to SDRAM (0-1FFF E00000-EEFFFF)"
-	.asciz "            TOS copied to SDRAM"
+	indent
+	.asciz "TOS copied to SDRAM"
 	.byte 13,10
-//	.asciz "            TOS copi‚ en SDRAM (0-1FFF E00000-EEFFFF)"
-	.asciz "            TOS copi‚ en SDRAM"
+	indent
+	.asciz "TOS copi‚ en SDRAM"
 message51b:	.asciz "NVRAM unused"
 	.asciz "NVRAM non utilis‚e"
 message52:	.byte 13,10
@@ -3847,6 +3692,320 @@ display_ram_test:
 	movem.l (SP)+,D0/D1/A0
 	rts
 
+/* The CT60 boot display: what this machine is.
+ *
+ * init_sdram works this out without printing it, so that the screen it lands
+ * on is the one the boot keeps - a SuperVidel in use replaces the screen
+ * first.  Printed from .end_sdram once that has happened, and straight away
+ * on the paths that stop and wait for the user.
+ */
+
+display_ct60_info:
+
+	movem.l D0-D7/A0-A6,-(SP)
+	move.l phystop,A0
+	tst.l ct60_info_shown(A0)
+	bne .end_ct60_info
+	moveq #-1,D0
+	move.l D0,ct60_info_shown(A0)
+	move.l clock_error(A0),D7
+	lea spaces(PC),A0
+	bsr display_string_single
+	lea message0(PC),A0
+	cmp.w #2,0x3E86          // number of planes
+	bhi.s .title_colors
+	lea message0b(PC),A0
+.title_colors:
+	bsr display_string_single
+	lea spaces(PC),A0
+	bsr display_string_single
+	movec.l PCR,D0
+	swap D0
+	lea message8(PC),A0      // 68060
+	cmp.w #0x0430,D0
+	beq.s .full_060
+	lea message9(PC),A0
+	cmp.w #0x0431,D0
+	beq.s .ec_lc_060
+	lea message10(PC),A0
+.full_060:
+.ec_lc_060:
+	bsr display_string
+	clr.w D0
+	swap D0
+	lsr.w #8,D0              // revision
+	divu #10,D0
+	and.w #7,D0
+	beq.s .rev_less_10
+	or.w #0x30,D0
+	bsr display_char
+.rev_less_10:
+	swap D0
+	or.w #0x30,D0
+	bsr display_char
+	movec.l PCR,D0
+	move.l D0,D1
+	lsr.l #8,D1
+	lea message11(PC),A0
+	and.w #0x1FF,D1
+	beq.s .display_mask      // revision 0, mask D00W/D11W
+	lea message13(PC),A0
+	cmp.w #2,D1              // revision 2, mask F84W
+	beq.s .display_mask
+	lea message14(PC),A0	
+	cmp.w #6,D1              // revision 1,5 mask F43G/G65V 
+	bcc.s .display_mask      // revision 6 and more mask E41J ?
+	lea message12(PC),A0
+.display_mask:
+	btst #8,D1
+	bne.s .mask_060_ok       // mask info only for 060 full
+	bsr display_string
+.mask_060_ok:
+.measure_mhz:
+	link A6,#-6
+	bsr measure_cpu_frequency
+	move.l D0,-4(A6)         // CPU frequency in MHz * 10
+	move.l #0x43543630,D0    // CT60
+	bsr get_cookie
+	move.l A0,D0
+	beq.s .no_cookie_ct60
+	move.l -4(A6),4(A0)      // value
+.no_cookie_ct60:
+	move.l -4(A6),D0
+	clr.w -2(A6)
+	cmp.w #1000,D0
+	bcs.s .low_100
+	move.l D0,-(SP)
+	moveq #0x20,D0
+	bsr display_char
+	move.l (SP)+,D0
+.low_100:     
+	lea -6(A6),A0
+	moveq #4,D1
+	bsr conv_ascii_value
+	move.b -3(A6),-2(A6)
+	move.b #0x2E,-3(A6)
+	bsr display_string_single
+	unlk A6
+	lea message18(PC),A0     // MHz
+	bsr display_string_single
+	bsr display_supervidel_info
+.no_code:
+	clr.l -(SP)
+	move.l #CT60_ABE_CODE,-(SP)
+	move.w #CT60_MODE_READ,-(SP)
+	move.w #rw_parameter,-(SP)
+	trap #14
+	lea 12(SP),SP
+	move.l D0,D3 
+	clr.l -(SP)
+	move.l #CT60_SDR_CODE,-(SP)
+	move.w #CT60_MODE_READ,-(SP)
+	move.w #rw_parameter,-(SP)
+	trap #14
+	lea 12(SP),SP
+	move.l D0,D4
+	move.l D3,D0
+	move.l D4,D1
+	and.l #0xFF000000,D0
+	and.l #0xFF000000,D1
+	moveq #0,D6              // flag display hardware
+	cmp.l #0x41000000,D0
+	beq.s .code_hard_display
+	cmp.l #0x53000000,D1
+	bne.s .no_code_display
+.code_hard_display:
+	moveq #-1,D6             // flag display hardware
+	lea message38(PC),A0
+	bsr display_string_single
+	cmp.l #0x41000000,D0
+	bne.s .no_abe_code_display
+	lea message39(PC),A0
+	bsr display_string_single
+	move.w D3,D0
+	lsr.w #8,D0
+	bsr display_char
+	move.w D3,D0
+	and.w #0xFF,D0
+	bsr display_char
+.no_abe_code_display:
+	cmp.l #0x53000000,D1
+	bne.s .no_code_display
+	lea message40(PC),A0
+	bsr display_string_single
+	move.w D4,D0
+	lsr.w #8,D0
+	bsr display_char
+	move.w D4,D0
+	and.w #0xFF,D0
+	bsr display_char
+.no_code_display:
+	clr.l -(SP)
+	move.l #CT60_CLOCK,-(SP)
+	move.w #CT60_MODE_READ,-(SP)
+	move.w #rw_parameter,-(SP)
+	trap #14
+	lea 12(SP),SP
+	cmp.l #MIN_FREQ_DALLAS/2,D0
+	bcs.s .no_pclock_display
+	cmp.l #MAX_FREQ,D0
+	bhi.s .no_pclock_display
+	tst.w D6
+	bne.s .no_display_hard
+	lea message38(PC),A0
+	bsr display_string_single
+.no_display_hard:
+	tst.l D7                 // error code programmable clock generator
+	bpl.s .pclock_ok
+	moveq #0x20,D0
+	bsr display_char
+	lea error12(PC),A0
+	cmp.w #CT60_CALC_CLOCK_ERROR,D7
+	beq.s .pclock_error
+	lea error11(PC),A0
+.pclock_error:
+	bsr display_string
+	bra.s .no_pclock_display
+.pclock_ok:
+	lea message99(PC),A0
+	bsr display_string_single
+	cmp.l #100000,D0         // KHz
+	bcs.s .low_100000
+	move.l D0,-(SP)
+	moveq #0x20,D0
+	bsr display_char
+	move.l (SP)+,D0
+.low_100000:	
+	link A6,#-8
+	clr.w -2(A6)
+	lea -8(A6),A0
+	moveq #6,D1
+	bsr conv_ascii_value
+	move.b -4(A6),-3(A6)
+	move.b -5(A6),-4(A6)
+	move.b #0x2E,-5(A6)
+	bsr display_string_single
+	unlk A6
+	lea message18(PC),A0     // MHz
+	bsr display_string_single
+.no_pclock_display:
+	lea crlf(PC),A0
+	bsr display_string_single
+.end_ct60_info:
+	movem.l (SP)+,D0-D7/A0-A6
+	rts
+
+/* The SDRAM size, which is only known once the module has been asked. */
+
+display_sdram_info:
+
+	movem.l D0-D4/A0-A1,-(SP)
+	move.l phystop,A0
+	move.l sdram_size(A0),D4
+	bmi.s .no_sdram_info     // no module, nothing was sized
+	lea crlf_spaces(PC),A0
+	bsr display_string_single
+	lea message1(PC),A0
+	bsr display_string_single
+	lea message5(PC),A0
+	cmp.w #3,D4
+	beq.s .ok_sdram2
+	lea message4(PC),A0
+	cmp.w #2,D4
+	beq.s .ok_sdram2
+	lea message3(PC),A0
+	cmp.w #1,D4
+	beq.s .ok_sdram2
+	lea message2(PC),A0
+.ok_sdram2:
+	bsr display_string_single
+	lea message6(PC),A0
+	bsr display_string
+	move.l phystop,A1
+	move.l sdram_warning(A1),D0
+	beq.s .no_sdram_warning
+	move.l D0,A0
+	bsr display_string
+.no_sdram_warning:
+.no_sdram_info:
+	movem.l (SP)+,D0-D4/A0-A1
+	rts
+
+/* Masks 1, 3, 4 and 5 of the 68060 want the store/load bypass turned off.
+ * Separate from the boot display, which works the mask out again for the
+ * text: this has to take effect before the code that follows it runs.
+ */
+
+fix_store_load_bypass:
+
+	movec.l PCR,D0
+	move.l D0,D1
+	lsr.l #8,D1
+	and.w #0x1FF,D1
+	beq.s .keep_bypass       // revision 0, mask D00W/D11W
+	cmp.w #2,D1
+	beq.s .keep_bypass       // revision 2, mask F84W
+	cmp.w #6,D1
+	bcc.s .keep_bypass       // revision 6 and more
+	bset #5,D0               // masks 1,3,4,5
+	movec.l D0,PCR
+.keep_bypass:
+	rts
+
+display_supervidel_info:
+
+	movem.l D0-D2/A0/A6,-(SP)
+	jsr detect_supervidel
+	beq .end_supervidel_info
+	move.l 0x80010000,D2     // SV_CTRL
+	lea crlf_spaces(PC),A0
+	bsr display_string_single
+	lea message_sv(PC),A0    // SuperVidel rev.
+	bsr display_string_single
+	moveq #0x32,D0           // '2'
+	btst #18,D2              // hardware revision
+	beq.s .display_sv_rev
+	moveq #0x31,D0           // '1'
+.display_sv_rev:
+	bsr display_char
+	lea message_sv_fw(PC),A0 // (FW
+	bsr display_string_single
+	move.l 0x8001007C,D0     // version register
+	and.l #0x3FF,D0
+	link A6,#-8
+	lea -8(A6),A0
+	moveq #4,D1
+	bsr conv_ascii_value_optimized
+	lea -8(A6),A0
+	bsr display_string_single
+	unlk A6
+	lea message_sv_int(PC),A0
+	move.w D2,D0             // the 25.175 MHz and the 32 MHz Videl clock, seen
+	and.w #0xC00,D0          // arriving from the motherboard or not.  Bit 13
+	beq.s .display_sv_clock  // says which clock drives the screen instead, but
+	lea message_sv_ext(PC),A0 // by the time this runs the driver has always
+.display_sv_clock:           // switched that to the SuperVidel's own chip
+	bsr display_string_single
+	btst #7,D2               // DVI monitor connected
+	beq.s .no_sv_dvi
+	lea message_sv_dvi(PC),A0
+	bsr display_string_single
+.no_sv_dvi:
+	lea message_sv_end(PC),A0
+	bsr display_string_single
+.end_supervidel_info:
+	movem.l (SP)+,D0-D2/A0/A6
+	rts
+
+message_sv:	.asciz "SuperVidel rev."
+message_sv_fw:	.asciz " (FW"
+message_sv_int:	.asciz ", internal clock"
+message_sv_ext:	.asciz ", external clock"
+message_sv_dvi:	.asciz ", DVI"
+message_sv_end:	.asciz ")"
+
+	.align 2
+
 conv_ascii_value_optimized:           // A0:target ascii, D0.L:value, D1:len
 
 	move.l A1,-(SP)
@@ -4111,7 +4270,7 @@ display_char:
 	addq.w #6,SP
 	movem.l (SP)+,D0-D2/A0-A2
 	rts
-	
+
 get_value:
 
 	movem.l D1-A5,-(SP)

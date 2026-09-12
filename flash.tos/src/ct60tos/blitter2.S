@@ -152,51 +152,24 @@ cf2:
 	movem.l (SP)+,D0-D3/A0-A2
 	rts
 	
-#define	logoaddr 0xe49434
-#define	dstY 4
-#define	srcX 96
-#define	srcY 86
-
 logo_atari:
-	movem.l	d0-d7/a0-a6,-(sp)
-	dc.w	0xa000
-	movem.w	(a0),d6/d7	// d6=planes	d7=bytes/line
-	lea	logoaddr,a0
-	move.l	0x44e.w,a1
 
-	move.w	#dstY,d0
-	mulu.w	d7,d0
-	add.w	d0,a1
-	subq	#1,d6
-blit_plane:
-	move.w	#(srcY-1),d4
-.linelp:
-	move.l	a1,a2
-	move.w	#(srcX/16)-1,d5
-.planelp:
-	move.w	(a0)+,d0
-	move.w	d6,d3
-	cmp.w	#15,d6
-	bne.s	.bpllp
-
-.tclp:
-	asl.w	#1,d0
-	scc.b	d2
-	ext.w	d2
-	move.w	d2,(a2)+
-	dbra	d3,.tclp
-	bra.s	.bpldone
-.bpllp:	move.w	d0,(a2)+
-	dbra	d3,.bpllp
-.bpldone:
-	dbra	d5,.planelp
-	add.w	d7,a1
-	dbra	d4,.linelp
-
-blitdone:
-	movem.l	(sp)+,d0-d7/a0-a6
-
-	jmp 0xE0066C            // skip ROM blitter logo draw (0xE00666)
+	// Patched over the pea of the ROM's own logo draw:
+	//	0xE00660  pea 0xE4983C		MFDB of the logo
+	//	0xE00666  bsr.w 0xE01082	draws it, line A $A00E
+	//	0xE0066A  addq.w #4,sp
+	// With a SuperVidel in use the driver has already drawn the logo, so
+	// skip the draw and the stack fixup after it. Otherwise put the pea
+	// back and let the ROM do it.
+	move.l	a0,-(sp)
+	move.l	phystop,a0
+	tst.l	sv_present(a0)
+	move.l	(sp)+,a0	// movea does not touch the flags
+	bgt.s	.drawn_already
+	pea	0xE4983C
+	jmp	0xE00666
+.drawn_already:
+	jmp	0xE0066C
 	
 	
 	dc.l 0x58425241  /* XBRA */
