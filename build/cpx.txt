@@ -1,0 +1,13 @@
+; Pure C command line equivalent of CT60CONF.PRJ plus the CPXLINK step.
+; Compiler/assembler flags: the Options dialog settings of the IDE
+; (compiler -M -G -P, assembler -2 -8 -S) plus the per-type flags of the
+; project file (.C [-2 -P], .S [-4 -S]).
+cd C:\SRC
+C:\PURE_C\PASM.TTP -2 -8 -S -4 -IC:\PURE_C CPXSTART.S
+C:\PURE_C\PASM.TTP -2 -8 -S -4 -IC:\PURE_C TEMP.S
+C:\PURE_C\PASM.TTP -2 -8 -S -4 -IC:\PURE_C PARAM.S
+C:\PURE_C\PASM.TTP -2 -8 -S -4 -IC:\PURE_C SDRAM.S
+C:\PURE_C\PCC.TTP -M -G -P -2 -L64 -IC:\PURE_C\INCLUDE CT60CONF.C
+C:\PURE_C\PCC.TTP -M -G -P -2 -L64 -IC:\PURE_C\INCLUDE CT60CTCM.C
+C:\PURE_C\PLINK.TTP -C=C:\CPX.LNK
+C:\SRC\CPXLINK.TTP CT60CONF.CP

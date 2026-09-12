@@ -1,0 +1,15 @@
+; Pure C command line equivalent of FLASH060.PRJ.
+; Compiler/assembler flags: the Options dialog settings of the IDE
+; (compiler -M -G -P, assembler -2 -8 -S) plus the per-type flags of the
+; project file (.C [-2 -P], .S [-4 -S]).
+cd C:\SRC060
+C:\PURE_C\PASM.TTP -2 -8 -S -4 -IC:\PURE_C FLASH.S
+C:\PURE_C\PASM.TTP -2 -8 -S -4 -IC:\PURE_C FLASH_CF.S
+C:\PURE_C\PASM.TTP -2 -8 -S -4 -IC:\PURE_C J_FUSE.S
+C:\PURE_C\PASM.TTP -2 -8 -S -4 -IC:\PURE_C JTAG_P.S
+C:\PURE_C\PASM.TTP -2 -8 -S -4 -IC:\PURE_C NVMACC.S
+C:\PURE_C\PCC.TTP -M -G -P -2 -L64 -IC:\PURE_C\INCLUDE FLASH060.C
+C:\PURE_C\PCC.TTP -M -G -P -2 -L64 -IC:\PURE_C\INCLUDE SREC.C
+C:\PURE_C\PCC.TTP -M -G -P -2 -L64 -IC:\PURE_C\INCLUDE JEDEC.C
+C:\PURE_C\PCC.TTP -M -G -P -2 -L64 -IC:\PURE_C\INCLUDE JTAG.C
+C:\PURE_C\PLINK.TTP -C=C:\FLASH060.LNK
