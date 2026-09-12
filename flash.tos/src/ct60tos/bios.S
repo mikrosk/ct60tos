@@ -54,3 +54,15 @@ begin4:
 	.long	_blink
 end4:
 
+	.globl	fix_mt_end
+
+	.align	2
+	.long	0x7978
+	.long	end5-begin5
+begin5:
+	jsr	fix_mt_end
+	nop
+	nop
+	nop
+	nop
+end5:

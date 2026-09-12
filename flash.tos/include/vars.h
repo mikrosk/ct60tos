@@ -48,6 +48,10 @@
 #define ramvalid   0x5A8
 #define dspin      0xA82
 
+// TOS boot memory test (bios/memtest.s), driven by dmaboot
+#define mt_state   0x182E
+#define mt_end     0x183A
+
 // line A offset vars
 #define dev_tab -692
 #define v_cel_ht -46
@@ -59,16 +63,33 @@
 #define bytes_ln -2
 #define v_lin_wr  2
 
-#define power_flag    -68
-#define flag_statvec  -64
-#define pbuf_statvec  -60
-#define count_io3_mfp -54
-#define start_hz_200  -52
-#define save_source   -40
-#define save_target   -36
-#define save_contrl   -32
-#define adr_source    -28
-#define adr_target    -24
-#define adr_fonts     -20
+// screen base the OS had before the flash resident driver changed it
+#define old_v_bas_ad    -96
+
+// 0, or the message to print under the SDRAM size
+#define sdram_warning   -92
+// non-zero once the boot display has been printed
+#define ct60_info_shown -88
+// SDRAM size code 0-3 for 64MB-512MB, -1 if no module was sized
+#define sdram_size      -84
+// error code from configuring the CT60 clock
+#define clock_error     -80
+
+// entry point of the flash resident driver, 0 if the image is not loaded
+#define sv_xbios_entry  -76
+// -1 not probed yet, 0 no SuperVidel, 1 SuperVidel (see detect_supervidel)
+#define sv_present      -72
+
+#define power_flag      -68
+#define flag_statvec    -64
+#define pbuf_statvec    -60
+#define count_io3_mfp   -54
+#define start_hz_200    -52
+#define save_source     -40
+#define save_target     -36
+#define save_contrl     -32
+#define adr_source      -28
+#define adr_target      -24
+#define adr_fonts       -20
 
 #endif	/* _VARS_H */

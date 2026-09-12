@@ -65,6 +65,7 @@ SECTIONS
 		sdram.o( .text )
 		pmmu2.o( .text )
 		videl2.o( .text )
+		svxbios.o( .text )
 	} > flash2
 
 	.text3 :
