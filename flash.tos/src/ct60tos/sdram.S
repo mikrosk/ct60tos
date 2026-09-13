@@ -3628,6 +3628,8 @@ auto_exec:
 .end_auto_exec:
 	rts
 	
+#define AUTO_STACK 4096         // supervisor stack of the AUTO folder loader
+
 auto_exec_prg:
 	
 	clr.l -(SP)
@@ -3635,8 +3637,12 @@ auto_exec_prg:
 	trap #1
 	addq.w #6,SP
 	move.l 4(SP),A6          // basepage
-	lea 256(A6),SP
-	move.l #256,-(SP)        // size
+	// The stack goes above the basepage, not inside it: this process is
+	// still the GEMDOS parent when GEM is started, and interrupts taken
+	// during the XBIOS and GEMDOS calls below would otherwise overwrite
+	// its current drive and file handle table.
+	lea 256+AUTO_STACK(A6),SP
+	move.l #256+AUTO_STACK,-(SP) // size
 	pea (A6)                 // old stack
 	clr.w -(SP)              // dummy
 	move.w #0x4A,-(SP)       // Mshrink
