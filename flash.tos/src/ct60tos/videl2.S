@@ -42,8 +42,8 @@ picture_boot:
 	move.w #0x2300,SR                         // enable interrupts
 	bsr fix_modecode
 	bsr screen_ntc_boot
-	moveq #0,D0
-	rts
+	moveq #1,D0                               // the jsr to here overwrites TOS's
+	rts                                       // moveq #1,D0, the next cartscan bit#
 	
 fix_modecode:
 
