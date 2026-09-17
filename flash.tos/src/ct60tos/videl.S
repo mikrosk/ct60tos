@@ -18,14 +18,14 @@
 
 	.text
 
-	.globl	picture_boot
+	.globl	boot_screen
 	.globl	fix_mono_shift
 
 	.align	2
 	.long	0x57E
 	.long	end1-begin1
 begin1:
-	jsr	picture_boot
+	jsr	boot_screen
 end1:
 
 	.align	2

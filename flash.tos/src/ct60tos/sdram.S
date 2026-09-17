@@ -606,18 +606,8 @@ init_sdram:
 	beq.s .end_sdram
 	moveq #-1,D7             // TOS in RAM, said below with the rest of it
 .end_sdram:
-	jsr detect_supervidel
-	beq.s .no_sv_driver      // no board: nothing reserved, nothing relocated,
-	move.l _sysbase,A0       // and TOS draws the boot logo
-	move.l 0x24(A0),A0       // kbshift.  Interrupts are enabled by the
-	moveq #0xF,D0            // instruction picture_boot replaces, so no key
-	and.b (A0),D0            // has been reported before this point.  Left
-	cmp.b #2,D0              // shift on its own: answer the rest of the boot
-	bne.s .use_sv_driver     // as if no board were fitted
-	move.l phystop,A0
-	clr.l sv_present(A0)
-	bra.s .no_sv_driver
-.use_sv_driver:
+	jsr detect_supervidel    // no board, or left shift alone at boot_screen:
+	beq.s .no_sv_driver      // nothing reserved or relocated, TOS draws the logo
 	jsr sv_xbios_reserve     // all of it before the display, so that the
 	jsr load_sv_xbios        // screen the display lands on is the one the
 	jsr install_sv_xbios     // boot keeps
