@@ -23,3 +23,4 @@
 	.align	2
 	
 	.short VERSION
+	.short DATE             // day, month, year, hour, minute

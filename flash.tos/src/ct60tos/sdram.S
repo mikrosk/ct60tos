@@ -1110,7 +1110,7 @@ message15:	.byte 13,10,27
 	.ascii "."
 	.byte ((VERSION/16) & 0xF) + 0x30
 	.byte (VERSION & 0xF) + 0x30
-	.asciz "f "
+	.asciz " "
 message15b:	
 	.ascii "2026 September "
 	.byte 27

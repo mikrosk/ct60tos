@@ -24,7 +24,9 @@
 #ifndef	_MAIN_H
 #define	_MAIN_H	1
 
-#define VERSION 0x0103
+#define VERSION 0x0300
+#define DATE \
+ 18, 9,2026, 0, 0
 
 #define Bit32u unsigned long
 #define Bit32s signed long
