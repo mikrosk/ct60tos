@@ -46,9 +46,8 @@
 #define PAGE_VIDEO   6
 #define PAGE_SV      7
 
-/* SuperVidel settings with no entry in SV.INF's shipped defaults */
+/* SuperVidel setting with no entry in SV.INF's shipped defaults */
 
-#define SV_MODECODE_DEFAULT 0x401c	/* 640x480x16bpp, as SV.INF ships it */
 #define SV_MODECODE_BOOT    0x401a	/* 640x480x4bpp, as SV.INF ships it */
 
 #define NO_STOP        0
@@ -287,7 +286,7 @@ int language,keyboard,datetime,vmode,bootpref,bootdelay,scsi,cpufpu;
 int tosram,blitterspeed,bootorder,bootlog,nv_magic_code;
 int flag_supervidel;
 unsigned int trigger_temp,daystop,timestop,beep;
-unsigned int sv_def,sv_forced,sv_boot,sv_restrict_x,sv_restrict_y,sv_flags;
+unsigned int sv_boot,sv_flags;
 int sv_top;								/* first settings row the viewport shows */
 int sv_pitch;							/* pixels between two settings rows */
 char *buffer_bubble=NULL;
@@ -358,31 +357,22 @@ unsigned short tab_temp[61],tab_temp_eiffel[61],tab_cpuload[61];
 #define MENUBOXSV 90
 #define MENUSVCONT 91			/* the viewport, its children scroll */
 #define MENUSVFIRST 92
-#define MENUSVENDEF 93
-#define MENUSVDEF 95
-#define MENUSVENFORCED 96
-#define MENUSVFORCED 98
-#define MENUSVDUAL 100
-#define MENUSVBPS8C 101
-#define MENUSVBPS32 103
-#define MENUSVENRESTRX 105
-#define MENUSVRESTRX 107
-#define MENUSVENRESTRY 108
-#define MENUSVRESTRY 110
-#define MENUSVENBOOT 112
-#define MENUSVBOOT 114
-#define MENUSVPRIM 116
-#define MENUSVCLONE 117
-#define MENUSVREZDLG 120
-#define MENUSVFASTVD 122
-#define MENUSVKILLVD 124
-#define MENUSVPMMU 126
-#define MENUSVLAST 127
-#define MENUSVUP 128
-#define MENUSVBAR 129
-#define MENUSVSLIDER 130
-#define MENUSVDOWN 131
-#define MENUSV 132
+#define MENUSVBPS8C 93
+#define MENUSVBPS32 95
+#define MENUSVENBOOT 98
+#define MENUSVBOOT 100
+#define MENUSVPRIM 102
+#define MENUSVCLONE 103
+#define MENUSVREZDLG 106
+#define MENUSVFASTVD 108
+#define MENUSVKILLVD 110
+#define MENUSVPMMU 112
+#define MENUSVLAST 113
+#define MENUSVUP 114
+#define MENUSVBAR 115
+#define MENUSVSLIDER 116
+#define MENUSVDOWN 117
+#define MENUSV 118
 
 #define INFOBOX 0
 #define INFOLOGO 1
@@ -428,7 +418,7 @@ unsigned short tab_temp[61],tab_temp_eiffel[61],tab_cpuload[61];
 #define OFFSETOK 2
 #define OFFSETCANCEL 3
 
-#define SV_ROWS 19			/* rows of settings behind the viewport */
+#define SV_ROWS 14			/* rows of settings behind the viewport */
 #define ADJ3D 2				/* the AES draws a 3D object this much bigger */
 #define SV_INSET 3			/* ...so the viewport holds its rows in by this */
 #define SV_SCROLL_DELAY 80L	/* mS between two steps of a held scroll arrow */
@@ -561,14 +551,8 @@ char *rs_strings[] = {
 	
 	"_____","XXXXX",
 	"[VDI]",
-	"Mode par d‚faut:","xxxxx",
-	"Mode impos‚:","xxxxx",
-	"Ecran double:",
-	"Hz","V","",
 	"8bpp chunky dans VDI TOS",
 	"32bpp dans VDI TOS",
-	"Largeur maxi:","xxxxx",
-	"Hauteur maxi:","xxxxx",
 	"[XBIOS]",
 	"Mode d‚marrage:","xxxxx",
 	"Sortie princ.:",
@@ -708,14 +692,8 @@ char *rs_strings_en[] = {
 	
 	"_____","XXXXX",
 	"[VDI]",
-	"Default mode:","xxxxx",
-	"Forced mode:","xxxxx",
-	"Dual screen:",
-	"Hz","V","",
 	"8bpp chunky in TOS VDI",
 	"32bpp in TOS VDI",
-	"Restrict width:","xxxxx",
-	"Restrict height:","xxxxx",
 	"[XBIOS]",
 	"Boot mode:","xxxxx",
 	"Primary output:",
@@ -797,17 +775,12 @@ TEDINFO rs_tedinfo[] = {
 	
 	(char *)220L,(char *)221L,(char *)222L,IBM,0,0,0x1180,0,0,4,32,
 
-	(char *)229L,(char *)225L,(char *)226L,IBM,0,0,0x1180,0,0,6,6,
-	(char *)231L,(char *)225L,(char *)226L,IBM,0,0,0x1180,0,0,6,6,
-	(char *)233L,(char *)234L,(char *)235L,IBM,0,2,0x1180,0,-1,6,1,
-	(char *)239L,(char *)225L,(char *)226L,IBM,0,0,0x1180,0,0,6,6,
-	(char *)241L,(char *)225L,(char *)226L,IBM,0,0,0x1180,0,0,6,6,
-	(char *)244L,(char *)225L,(char *)226L,IBM,0,0,0x1180,0,0,6,6,
-	(char *)246L,(char *)247L,(char *)248L,IBM,0,2,0x1180,0,-1,4,1,
-	(char *)255L,(char *)256L,(char *)257L,IBM,0,2,0x1180,0,0,13,1 };
+	(char *)232L,(char *)225L,(char *)226L,IBM,0,0,0x1180,0,0,6,6,
+	(char *)234L,(char *)235L,(char *)236L,IBM,0,2,0x1180,0,-1,4,1,
+	(char *)243L,(char *)244L,(char *)245L,IBM,0,2,0x1180,0,0,13,1 };
 	
 OBJECT rs_object[] = {
-	-1,1,132,G_BOX,FL3DBAK,NORMAL,0x1100L,0,0,32,11,
+	-1,1,118,G_BOX,FL3DBAK,NORMAL,0x1100L,0,0,32,11,
 	2,-1,-1,G_TEXT,FL3DBAK,SELECTED,0L,0,0,32,1,
 	3,-1,-1,G_STRING,NONE,NORMAL,3L,1,1,14,1,
 	4,-1,-1,G_BOXTEXT,TOUCHEXIT,SHADOWED,1L,16,1,15,1,								/* popup selection */
@@ -899,49 +872,35 @@ OBJECT rs_object[] = {
 	89,-1,-1,G_BUTTON,SELECTABLE|DEFAULT|EXIT|FL3DIND|FL3DBAK,NORMAL,152L,21,9,6,1,	/* Cancel */
 	90,-1,-1,G_BOXCHAR,SELECTABLE|EXIT|FL3DIND|FL3DBAK,NORMAL,0x69ff1100L,29,9,2,1,	/* i */
 
-	132,91,131,G_BOX,FL3DIND,NORMAL,0xff1100L,0,2,32,6,							/* SuperVidel box */
-	128,92,127,G_BOX,NONE,NORMAL,0x1178L,1,1,28,5,								/* scrolling viewport */
+	118,91,117,G_BOX,FL3DIND,NORMAL,0xff1100L,0,2,32,6,								/* SuperVidel box */
+	114,92,113,G_BOX,NONE,NORMAL,0x1178L,1,1,28,5,								/* scrolling viewport */
 	93,-1,-1,G_STRING,NONE,NORMAL,227L,0,0,8,1,
 	94,-1,-1,G_BOX,SELECTABLE|TOUCHEXIT|FL3DIND,NORMAL,0xff1100L,0,1,2,1,
-	95,-1,-1,G_STRING,NONE,NORMAL,228L,3,1,16,1,
-	96,-1,-1,G_FTEXT,EDITABLE|FL3DBAK,NORMAL,53L,20,1,7,1,						/* default mode code */
-	97,-1,-1,G_BOX,SELECTABLE|TOUCHEXIT|FL3DIND,NORMAL,0xff1100L,0,2,2,1,
-	98,-1,-1,G_STRING,NONE,NORMAL,230L,3,2,16,1,
-	99,-1,-1,G_FTEXT,EDITABLE|FL3DBAK,NORMAL,54L,20,2,7,1,						/* forced mode code */
-	100,-1,-1,G_STRING,NONE,NORMAL,232L,3,3,16,1,
-	101,-1,-1,G_BOXTEXT,TOUCHEXIT,SHADOWED,55L,20,3,7,1,						/* popup dual screen */
-	102,-1,-1,G_BOX,SELECTABLE|TOUCHEXIT|FL3DIND,NORMAL,0xff1100L,0,4,2,1,
-	103,-1,-1,G_STRING,NONE,NORMAL,236L,3,4,24,1,
-	104,-1,-1,G_BOX,SELECTABLE|TOUCHEXIT|FL3DIND,NORMAL,0xff1100L,0,5,2,1,
-	105,-1,-1,G_STRING,NONE,NORMAL,237L,3,5,24,1,
-	106,-1,-1,G_BOX,SELECTABLE|TOUCHEXIT|FL3DIND,NORMAL,0xff1100L,0,6,2,1,
-	107,-1,-1,G_STRING,NONE,NORMAL,238L,3,6,16,1,
-	108,-1,-1,G_FTEXT,EDITABLE|FL3DBAK,NORMAL,56L,20,6,7,1,						/* restrict width */
-	109,-1,-1,G_BOX,SELECTABLE|TOUCHEXIT|FL3DIND,NORMAL,0xff1100L,0,7,2,1,
-	110,-1,-1,G_STRING,NONE,NORMAL,240L,3,7,16,1,
-	111,-1,-1,G_FTEXT,EDITABLE|FL3DBAK,NORMAL,57L,20,7,7,1,						/* restrict height */
-	112,-1,-1,G_STRING,NONE,NORMAL,242L,0,9,8,1,
-	113,-1,-1,G_BOX,SELECTABLE|TOUCHEXIT|FL3DIND,NORMAL,0xff1100L,0,10,2,1,
-	114,-1,-1,G_STRING,NONE,NORMAL,243L,3,10,16,1,
-	115,-1,-1,G_FTEXT,EDITABLE|FL3DBAK,NORMAL,58L,20,10,7,1,					/* boot mode code */
-	116,-1,-1,G_STRING,NONE,NORMAL,245L,3,11,16,1,
-	117,-1,-1,G_BOXTEXT,TOUCHEXIT,SHADOWED,59L,20,11,7,1,						/* popup primary output */
-	118,-1,-1,G_BOX,SELECTABLE|TOUCHEXIT|FL3DIND,NORMAL,0xff1100L,0,12,2,1,
-	119,-1,-1,G_STRING,NONE,NORMAL,249L,3,12,24,1,
-	120,-1,-1,G_STRING,NONE,NORMAL,250L,0,14,8,1,
-	121,-1,-1,G_BOX,SELECTABLE|TOUCHEXIT|FL3DIND,NORMAL,0xff1100L,0,15,2,1,
-	122,-1,-1,G_STRING,NONE,NORMAL,251L,3,15,24,1,
-	123,-1,-1,G_BOX,SELECTABLE|TOUCHEXIT|FL3DIND,NORMAL,0xff1100L,0,16,2,1,
-	124,-1,-1,G_STRING,NONE,NORMAL,252L,3,16,24,1,
-	125,-1,-1,G_BOX,SELECTABLE|TOUCHEXIT|FL3DIND,NORMAL,0xff1100L,0,17,2,1,
-	126,-1,-1,G_STRING,NONE,NORMAL,253L,3,17,24,1,
-	127,-1,-1,G_BOX,SELECTABLE|TOUCHEXIT|FL3DIND,NORMAL,0xff1100L,0,18,2,1,
-	91,-1,-1,G_STRING,NONE,NORMAL,254L,3,18,24,1,
-	129,-1,-1,G_BOXCHAR,TOUCHEXIT|FL3DACT,NORMAL,0x1ff1100L,29,1,2,1,					/* scroll up */
-	131,130,130,G_BOX,TOUCHEXIT,NORMAL,0xff1141L,29,2,2,3,
-	129,-1,-1,G_BOX,TOUCHEXIT|FL3DACT,NORMAL,0xff1100L,0,0,2,1,							/* scrollbar knob */
+	95,-1,-1,G_STRING,NONE,NORMAL,228L,3,1,24,1,
+	96,-1,-1,G_BOX,SELECTABLE|TOUCHEXIT|FL3DIND,NORMAL,0xff1100L,0,2,2,1,
+	97,-1,-1,G_STRING,NONE,NORMAL,229L,3,2,24,1,
+	98,-1,-1,G_STRING,NONE,NORMAL,230L,0,4,8,1,
+	99,-1,-1,G_BOX,SELECTABLE|TOUCHEXIT|FL3DIND,NORMAL,0xff1100L,0,5,2,1,
+	100,-1,-1,G_STRING,NONE,NORMAL,231L,3,5,16,1,
+	101,-1,-1,G_FTEXT,EDITABLE|FL3DBAK,NORMAL,53L,20,5,7,1,					/* boot mode code */
+	102,-1,-1,G_STRING,NONE,NORMAL,233L,3,6,16,1,
+	103,-1,-1,G_BOXTEXT,TOUCHEXIT,SHADOWED,54L,20,6,7,1,						/* popup primary output */
+	104,-1,-1,G_BOX,SELECTABLE|TOUCHEXIT|FL3DIND,NORMAL,0xff1100L,0,7,2,1,
+	105,-1,-1,G_STRING,NONE,NORMAL,237L,3,7,24,1,
+	106,-1,-1,G_STRING,NONE,NORMAL,238L,0,9,8,1,
+	107,-1,-1,G_BOX,SELECTABLE|TOUCHEXIT|FL3DIND,NORMAL,0xff1100L,0,10,2,1,
+	108,-1,-1,G_STRING,NONE,NORMAL,239L,3,10,24,1,
+	109,-1,-1,G_BOX,SELECTABLE|TOUCHEXIT|FL3DIND,NORMAL,0xff1100L,0,11,2,1,
+	110,-1,-1,G_STRING,NONE,NORMAL,240L,3,11,24,1,
+	111,-1,-1,G_BOX,SELECTABLE|TOUCHEXIT|FL3DIND,NORMAL,0xff1100L,0,12,2,1,
+	112,-1,-1,G_STRING,NONE,NORMAL,241L,3,12,24,1,
+	113,-1,-1,G_BOX,SELECTABLE|TOUCHEXIT|FL3DIND,NORMAL,0xff1100L,0,13,2,1,
+	91,-1,-1,G_STRING,NONE,NORMAL,242L,3,13,24,1,
+	115,-1,-1,G_BOXCHAR,TOUCHEXIT|FL3DACT,NORMAL,0x1ff1100L,29,1,2,1,					/* scroll up */
+	117,116,116,G_BOX,TOUCHEXIT,NORMAL,0xff1141L,29,2,2,3,
+	115,-1,-1,G_BOX,TOUCHEXIT|FL3DACT,NORMAL,0xff1100L,0,0,2,1,							/* scrollbar knob */
 	90,-1,-1,G_BOXCHAR,TOUCHEXIT|FL3DACT,NORMAL,0x2ff1100L,29,5,2,1,					/* scroll down */
-	0,-1,-1,G_TEXT,LASTOB|FL3DBAK,NORMAL,60L,1,2,12,1,							/* SuperVidel */
+	0,-1,-1,G_TEXT,LASTOB|FL3DBAK,NORMAL,55L,1,2,12,1,							/* SuperVidel */
 
 	/* info box */
 	-1,1,15,G_BOX,FL3DBAK,OUTLINED,0x21100L,0,0,40,24,
@@ -1002,7 +961,7 @@ OBJECT rs_object[] = {
 	3,-1,-1,G_BUTTON,SELECTABLE|EXIT|FL3DIND|FL3DBAK,NORMAL,223L,7,3,6,1,					/* OK */
 	0,-1,-1,G_BUTTON,SELECTABLE|DEFAULT|EXIT|LASTOB|FL3DIND|FL3DBAK,NORMAL,224L,20,3,6,1 };	/* Cancel */
 
-long rs_trindex[] = {0L,133L,149L,182L};
+long rs_trindex[] = {0L,119L,135L,168L};
 struct foobar {
 	int dummy;
 	int *image;
@@ -1127,8 +1086,8 @@ UWORD pic_stop[]={
 #define NUM_BB 4		/* number of BITBLK */
 #define NUM_FRIMG 0
 #define NUM_IB 0		/* number of ICONBLK */
-#define NUM_TI 61		/* number of TEDINFO */
-#define NUM_OBS 186		/* number of objects */
+#define NUM_TI 56		/* number of TEDINFO */
+#define NUM_OBS 172		/* number of objects */
 #define NUM_TREE 4		/* number of trees */ 
 
 #define TREE1 0
@@ -1138,10 +1097,10 @@ UWORD pic_stop[]={
 
 #ifndef LIGHT
 #define MAX_SELECT 8
-#define NB_BUB 50
+#define NB_BUB 45
 #else
 #define MAX_SELECT 5
-#define NB_BUB 50-12
+#define NB_BUB 45-13
 #endif
 
 #define USA 0
@@ -1238,15 +1197,10 @@ char *day_stop[2][11]={"  Sans           ","  Lundi          ","  Mardi         
                        "  Saturday  ","  Sunday    ","  Mon-Fri   ","  Weekend   ","  Every day "};
 char *spec_beepp[2][2]={"Non","Oui","No","Yes"};
 char *beepp[2][2]={"  Non ","  Oui ","  No  ","  Yes "};
-int sv_checkbox[12]={MENUSVENDEF,MENUSVENFORCED,MENUSVBPS8C,MENUSVBPS32,
-                     MENUSVENRESTRX,MENUSVENRESTRY,MENUSVENBOOT,MENUSVCLONE,
-                     MENUSVREZDLG,MENUSVFASTVD,MENUSVKILLVD,MENUSVPMMU};
+int sv_checkbox[8]={MENUSVBPS8C,MENUSVBPS32,MENUSVENBOOT,MENUSVCLONE,
+                    MENUSVREZDLG,MENUSVFASTVD,MENUSVKILLVD,MENUSVPMMU};
 char *spec_sv_out[2]={"VGA","DVI"};
 char *sv_out[2]={"  VGA ","  DVI "};
-char *spec_sv_dual[2][3]={"Sans","V","Hz",
-                          "Off","V","Hz"};
-char *sv_dual[2][3]={"  Sans ","  V    ","  Hz   ",
-                     "  Off  ","  V    ","  Hz   "};
 
 /* BubbleGEM */
 
@@ -1394,24 +1348,9 @@ struct bubblegem bubbletab[NB_BUB] = {
 	"Bouton pour afficher|des informations",
 	"Button to display|program information"},
 #ifndef LIGHT
-	{MENUSVDEF,
-	"Code de mode VDI par d‚faut|si l'AES n'en impose pas",
-	"Default VDI mode code used|when the AES asks for none"},
-	{MENUSVFORCED,
-	"Code de mode VDI rempla‡ant|celui demand‚ par l'AES|0 = d‚sactiv‚",
-	"VDI mode code that overrides|the one the AES asks for|0 = disabled"},
 	{MENUSVBOOT,
 	"Code de mode utilis‚|pendant le d‚marrage",
-	"Mode code used|during bootup"},
-	{MENUSVDUAL,
-	"Double ‚cran, empil‚|verticalement ou horizontalement",
-	"Dual screen, stacked|vertically or horizontally"},
-	{MENUSVRESTRX,
-	"Limite la largeur de|l'‚cran VDI|0 = sans limite",
-	"Limit the VDI screen width|0 = no limit"},
-	{MENUSVRESTRY,
-	"Limite la hauteur de|l'‚cran VDI|0 = sans limite",
-	"Limit the VDI screen height|0 = no limit"}
+	"Mode code used|during bootup"}
 #endif
 };
 
@@ -1795,27 +1734,16 @@ int CDECL cpx_call(GRECT *work)
 	printf("\r\nRead SuperVidel parameters");
 #endif
 	flag_supervidel=(*Xcpb->get_cookie)('SupV',&value) ? 1 : 0;
-	sv_def=SV_MODECODE_DEFAULT;			/* the values SV.INF ships, used until the */
-	sv_forced=0;						/* flash holds settings of its own */
-	sv_boot=SV_MODECODE_BOOT;
-	sv_restrict_x=sv_restrict_y=0;
-	sv_flags=CT60_SV_VERSION|CT60_SV_CLONE|CT60_SV_REZDIALOG
-	        |CT60_SV_FAST_VIDEL|CT60_SV_PMMU_BOOST;
+	sv_boot=SV_MODECODE_BOOT;			/* the values SV.INF ships, used until */
+	sv_flags=CT60_SV_VERSION|CT60_SV_CLONE|CT60_SV_REZDIALOG	/* the flash holds */
+	        |CT60_SV_FAST_VIDEL|CT60_SV_PMMU_BOOST;				/* settings of its own */
 	if(flag_supervidel)
 	{
 		value=sv_param(CT60_MODE_READ,CT60_SV_CONFIG,0L);
 		if(((unsigned int)value & CT60_SV_VERSION_MASK)==CT60_SV_VERSION)
-		{								/* the version field vouches for all three */
+		{								/* the version field vouches for both */
 			sv_boot=(unsigned int)(value>>16);
 			sv_flags=(unsigned int)value;
-			if((sv_flags & CT60_SV_DUAL)==CT60_SV_DUAL)
-				sv_flags&=~CT60_SV_DUAL;	/* there is no third dual screen mode */
-			value=sv_param(CT60_MODE_READ,CT60_SV_AES_MODES,0L);
-			sv_def=(unsigned int)(value>>16);
-			sv_forced=(unsigned int)value;
-			value=sv_param(CT60_MODE_READ,CT60_SV_RESTRICT,0L);
-			sv_restrict_x=(unsigned int)(value>>16);
-			sv_restrict_y=(unsigned int)value;
 		}
 	}
 	set_sv_objects();
@@ -2831,21 +2759,6 @@ void CDECL cpx_button(MRETS *mrets,int nclicks,int *event)
 						sv_flags &= ~CT60_SV_DVI;
 				}
 				break;
-			case MENUSVDUAL:
-				objc_offset(rs_object,MENUSVDUAL,&menu.g_x,&menu.g_y);
-				menu.g_w=rs_object[MENUSVDUAL].ob_width;
-				menu.g_h=rs_object[MENUSVDUAL].ob_height;
-				i=(int)((sv_flags & CT60_SV_DUAL)>>CT60_SV_DUAL_SHIFT);
-				ret=(*Xcpb->Popup)(sv_dual[start_lang],3,i,IBM,&menu,Work);
-				if(ret>=0 && ret!=i)
-				{
-					t_edinfo=rs_object[MENUSVDUAL].ob_spec.tedinfo;
-					t_edinfo->te_ptext=spec_sv_dual[start_lang][ret];
-					display_objc(MENUSVDUAL,Work);
-					sv_flags &= ~CT60_SV_DUAL;
-					sv_flags |= (unsigned int)(ret<<CT60_SV_DUAL_SHIFT);
-				}
-				break;
 			case MENUSVBPS8C:				/* no value of its own: only its own */
 			case MENUSVBPS32:				/* label greys with it */
 			case MENUSVCLONE:
@@ -2856,11 +2769,7 @@ void CDECL cpx_button(MRETS *mrets,int nclicks,int *event)
 				sv_fields();
 				display_objc(objc_clic+1,Work);
 				break;
-			case MENUSVENDEF:
-			case MENUSVENFORCED:
 			case MENUSVENBOOT:
-			case MENUSVENRESTRX:
-			case MENUSVENRESTRY:
 				sv_fields();
 				objc_edit(rs_object,ed_objc,0,&ed_pos,ED_END);
 				display_objc(MENUSVCONT,Work);
@@ -3287,12 +3196,6 @@ _ok_:
 				if(flag_supervidel)
 				{
 					get_sv_objects();
-					value=(long)((((unsigned long)sv_def)<<16)+(unsigned long)sv_forced);
-					if(sv_param(CT60_MODE_WRITE,CT60_SV_AES_MODES,value)!=value)
-						sv_error=1;
-					value=(long)((((unsigned long)sv_restrict_x)<<16)+(unsigned long)sv_restrict_y);
-					if(sv_param(CT60_MODE_WRITE,CT60_SV_RESTRICT,value)!=value)
-						sv_error=1;
 					value=(long)((((unsigned long)sv_boot)<<16)+(unsigned long)sv_flags);
 					if(sv_param(CT60_MODE_WRITE,CT60_SV_CONFIG,value)!=value)
 						sv_error=1;
@@ -3522,7 +3425,7 @@ int init_rsc(void)
 				rs_object[i].ob_x+=SV_INSET;	/* a 3D object is drawn outside its */
 				rs_object[i].ob_y+=SV_INSET;	/* own rectangle, by 2 pixels on one */
 			}									/* AES and 3 on another, so keep the */
-			for(i=0;i<12;i++)				/* square, and inset inside its row */
+			for(i=0;i<8;i++)				/* square, and inset inside its row */
 			{
 				j=sv_checkbox[i];
 				rs_object[j+1].ob_flags |= FL3DBAK;	/* its label: DISABLED washes an */
@@ -4233,7 +4136,7 @@ void sv_fields(void)
 
 {
 	register int i,j;
-	for(i=0;i<12;i++)					/* a checkbox greys its own label, which */
+	for(i=0;i<8;i++)					/* a checkbox greys its own label, which */
 	{									/* is always the object that follows it */
 		j=sv_checkbox[i];
 		if(rs_object[j].ob_state & SELECTED)
@@ -4241,11 +4144,7 @@ void sv_fields(void)
 		else
 			rs_object[j+1].ob_state |= DISABLED;
 	}
-	sv_field(MENUSVENDEF,MENUSVDEF);	/* and five of them a value as well */
-	sv_field(MENUSVENFORCED,MENUSVFORCED);
-	sv_field(MENUSVENBOOT,MENUSVBOOT);
-	sv_field(MENUSVENRESTRX,MENUSVRESTRX);
-	sv_field(MENUSVENRESTRY,MENUSVRESTRY);
+	sv_field(MENUSVENBOOT,MENUSVBOOT);	/* and one of them a value as well */
 }
 
 int sv_first_edit(void)					/* the cursor belongs on a visible field */
@@ -4336,26 +4235,12 @@ void set_sv_objects(void)				/* SuperVidel variables -> objects */
 
 {
 	register TEDINFO *t_edinfo;
-	t_edinfo=rs_object[MENUSVDEF].ob_spec.tedinfo;
-	sprintf(t_edinfo->te_ptext,"$%04x",sv_def);
-	t_edinfo=rs_object[MENUSVFORCED].ob_spec.tedinfo;
-	sprintf(t_edinfo->te_ptext,"$%04x",sv_forced);
 	t_edinfo=rs_object[MENUSVBOOT].ob_spec.tedinfo;
 	sprintf(t_edinfo->te_ptext,"$%04x",sv_boot);
-	t_edinfo=rs_object[MENUSVRESTRX].ob_spec.tedinfo;
-	sprintf(t_edinfo->te_ptext,"%u",sv_restrict_x);
-	t_edinfo=rs_object[MENUSVRESTRY].ob_spec.tedinfo;
-	sprintf(t_edinfo->te_ptext,"%u",sv_restrict_y);
-	set_check(MENUSVENDEF,sv_def);
-	set_check(MENUSVENFORCED,sv_forced);
 	set_check(MENUSVENBOOT,sv_boot);
-	set_check(MENUSVENRESTRX,sv_restrict_x);
-	set_check(MENUSVENRESTRY,sv_restrict_y);
 	sv_fields();
 	t_edinfo=rs_object[MENUSVPRIM].ob_spec.tedinfo;
 	t_edinfo->te_ptext=spec_sv_out[(sv_flags & CT60_SV_DVI) ? 1 : 0];
-	t_edinfo=rs_object[MENUSVDUAL].ob_spec.tedinfo;
-	t_edinfo->te_ptext=spec_sv_dual[start_lang][(sv_flags & CT60_SV_DUAL)>>CT60_SV_DUAL_SHIFT];
 	set_check(MENUSVBPS8C,sv_flags & CT60_SV_BPS8C);
 	set_check(MENUSVBPS32,sv_flags & CT60_SV_BPS32);
 	set_check(MENUSVCLONE,sv_flags & CT60_SV_CLONE);
@@ -4370,22 +4255,10 @@ void get_sv_objects(void)				/* objects -> SuperVidel variables */
 {
 	register TEDINFO *t_edinfo;
 	register unsigned int flags;
-	t_edinfo=rs_object[MENUSVDEF].ob_spec.tedinfo;
-	sv_def=(rs_object[MENUSVENDEF].ob_state & SELECTED)
-	 ? read_number(t_edinfo->te_ptext) : 0;
-	t_edinfo=rs_object[MENUSVFORCED].ob_spec.tedinfo;
-	sv_forced=(rs_object[MENUSVENFORCED].ob_state & SELECTED)
-	 ? read_number(t_edinfo->te_ptext) : 0;
 	t_edinfo=rs_object[MENUSVBOOT].ob_spec.tedinfo;
 	sv_boot=(rs_object[MENUSVENBOOT].ob_state & SELECTED)
 	 ? read_number(t_edinfo->te_ptext) : 0;
-	t_edinfo=rs_object[MENUSVRESTRX].ob_spec.tedinfo;
-	sv_restrict_x=(rs_object[MENUSVENRESTRX].ob_state & SELECTED)
-	 ? read_number(t_edinfo->te_ptext) : 0;
-	t_edinfo=rs_object[MENUSVRESTRY].ob_spec.tedinfo;
-	sv_restrict_y=(rs_object[MENUSVENRESTRY].ob_state & SELECTED)
-	 ? read_number(t_edinfo->te_ptext) : 0;
-	flags=(sv_flags & (CT60_SV_DVI|CT60_SV_DUAL))|CT60_SV_VERSION;	/* the popups */
+	flags=(sv_flags & CT60_SV_DVI)|CT60_SV_VERSION;	/* the popup */
 	if(rs_object[MENUSVBPS8C].ob_state & SELECTED)
 		flags |= CT60_SV_BPS8C;
 	if(rs_object[MENUSVBPS32].ob_state & SELECTED)
@@ -4408,11 +4281,7 @@ void display_selection(int selection,int flag_aff)
 {
 	TEDINFO *t_edinfo;
 	rs_object[MENUBOXSV].ob_flags |= HIDETREE;	/* only PAGE_SV shows this page */
-	rs_object[MENUSVDEF].ob_flags &= ~EDITABLE;
-	rs_object[MENUSVFORCED].ob_flags &= ~EDITABLE;
 	rs_object[MENUSVBOOT].ob_flags &= ~EDITABLE;
-	rs_object[MENUSVRESTRX].ob_flags &= ~EDITABLE;
-	rs_object[MENUSVRESTRY].ob_flags &= ~EDITABLE;
 	switch(selection)
 	{
 	case PAGE_CPULOAD:			/* average load */
