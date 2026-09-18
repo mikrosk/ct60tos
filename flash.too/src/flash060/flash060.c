@@ -481,7 +481,8 @@ int Button(int objc_clic, int mouse_x)
 			{
 				if(coldfire || get_cookie('CT60'))
 				{
-					if((unsigned short)Supexec(coldfire ? get_version_flash_cf : get_version_flash) < 0x200)
+					/* only boot 2.xx always copies TOS to RAM */
+					if(((unsigned short)Supexec(coldfire ? get_version_flash_cf : get_version_flash) & 0xFF00) != 0x200)
 						tosram=ct60_rw_parameter(CT60_MODE_READ,CT60_PARAM_TOSRAM,0L)&1;
 					else
 						tosram=1;
