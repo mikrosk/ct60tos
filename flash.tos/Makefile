@@ -44,9 +44,9 @@ INCDIR=		./include
 OBJDIR=		./obj
 
 INCLUDE=	-I$(INCDIR)
-CFLAGS=		-m68060 -msoft-float -Wall -O2 -fomit-frame-pointer
+CFLAGS=		-m68060 -msoft-float -Wall -O2 -fomit-frame-pointer -MMD -MP
 
-CFLAGS_TOS=	-m68060 -msoft-float -Wall -O2 -fomit-frame-pointer
+CFLAGS_TOS=	-m68060 -msoft-float -Wall -O2 -fomit-frame-pointer -MMD -MP
 
 PROGRAM=	flash
 
@@ -64,6 +64,8 @@ TOS_OBJS=	$(patsubst $(SRCDIR)/ct60tos/%,$(OBJDIR)/ct60tos/%.o, \
 			$(basename $(wildcard $(SRCDIR)/ct60tos/*.[Sc])))
 
 TOS=		ct60tos.bin
+
+DEPS=		$(FLASH_OBJS:.o=.d) $(TOS_OBJS:.o=.d)
 
 BINARCHIVE=	$(PROGRAM).zip
 BINDISTDIR=	./$(PROGRAM)
@@ -117,7 +119,7 @@ $(FLASH_BINARY):	$(FLASH_OBJS)
 $(TOS_PATCHES):	$(TOS_OBJS) ct60.ld
 	cd $(OBJDIR)/ct60tos && $(LD) -T ../../ct60.ld -o ../../$@
 
-$(GENTOS):	$(SRCDIR)/gentos.c
+$(GENTOS):	$(SRCDIR)/gentos.c $(INCDIR)/endianness.h
 	$(HOSTCC) -Wall -O2 $(INCLUDE) -D$(PLATFORM) -o $@ $(SRCDIR)/gentos.c
 
 tos:	$(TOS)
@@ -128,10 +130,6 @@ $(OBJDIR)/%.o:	$(SRCDIR)/%.c
 	@mkdir -p $(@D)
 	$(CC) $(INCLUDE) $(CFLAGS) -c $< -o $@
 
-$(OBJDIR)/ct60tos/setup_firmware.o:	$(SRCDIR)/ct60_setup/setup.bin
-
-$(OBJDIR)/ct60tos/svxbios.o:	$(NFDISTDIR)/sv_xbios.bin
-
 $(OBJDIR)/ct60tos/%.o:	$(SRCDIR)/ct60tos/%.S
 	@mkdir -p $(@D)
 	$(CC) $(INCLUDE) $(CFLAGS_TOS) -c $< -o $@
@@ -139,3 +137,9 @@ $(OBJDIR)/ct60tos/%.o:	$(SRCDIR)/ct60tos/%.S
 $(OBJDIR)/%.o:	$(SRCDIR)/%.S
 	@mkdir -p $(@D)
 	$(CC) $(INCLUDE) $(CFLAGS) -c $< -o $@
+
+# .incbin is the assembler's, the preprocessor never sees those files
+$(OBJDIR)/ct60tos/setup_firmware.o:	$(SRCDIR)/ct60_setup/setup.bin
+$(OBJDIR)/ct60tos/svxbios.o:	$(NFDISTDIR)/sv_xbios.bin
+
+-include $(DEPS)
