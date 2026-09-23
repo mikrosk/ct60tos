@@ -26,7 +26,7 @@ HEADERS = ct60_ctcm.h ct60.h asm_procs.h ct60_sdram.h form_boot.h form_cpu.h \
 
 EXTRA_DIST = $(HEADERS) setup_loader.S
 
-CFLAGS  = -Os -fomit-frame-pointer -Wall -Wno-unused-variable -m68020-60 $(EXTRA_CFLAGS)
+CFLAGS  = -Os -fomit-frame-pointer -Wall -Wno-unused-variable -m68020-60 -I../../include $(EXTRA_CFLAGS)
 ASFLAGS = -m68060
 LDFLAGS = -nostdlib -Wl,--entry -Wl,_init_setup -lgcc
 ## If gcc generates some memcpy calls:

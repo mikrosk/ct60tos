@@ -16,6 +16,10 @@
 *  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 */
 
+/* Shared by the flash, the boot setup and the CT60 CPX. The assembler sees
+   the constants only, the call macros follow the toolchain: Pure C reaches
+   the Xbios through xbios(), gcc through the MiNTlib trap wrappers. */
+
 #ifndef	_CT60_H
 #define	_CT60_H
 
@@ -56,9 +60,34 @@
 #define CT60_SV_VERSION 0x1000       /* layout version, 0: never written, 0xf: erased */
 #define CT60_SV_VERSION_MASK 0xf000
 
+#ifndef __ASSEMBLER__
+
+typedef struct
+{
+	unsigned short trigger_temp;
+	unsigned short daystop;
+	unsigned short timestop;
+	unsigned short speed_fan;
+	unsigned long cpu_frequency; /* in MHz * 10 */
+	unsigned short beep;
+} CT60_COOKIE;
+
+#ifdef __GNUC__
+
 #define ct60_read_core_temperature(type_deg) (long)trap_14_ww((short)(0xc60a),(short)(type_deg))
 #define	ct60_rw_parameter(mode,type_param,value) (long)trap_14_wwll((short)(0xc60b),(short)(mode),(long)(type_param),(long)(value))
 #define ct60_cache(cache_mode) (long)trap_14_ww((short)(0xc60c),(short)(cache_mode))
 #define ct60_flush_cache() (long)trap_14_ww((short)(0xc60d))
+
+#else
+
+#define ct60_read_core_temperature(type_deg) (long)xbios(0xc60a,(short)(type_deg))
+#define ct60_rw_parameter(mode,type_param,value) (long)xbios(0xc60b,(short)(mode),(long)(type_param),(long)(value))
+#define ct60_cache(cache_mode) (long)xbios(0xc60c,(short)(cache_mode))
+#define ct60_flush_cache() (long)xbios(0xc60d)
+
+#endif /* __GNUC__ */
+
+#endif /* __ASSEMBLER__ */
 
 #endif	/* _CT60_H */
