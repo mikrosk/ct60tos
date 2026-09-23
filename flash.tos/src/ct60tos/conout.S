@@ -491,11 +491,10 @@ escfn9:
  */
 escK:
 escfn10:
-        move.l	_v_cur_cx,-(sp) // save cursor position.
+        move.l  _v_cur_cx,-(sp) // save cursor position. (x and y)
         bclr    #F_CEOL,_v_stat_0 // test and clear EOL handling bit. (overwrite)
         move.w  sr,-(sp)        // save result of test.
         bsr     escf            // hide cursor.
-//        bsr     escj            // save cursor position.
         move.w  _v_cur_cx,d1    // test current x.
         btst    #0,d1           // even or odd?   (fixed btst.l)
         beq     ef10_blnk       // if even, branch.
@@ -517,8 +516,9 @@ ef10_out:
         beq     ef10_done       // if it was overwrite, just exit.
         bset    #F_CEOL,_v_stat_0 // else set it back to wrap.
 ef10_done:
-//        bsr     esck            // restore cursor position.
-        move.l	(sp)+,_v_cur_cx // restore cursor position.
+        move.w  (sp)+,d0        // restore cursor position.
+        move.w  (sp)+,d1
+        bsr     move_cursor
         bra     cntesce         // show cursor.
 
 ef10_space:
@@ -727,9 +727,8 @@ escl:           bsr     escf            // hide cursor.
 /*
  * esco - Erase from Beginning of Line.
  */
-esco:           bsr     escf            // hide cursor.
-	        move.l	_v_cur_cx,-(sp) // save cursor position.
-//                bsr     escj            // save cursor position.
+esco:           move.l  _v_cur_cx,-(sp) // save cursor position. (x and y)
+                bsr     escf            // hide cursor.
                 move.w  _v_cur_cx,d2     // test current x.
                 beq     esco_space      // if x = x minimum, just output a space.
                 btst    #0,d2           // x even or odd?
@@ -745,9 +744,9 @@ esco_blnk:      swap    d2              // blank to end of line.
                 swap    d1
                 clr.w   d1              // upper left coords. (0,y)
                 bsr     blnk_blt        // blank from beginning of line.
-esco_out: 
-//		bsr     esck            // restore cursor position.
-	        move.l	(sp)+,_v_cur_cx // restore cursor position.
+esco_out:       move.w  (sp)+,d0        // restore cursor position.
+                move.w  (sp)+,d1
+                bsr     move_cursor
                 bra     cntesce         // show cursor.
 
 esco_space:     move.w  #0x20,d1        // output a space.
