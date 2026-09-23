@@ -37,6 +37,7 @@
 #define CT60_ABE_CODE 11
 #define CT60_SDR_CODE 12
 #define CT60_CLOCK 13
+#define CT60_PARAM_CTPCI 14
 
 /* SuperVidel setting, written by the CT60 CPX and read by the SuperVidel
    driver at boot. The VDI and AES side is not kept here: SVSCREEN.SYS is

@@ -2,6 +2,8 @@
  * 
  * Didier Mequignon 2001-2005, e-mail: aniplay@wanadoo.fr
  *
+ * Daniel Illgen    2019/02: Added CTPCI IDE support
+ *
  *  This library is free software; you can redistribute it and/or
  *  modify it under the terms of the GNU Lesser General Public
  *  License as published by the Free Software Foundation; either
@@ -28,6 +30,8 @@
 	.globl display_ram_test
 	.globl ct60_read_info_sdram
 	.globl ct60_configure_sdram
+	.globl setup_loader
+	.globl versionstring
 
 #include "main.h"
 #include "ct60.h"
@@ -151,6 +155,17 @@
 #define _sda      0xf0000000      // read from SDA line on the D0 CPU data bus
 #define _sdcnf    0xf2000000      // SDRAM configuration 0xf2xx0000 
 
+#define _nideoff  0xf3000000      // turn off the new IDE on the CTPCI (default)
+#define _nideon   0xf3800000      // turn on the new IDE on the CTPCI
+#define _oideon   0xf8000000      // turn on the old IDE of the motherboard (default)
+#define _oideoff  0xf8800000      // turn off the old IDE of the motherboard
+#define _itf      0xe0000040      // CTPCI IDE Fast Timming
+#define ITF       2               // IDE Fast Timming for 75-100 MHz
+
+#define PLX9054            0x905410B5
+#define PCI_LOCAL_CONFIG   0xE8000000   /* CT60 bus slot - no cache - reserved */
+#define PCIIDR                0x00   /* PCI Configuration ID Register       */
+
 #define  WAIT_US bsr wait_26us  
 
 init_060:
@@ -185,8 +200,8 @@ init_060:
 	lea .no_cartrige(PC),A6
 	jmp 0x00FA0004
 .no_cartrige:
-	move.w #0x20,0xFFFF828C
-	move.w #0x10,0xFFFF8282
+	move.w #0x20,0xFFFF828C	//TODO 01B4, was 0x20 - more sane defaults - but vsync now works - is that good?
+	move.w #0x10,0xFFFF8282	//TODO 01FE, was 0x10 - stop vsync - maybe switch order around? add nops here?
 	or.b #0x21,0xFFFF8007
 	btst #6,0xFFFF8007
 	beq .end_init_060
@@ -599,8 +614,6 @@ init_sdram:
 	cmp.b #0x6,D0            // CTRL-LSHIFT
 	beq.s .end_sdram
 	lea _init_mmu_tree,A0
-	add.l #0xE80000,A0
-	sub.l #_ct60tos_half_flash,A0
 	jsr (A0)
 	tst.l D0
 	beq.s .end_sdram
@@ -1104,6 +1117,8 @@ message13:	.asciz " Mask F84W"      // revision 2
 	.asciz " Masque F84W"
 message14:	.asciz " Mask E41J"      // revision 6
 	.asciz " Masque E41J" 
+versionstring:
+	.byte	message16-message15
 message15:	.byte 13,10,27
 	.ascii "p Boot v"
 	.byte ((VERSION/256) & 0xF) + 0x30
@@ -1121,7 +1136,7 @@ message15b:
 	.ascii "q"
 	.byte 13,10,0
 message16:	.byte 13,10
-	.asciz "Initialization SDRAM"
+	.asciz "Initializing SDRAM"
 	.byte 13,10 
 	.asciz "Initialisation SDRAM" 
 message17:   .ascii "MB/S"
@@ -1329,7 +1344,7 @@ message86:	.asciz "media not present"
 message87:	.asciz "boot impossible"
 	.asciz "boot impossible"
 message88:	.byte 13,10
-	.asciz " Abnormal asnwer => Reset SCSI..."
+	.asciz " Abnormal answer => Reset SCSI..."
 	.byte 13,10
 	.asciz " R‚ponse anormale => Reset SCSI..."
 message89:	.asciz "MB/S "
@@ -1381,7 +1396,7 @@ message98:	.byte 13,10
 	.byte 13,10	
 	.asciz "Valeur (dec) ? "
 message99:	.asciz " CTCM"
-	
+
 blue:	.byte 0x1B,0x62,0x34,0
 black:	.byte 0x1B,0x62,0x3F,0
 	
@@ -1487,6 +1502,7 @@ list_device_type:
 	.align 2
 
 boot_drive:
+	jsr	setup_loader
 
 	movem.l D0-A5,-(SP)
 	link A6,#-18
@@ -3332,8 +3348,6 @@ menu_boot:
 	move.l D0,D1
 	move.l #0x5F465055,D0    // _FPU cookie
 	bsr get_cookie
-	add.l #0xE80000,A1
-	sub.l #_ct60tos_half_flash,A1
 	jsr (A1)
 .normal_boot:
 	unlk A6
@@ -4569,6 +4583,17 @@ add_sdram:
 	moveq #10,D0
 	bsr display_char
 .not_infos:
+	link A6,#-12
+	pea -12(A6)              // buffer
+	move.w #12,-(SP)         // size
+	clr.w -(SP)              // start
+	clr.w -(SP)              // read
+	move.w #46,-(SP)         // NVMaccess
+	trap #14
+	lea 12(SP),SP
+	move.b -2(A6),D4         // bootdelay in seconds
+	unlk A6
+
 	move.l #0x01002000,D1    // skip 8K for the supervisor stack
 	move.l ramtop,D0
 	sub.l D1,D0
@@ -4584,6 +4609,7 @@ add_sdram:
 	cmp.l #0x5555AAAA,memval3
 	beq .ram_valid
 .not_valid:
+
 	move.l D1,A4
 #ifndef INIT_SDRAM_MOVE16
 	add.l D0,A4              // end
@@ -4725,6 +4751,7 @@ add_sdram:
 	move.l #0x752019F3,memvalid
 	move.l #0x237698AA,memval2
 	move.l #0x5555AAAA,memval3
+	bsr	CTPCI_Init
 	moveq #3,D0
 	jsr 0xE00BD2
 	move.l hdv_boot,A0
@@ -4735,6 +4762,60 @@ add_sdram:
 	jsr (A0)
 .no_boot:
 	movem.l (SP)+,D1-D7/A1-A5
+	rts
+
+CTPCI_Init:
+	movem.l	D0-D7/A0-A6,-(SP)
+
+	move.l	sp,a2
+	move.l	8,a3
+	move.l	#.berr,8
+	nop
+	moveq	#0,d0
+	tst.l	PCI_LOCAL_CONFIG
+	nop
+	moveq	#1,d0
+.berr:	move.l	a3,8
+	move.l	a2,sp
+	nop
+
+	tst.l	d0
+	beq	.noctpci
+
+	// ctpci setup code
+	bsr	measure_cpu_frequency
+	moveq	#4,D1
+	cmp.l	#750,D0
+	bcs.s	.lower_75mhz
+	moveq	#6,D1
+.lower_75mhz:
+	move.b	D1,0xE0000023	// set CTPCI to 2*512MB instead of 2*1GB
+
+	clr.l 	-(SP)
+	move.l	#CT60_PARAM_CTPCI,-(SP)
+	move.w	#CT60_MODE_READ,-(SP)
+	move.w	#rw_parameter,-(SP)
+	trap	#14
+	lea	12(SP),SP
+	btst	#0,D0
+	beq.s	.normal
+	// swap IDE address
+	clr.l	_oideoff           // turn off the old IDE of the motherboard
+	clr.l	_nideon            // turn on the new IDE on the CTPCI
+	bra.s	.swapdone
+.normal:
+	clr.l	_nideoff
+	clr.l	_oideon
+.swapdone:
+/*
+	lea	msg_pciinit(pc),a0
+	bra.s	.showmsg
+*/
+.noctpci:
+//	lea	msg_nopci(pc),a0
+.showmsg:
+//	bsr	display_string_single
+	movem.l	(SP)+,D0-D7/A0-A6
 	rts
 
 ct60_configure_clock:	// D0.L: frequency, D1: mode

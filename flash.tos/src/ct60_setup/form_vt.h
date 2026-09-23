@@ -25,7 +25,9 @@
 /*--- Defines ---*/
 
 #define WIDTH 80
-#define HEIGHT 24
+#define HEIGHT vt_height
+
+extern int vt_height;
 
 #define FORM_X	10
 #define FORM_Y	2
@@ -81,6 +83,8 @@ enum {
 enum {
 	SETTING_DIR_UP=0,	/* select previous value */
 	SETTING_DIR_DOWN,	/* select next value */
+	SETTING_DIR_LEFT,
+	SETTING_DIR_RIGHT,
 	SETTING_DIR_PRINT	/* print current value */
 };
 
@@ -135,7 +139,7 @@ void vt_displayForm_idx(form_t *form, int start, int count);
 
 /* Setting functions */
 void vt_initSettings(const form_setting_t *settings);
-void vt_setting_prev(void);
+int vt_setting_prev(void);
 void vt_setting_next(void);
 void vt_setting_prevRow(void);
 void vt_setting_nextRow(void);

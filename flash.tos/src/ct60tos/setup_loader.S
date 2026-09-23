@@ -2,6 +2,7 @@
 	CT60 setup loader
 
 	Copyright (C) 2009-2010	Patrice Mandin
+	Copyright (C) 2019 Daniel Illgen
 
 	This program is free software; you can redistribute it and/or modify
 	it under the terms of the GNU General Public License as published by
@@ -18,66 +19,114 @@
 	Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 */
 
-#define SETUP_PROG_START	0xe7ab00+0x150
-#define SETUP_PROG_LENGTH	18176
+#define SETUP_PROG_START	0xe7c000
 
 	.text
 
-	.align	2
-	.long	0x00b3a
-	.long	setup_jmp_end-setup_jmp_start
-setup_jmp_start:
-	jmp	0xe7ab00
-setup_jmp_end:
+	.globl setup_loader
+	.globl loadtos
+	.globl loadtos_halt
 
-	.align	2
-	.long	0x007ab00
-	.long	setup_loader_end-setup_loader
+#include "vars.h"
+#define DELAY	400
+#define	SCANCODE_DELETE	0x53
 
 setup_loader:
-	/* Code originally at 0xe00b3a */
-	tst.w	d0
-	beq.s	noclear1
-	clr.w	0xa80.w
-noclear1:
-
-	/* Save registers and top of stack in memory */
 	movem.l	d0-d7/a0-a6,-(sp)
-
-	move.l	#256,-(sp)
-	move	#0x48,-(sp)
-	trap	#1
+	pea	msg_setup_delkey
+	move.w	#9,-(sp)
+	trap	#1		//tos_cconws
 	addq.l	#6,sp
 
-	tst.l	d0
-	beq	setup_loader_stop_nomem
-	move.l	d0,a5
-	
-	move.l	a5,a0
-	moveq	#16-1,d0
-loop_save:
-	move.l	(sp)+,(a0)+
-	dbra	d0,loop_save
+	moveq	#0,d7
+	lea	_hz_200,a6
+	move.l	#DELAY/2,d5
+	move.l	#DELAY/1,d6
+	add.l	(a6),d5
+	add.l	(a6),d6
+.lp:
+	move.w	#11,-(sp)
+	trap	#1		//tos_cconis
+	addq.l	#2,sp
 
-	lea	-64(sp),sp
+	tst.l	d0
+	beq	.nokey
+
+	move.w	#8,-(sp)
+	trap	#1		//tos_cnecin
+	addq.l	#2,sp
+
+	swap	d0
+	cmp.b	#SCANCODE_DELETE,d0	//del pressed?
+	bne	.done		//abort when any other key is pressed
+	moveq	#1,d7
+	bra	.done
+.nokey:
+	cmp.l	(a6),d5
+	bhi	.skpdel
+
+	move.w	#'.',-(sp)
+	move.w	#2,-(sp)
+	trap	#1		//tos_cconout
+	addq.l	#4,sp
+
+	moveq	#-1,d5
+.skpdel:
+	cmp.l	(a6),d6
+	bhi	.lp
+.done:
+	pea	msg_setup_cleanup
+	move.w	#9,-(sp)
+	trap	#1		//tos_cconws
+	addq.l	#6,sp
+
+	tst.l	d7
+	beq	setup_loader_stop
+
+	lea	SETUP_PROG_START,a0
+	lea	versionstring,a1
+	bra	loadtos
+
+setup_loader_stop:
+	movem.l	(sp)+,d0-d7/a0-a6
+
+	rts
+null:
+	.long	0
+	
+msg_setup_delkey:
+	.byte	0x1b,0x6a,0x1b,0x59,0xff,0x20,0x1b,0x6c
+	.asciz	"Press DEL to enter setup."
+msg_setup_cleanup:	
+	.byte	0x1b,0x6c,0x1b,0x6b,0x00
+msg_halt:
+	.byte	13,10,27
+	.asciz	"l*** SYSTEM HALTED ***"
+	.align	2
+
+
+loadtos:	//a0=pointer to binary boot code
+		//a1=pointer to commandline
+	movem.l	d0-d7/a0-a6,-(sp)
+	move.l	a0,a5
 
 	/* Create basepage */
 	lea	null(pc),a0
 
 	pea	(a0)
-	pea	(a0)
-	pea	(a0)
+	move.l	a1,-(sp)
+	move.l	(a0),-(sp)
 	move.w	#5,-(sp)
 	move.w	#0x4b,-(sp)
 	trap	#1
 	lea	16(sp),sp	
 
 	tst.l	d0
-	bmi	setup_loader_stop
+	bmi	loadtos_stop
 	move.l	d0,a6
 
 	/* Init basepage */
-	lea	SETUP_PROG_START,a0
+	lea	4(a5),a0
 	add.l	#256,d0
 
 	move.l	d0,8(a6)
@@ -97,7 +146,7 @@ loop_save:
 	move.l	d1,28(a6)
 
 	/* Copy executable */
-	move.l	#SETUP_PROG_LENGTH,d0
+	move.l	(a5),d0
 	lea	256(a6),a1
 	moveq	#16,d1
 copy_setup:
@@ -153,6 +202,8 @@ clear_bss_long:
 	subq.l	#1,d1
 	bne.s	clear_bss_long
 clear_bss:
+	tst.l	d0
+	beq.s	no_clear
 	clr.b	(a0)+
 	subq.l	#1,d0
 	bne.s	clear_bss
@@ -163,34 +214,19 @@ no_clear:
 
 	pea	(a0)
 	pea	(a6)
-	pea	(a0)
+	move.l	(a0),-(sp)
 	move.w	#6,-(sp)
 	move.w	#0x4b,-(sp)
 	trap	#1
 	lea	16(sp),sp
-
-	/* Restore original stack and registers content */
-
-setup_loader_stop:
-	lea	64(sp),sp
-
-	lea	64(a5),a0
-	moveq	#16-1,d0
-loop_restore:
-	move.l	-(a0),-(sp)
-	dbra	d0,loop_restore
-
-	pea	0(a5)
-	move	#0x49,-(sp)
-	trap	#1
+loadtos_halt:
+	pea	msg_halt
+	move.w	#9,-(sp)
+	trap	#1		//tos_cconws
 	addq.l	#6,sp
 
+halt:	bra	halt
+
+loadtos_stop:
 	movem.l	(sp)+,d0-d7/a0-a6
-
-setup_loader_stop_nomem:
-	jmp	0xe00b42
-
-null:
-	.byte	0,0
-
-setup_loader_end:
+	rts

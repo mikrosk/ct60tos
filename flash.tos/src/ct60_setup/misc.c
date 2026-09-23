@@ -24,6 +24,13 @@
 #include <mint/osbind.h>
 #include <mint/sysvars.h>
 
+void * memcpy (void *dest, const void *src, size_t len)
+{
+	char *d = dest;
+	const char *s = src;
+        while (len--) *d++ = *s++;
+	return dest;
+}
 void format_number(char *str, int value, int num_chars, char null_digit)
 {
 	int i, divisor;
@@ -71,30 +78,6 @@ void format_number_hex(char *str, int value, int num_chars, int prefix)
 	}
 }
 
-int getCookie(unsigned long name, unsigned long *value)
-{
-	unsigned long *pCookie;
-	void *old_stack;
-	
-	old_stack = (void *) Super(0);
-	pCookie = *_p_cookies;
-	Super(old_stack);
-
-	if (pCookie == NULL) {
-		return 0;
-	}
-
-	while (pCookie[0]) {
-		if (pCookie[0] == name) {
-			*value = pCookie[1];
-			return 1;
-		}
-		pCookie += 2;
-	}
-
-	return 0;
-}
-
 unsigned long getTicks(void)
 {
 	void *old_stack = (void *) Super(0);
@@ -125,6 +108,13 @@ void strCopy(const char *src, char *dest)
 		*dest++ = *src++;
 	}
 	*dest = 0;
+}
+
+void strCopyU(const char *src, char *dest)
+{
+	while (*src) {
+		*dest++ = *src++;
+	}
 }
 
 int strToInt(const char *src)

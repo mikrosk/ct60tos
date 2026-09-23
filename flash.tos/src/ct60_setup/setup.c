@@ -19,22 +19,26 @@
 */
 
 #include <stdlib.h>
+#include <stdint.h>
 
 #include <mint/osbind.h>
+#include <mint/falcon.h>
+#include <mint/cookie.h>
 #include <vt52.h>
 
 #include "config.h"
+#include "asm_procs.h"
 #include "form_vt.h"
 #include "form_nvram.h"
 #include "form_ct60.h"
 #include "form_cpu.h"
 #include "form_sdram.h"
-#include "form_devices.h"
-#include "form_bootorder.h"
+#include "form_boot.h"
 #include "form_exit.h"
 #include "scancodes.h"
 #include "video.h"
 #include "misc.h"
+#include "ct60.h"
 
 /*--- Defines ---*/
 
@@ -66,49 +70,69 @@ static const form_menu_t form_menu_empty={
 };
 
 static const menu_t menu[NUM_MENU_ENTRIES]={
-	{"NVRAM",	&form_menu_nvram, &form_setting_nvram[0]},
+	{"NVRAM     ",	&form_menu_nvram, &form_setting_nvram[0]},
 	{"          ",	&form_menu_empty, NULL},
-	{"CT60",	&form_menu_ct60, NULL},
-	{" CPU",	&form_menu_cpu, &form_setting_cpu[0]},
-	{" SDRAM",	&form_menu_sdram, NULL},
+	{"CT60      ",	&form_menu_ct60, NULL},
+	{" CPU      ",	&form_menu_cpu, &form_setting_cpu[0]},
+	{" SDRAM    ",	&form_menu_sdram, NULL},
 	{"          ",	&form_menu_empty, NULL},
-	{"Boot order",	&form_menu_bootorder, &form_setting_bootorder[0]},
+	{"CT60 BOOT ",	&form_menu_boot, &form_setting_boot[0]},
 	{"          ",	&form_menu_empty, NULL},
-	{"Exit",	&form_menu_exit, &form_setting_exit[0]}
+	{"EXIT      ",	&form_menu_exit, &form_setting_exit[0]}
 };
 
 static int menu_refresh = 1;
 static int form_refresh = 1;
 static int setup_state = STATE_MENU;
 static int menu_row = 0;
+int has_ct60 = 0;
+int cpu_cookie=0;
 
 /*--- Functions prototypes ---*/
 
 static void display_banner(void);
 static void display_menu(void);
 static void display_status(void);
-static int wait_loop(void);
 
 static void setup_menu(unsigned long key_pressed);
 static void setup_form_select(unsigned long key_pressed);
 static void setup_list_select(unsigned long key_pressed);
 static void setup_updown_select(unsigned long key_pressed);
 
+char *basepage;
 /*--- Functions ---*/
+void forcecachect60()
+{
+	if (!has_ct60) {
+		return;
+	}
+	ct60_cache(1);
+};
+
+//void debout(long val) { char s; for (s = 28; s >= 0; s -= 4) Cconout("0123456789ABCDEF"[(val >> s) & 0xF]); };
 
 void __main(void)
 {
-	/* TODO: Check CT6X presence */
-
-	if (wait_loop() == 0) {
+	volatile uint32_t * const sysvars = (uint32_t *)0x400;
+#if SETUP_STANDALONE
+	unsigned long cookie_mch=0;
+	getCookie(C__MCH,&cookie_mch);
+	if ((cookie_mch>>16)!=3) {
+		Cconws("\033ESYSTEM NOT SUPPORTED\r\nPRESS ANY KEY TO QUIT\r\n");
+		Cnecin();
 		return;
-	}
+	};
+#endif
+
+	unsigned long cookie_ct60;
+	has_ct60 = getCookie(C_CT60, &cookie_ct60);
+
 
 #if CHANGE_VIDEO_MODE
 	video_save();
+	vt_height=get_text_max()&0xff;
 #endif
-
-	cpufreq_changed = 0;
+	forcecachect60();
 
 	display_banner();
 	vt_initSettings(NULL);
@@ -173,60 +197,35 @@ void __main(void)
 	Cconws("\r\n" C_ON);
 #endif
 
-#ifdef SETUP_STANDALONE
-	cpufreq_changed = 0;
-#endif
-	if ((exit_type == SETUP_RESET) || cpufreq_changed) {
-		Super(0);
-
-		__asm__ __volatile__(
-			"jmp\t0xe00030"
-		);
+#if !SETUP_STANDALONE
+	if (exit_type == SETUP_DIAG) {
+		void *old_stack = (void *) Super(0);
+		start_diag_asm();
+		Super(old_stack);
+	};
+	Super(0);
+	if (exit_type == SETUP_RESET_COLD) {
+		sysvars[0x20/4]=0;
+		sysvars[0x3a/4]=0;
 	}
+	__asm__ __volatile__(
+		"jmp\t0xe00030"
+	);
+#endif
 }
 
-static int wait_loop(void)
+void CcenterY(const char *src, int y)
 {
-#ifndef SETUP_STANDALONE
-	unsigned long dot_tick, cur_tick, start_tick;
-	int start_setup = 0;
-
-	vt_setCursorPos(0,24);
-	Cconws("Press DEL to enter setup.");
-	start_tick = dot_tick = cur_tick = getTicks();
-
-	while (cur_tick-start_tick < 200*2) {
-		if (Cconis() != 0) {
-			unsigned long key_pressed = Cnecin();
-			unsigned char scancode = (key_pressed >> 16) & 0xff;
-		
-			if (scancode == SCANCODE_DELETE) {
-				start_setup = 1;
-				break;
-			}
-		}
-
-		if (cur_tick-dot_tick>200) {
-			dot_tick = cur_tick;
-			Cconws(".");
-		}
-
-		cur_tick = getTicks();
-	}
-
-#if !CHANGE_VIDEO_MODE
-	vt_setCursorPos(0,9);
-	Cconws(CLEAR_DOWN);
-#endif
-
-	return start_setup;
-#else
-	return 1;
-#endif
-}
+  	vt_setCursorPos((WIDTH-strLength(src))>>1,y);
+	Cconws(src);
+};
 
 static void display_banner(void)
 {
+  	char msg[256];
+	char msg1[]="CT60";
+	char msg2[]="Setup";
+	int i,l,p,s;
 	Cconws(CLEAR_HOME C_OFF);
 
 	vt_setFgColor(COL_BANNER_FG);
@@ -234,10 +233,19 @@ static void display_banner(void)
 
 	Cconws(CLEAR_DOWN);
 
-	vt_setCursorPos((WIDTH-18)>>1,0);
-	Cconws("CT60 Setup - v 1.1");
-	vt_setCursorPos((WIDTH-25)>>1,1);
-	Cconws("(C) 2009 - Patrice Mandin");
+	strCopy("CT60 Setup v1.3.0",msg);
+#if !SETUP_STANDALONE
+	if ((basepage[0x80]!=0)&&(basepage[0x81]==27)) { // read tos build date from basepage if run from ct60tos
+		p=s=0;
+		while (msg1[s]) msg[p++]=msg1[s++];
+		l=basepage[0x80]-7; // skip escape sequence
+		for (i=0;i<l;i++) msg[p++]=basepage[0x83+i];
+		strCopy(msg2,&msg[p]);
+	}
+#endif
+
+	CcenterY(msg,0);
+	CcenterY("(C) 2009 Patrice Mandin, 2019-2026 Daniel Illgen",1);
 }
 
 static void display_menu(void)
@@ -248,17 +256,14 @@ static void display_menu(void)
 	for (i=0; i<FORM_H; i++) {
 		vt_setCursorPos(FORM_X,FORM_Y+i);
 		vt_setBgColor(COL_MENU_BG);
-		Cconws(DEL_BOL);
-
 		if (i<NUM_MENU_ENTRIES) {
-			if (i==menu_row) {
-				vt_setBgColor(COL_MENU_BG_SEL);
-				Cconws(DEL_BOL);
-			}
-
+			if (i==menu_row) vt_setBgColor(COL_MENU_BG_SEL);
 			vt_setCursorPos(0,FORM_Y+i);
 			Cconws(menu[i].name);
-		}
+		} else {
+			vt_setCursorPos(0,FORM_Y+i);
+			Cconws("          ");
+		};
 	}
 }
 
@@ -267,11 +272,11 @@ static void display_status(void)
 	vt_setFgColor(COL_BANNER_FG);
 	vt_setBgColor(COL_BANNER_BG);
 	
-	vt_setCursorPos(0,24);
+	vt_setCursorPos(0,HEIGHT);
 
 	switch(setup_state) {
 		case STATE_MENU:
-			Cconws(CLEAR_DOWN "UP/DOWN: Select menu, RIGHT: Enter menu, ESC: Quit");
+			Cconws(CLEAR_DOWN "UP/DOWN: Select menu, ENTER: Enter menu, ESC: Quit");
 			break;
 		case STATE_FORM_SELECT:
 			Cconws(CLEAR_DOWN "ARROWS: Select setting, ENTER: Enter setting, ESC: Back");
@@ -299,20 +304,27 @@ static void setup_menu(unsigned long key_pressed)
 
 	switch(scancode) {
 		case SCANCODE_ESCAPE:
-			exit_type = SETUP_EXIT;
+//			exit_type = SETUP_EXIT;
+			menu_row=NUM_MENU_ENTRIES-1;
+			menu_refresh = 1;
+			if (menu[menu_row].settings) {
+				setup_state = STATE_FORM_SELECT;
+			}
 			break;
 		case SCANCODE_UP:
 			if (menu_row>0) {
-				--menu_row;
-			}
+				do { --menu_row; } while ((menu_row>0)&&(menu[menu_row].form==&form_menu_empty));
+			} else menu_row=NUM_MENU_ENTRIES-1;
 			menu_refresh = 1;
 			break;
 		case SCANCODE_DOWN:
 			if (menu_row<NUM_MENU_ENTRIES-1) {
-				++menu_row;
-			}
+				do { ++menu_row; } while ((menu_row<NUM_MENU_ENTRIES-1)&&(menu[menu_row].form==&form_menu_empty));
+			} else menu_row = 0;
 			menu_refresh = 1;
 			break;
+		case SCANCODE_ENTER:
+		case SCANCODE_SPACE:
 		case SCANCODE_RIGHT:	/* First parameter on first row */
 			if (menu[menu_row].settings) {
 				setup_state = STATE_FORM_SELECT;
@@ -331,6 +343,7 @@ static void setup_form_select(unsigned long key_pressed)
 	switch(scancode) {
 		case SCANCODE_ESCAPE:
 			setup_state = STATE_MENU;
+			menu_refresh = 1;
 			break;
 		case SCANCODE_UP:	/* First parameter on previous row */
 			vt_setting_prevRow();
@@ -339,11 +352,15 @@ static void setup_form_select(unsigned long key_pressed)
 			vt_setting_nextRow();
 			break;
 		case SCANCODE_LEFT:	/* Previous parameter on same row */
-			vt_setting_prev();
+			if (vt_setting_prev()) {
+				setup_state = STATE_MENU;
+				menu_refresh = 1;
+			};
 			break;
 		case SCANCODE_RIGHT:	/* Next parameter on same row */
 			vt_setting_next();
 			break;
+		case SCANCODE_SPACE:
 		case SCANCODE_ENTER:
 		case SCANCODE_KP_ENTER:
 			switch(vt_setting_getType()) {
@@ -400,6 +417,7 @@ static void setup_list_select(unsigned long key_pressed)
 		case SCANCODE_RIGHT:
 			vt_setting_listNext();
 			break;
+		case SCANCODE_SPACE:
 		case SCANCODE_ENTER:
 		case SCANCODE_KP_ENTER:
 			vt_setting_newValue(menu[menu_row].form, NULL);
@@ -420,13 +438,18 @@ static void setup_updown_select(unsigned long key_pressed)
 			setup_state = STATE_FORM_SELECT;
 			break;
 		case SCANCODE_UP:
-		case SCANCODE_LEFT:
 			vt_setting_updown(SETTING_DIR_UP);
 			break;
+		case SCANCODE_LEFT:
+			vt_setting_updown(SETTING_DIR_LEFT);
+			break;
 		case SCANCODE_DOWN:
-		case SCANCODE_RIGHT:
 			vt_setting_updown(SETTING_DIR_DOWN);
 			break;
+		case SCANCODE_RIGHT:
+			vt_setting_updown(SETTING_DIR_RIGHT);
+			break;
+		case SCANCODE_SPACE:
 		case SCANCODE_ENTER:
 		case SCANCODE_KP_ENTER:
 			vt_setting_newValue(menu[menu_row].form, NULL);

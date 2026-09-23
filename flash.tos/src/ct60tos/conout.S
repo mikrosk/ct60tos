@@ -15,6 +15,8 @@
  *
  * Didier Mequignon 2003/01, add 65K colors & TOS_CT60 flag
  *
+ * Daniel Illgen    2019/02: fixed VT52 emulator regarding KoJEd+jk
+ *
  */
 
 
@@ -96,7 +98,7 @@
 #define _v_cur_tim LINEA_VAR-23 // cursor blink timer
 
 #define _disab_cnt LINEA_VAR-346// disable depth count. (>0 => disabled)
-#define sav_cxy LINEA_VAR-338   // save area for cursor coords.
+#define sav_cxy LINEA_VAR-334   // save area for cursor coords.
 
 #define save_row  0x4AC         // saved row in escape Y command
 #define con_state 0x4A8         // state of conout state machine
@@ -489,10 +491,11 @@ escfn9:
  */
 escK:
 escfn10:
+        move.l	_v_cur_cx,-(sp) // save cursor position.
         bclr    #F_CEOL,_v_stat_0 // test and clear EOL handling bit. (overwrite)
         move.w  sr,-(sp)        // save result of test.
         bsr     escf            // hide cursor.
-        bsr     escj            // save cursor position.
+//        bsr     escj            // save cursor position.
         move.w  _v_cur_cx,d1    // test current x.
         btst    #0,d1           // even or odd?   (fixed btst.l)
         beq     ef10_blnk       // if even, branch.
@@ -514,7 +517,8 @@ ef10_out:
         beq     ef10_done       // if it was overwrite, just exit.
         bset    #F_CEOL,_v_stat_0 // else set it back to wrap.
 ef10_done:
-        bsr     esck            // restore cursor position.
+//        bsr     esck            // restore cursor position.
+        move.l	(sp)+,_v_cur_cx // restore cursor position.
         bra     cntesce         // show cursor.
 
 ef10_space:
@@ -610,7 +614,7 @@ escc:           and.w   #0x0F,d0        // low-order bits only.
 #else
                 cmp.w   #16,_v_planes   // 65K colors
                 bcc.s   set_bg_ntc 
-                move.w  d0,_v_col_bg    // set the foreground color.
+                move.w  d0,_v_col_bg    // set the background color.
                 rts
 set_bg_ntc:
                 lea.l   LINEA_VAR+0xB12,a0        // Falcon
@@ -724,7 +728,8 @@ escl:           bsr     escf            // hide cursor.
  * esco - Erase from Beginning of Line.
  */
 esco:           bsr     escf            // hide cursor.
-                bsr     escj            // save cursor position.
+	        move.l	_v_cur_cx,-(sp) // save cursor position.
+//                bsr     escj            // save cursor position.
                 move.w  _v_cur_cx,d2     // test current x.
                 beq     esco_space      // if x = x minimum, just output a space.
                 btst    #0,d2           // x even or odd?
@@ -740,7 +745,9 @@ esco_blnk:      swap    d2              // blank to end of line.
                 swap    d1
                 clr.w   d1              // upper left coords. (0,y)
                 bsr     blnk_blt        // blank from beginning of line.
-esco_out:       bsr     esck            // restore cursor position.
+esco_out: 
+//		bsr     esck            // restore cursor position.
+	        move.l	(sp)+,_v_cur_cx // restore cursor position.
                 bra     cntesce         // show cursor.
 
 esco_space:     move.w  #0x20,d1        // output a space.

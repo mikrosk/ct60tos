@@ -25,6 +25,7 @@
 #include <mint/falcon.h>
 #include <mint/cookie.h>
 
+#include "setup.h"
 #include "form_vt.h"
 #include "form_sdram.h"
 #include "misc.h"
@@ -35,44 +36,44 @@
 /*--- Defines ---*/
 
 #define FORM_MEMTYPE 1
-#define FORM_MEMTYPE_POS 13
+#define FORM_MEMTYPE_POS 40
 #define FORM_ROWS (FORM_MEMTYPE+1)
-#define FORM_ROWS_POS 14
+#define FORM_ROWS_POS 40
 #define FORM_COLUMNS (FORM_ROWS+1)
-#define FORM_COLUMNS_POS 17
+#define FORM_COLUMNS_POS 40
 #define FORM_BANKS (FORM_COLUMNS+1)
-#define FORM_BANKS_POS 12
+#define FORM_BANKS_POS 40
 #define FORM_WIDTH (FORM_BANKS+1)
-#define FORM_WIDTH_POS 19
+#define FORM_WIDTH_POS 40
 #define FORM_VOLT (FORM_WIDTH+1)
-#define FORM_VOLT_POS 25
+#define FORM_VOLT_POS 40
 #define FORM_CYCLE (FORM_VOLT+1)
-#define FORM_CYCLE_POS_INT 12
-#define FORM_CYCLE_POS_FRAC 15
+#define FORM_CYCLE_POS_INT 40
+#define FORM_CYCLE_POS_FRAC (FORM_CYCLE_POS_INT+3)
 #define FORM_ACCESS (FORM_CYCLE+1)
-#define FORM_ACCESS_POS_INT 19
-#define FORM_ACCESS_POS_FRAC 22
+#define FORM_ACCESS_POS_INT 40
+#define FORM_ACCESS_POS_FRAC (FORM_ACCESS_POS_INT+3)
 #define FORM_CONFIG (FORM_ACCESS+1)
-#define FORM_CONFIG_POS 15
+#define FORM_CONFIG_POS 40
 #define FORM_REFRESH (FORM_CONFIG+1)
-#define FORM_REFRESH_POS 14
+#define FORM_REFRESH_POS 40
 #define FORM_NUMBANKS (FORM_REFRESH+1)
-#define FORM_NUMBANKS_POS 17
+#define FORM_NUMBANKS_POS 40
 #define FORM_PRECHARGE (FORM_NUMBANKS+1)
-#define FORM_PRECHARGE_POS 28
+#define FORM_PRECHARGE_POS 40
 #define FORM_ACTIVE (FORM_PRECHARGE+1)
-#define FORM_ACTIVE_POS 36
+#define FORM_ACTIVE_POS 40
 #define FORM_RASCAS (FORM_ACTIVE+1)
-#define FORM_RASCAS_POS 26
+#define FORM_RASCAS_POS 40
 #define FORM_DENSITY (FORM_RASCAS+1)
-#define FORM_DENSITY_POS 21
+#define FORM_DENSITY_POS 40
 #define FORM_MANID (FORM_DENSITY+1)
-#define FORM_MANID_POS 24
+#define FORM_MANID_POS 40
 #define FORM_MANDATE (FORM_MANID+1)
-#define FORM_MANDATE_POS 27
-#define FORM_MANDATE_POS_YEAR 30
+#define FORM_MANDATE_POS 40
+#define FORM_MANDATE_POS_YEAR (FORM_MANDATE_POS+3)
 #define FORM_ATTR (FORM_MANDATE+1)
-#define FORM_ATTR_POS 19
+#define FORM_ATTR_POS 40
 
 #define CHAR_MU "\xe6"
 
@@ -113,24 +114,24 @@ static char *sdram_manufacturers[13]={
 
 static form_t form_sdram[]={
 	{FORM_TITLE, "SDRAM", FORM_X+((FORM_W-5)>>1), FORM_Y},
-	{FORM_TEXT, "Memory type: -----", FORM_X+2,FORM_Y+2},
-	{FORM_TEXT, "Address rows: ---", FORM_X+2,FORM_Y+3},
-	{FORM_TEXT, "Address columns: ---", FORM_X+2,FORM_Y+4},
-	{FORM_TEXT, "DIMM banks: ---", FORM_X+2,FORM_Y+5},
-	{FORM_TEXT, "Module data width: ----- bits", FORM_X+2,FORM_Y+6},
-	{FORM_TEXT, "Voltage interface level: --- LVTTL", FORM_X+2,FORM_Y+7},
-	{FORM_TEXT, "Cycle time: --.-- ns", FORM_X+2,FORM_Y+8},
-	{FORM_TEXT, "Access from clock: --.-- ns", FORM_X+2,FORM_Y+9},
-	{FORM_TEXT, "Configuration: ---------", FORM_X+2,FORM_Y+10},
-	{FORM_TEXT, "Refresh rate: ---------", FORM_X+2,FORM_Y+11},
-	{FORM_TEXT, "Number of banks: ---", FORM_X+2,FORM_Y+12},
-	{FORM_TEXT, "Minimum row precharge time: --- ns", FORM_X+2,FORM_Y+13},
-	{FORM_TEXT, "Minimum row active to active delay: --- ns", FORM_X+2,FORM_Y+14},
-	{FORM_TEXT, "Minimum RAS to CAS delay: --- ns", FORM_X+2,FORM_Y+15},
-	{FORM_TEXT, "Module bank density: --- MB", FORM_X+2,FORM_Y+16},
-	{FORM_TEXT, "Module manufacturer ID: ----------------", FORM_X+2,FORM_Y+17},
-	{FORM_TEXT, "Module manufacturing date: --/----", FORM_X+2,FORM_Y+18},
-	{FORM_TEXT, "Module attributes: ----", FORM_X+2,FORM_Y+19},
+	{FORM_TEXT, "Memory type:                            -----", FORM_X+2,FORM_Y+2},
+	{FORM_TEXT, "Address rows:                           ---", FORM_X+2,FORM_Y+3},
+	{FORM_TEXT, "Address columns:                        ---", FORM_X+2,FORM_Y+4},
+	{FORM_TEXT, "DIMM banks:                             ---", FORM_X+2,FORM_Y+5},
+	{FORM_TEXT, "Module data width:                      ----- bits", FORM_X+2,FORM_Y+6},
+	{FORM_TEXT, "Voltage interface level:                --- LVTTL", FORM_X+2,FORM_Y+7},
+	{FORM_TEXT, "Cycle time:                             --.-- ns", FORM_X+2,FORM_Y+8},
+	{FORM_TEXT, "Access from clock:                      --.-- ns", FORM_X+2,FORM_Y+9},
+	{FORM_TEXT, "Configuration:                          ---------", FORM_X+2,FORM_Y+10},
+	{FORM_TEXT, "Refresh rate:                           ---------", FORM_X+2,FORM_Y+11},
+	{FORM_TEXT, "Number of banks:                        ---", FORM_X+2,FORM_Y+12},
+	{FORM_TEXT, "Minimum row precharge time:             --- ns", FORM_X+2,FORM_Y+13},
+	{FORM_TEXT, "Minimum row active to active delay:     --- ns", FORM_X+2,FORM_Y+14},
+	{FORM_TEXT, "Minimum RAS to CAS delay:               --- ns", FORM_X+2,FORM_Y+15},
+	{FORM_TEXT, "Module bank density:                    --- MB", FORM_X+2,FORM_Y+16},
+	{FORM_TEXT, "Module manufacturer ID:                 ----------------", FORM_X+2,FORM_Y+17},
+	{FORM_TEXT, "Module manufacturing date:              --/----", FORM_X+2,FORM_Y+18},
+	{FORM_TEXT, "Module attributes:                      ----", FORM_X+2,FORM_Y+19},
 	{FORM_END, 0,0,0}
 };
 
@@ -149,9 +150,6 @@ const form_menu_t form_menu_sdram={
 	NULL
 };
 
-static unsigned long cookie_ct60;
-static char has_ct60;
-
 /*--- Functions prototypes ---*/
 
 void initFormSdram(void)
@@ -159,8 +157,6 @@ void initFormSdram(void)
 	unsigned char buffer[128];
 	void *old_stack;
 	int err, i, j, found, week, year;
-
-	has_ct60 = getCookie(C_CT60, &cookie_ct60);
 
 	if (!has_ct60) {
 		return;
@@ -177,26 +173,28 @@ void initFormSdram(void)
 	if (buffer[SDRAM_TYPE] == 4) {
 		strCopy(sdram_type, &form_sdram[FORM_MEMTYPE].text[FORM_MEMTYPE_POS]);
 	}
-	format_number(&form_sdram[FORM_ROWS].text[FORM_ROWS_POS], buffer[SDRAM_ROWS], 3, ' ');
-	format_number(&form_sdram[FORM_COLUMNS].text[FORM_COLUMNS_POS], buffer[SDRAM_COLUMNS], 3, ' ');
-	format_number(&form_sdram[FORM_BANKS].text[FORM_BANKS_POS], buffer[SDRAM_DIMMS], 3, ' ');
-	format_number(&form_sdram[FORM_WIDTH].text[FORM_WIDTH_POS], (buffer[SDRAM_WIDTH+1]<<8)|buffer[SDRAM_WIDTH], 5, ' ');
-	format_number(&form_sdram[FORM_VOLT].text[FORM_VOLT_POS], buffer[SDRAM_VOLTAGE], 3, ' ');
-	format_number(&form_sdram[FORM_CYCLE].text[FORM_CYCLE_POS_INT], buffer[SDRAM_CYCLE]>>4, 2, ' ');
+	format_number(&form_sdram[FORM_ROWS].text[FORM_ROWS_POS], buffer[SDRAM_ROWS], 3, '0');
+	format_number(&form_sdram[FORM_COLUMNS].text[FORM_COLUMNS_POS], buffer[SDRAM_COLUMNS], 3, '0');
+	format_number(&form_sdram[FORM_BANKS].text[FORM_BANKS_POS], buffer[SDRAM_DIMMS], 3, '0');
+	format_number(&form_sdram[FORM_WIDTH].text[FORM_WIDTH_POS], (buffer[SDRAM_WIDTH+1]<<8)|buffer[SDRAM_WIDTH], 5, '0');
+	format_number(&form_sdram[FORM_VOLT].text[FORM_VOLT_POS], buffer[SDRAM_VOLTAGE], 3, '0');
+	format_number(&form_sdram[FORM_CYCLE].text[FORM_CYCLE_POS_INT], buffer[SDRAM_CYCLE]>>4, 2, '0');
 	format_number(&form_sdram[FORM_CYCLE].text[FORM_CYCLE_POS_FRAC], buffer[SDRAM_CYCLE] & 15, 2, '0');
-	format_number(&form_sdram[FORM_ACCESS].text[FORM_ACCESS_POS_INT], buffer[SDRAM_ACCESS]>>4, 2, ' ');
+	format_number(&form_sdram[FORM_ACCESS].text[FORM_ACCESS_POS_INT], buffer[SDRAM_ACCESS]>>4, 2, '0');
 	format_number(&form_sdram[FORM_ACCESS].text[FORM_ACCESS_POS_FRAC], buffer[SDRAM_ACCESS] & 15, 2, '0');
 	if (buffer[SDRAM_CONFIG]<3) {
 		strCopy(sdram_config[buffer[SDRAM_CONFIG]], &form_sdram[FORM_CONFIG].text[FORM_CONFIG_POS]);
 	}
 	if (buffer[SDRAM_REFRESH]<6) {
 		strCopy(sdram_refresh[buffer[SDRAM_REFRESH]], &form_sdram[FORM_REFRESH].text[FORM_REFRESH_POS]);
-	}
-	format_number(&form_sdram[FORM_NUMBANKS].text[FORM_NUMBANKS_POS], buffer[SDRAM_BANKS], 3, ' ');
-	format_number(&form_sdram[FORM_PRECHARGE].text[FORM_PRECHARGE_POS], buffer[SDRAM_PRECHARGE], 3, ' ');
-	format_number(&form_sdram[FORM_ACTIVE].text[FORM_ACTIVE_POS], buffer[SDRAM_ACTIVE], 3, ' ');
-	format_number(&form_sdram[FORM_RASCAS].text[FORM_RASCAS_POS], buffer[SDRAM_RASCAS], 3, ' ');
-	format_number(&form_sdram[FORM_DENSITY].text[FORM_DENSITY_POS], buffer[SDRAM_DENSITY]<<2, 3, ' ');
+	} else {
+		format_number_hex(&form_sdram[FORM_REFRESH].text[FORM_REFRESH_POS],buffer[SDRAM_REFRESH],9,0);
+	};
+	format_number(&form_sdram[FORM_NUMBANKS].text[FORM_NUMBANKS_POS], buffer[SDRAM_BANKS], 3, '0');
+	format_number(&form_sdram[FORM_PRECHARGE].text[FORM_PRECHARGE_POS], buffer[SDRAM_PRECHARGE], 3, '0');
+	format_number(&form_sdram[FORM_ACTIVE].text[FORM_ACTIVE_POS], buffer[SDRAM_ACTIVE], 3, '0');
+	format_number(&form_sdram[FORM_RASCAS].text[FORM_RASCAS_POS], buffer[SDRAM_RASCAS], 3, '0');
+	format_number(&form_sdram[FORM_DENSITY].text[FORM_DENSITY_POS], buffer[SDRAM_DENSITY]<<2, 3, '0');
 	format_number_hex(&form_sdram[FORM_ATTR].text[FORM_ATTR_POS], buffer[SDRAM_ATTRIBS], 2, 1);
 
 	found = 0;

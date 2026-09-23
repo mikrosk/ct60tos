@@ -23,9 +23,13 @@
 #define CONFIG_H 1
 
 /* Define for standalone program
- *   - Disable delay with 'Press DEL to enter setup' message
- *   - Do not force reset on exit
+ *   - Enable Exit
  */
 #define SETUP_STANDALONE 1
+
+/* Directly set VT52 foreground and background colors
+ * fixes buggy TOS 4 VT52 emulator
+ */
+#define VT52FIX 1
 
 #endif /* CONFIG_H */

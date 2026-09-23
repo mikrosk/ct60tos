@@ -38,16 +38,12 @@ SECTIONS
 		vectors.o( .text )
 		videl.o( .text )
 		debug.o( .text )
-		setup_loader.o( .text )
 		setup_firmware.o( .text )
 		/* Final "patch" header */
 		LONG( ADDR( .text2 ) )
 		LONG( SIZEOF( .text2 ) )
 	} > flash1
 	end_of_text1 = .;
-
-	/* address of the 2nd flash half, referenced by ataboot.S */
-	_ct60tos_half_flash = 0x00E80000;
 
 	.text2 :
 	AT( end_of_text1 )
@@ -61,6 +57,7 @@ SECTIONS
 		aes2.o( .text )
 		vectors2.o( .text )
 		debug2.o( .text )
+		setup_loader.o( .text )
 		ataboot.o( .text )
 		extvidel.o( .text )
 		magxboot.o( .text )

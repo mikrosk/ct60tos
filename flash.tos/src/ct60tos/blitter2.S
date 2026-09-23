@@ -99,13 +99,13 @@ copy_fonts:
 	move.l D0,_memtop
 	move.l D0,A1
 	move.l D0,D1
-	lea 0xE4AFEC,A0
+	lea 0xE4AFEC,A0		// System Fonts Font Data
 	move.w #0xFFF,D0
 cf1:
 		move.l (A0)+,(A1)+
 	dbf D0,cf1	
 	move.l A1,D2
-	lea 0xE09410,A0
+	lea 0xE09410,A0		// System font Descriptors
 	move.w #0x17,D0
 cf2:
 		move.l (A0)+,(A1)+

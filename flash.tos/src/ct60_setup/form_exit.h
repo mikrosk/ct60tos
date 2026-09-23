@@ -27,7 +27,9 @@
 enum {
 	SETUP_CONTINUE=0,
 	SETUP_EXIT=1,
-	SETUP_RESET=2
+	SETUP_RESET=2,
+	SETUP_RESET_COLD=3,
+	SETUP_DIAG=4
 };
 
 /*--- Variables ---*/

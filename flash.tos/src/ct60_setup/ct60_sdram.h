@@ -48,7 +48,7 @@
 /*--- Functions prototypes ---*/
 
 long ct60_rw_clock(short mode, short address, short data);
-long ct60_read_info_clock(char buffer[128]);
-long ct60_read_info_sdram(char buffer[128]);
+long ct60_read_info_clock(unsigned char buffer[128]);
+long ct60_read_info_sdram(unsigned char buffer[128]);
 
 #endif /* CT60_SDRAM_H */

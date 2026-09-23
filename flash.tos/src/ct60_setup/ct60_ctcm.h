@@ -73,7 +73,7 @@
 #define MIN_FREQ_REV1       50000UL /* KHz */
 #define MAX_FREQ_REV6_BOOT 100000UL /* KHz */
 #define MAX_FREQ_REV6      110000UL /* KHz */
-#define MIN_FREQ_REV6       66000UL /* KHz */
+#define MIN_FREQ_REV6       66500UL /* KHz */
 
 unsigned long ct60_freq_min;
 unsigned long ct60_freq_step;

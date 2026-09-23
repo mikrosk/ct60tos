@@ -40,6 +40,9 @@ int strLength(const char *str);
 /* String copy */
 void strCopy(const char *src, char *dest);
 
+/* String copy, without terminating 0 */
+void strCopyU(const char *src, char *dest);
+
 /* String to int */
 int strToInt(const char *src);
 

@@ -22,6 +22,7 @@
 #include <mint/osbind.h>
 #include <vt52.h>
 
+#include "config.h"
 #include "form_vt.h"
 #include "misc.h"
 
@@ -31,6 +32,10 @@
 
 /*--- Variables ---*/
 
+char* v_col_fg;
+char* v_col_bg;
+
+int vt_height;
 static char vt_input[INPUT_BUF_LEN];
 static char vtStr[5];
 
@@ -54,20 +59,28 @@ void vt_setCursorPos(int x,int y)
 
 void vt_setBgColor(int col)
 {
+#if VT52FIX
+	*v_col_bg=col;
+#else
 	vtStr[0]=27;
 	vtStr[1]='c';
 	vtStr[2]=col;
 	vtStr[3]=0;
 	Cconws(vtStr);
+#endif
 }
 
 void vt_setFgColor(int col)
 {
+#if VT52FIX
+	*v_col_fg=col;
+#else
 	vtStr[0]=27;
 	vtStr[1]='b';
 	vtStr[2]=col;
 	vtStr[3]=0;
 	Cconws(vtStr);
+#endif
 }
 
 const char *vt_readString(void)
@@ -145,14 +158,17 @@ void vt_initSettings(const form_setting_t *settings)
 	vt_prev_selected = -1;
 }
 
-void vt_setting_prev(void)
+int vt_setting_prev(void)
 {
 	if (!form_settings) {
-		return;
+		return(0);
 	}
 
 	if (vt_selected>0) {
 		--vt_selected;
+		return(0);
+	} else {
+	  	return(1);
 	}
 }
 
@@ -185,6 +201,7 @@ void vt_setting_prevRow(void)
 
 		--vt_selected;
 	}
+	while ((vt_selected>0)&&(form_settings[vt_selected].posy==form_settings[vt_selected-1].posy)) --vt_selected;
 }
 
 void vt_setting_nextRow(void)

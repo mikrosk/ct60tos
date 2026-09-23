@@ -1,0 +1,57 @@
+			CT60 Setup
+
+		Reading/changing settings at boot time
+
+
+0 Disclaimer
+------------
+
+Use at your own risks.
+
+
+1 Dependencies
+--------------
+
+- Gcc and binutils
+- Mintlib development package.
+- Perl, to convert the program to source code, for inclusion in firmware.
+
+
+2 Configuration
+---------------
+
+In config.h file, if SETUP_STANDALONE is defined (which is the default), it
+allows you to run the generated setup.tos program from the desktop, as a
+standard application.
+
+For inclusion in firmware, you must comment/undefine this value before
+compilation to enable the following features:
+- Enable delay with 'Press DEL to enter setup' message
+- Force reset on exit if CPU frequency changed
+
+Run 'make' to build the program.
+
+
+3 Inclusion in firmware
+-----------------------
+
+Between the end of standard TOS, and its end (at 512KB boundary), there is
+approx. 21KB available, and this is where the setup and its loader are stored
+when generating the firmware. A new location will be needed if it gets bigger
+in size.
+
+Run 'make firmware' to generate the file setup_firmware.S
+
+Modify the SETUP_PROG_LENGTH value in setup_loader.S to match the size written
+in setup_firmware.S
+
+Copy these two files in flash-<version>/tos directory.
+
+Modify Makefile in flash-<version> to add these two files as extra files to be
+included.
+
+Now recompile the firmware, and you are set.
+
+-- 
+Patrice Mandin <patmandin@gmail.com>
+Web: http://pmandin.atari.org/

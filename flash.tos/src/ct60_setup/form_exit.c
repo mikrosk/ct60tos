@@ -24,17 +24,40 @@
 #include <mint/osbind.h>
 #include <mint/falcon.h>
 
+#include "config.h"
 #include "form_vt.h"
 #include "form_exit.h"
 
 /*--- Defines ---*/
 
+#if SETUP_STANDALONE
 #define FORM_CONTINUE 1
 #define FORM_RESET (FORM_CONTINUE+1)
+#define FORM_RCOLD (FORM_RESET+1)
+#define FORM_DIAG  (FORM_RCOLD+1)
 
 #define FORM_SETTING_CONTINUE 0
 #define FORM_SETTING_RESET (FORM_SETTING_CONTINUE+1)
+#define FORM_SETTING_RCOLD (FORM_SETTING_RESET+1)
+#define FORM_SETTING_DIAG  (FORM_SETTING_RCOLD+1)
 
+#define YPOS_CONT  FORM_Y+2
+#define YPOS_RESET FORM_Y+3
+#define YPOS_RCOLD FORM_Y+4
+#define YPOS_DIAG  FORM_Y+6
+#else
+#define FORM_RESET 1
+#define FORM_RCOLD (FORM_RESET+1)
+#define FORM_DIAG  (FORM_RCOLD+1)
+
+#define FORM_SETTING_RESET 0
+#define FORM_SETTING_RCOLD (FORM_SETTING_RESET+1)
+#define FORM_SETTING_DIAG  (FORM_SETTING_RCOLD+1)
+
+#define YPOS_RESET FORM_Y+2
+#define YPOS_RCOLD FORM_Y+3
+#define YPOS_DIAG  FORM_Y+5
+#endif
 /*--- Global variables ---*/
 
 unsigned char exit_type;
@@ -43,17 +66,29 @@ unsigned char exit_type;
 
 static void exitContinue(void);
 static void exitReset(void);
+static void exitResetCold(void);
+static void exitDiag(void);
 
 static form_t form_exit[]={
 	{FORM_TITLE, "Exit", FORM_X+((FORM_W-4)>>1), FORM_Y},
-	{FORM_TEXT, "Exit and continue booting", FORM_X+2,FORM_Y+2},
-	{FORM_TEXT, "Exit and reset", FORM_X+2,FORM_Y+3},
+#if SETUP_STANDALONE
+	{FORM_TEXT, "Exit to TOS", FORM_X+2,YPOS_CONT},
+#else
+	{FORM_TEXT, "Exit and warm reboot", FORM_X+2,YPOS_RESET},
+	{FORM_TEXT, "Exit and cold reboot", FORM_X+2,YPOS_RCOLD},
+	{FORM_TEXT, "Exit to diagnostics", FORM_X+2,YPOS_DIAG},
+#endif
 	{FORM_END, 0,0,0}
 };
 
 form_setting_t form_setting_exit[]={
-	{FORM_X+2,FORM_Y+2, NULL, SETTING_FUNC, 0, exitContinue},
-	{FORM_X+2,FORM_Y+3, NULL, SETTING_FUNC, 0, exitReset},
+#if SETUP_STANDALONE
+	{FORM_X+2,YPOS_CONT , NULL, SETTING_FUNC, 0, exitContinue},
+#else
+	{FORM_X+2,YPOS_RESET, NULL, SETTING_FUNC, 0, exitReset},
+	{FORM_X+2,YPOS_RCOLD, NULL, SETTING_FUNC, 0, exitResetCold},
+	{FORM_X+2,YPOS_DIAG , NULL, SETTING_FUNC, 0, exitDiag},
+#endif
 	{0, 0, NULL, SETTING_END}
 };
 
@@ -69,11 +104,33 @@ const form_menu_t form_menu_exit={
 };
 
 /*--- Functions ---*/
+static int diag_installed()
+{
+	void *old_stack = (void *) Super(0);
+
+	unsigned long value = *((volatile long *)0x00ed0000);
+
+	Super(old_stack);
+
+	return value==0xFA52235F;
+}
+
 
 static void initFormExit(void)
 {
+
+#if SETUP_STANDALONE
 	form_setting_exit[FORM_SETTING_CONTINUE].text = &form_exit[FORM_CONTINUE].text[0];
+#else
 	form_setting_exit[FORM_SETTING_RESET].text = &form_exit[FORM_RESET].text[0];
+	form_setting_exit[FORM_SETTING_RCOLD].text = &form_exit[FORM_RCOLD].text[0];
+	form_setting_exit[FORM_SETTING_DIAG].text = &form_exit[FORM_DIAG].text[0];
+
+	if (!diag_installed()) {
+	   form_setting_exit[FORM_SETTING_DIAG].text[0]=0;
+	   form_setting_exit[FORM_SETTING_DIAG].input=SETTING_END;
+	};
+#endif
 }
 
 void displayFormExit(void)
@@ -89,4 +146,14 @@ void exitContinue(void)
 void exitReset(void)
 {
 	exit_type = SETUP_RESET;
+}
+
+void exitResetCold(void)
+{
+	exit_type = SETUP_RESET_COLD;
+}
+
+void exitDiag(void)
+{
+	exit_type = SETUP_DIAG;
 }

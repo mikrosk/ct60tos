@@ -25,6 +25,7 @@
 #include <mint/falcon.h>
 #include <mint/cookie.h>
 
+#include "setup.h"
 #include "form_vt.h"
 #include "form_ct60.h"
 #include "misc.h"
@@ -48,8 +49,8 @@
 
 static form_t form_ct60[]={
 	{FORM_TITLE, "CT60", FORM_X+((FORM_W-4)>>1), FORM_Y},
-	{FORM_TEXT, "ABE: --", FORM_X+2,FORM_Y+2},
-	{FORM_TEXT, "SDR: --", FORM_X+2,FORM_Y+3},
+	{FORM_TEXT, "ABE: ---- (--------)", FORM_X+2,FORM_Y+2},
+	{FORM_TEXT, "SDR: ---- (--------)", FORM_X+2,FORM_Y+3},
 	{FORM_TEXT, "ETHERNAT:   [-]", FORM_X+2,FORM_Y+5},
 	{FORM_TEXT, "SUPERVIDEL: [-]", FORM_X+2,FORM_Y+6},
 	{FORM_TEXT, "CTPCI:      [-]", FORM_X+2,FORM_Y+7},
@@ -73,11 +74,9 @@ const form_menu_t form_menu_ct60={
 
 static void initFormCt60(void)
 {
-	unsigned long cookie_cpu, chip_code, cookie_ct60;
+	unsigned long cookie_cpu, chip_code;
 	void *oldpile;
-	char has_ct60;
-
-	has_ct60 = getCookie(C_CT60, &cookie_ct60);
+	char c;
 
 	if (!has_ct60) {
 		return;
@@ -85,12 +84,30 @@ static void initFormCt60(void)
 
 	/* Read ABE,SDR versions */
 	chip_code = ct60_rw_parameter(CT60_MODE_READ, CT60_ABE_CODE, NULL);
-	form_ct60[FORM_ABE].text[FORM_ABE_POS] = (chip_code>>8) & 0xff;
-	form_ct60[FORM_ABE].text[FORM_ABE_POS+1] = chip_code & 0xff;
+	if (chip_code!=-1) {
+	  c=(chip_code>>24) & 0x7f;if (c<0x20) c=' ';
+	  form_ct60[FORM_ABE].text[FORM_ABE_POS] = c;
+	  c=(chip_code>>16) & 0x7f;if (c<0x20) c=' ';
+	  form_ct60[FORM_ABE].text[FORM_ABE_POS+1] = c;
+	  c=(chip_code>>8) & 0x7f;if (c<0x20) c=' ';
+	  form_ct60[FORM_ABE].text[FORM_ABE_POS+2] = c;
+	  c=(chip_code   ) & 0x7f;if (c<0x20) c=' ';
+	  form_ct60[FORM_ABE].text[FORM_ABE_POS+3] = c;
+	};
+	format_number_hex(&form_ct60[FORM_ABE].text[FORM_ABE_POS+6],chip_code,8,0);
 
 	chip_code = ct60_rw_parameter(CT60_MODE_READ, CT60_SDR_CODE, NULL);
-	form_ct60[FORM_SDR].text[FORM_SDR_POS] = (chip_code>>8) & 0xff;
-	form_ct60[FORM_SDR].text[FORM_SDR_POS+1] = chip_code & 0xff;
+	if (chip_code!=-1) {
+	  c=(chip_code>>24) & 0x7f;if (c<0x20) c=' ';
+	  form_ct60[FORM_SDR].text[FORM_SDR_POS] = c;
+	  c=(chip_code>>16) & 0x7f;if (c<0x20) c=' ';
+	  form_ct60[FORM_SDR].text[FORM_SDR_POS+1] = c;
+	  c=(chip_code>>8) & 0x7f;if (c<0x20) c=' ';
+	  form_ct60[FORM_SDR].text[FORM_SDR_POS+2] = c;
+	  c=(chip_code   ) & 0x7f;if (c<0x20) c=' ';
+	  form_ct60[FORM_SDR].text[FORM_SDR_POS+3] = c;
+	};
+	format_number_hex(&form_ct60[FORM_SDR].text[FORM_SDR_POS+6],chip_code,8,0);
 
 	/* Detect CT60 devices */
 
@@ -106,7 +123,7 @@ static void initFormCt60(void)
 		? 'X' : ' ');
 
 	form_ct60[FORM_SUPERVIDEL].text[FORM_SUPERVIDEL_POS] =
-		(HW_RegDetect(cookie_cpu, 0x30000000)
+		(HW_RegDetect(cookie_cpu, 0x80010000)
 		? 'X' : ' ');
 
 	form_ct60[FORM_CTPCI].text[FORM_CTPCI_POS] =

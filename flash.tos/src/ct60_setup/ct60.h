@@ -27,7 +27,7 @@
 #define CT60_MODE_WRITE 1
 #define CT60_PARAM_TOSRAM 0
 #define CT60_BLITTER_SPEED 1
-#define CT60_CACHE_DELAY 2
+//#define CT60_CACHE_DELAY 2
 #define CT60_BOOT_ORDER 3
 #define CT60_CPU_FPU 4
 #define CT60_BOOT_LOG 5
@@ -38,6 +38,7 @@
 #define CT60_ABE_CODE 11
 #define CT60_SDR_CODE 12
 #define CT60_CLOCK 13
+#define CT60_PARAM_CTPCI 14
 
 typedef struct
 {
@@ -53,7 +54,5 @@ typedef struct
 #define	ct60_rw_parameter(mode,type_param,value) (long)trap_14_wwll((short)(0xc60b),(short)(mode),(long)(type_param),(long)(value))
 #define ct60_cache(cache_mode) (long)trap_14_ww((short)(0xc60c),(short)(cache_mode))
 #define ct60_flush_cache() (long)trap_14_ww((short)(0xc60d))
-
-int ct60_cpu_read_pcr();
 
 #endif	/* _CT60_H */

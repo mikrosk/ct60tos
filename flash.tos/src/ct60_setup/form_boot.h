@@ -1,6 +1,6 @@
 /*
 	CT60 Setup
-	Read CPU revision
+	Boot order
 
 	Copyright (C) 2009	Patrice Mandin
 
@@ -19,12 +19,16 @@
 	Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 */
 
-	.globl	_ct60_cpu_read_pcr
+#ifndef FORM_BOOT_H
+#define FORM_BOOT_H
 
-	.text
+/*--- Variables ---*/
 
-_ct60_cpu_read_pcr:
-	.chip	68060
-	movec	pcr,d0
-	.chip	68000
-	rts
+extern const form_menu_t form_menu_boot;
+extern form_setting_t form_setting_boot[];
+
+/*--- Functions prototypes ---*/
+
+void displayFormBoot(void);
+
+#endif /* FORM_BOOT_H */
