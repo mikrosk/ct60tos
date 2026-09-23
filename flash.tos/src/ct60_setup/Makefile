@@ -11,11 +11,8 @@ AS=$(CROSS_PREFIX)m68k-atari-mint-as
 CC=$(CROSS_PREFIX)m68k-atari-mint-gcc
 STRIP=$(CROSS_PREFIX)m68k-atari-mint-strip
 OBJCOPY=$(CROSS_PREFIX)m68k-atari-mint-objcopy
-BIN2SRC=./bin2src.pl
 
 TARGET = setup.tos
-FIRMWARE_TARGET = setup_firmware.S
-FIRMWARE_DIR = ../ct60tos/
 
 CSRCS = setup.c form_vt.c form_nvram.c form_cpu.c \
 	form_boot.c form_exit.c misc.c video.c ct60_ctcm.c \
@@ -27,9 +24,9 @@ HEADERS = ct60_ctcm.h ct60.h asm_procs.h ct60_sdram.h form_boot.h form_cpu.h \
 	form_exit.h form_nvram.h form_sdram.h form_vt.h \
 	misc.h nvram.h scancodes.h video.h form_ct60.h hw_regs.h config.h
 
-EXTRA_DIST = $(HEADERS) setup_loader.S bin2src.pl
+EXTRA_DIST = $(HEADERS) setup_loader.S
 
-CFLAGS  = -Os -fomit-frame-pointer -Wall -Wno-unused-variable -m68020-60
+CFLAGS  = -Os -fomit-frame-pointer -Wall -Wno-unused-variable -m68020-60 $(EXTRA_CFLAGS)
 ASFLAGS = -m68060
 LDFLAGS = -nostdlib -Wl,--entry -Wl,_init_setup -lgcc
 ## If gcc generates some memcpy calls:
@@ -49,7 +46,7 @@ $(TARGET):	$(COBJECTS) $(SOBJECTS)
 	${STRIP} $(TARGET)
 
 clean:
-	rm -f $(COBJECTS) $(SOBJECTS) $(TARGET) $(DEPEND) $(FIRMWARE_TARGET) *~
+	rm -f $(COBJECTS) $(SOBJECTS) $(TARGET) $(DEPEND) *~
 
 dist:
 	cd .. ; tar cvzf \
@@ -57,17 +54,8 @@ dist:
 		ct60_setup/*.c \
 		ct60_setup/*.h \
 		ct60_setup/*.S \
-		ct60_setup/*.pl \
 		ct60_setup/Makefile \
-		ct60_setup/COPYING \
-		ct60_setup/README \
-		--exclude=ct60_setup/$(FIRMWARE_TARGET)
-
-firmware:	$(FIRMWARE_TARGET)
-
-$(FIRMWARE_TARGET):	$(TARGET)
-	$(BIN2SRC) $< > $@
-	cp setup_firmware.S $(FIRMWARE_DIR)
+		ct60_setup/COPYING
 
 run:
 	hatari $(TARGET)

@@ -25,7 +25,9 @@
 /* Define for standalone program
  *   - Enable Exit
  */
+#ifndef SETUP_STANDALONE
 #define SETUP_STANDALONE 1
+#endif
 
 /* Directly set VT52 foreground and background colors
  * fixes buggy TOS 4 VT52 emulator
