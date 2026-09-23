@@ -31,7 +31,7 @@
 	.globl ct60_read_info_sdram
 	.globl ct60_configure_sdram
 	.globl setup_loader
-	.globl versionstring
+	.globl message15
 
 #include "main.h"
 #include "ct60.h"
@@ -1117,8 +1117,6 @@ message13:	.asciz " Mask F84W"      // revision 2
 	.asciz " Masque F84W"
 message14:	.asciz " Mask E41J"      // revision 6
 	.asciz " Masque E41J" 
-versionstring:
-	.byte	message16-message15
 message15:	.byte 13,10,27
 	.ascii "p Boot v"
 	.byte ((VERSION/256) & 0xF) + 0x30

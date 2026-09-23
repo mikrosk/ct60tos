@@ -20,6 +20,7 @@
 */
 
 #define SETUP_PROG_START	0xe7c000
+#define CMDLINE_MAX	128             // what a basepage holds
 
 	.text
 
@@ -83,9 +84,13 @@ setup_loader:
 	tst.l	d7
 	beq	setup_loader_stop
 
+	lea	-CMDLINE_MAX(sp),sp
+	move.l	sp,a1
+	bsr	build_cmdline
 	lea	SETUP_PROG_START,a0
-	lea	versionstring,a1
-	bra	loadtos
+	move.l	sp,a1
+	bsr	loadtos
+	lea	CMDLINE_MAX(sp),sp
 
 setup_loader_stop:
 	movem.l	(sp)+,d0-d7/a0-a6
@@ -94,6 +99,37 @@ setup_loader_stop:
 null:
 	.long	0
 	
+/* The setup puts the boot banner in its title bar, taking it from the
+ * command line: a length byte, then the text between an ESC p and an
+ * ESC q.  message15 is that banner but starts with the CR LF the boot
+ * display needs, so hand over a copy from the ESC on, with the closing
+ * escape the setup expects to find.  a1 points at CMDLINE_MAX bytes.
+ */
+build_cmdline:
+	movem.l	d0/a0/a2,-(sp)
+	lea	message15+2,a0          // past the CR LF, at the ESC
+	move.l	a1,a2
+	addq.l	#1,a2                   // the text follows the length byte
+	move.w	#CMDLINE_MAX-8,d0       // leave room for what is appended
+.copy:
+	move.b	(a0)+,(a2)+
+	beq.s	.copied
+	subq.w	#1,d0
+	bne.s	.copy
+	addq.l	#1,a2                   // ran out before the NUL
+.copied:
+	subq.l	#1,a2                   // back onto the NUL, overwrite it
+	move.b	#27,(a2)+
+	move.b	#'q',(a2)+
+	move.b	#13,(a2)+
+	move.b	#10,(a2)+
+	clr.b	(a2)
+	move.l	a2,d0
+	sub.l	a1,d0                   // text length, the NUL counts
+	move.b	d0,(a1)
+	movem.l	(sp)+,d0/a0/a2
+	rts
+
 msg_setup_delkey:
 	.byte	0x1b,0x6a,0x1b,0x59,0xff,0x20,0x1b,0x6c
 	.asciz	"Press DEL to enter setup."
