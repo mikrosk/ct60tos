@@ -65,6 +65,7 @@ SECTIONS
 		pmmu2.o( .text )
 		videl2.o( .text )
 		svxbios.o( .text )
+		load_prg.o( .text )
 	} > flash2
 
 	.text3 :

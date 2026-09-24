@@ -141,7 +141,7 @@ msg_halt:
 	.align	2
 
 
-loadtos:	//a0=pointer to binary boot code
+loadtos:	//a0=pointer to the program header
 		//a1=pointer to commandline
 	movem.l	d0-d7/a0-a6,-(sp)
 	move.l	a0,a5
@@ -161,89 +161,21 @@ loadtos:	//a0=pointer to binary boot code
 	bmi	loadtos_stop
 	move.l	d0,a6
 
-	/* Init basepage */
-	lea	4(a5),a0
-	add.l	#256,d0
-
-	move.l	d0,8(a6)
-	move.l	2(a0),d1
-	add.l	#28,d0
-	add.l	d1,d0
-	move.l	d1,12(a6)
-	
-	move.l	d0,16(a6)
-	move.l	6(a0),d1
-	add.l	d1,d0
-	move.l	d1,20(a6)
-
-	move.l	d0,24(a6)
-	move.l	10(a0),d1
-	add.l	d1,d0
-	move.l	d1,28(a6)
-
-	/* Copy executable */
-	move.l	(a5),d0
+	/* Segments where Pexec puts them, TEXT straight after the basepage */
 	lea	256(a6),a1
-	moveq	#16,d1
-copy_setup:
-	move.l	(a0)+,(a1)+
-	move.l	(a0)+,(a1)+
-	move.l	(a0)+,(a1)+
-	move.l	(a0)+,(a1)+
-	sub.l	d1,d0
-	bgt.s	copy_setup
+	move.l	a1,8(a6)		// p_tbase
+	move.l	2(a5),d1
+	move.l	d1,12(a6)		// p_tlen
+	lea	(a1,d1.l),a0
+	move.l	a0,16(a6)		// p_dbase
+	move.l	6(a5),d1
+	move.l	d1,20(a6)		// p_dlen
+	add.l	d1,a0
+	move.l	a0,24(a6)		// p_bbase
+	move.l	10(a5),28(a6)		// p_blen
 
-	/* Relocate it */
-	lea	256(a6),a0
-	tst.l	0x1a(a0)
-	beq.s	no_relocate
-
-	moveq.l	#0x1c,d0
-	add.l	2(a0),d0
-	add.l	6(a0),d0
-	add.l	14(a0),d0
-	tst.l	(a0,d0.l)
-	beq.s	no_relocate
-
-	lea	4(a0,d0.l),a1
-	move.l	(a0,d0.l),d0
-	lea	0x1c(a0),a0
-	move.l	a0,d2
-	moveq	#0,d1
-relocate_loop:
-	add.l	d2,(a0,d0.l)
-relocate_again:
-	move.b	(a1)+,d1
-	beq.s	no_relocate	
-
-	cmp.b	#1,d1
-	beq.s	adv254
-	add.l	d1,d0
-	bra.s	relocate_loop
-adv254:
-	add.l	#254,d0
-	bra.s	relocate_again
-no_relocate:
-
-	/* Clear BSS */
-	move.l	0x18(a6),a0
-	move.l	0x1c(a6),d0
-	beq.s	no_clear
-	move.l	d0,d1
-	and.l	#3,d0
-	lsr.l	#2,d1
-	beq.s	clear_bss
-clear_bss_long:
-	clr.l	(a0)+
-	subq.l	#1,d1
-	bne.s	clear_bss_long
-clear_bss:
-	tst.l	d0
-	beq.s	no_clear
-	clr.b	(a0)+
-	subq.l	#1,d0
-	bne.s	clear_bss
-no_clear:
+	move.l	a5,a0
+	jsr	load_prg
 
 	/* Exec it */
 	lea	null(pc),a0

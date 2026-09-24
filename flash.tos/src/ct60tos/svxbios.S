@@ -110,68 +110,8 @@ load_sv_xbios:
 	beq .end_load
 
 	lea sv_xbios_image,A0
-	move.l 2(A0),D1          // TEXT
-	move.l 6(A0),D2          // DATA
-	move.l 10(A0),D3         // BSS
-	lea 28(A0),A0            // TEXT starts after the program header
 	move.l ramtop,A1         // reserved by sv_xbios_reserve
-	move.l A1,D5             // relocation offset, the image is linked at 0
-
-	move.l D1,D0
-	add.l D2,D0              // TEXT + DATA
-	move.l A1,A2
-	lsr.l #1,D0
-	bcc.s .copy_words
-	move.b (A0)+,(A2)+       // odd size, can not happen but be safe
-.copy_words:
-	subq.l #1,D0
-	bmi.s .copy_done
-.loop_copy:
-		move.w (A0)+,(A2)+
-	dbf D0,.loop_copy
-	swap D0
-	subq.l #1,D0
-	bpl.s .loop_copy
-.copy_done:
-
-	move.l D3,D0             // BSS, A2 already points at it
-	lsr.l #1,D0
-	bcc.s .clear_words
-	clr.b (A2)+
-.clear_words:
-	subq.l #1,D0
-	bmi.s .clear_done
-.loop_clear:
-		clr.w (A2)+
-	dbf D0,.loop_clear
-	swap D0
-	subq.l #1,D0
-	bpl.s .loop_clear
-.clear_done:
-
-	move.l (A0),D0           // A0 is at the fixup table (no symbols)
-	beq.s .reloc_done        // nothing to relocate
-	addq.l #4,A0
-	move.l A1,A2
-	add.l D0,A2
-	add.l D5,(A2)
-.loop_reloc:
-		moveq #0,D0
-		move.b (A0)+,D0
-		beq.s .reloc_done
-		cmp.b #1,D0
-		bne.s .reloc_fixup
-		lea 254(A2),A2       // skip 254 bytes, no fixup
-	bra.s .loop_reloc
-.reloc_fixup:
-		add.l D0,A2
-		add.l D5,(A2)
-	bra.s .loop_reloc
-.reloc_done:
-
-	nop
-	cpusha BC                // it was written through the data cache
-	nop
+	jsr load_prg
 	move.l 0x1C(A1),D0       // entry offset, from the program header
 	add.l D0,A1
 	move.l phystop,A0
