@@ -1170,13 +1170,14 @@ det_v_clrwk:
 	jsr (A3)
 	move.l D0,D2
 	move.l adr_var_vdi,A0
+	move.l D2,D0             // colour, replicated below to fill a long
 #ifdef COLDFIRE
-	moveq #0,D0
-	move.w V_PLANES(A0),D0   // nb planes
-	cmp.l #16,D0
+	moveq #0,D1
+	move.w V_PLANES(A0),D1   // nb planes
+	cmp.l #16,D1
 #else
-	move.w V_PLANES(A0),D0   // nb planes
-	cmp.w #16,D0
+	move.w V_PLANES(A0),D1   // nb planes
+	cmp.w #16,D1
 #endif
 	bhi.s .clrw1
 	bcs.s .clrw5
@@ -1217,13 +1218,13 @@ det_v_clrwk:
 	bra.s .clrw4
 .clrw3:
 #ifdef COLDFIRE
-		lea -32(SP),SP
+		lea -32(A4),A4
 		movem.l D1-A0,(A4)
-		lea -32(SP),SP
+		lea -32(A4),A4
 		movem.l D1-A0,(A4)
-		lea -32(SP),SP
+		lea -32(A4),A4
 		movem.l D1-A0,(A4)
-		lea -32(SP),SP
+		lea -32(A4),A4
 		movem.l D1-A0,(A4)
 .clrw4:
 	subq.l #1,D0
