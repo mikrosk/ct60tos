@@ -4873,13 +4873,15 @@ _mcf548x_ac97_playback_resample:
 	move.l 32+12(SP),D4      // target number of samples
 	move.l 32+16(SP),A0      // source
 	move.l 32+20(SP),A2      // target AC97 slots
+	                         // 32+24(SP): resampling phase (fraction in high word), updated
 	swap D1                  // source frequency * 65536
 	.chip 68060
 	divu #48000,D1           // / target frequency
 	.chip 5200
 	swap D1                  // * 65536 => step
 	clr.w D1
-	moveq #0,D2
+	move.l 32+24(SP),A1
+	move.l (A1),D2           // phase left over from the previous call
 	moveq #0,D3
 	cmp.l #MONO16,D0
 	beq.s .pr9
@@ -4921,6 +4923,7 @@ _mcf548x_ac97_playback_resample:
 		lea 52(A2),A2
 	subq.l #1,D4
 	bgt.s .pr9
+	lea (A0,D3.l*2),A1       // next source sample
 	bra .pr1
 .pr7:
 		move.l A0,A1 // source
@@ -4952,6 +4955,7 @@ _mcf548x_ac97_playback_resample:
 		lea 52(A2),A2
 	subq.l #1,D4
 	bgt.s .pr7
+	lea (A0,D3.l),A1         // next source sample
 	bra .pr1
 .pr5:
 		move.l A0,A1 // source
@@ -4993,6 +4997,7 @@ _mcf548x_ac97_playback_resample:
 	subq.l #1,A3
 	move.l A3,D0
 	bgt.s .pr5
+	lea (A0,D3.l*4),A1       // next source sample
 	bra.s .pr1
 .pr3:
 		move.l A0,A1 // source
@@ -5036,7 +5041,10 @@ _mcf548x_ac97_playback_resample:
 	subq.l #1,A3
 	move.l A3,D0
 	bgt.s .pr3
+	lea (A0,D3.l*2),A1       // next source sample
 .pr1:
+	move.l 32+24(SP),A2
+	move.l D2,(A2)           // keep the fraction for the next call
 	move.l A1,D0
 	movem.l (SP),D2-D7/A2-A3
 	lea 32(SP),SP

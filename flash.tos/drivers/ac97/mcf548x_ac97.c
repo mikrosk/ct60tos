@@ -190,6 +190,7 @@ struct mcf548x_ac97_priv {
 	long freq_codec;
 	long freq_dac;
 	long play_frequency;
+	unsigned long play_phase; /* resampling position between source samples, fraction in high word */
 	long freq_adc;
 	long record_frequency;
 #ifdef USE_VRA
@@ -267,7 +268,7 @@ extern int usb_free(void *addr);
 #endif
 #endif /* USE_DMA */
 extern long install_xbra(short vector, void *handler);
-extern void *mcf548x_ac97_playback_resample(long play_frequency, int play_res, int num_frames, void *source, long *target);
+extern void *mcf548x_ac97_playback_resample(long play_frequency, int play_res, int num_frames, void *source, long *target, unsigned long *phase);
 extern void *mcf548x_ac97_record_resample(long record_frequency, int record_res, int num_samples, void *target, long *source);
 #if defined(COLDFIRE) && defined(LWIP) 
 extern void board_printf(const char *fmt, ...);
@@ -846,7 +847,7 @@ static int mcf548x_ac97_build_frame(struct mcf548x_ac97_priv *priv, int num_fram
 				}
 				if(ok)
 				{
-					priv->play_samples = mcf548x_ac97_playback_resample(priv->play_frequency, priv->play_res, num_frames, priv->play_samples, (long *)&cmd[AC97_SLOT_PCM_LEFT]);
+					priv->play_samples = mcf548x_ac97_playback_resample(priv->play_frequency, priv->play_res, num_frames, priv->play_samples, (long *)&cmd[AC97_SLOT_PCM_LEFT], &priv->play_phase);
 					for(i = 0; i < num_frames; i++)
 					{
 						tag = MCF_PSC_TB_AC97_TB(1<<19) | MCF_PSC_TB_AC97_TB(3<<15) | MCF_PSC_TB_AC97_SOF; /* 1st slot is 16 bits length */
@@ -2596,6 +2597,7 @@ int mcf548x_ac97_playback_prepare(long psc_channel, long frequency, long res, lo
 	level = asm_set_ipl(7);
 	priv->play_frequency = frequency;
 	priv->freq_dac = nearest_freq;
+	priv->play_phase = 0;
 	priv->play_record_mode &= ~SB_PLA_RPT; 
 	priv->play_record_mode |= ((int)mode & SB_PLA_RPT);
 	priv->play_res = res & 0xff;
