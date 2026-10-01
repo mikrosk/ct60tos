@@ -2591,7 +2591,7 @@ int mcf548x_ac97_playback_prepare(long psc_channel, long frequency, long res, lo
 				break;
 			return(-1); // error
 	}
-	mcf548x_ac97_create_offsets(frequency, nearest_freq, res, priv->incr_offsets_play);
+	mcf548x_ac97_create_offsets(frequency, nearest_freq, res & 0xff, priv->incr_offsets_play);
 	mcf548x_ac97_write(priv, AC97_PCM_FRONT_DAC_RATE, nearest_freq);
 	level = asm_set_ipl(7);
 	priv->play_frequency = frequency;
@@ -2863,7 +2863,8 @@ int mcf548x_ac97_capture_prepare(long psc_channel, long frequency, long res, lon
 				break;
 			return(-1); // error
 	}
-	mcf548x_ac97_create_offsets(frequency, nearest_freq, res, priv->incr_offsets_record);
+	/* RECORD_STEREO16/RECORD_STEREO8 >> 8 are 0/1 like STEREO8/STEREO16 */
+	mcf548x_ac97_create_offsets(frequency, nearest_freq, (res >> 8) & 0xff, priv->incr_offsets_record);
 	mcf548x_ac97_write(priv, AC97_PCM_LR_ADC_RATE, nearest_freq);
 	level = asm_set_ipl(7);
 	priv->record_frequency = frequency;
