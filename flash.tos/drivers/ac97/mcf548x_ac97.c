@@ -2437,30 +2437,23 @@ static void mcf548x_ac97_create_offsets(long frequency, long nearest_freq, int m
 	{ // VRA not works => create soft offsets
 		long tab_offsets[AC97_SAMPLES_BY_BUFFER+1];
     int i;
-    long incr, offset = 0;
 		int coeff = nearest_freq / AC97_SAMPLES_BY_BUFFER;
 		int new_samples_by_buffer = frequency / coeff;
 		if((frequency % coeff) >= (coeff >> 1))
 			new_samples_by_buffer++;
 		if(new_samples_by_buffer > AC97_SAMPLES_BY_BUFFER)
 			new_samples_by_buffer = AC97_SAMPLES_BY_BUFFER;
-		incr = (long)((new_samples_by_buffer << 16) / AC97_SAMPLES_BY_BUFFER);
+		/* exact division, so a whole buffer advances by new_samples_by_buffer */
 		switch(mode)
 		{
 			case STEREO8:
 			case STEREO16:
 				for(i = 0; i <= AC97_SAMPLES_BY_BUFFER; i++)
-				{
-					tab_offsets[i] = (offset >> 16) << 1;
-					offset += incr;
-				}
+					tab_offsets[i] = ((i * new_samples_by_buffer) / AC97_SAMPLES_BY_BUFFER) << 1;
 				break;
 			default:
 				for(i = 0; i <= AC97_SAMPLES_BY_BUFFER; i++)
-				{
-					tab_offsets[i] = offset >> 16;
-					offset += incr;
-				}
+					tab_offsets[i] = (i * new_samples_by_buffer) / AC97_SAMPLES_BY_BUFFER;
 				break;
 		}
 		for(i = 0; i < AC97_SAMPLES_BY_BUFFER; i++)
