@@ -1219,7 +1219,7 @@ static int mcf548x_ac97_build_frame(struct mcf548x_ac97_priv *priv, int num_fram
 			if(index >= AC97_SAMPLES_BY_BUFFER)
 				index = 0;
 		}
-		if(priv->play_res == STEREO16)
+		if((priv->play_res == STEREO16) || (priv->play_res == MONO16))
 			priv->play_samples = (void *)sptr;
 		else
 			priv->play_samples = (void *)cptr;
