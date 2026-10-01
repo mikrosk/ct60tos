@@ -2955,6 +2955,8 @@ long setbuffer(long reg, long begaddr, long endaddr)
 
 long setmode(long mode)
 {
+	if(mode == -1) /* inquire, valid by bit 5 of cookie '_SND' */
+		return(mode_res);
 	switch(mode & 0xff)
 	{
 		case STEREO8:
@@ -2963,7 +2965,8 @@ long setmode(long mode)
 		/* valid by bit 5 of cookie '_SND' */
 		case MONO16:
 			break;
-		return(1); // error
+		default:
+			return(1); // error
 	}
 	switch(mode & 0xff00)
 	{
