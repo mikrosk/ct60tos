@@ -2745,10 +2745,11 @@ static void mcf548x_ac97_clear_capture(struct mcf548x_ac97_priv *priv)
 	priv->new_record_start_samples = NULL;
 	priv->new_record_end_samples = NULL;
 	priv->cause_inter &= ~SI_RECORD;
-#ifdef LWIP
-	priv->callback_record_to_call = 0;
-#endif
-	priv->callback_record = NULL;
+	if(!priv->open_record)
+	{
+		priv->callback_record_to_call = 0;
+		priv->callback_record = NULL;
+	}
 	asm_set_ipl(level);
 }
 
