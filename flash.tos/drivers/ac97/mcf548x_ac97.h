@@ -100,6 +100,7 @@ int mcf548x_ac97_capture_prepare(long psc_channel, long frequency, long res, lon
 int mcf548x_ac97_capture_callback(long psc_channel, void (*callback)());
 int mcf548x_ac97_capture_trigger(long psc_channel, long cmd);
 int mcf548x_ac97_capture_pointer(long channel, void **ptr, long set);
+int mcf548x_ac97_interrupt_cause(long psc_channel, long cause);
 int mcf548x_ac97_ioctl(long psc_channel, unsigned int cmd, void *arg);
 int mcf548x_ac97_debug_read(long psc_channel, long reg);
 int mcf548x_ac97_debug_write(long psc_channel, long reg, long val);

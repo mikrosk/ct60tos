@@ -3009,6 +3009,23 @@ int mcf548x_ac97_capture_pointer(long psc_channel, void **ptr, long set)
 	return(0); // OK
 }
 
+/* End of frame route: 0 calls the registered callbacks, SI_PLAY/SI_RECORD/SI_BOTH
+   call the Timer A vector, + 0x100 the MFP IO7 vector instead */
+int mcf548x_ac97_interrupt_cause(long psc_channel, long cause)
+{
+	struct mcf548x_ac97_priv *priv;
+	int level;
+	if((psc_channel < 0) || (psc_channel >= 4))
+		return(-1); // error
+	priv = Devices[psc_channel];
+	if(priv == NULL)
+		return(-1); // error
+	level = asm_set_ipl(7);
+	priv->cause_inter = (int)cause;
+	asm_set_ipl(level);
+	return(0); // OK
+}
+
 int mcf548x_ac97_ioctl(long psc_channel, unsigned int cmd, void *arg)
 {
 	struct mcf548x_ac97_priv *priv;

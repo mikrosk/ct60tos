@@ -3026,6 +3026,7 @@ long setinterrupt(long src, long cause, void (*callback)())
 				case SI_RECORD:
 				case SI_BOTH:
 					cause_inter = cause;
+					mcf548x_ac97_interrupt_cause(AC97_DEVICE, cause_inter);
 					return(0); // OK
 			}
 			break;
@@ -3037,6 +3038,7 @@ long setinterrupt(long src, long cause, void (*callback)())
 				case SI_RECORD:
 				case SI_BOTH:
 					cause_inter = cause | 0x100;
+					mcf548x_ac97_interrupt_cause(AC97_DEVICE, cause_inter);
 					return(0); // OK
 			}
 			break;
@@ -3051,6 +3053,7 @@ long setinterrupt(long src, long cause, void (*callback)())
 			mcf548x_ac97_playback_callback(AC97_DEVICE, callback_play);
 			mcf548x_ac97_capture_callback(AC97_DEVICE, callback_record);
 			cause_inter = 0;
+			mcf548x_ac97_interrupt_cause(AC97_DEVICE, cause_inter);
 			return(0); // OK
 			break;
 	}
@@ -3087,6 +3090,7 @@ long buffoper(long mode)
 	{
 		if(!mcf548x_ac97_playback_open(AC97_DEVICE))
 		{
+			mcf548x_ac97_interrupt_cause(AC97_DEVICE, cause_inter); /* cleared by open */
 			if(!mcf548x_ac97_playback_prepare(AC97_DEVICE, frequency, mode_res, mode))
 			{
 				ptr[0] = (void *)play_addr;
@@ -3109,6 +3113,7 @@ long buffoper(long mode)
 	{
 		if(!mcf548x_ac97_capture_open(AC97_DEVICE))
 		{
+			mcf548x_ac97_interrupt_cause(AC97_DEVICE, cause_inter); /* cleared by open */
 			if(!mcf548x_ac97_capture_prepare(AC97_DEVICE, frequency, mode_res, mode))
 			{
 				ptr[0] = (void *)record_addr;
@@ -3266,6 +3271,7 @@ long sndstatus(long reset)
 			flag_clock_44_48 = prescale_ste = 0;
 			play_addr = record_addr = 0;
 			cause_inter = 0;
+			mcf548x_ac97_interrupt_cause(AC97_DEVICE, cause_inter);
 			callback_play = callback_record = NULL;
 			mcf548x_ac97_ioctl(AC97_DEVICE, SOUND_MIXER_WRITE_POWERDOWN, NULL);
 			return(SS_OK);
