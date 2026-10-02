@@ -276,6 +276,7 @@ int cd_disk_boot(void)
 	init_scsiio();
 	if(scsicall != NULL)
 	{
+		kprint("SCSIDRV found\r\n\n");
 		rc = InquireSCSI(cInqFirst, &Bus);
 		while(rc == 0)
 		{
@@ -303,6 +304,7 @@ int cd_disk_boot(void)
 						revision[4] = '\0';
 						while(!medium)
 						{
+							Wait(20);
 							rc = ReadCapacity(0, &BlockSize, &BlockLen);
 							if(rc == 0)
 								medium = 1;
