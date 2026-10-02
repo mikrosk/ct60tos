@@ -238,7 +238,8 @@ void update_mmu(void) // MMU access fault
 #ifdef MCF547X
 				if((addr >= ZONE_CART) && (addr < END_ZONE_CART))
 					mmu_remap(addr,(addr|FPGA_ZONE_IO),MMUOR_ITLB,MMUTR_SG,MMUDR_PAGE+MMUDR_WRITEBACK+MMUDR_X);
-				else if((addr >= ZONE_EPROM2) && (addr < END_ZONE_EPROM2))
+				else if(((addr >= ZONE_EPROM2) && (addr < END_ZONE_EPROM2))
+				 || ((addr >= NO_CACHE_MEMORY_BASE) && (addr < NO_CACHE_MEMORY_BASE+NO_CACHE_MEMORY_SIZE)))
 #else /* MCF548X */
 				if((addr >= ZONE_CART) && (addr < END_ZONE_EPROM2))
 #endif
@@ -556,6 +557,13 @@ void init_mmu(unsigned long base_pci_drivers, unsigned long size_pci_drivers)
 		" MOVEC.L D0,ACR0\n\t"              /* data */
 		" MOVE.L #0x0100E020,D0\n\t"
 		" MOVEC.L D0,ACR1" : : : "d0" );    /* data */
+#ifdef MCF547X /* FIREBEE */
+	asm volatile (
+		" MOVE.L #0x0201E000,D0\n\t"
+		" MOVEC.L D0,ACR2\n\t"              /* instruction */
+		" MOVE.L #0x0100E000,D0\n\t"
+		" MOVEC.L D0,ACR3" : : : "d0" );    /* instruction */
+#else /* MCF548X */
   /* SDRAM is cacheable */
 	{
 		unsigned long ACR_SDRAM = (SDRAM_BASE & 0xFF000000) + (((SDRAM_SIZE-1) >> 8) & 0xFF0000) + 0xE000;
@@ -566,6 +574,7 @@ void init_mmu(unsigned long base_pci_drivers, unsigned long size_pci_drivers)
 	asm volatile (
 		" MOVEQ #0,D0\n\t"
 		" MOVEC.L D0,ACR3" : : : "d0");     /* instruction */
+#endif /* MCF547X */
 #endif
 	asm volatile (" NOP");
 	MMUCR = MMUCR_EN;                     /* enable */
