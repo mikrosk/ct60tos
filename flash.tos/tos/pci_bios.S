@@ -7175,22 +7175,130 @@ _dma_free:
 dma_lock:
 
 	move.l 4(SP),D0          // mode
-	bra.s .dl1
+	move.l 8(SP),A0          // address
+	move.l 12(SP),D1         // data
+	bra.s .dl2
 	
 _dma_lock:  /* CTPCI DMA freeze workaround */
 
 	move.w 2(A0),D0          // mode
-.dl1:
+	move.l 8(A0),D1          // data
+	move.l 4(A0),A0          // address
+	move.l phystop,A1
+	moveq #CTPCI_1N,D1
+	and.l hardware_type(A1),D1
+	beq.s .dl_error
 	cmp.w #-2,D0
 	bne.s .dl2
 	lea dma_lock(PC),A0
 	move.l A0,D0
 	rts
 .dl2:
-	bmi.s .dl3
-	nop	
-.dl3:
+	tst.w D0
+	bmi.s .dl_status
+	bne.s .dl_lock
+	bclr #7,PCI_CTPCI_CONFIG_ENABI // unlock
+	sne.b D0
+	and.l #1,D0
+	rts
+.dl_lock:
+	cmp.w #1,D0
+	bne.s .dl_access
+	move.w SR,-(SP)
+	or.w #0x700,SR               // no interrupts
+	btst #7,PCI_CTPCI_CONFIG_ENABI
+	bne.s .dl_busy               // already locked
+	bclr #6,PCI_CTPCI_CONFIG_ENABI
+	bne.s .dl_busy               // DMA in progress
+	bset #7,PCI_CTPCI_CONFIG_ENABI // lock
+	bra.s .dl_end
+.dl_busy:
+	sne.b D0
+.dl_end:
+	move.w (SP)+,SR
+	and.l #1,D0
+	rts
+.dl_error:
 	moveq #-1,D0
+	rts
+.dl_status:
+	cmp.w #-1,D0
+	bne.s .dl_error
+	btst #7,PCI_CTPCI_CONFIG_ENABI
+	sne.b D0
+	and.l #1,D0
+	rts
+.dl_access:
+	cmp.w #8,D0
+	bcc.s .dl_error
+	move.w SR,-(SP)
+	or.w #0x700,SR               // no interrupts
+	move.l D0,-(SP)
+	moveq #1,D0
+	jsr led_floppy
+	move.l (SP)+,D0
+	subq.w #2,D0
+	move.w .dl_tab(PC,D0.W*2),D0
+	jsr .dl_tab(PC,D0.W)
+	move.l D0,-(SP)
+	moveq #0,D0
+	jsr led_floppy
+	move.l (SP)+,D0
+	move.w (SP)+,SR
+	rts
+.dl_tab:
+	dc.w .dl_read_byte-.dl_tab   // 2
+	dc.w .dl_read_word-.dl_tab   // 3
+	dc.w .dl_read_long-.dl_tab   // 4
+	dc.w .dl_write_byte-.dl_tab  // 5
+	dc.w .dl_write_word-.dl_tab  // 6
+	dc.w .dl_write_long-.dl_tab  // 7
+.dl_read_byte:
+	bclr #6,PCI_CTPCI_CONFIG_ENABI
+	bne.s .dl_read_byte          // wait end of DMA
+	bset #7,PCI_CTPCI_CONFIG_ENABI
+	move.b (A0),D0
+	bclr #7,PCI_CTPCI_CONFIG_ENABI
+	and.l #0xFF,D0
+	rts
+.dl_read_word:
+	bclr #6,PCI_CTPCI_CONFIG_ENABI
+	bne.s .dl_read_word
+	bset #7,PCI_CTPCI_CONFIG_ENABI
+	move.w (A0),D0
+	bclr #7,PCI_CTPCI_CONFIG_ENABI
+	and.l #0xFFFF,D0
+	rts
+.dl_read_long:
+	bclr #6,PCI_CTPCI_CONFIG_ENABI
+	bne.s .dl_read_long
+	bset #7,PCI_CTPCI_CONFIG_ENABI
+	move.l (A0),D0
+	bclr #7,PCI_CTPCI_CONFIG_ENABI
+	rts
+.dl_write_byte:
+	bclr #6,PCI_CTPCI_CONFIG_ENABI
+	bne.s .dl_write_byte
+	bset #7,PCI_CTPCI_CONFIG_ENABI
+	move.b D1,(A0)
+	bclr #7,PCI_CTPCI_CONFIG_ENABI
+	moveq #0,D0
+	rts
+.dl_write_word:
+	bclr #6,PCI_CTPCI_CONFIG_ENABI
+	bne.s .dl_write_word
+	bset #7,PCI_CTPCI_CONFIG_ENABI
+	move.w D1,(A0)
+	bclr #7,PCI_CTPCI_CONFIG_ENABI
+	moveq #0,D0
+	rts
+.dl_write_long:
+	bclr #6,PCI_CTPCI_CONFIG_ENABI
+	bne.s .dl_write_long
+	bset #7,PCI_CTPCI_CONFIG_ENABI
+	move.l D1,(A0)
+	bclr #7,PCI_CTPCI_CONFIG_ENABI
+	moveq #0,D0
 	rts
 
 #endif /* COLDFIRE */
