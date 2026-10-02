@@ -68,7 +68,7 @@ extern unsigned char __MBAR[];
 #define portVECTOR_TIMER                ( 64 + INT0_HI_DTMR2 )
 #else /* MCF548X */
 #ifdef MCF547X
-#define SYSTEM_CLOCK                    133 // system bus frequency in MHz
+#define SYSTEM_CLOCK                    132 // system bus frequency in MHz
 #else /* MCF548X */
 #define SYSTEM_CLOCK                    100 // system bus frequency in MHz
 #endif /* MCF547X */
