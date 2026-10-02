@@ -2088,6 +2088,7 @@ _uninstall_usb_stor:
 	move.l pun_ptr_ahdi,D1
 	beq.s .error_usb_uninstall
 	move.l D1,A1
+	moveq #2,D2              // drive C
 .loop_uninstall_usb_part_ahdi:
 		moveq #0,D1
 		move.b pinfo_pun(A1,D2.l),D1
