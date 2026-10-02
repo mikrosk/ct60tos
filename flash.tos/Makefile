@@ -232,7 +232,7 @@ BOOT_OBJSCF3=	\
 		$(OBJDIRCF)/tos/patches/movep.o \
 		$(OBJDIRCF)/tos/patches/params.o \
 		$(OBJDIRCF)/tos/patches/blitter.o \
-		$(OBJDIRCF)/tos/patches/bios.o \
+		$(OBJDIRCF3)/tos/patches/bios.o \
 		$(OBJDIRCF3)/tos/patches/xbios.o \
 		$(OBJDIRCF)/tos/patches/gemdos.o \
 		$(OBJDIRCF)/tos/patches/aes.o \

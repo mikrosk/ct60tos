@@ -128,7 +128,7 @@ end4:
 
 #endif /* conout.c */
 
-#if defined(COLDFIRE) && !defined(MCF547X)
+#ifdef COLDFIRE
 
 	.globl	auxistat
 	
@@ -166,12 +166,13 @@ begin8:
 	.long	auxout
 end8:
 
-#endif  /* defined(COLDFIRE) && !defined(MCF547X) */
+#endif  /* COLDFIRE */
 
 #ifdef COLDFIRE
 
 	.globl	error_ok
 
+#ifndef MCF547X
 	.align	2
 	.long	0xE76
 	.long	end9-begin9
@@ -220,6 +221,7 @@ end14:
 begin15:      // MIDI
 	.long	error_ok
 end15:
+#endif /* MCF547X */
 
 	.align	2
 	.long	0xEA2
