@@ -194,7 +194,7 @@ end15:
 	.long	0x6E8
 	.long	end16-begin16
 begin16:	// ROM CRC warning
-	.ascii	"Patched by MCS 05.06.2017 ver.9\r\n"
+	.ascii	"Patched by MCS 07.10.2019 ver10\r\n"
 	.byte	0
 end16:
 
