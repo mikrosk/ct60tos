@@ -5284,6 +5284,36 @@ _install_magic_routine:
 	addq.l #4,SP
 	rts
 
+#if defined(COLDFIRE) && defined(LWIP)
+
+call_from_vbl: // A0: function called by the TOS VBL with 8 long parameters, return D0
+
+	pea (A0)
+	lea vbl_function_args,A0
+	move.l 8(SP),(A0)+
+	move.l 12(SP),(A0)+
+	move.l 16(SP),(A0)+
+	move.l 20(SP),(A0)+
+	move.l 24(SP),(A0)+
+	move.l 28(SP),(A0)+
+	move.l 32(SP),(A0)+
+	move.l 36(SP),(A0)+
+	move.l (SP)+,vbl_function
+	lea -16(SP),SP
+	movem.l D1-D2/A1-A2,(SP)
+.wait_vbl_function:
+		pea 1
+		jsr _vTaskDelay
+		addq.l #4,SP
+	tst.l vbl_function
+	bne.s .wait_vbl_function
+	movem.l (SP),D1-D2/A1-A2
+	lea 16(SP),SP
+	move.l vbl_function_ret,D0
+	rts
+
+#endif /* defined(COLDFIRE) && defined(LWIP) */
+
 #ifndef COLDFIRE
 _get_no_cache_memory:
 
