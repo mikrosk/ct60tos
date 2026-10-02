@@ -411,6 +411,12 @@ In:
 	and.w D4,D0              // physical drive
 	asl.w #4,D0
 	or.b #0x40,D0            // LBA
+	move.l D0,-(SP)
+	move.l D2,D0             // LBA
+	swap D0
+	lsr.l #8,D0
+	and.l #0xF,D0            // LBA bits 24-27
+	or.l (SP)+,D0
 	move.b D0,1(A1)          // drive (C/D/H)
 	move.l D2,D0             // LBA
 	move.b D0,4(A1)          // sec num, LBA low
@@ -816,13 +822,19 @@ Out:
 	and.w D4,D0              // physical drive
 	asl.w #4,D0
 	or.b #0x40,D0            // LBA
+	move.l D0,-(SP)
+	move.l D2,D0             // LBA
+	swap D0
+	lsr.l #8,D0
+	and.l #0xF,D0            // LBA bits 24-27
+	or.l (SP)+,D0
 	move.b D0,1(A1)          // drive (C/D/H)
 	move.l D2,D0             // LBA
 	move.b D0,4(A1)          // sec num, LBA low
 	lsr.l #8,D0
 	move.w D0,2(A1)          // cyl high & low, LBA high & mid
 	move.b D1,5(A1)          // sec count 0 <=> 256
-	cmp.l #0x1000000,D2
+	cmp.l #0x10000000,D2
 	bcc.s .out12
 	move.b #0x30,(A1)        // write sector(s)
 	clr.b 6(A1)              // features
