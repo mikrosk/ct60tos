@@ -77,7 +77,7 @@
 	.global _vixPlaybackFrameSelect,_vixGetGrKeys,_vixSetGrKeys
 	.global _vixPlaybackGetEq,_vixPlaybackSetEq,_vixPlaybackGetDeint,_vixPlaybackSetDeint
 	.global _InitVideo
-	.global _asm_set_ipl
+	.global _asm_set_ipl,_asm_get_ipl
 #ifdef MCF547X
 	.global _check_sd_card,_install_sd_card
 #endif
@@ -5241,6 +5241,13 @@ _asm_set_ipl:
 	movem.l (SP),D6-D7
 	lea 8(SP),SP
 	unlk A6
+	rts
+
+_asm_get_ipl:
+
+	move.w SR,D0
+	lsr.l #8,D0
+	and.l #7,D0              // IPL
 	rts
 
 #ifdef COLDFIRE

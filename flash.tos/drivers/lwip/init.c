@@ -274,6 +274,7 @@ xTaskHandle tid_TELNET, tid_DEBUG, tid_HTTPd;
 #ifdef MCF547X
 xTaskHandle tid_ETOS;
 unsigned long pseudo_dma_vec;
+xQueueHandle xQueueWaitVBL;
 extern short boot_os, drive_ok;
 #if defined(CONFIG_USB_UHCI) || defined(CONFIG_USB_OHCI) || defined(CONFIG_USB_EHCI)
 void *pci_data;
@@ -1743,9 +1744,8 @@ void inter_vbl(void)
   asm volatile (
         "_new_vbl:\n\t"
         " lea -24(SP),SP\n\t"
-        " movem.l D0-D2/A0-A2,(SP)\n\t" );
-  function_vbl();
-  asm volatile (
+        " movem.l D0-D2/A0-A2,(SP)\n\t"
+        " jsr _function_vbl\n\t"
         " movem.l (SP),D0-D2/A0-A2\n\t"
         " lea 24(SP),SP\n\t"
         "	move.l 0x70,-(SP)\n\t"
@@ -1825,65 +1825,75 @@ static portTASK_FUNCTION(vVBL, pvParmeters)
   long date = 0, time = 0;
   *(unsigned long *)(((64+4) * 4) + coldfire_vector_base) = (unsigned long)new_vbl;
   MCF_GPIO_PODR_FEC1L &= ~MCF_GPIO_PODR_FEC1L_PODR_FEC1L4; /* led */
-  vTaskDelay(configTICK_RATE_HZ);
+  if(xQueueWaitVBL != NULL)
+  {
+    long msg = 0;
+    while(xQueueAltReceive(xQueueWaitVBL, &msg, 1) != pdTRUE)
+    {
+      if(asm_get_ipl() <= 3)
+        break;
+    }
+  }
+  else
+  {
+    while(asm_get_ipl() > 3) /* wait EMUTOS interrupts */
+      vTaskDelay(1);
+  }
+  vTaskSuspend(tid_ETOS);
   get_mouseikbdvec();  /* XBIOS calls !!! (for USB and screen WEB server) */
   old_vector_xbios = *(long *)0xB4; /* XBIOS */
 #if defined(CONFIG_USB_UHCI) || defined(CONFIG_USB_OHCI) || defined(CONFIG_USB_EHCI)
 #ifdef SOUND_AC97
+  flag_snd_init = 0;
 	for(i = 0; i < 2; i++)
 	{
 		sound_err = mcf548x_ac97_install(2);
 		if(!sound_err)
 			break;
 	}
-#endif
-#endif
+  if(!sound_err)
+  {
+    *(long *)0xB4 = (long)det_xbios;
+    flag_snd_init = 1;
+    flag_gsxb = 1;
+    sndstatus(1);
+  }
+#endif /* SOUND_AC97 */
+  if(pci_data != NULL)
+  {
+    COOKIE pcookie;
+    COOKIE *p = *(COOKIE **)cookie;
+    int i = 0;
+    board_printf("Add cookies\r\n");
+    pcookie.ident = '_PCI';
+    pcookie.v.l = (long)pci_data;
+    while(p != NULL)
+    {
+      if(p->ident == '_PCI')
+      	continue;
+      if((!p->ident) && (i+1 < p->v.l)) /* free space ? */
+      {
+        *(p+1) = *p; /* add cookie */
+        *p++ = pcookie;
+        break;
+      }
+#ifdef SOUND_AC97
+      if((p->ident == '_SND') && !sound_err)
+        p->v.l |= 0x27; /* bit 5: extended mode, bit 2: 16 bits DMA, bit 1: 8 bits DMA, bit 0: YM2149 */
+#endif /* SOUND_AC97 */
+      i++;
+      p++;
+    }
+  }
+#if 0 // #ifdef CONFIG_USB_STORAGE
+  if(usb_found)
+    usb_stor_scan();
+#endif /* CONFIG_USB_STORAGE */	
+#endif /* defined(CONFIG_USB_UHCI) || defined(CONFIG_USB_OHCI) || defined(CONFIG_USB_EHCI) */
+  vTaskResume(tid_ETOS);
   while(1)
   {
 		unsigned long start_timer = *(unsigned long *)_hz_200;
-#if defined(CONFIG_USB_UHCI) || defined(CONFIG_USB_OHCI) || defined(CONFIG_USB_EHCI)
-#ifdef SOUND_AC97
-    if(!sound_err)
-    {
-      *(long *)0xB4 = (long)det_xbios;
-      flag_snd_init = 1;
-      flag_gsxb = 1;
-      sndstatus(1);
-    }
-    else
-      flag_snd_init = 0;
-#endif /* SOUND_AC97 */
-    board_printf("Add cookies\r\n");
-    if(pci_data != NULL)
-    {
-      COOKIE pcookie;
-      COOKIE *p = *(COOKIE **)cookie;
-      int i = 0;
-      pcookie.ident = '_PCI';
-      pcookie.v.l = (long)pci_data;
-      while(p != NULL)
-      {
-        if(p->ident == '_PCI')
-        	continue;
-        if((!p->ident) && (i+1 < p->v.l)) /* free space ? */
-        {
-          *(p+1) = *p; /* add cookie */
-          *p++ = pcookie;
-          break;
-        }
-#ifdef SOUND_AC97
-        if((p->ident == '_SND') && !sound_err)
-          p->v.l |= 0x27; /* bit 5: extended mode, bit 2: 16 bits DMA, bit 1: 8 bits DMA, bit 0: YM2149 */
-#endif /* SOUND_AC97 */
-        i++;
-        p++;
-      }
-    }
-#if 0 // #ifdef CONFIG_USB_STORAGE
-    if(usb_found)
-      usb_stor_scan();
-#endif /* CONFIG_USB_STORAGE */	
-#endif /* defined(CONFIG_USB_UHCI) || defined(CONFIG_USB_OHCI) || defined(CONFIG_USB_EHCI) */
     while((*(unsigned long *)_hz_200 - start_timer) < 200UL)
     {
 		  start_timer = *(unsigned long *)_hz_200;
@@ -1909,7 +1919,7 @@ static portTASK_FUNCTION(vVBL, pvParmeters)
             mmu_map(end_physbase,(end_physbase + 0x60000000),0,MMUDR_SZ1M+MMUDR_WRITETHROUGH+MMUDR_R+MMUDR_W);
           }
           asm_set_ipl(level);
-//          board_printf("new videl screen at 0x%lX\r\n", physbase); 
+          board_printf("New videl screen at 0x%lX\r\n", physbase); 
         }
       }
       if(!(count % 50))
@@ -1979,10 +1989,65 @@ static portTASK_FUNCTION(vVBL, pvParmeters)
   }
 }
 
+static void emutos_stop(void)
+{
+  asm volatile (
+        " swap D0\n\t"
+        " move.w SR,D0\n\t"
+        " lea -24(SP),SP\n\t"
+        " movem.l D0-D2/A0-A2,(SP)\n\t"
+        " and.l #0x700,D0\n\t"
+        " cmp.l #0x700,D0\n\t"
+        " beq.s .emutos_stopped\n\t"   /* all interrupts masked */
+        " pea 1\n\t"
+        " jsr _vTaskDelay\n\t"
+        " bra.s .emutos_stop_end\n\t"
+        ".emutos_stopped:\n\t"
+        " lea 24(SP),A0\n\t"
+        " pea (A0)\n\t"
+        " jsr _emutos_stopped\n\t"
+        ".emutos_stop_end:\n\t"
+        " addq.l #4,SP\n\t"
+        " movem.l (SP),D0-D2/A0-A2\n\t"
+        " lea 24(SP),SP\n\t"
+        " move.w D0,SR\n\t" );
+}
+
 static portTASK_FUNCTION(vETOS,pvParmeters)
 {           
   void (*fp)(void) = (void(*)(void))0xE00000;
   (*fp)();
+}
+
+void emutos_stopped(unsigned long *stack)
+{
+  int i;
+  board_printf("EMUTOS stopped, stack 0x%08lX:\r\n", stack);
+  for(i = 0; i < 8; i++)
+    board_printf("%08lX ", stack[i]);
+  board_printf("\r\n");
+  vTaskSuspend(tid_ETOS);
+}
+
+static void emutos_halt(void)
+{
+  vTaskDelete(0);
+}
+
+static void emutos_enable_interrupts(void)
+{
+  static long msg;
+  asm volatile (
+        " move.w SR,D0\n\t"
+        " move.w #0x2300,SR\n\t"
+        " lea -24(SP),SP\n\t"
+        " movem.l D0-D2/A0-A2,(SP)\n\t" );
+  if(xQueueWaitVBL != NULL)
+    xQueueAltSend(xQueueWaitVBL, &msg, 0);
+  asm volatile (
+        " move.w #0x2300,SR\n\t"
+        " movem.l (SP),D0-D2/A0-A2\n\t"
+        " lea 24(SP),SP\n\t" );
 }
 
 static void go_emutos(unsigned long source)
@@ -1999,6 +2064,7 @@ static void go_emutos(unsigned long source)
   COOKIE *pci_cookie = *(COOKIE **)cookie;
 #endif
   unsigned long top = (unsigned long)__LWIP_BASE - 0x100000; /* - 1MB */
+  unsigned short *p;
   int i;
   mcf548x_ac97_uninstall(2, 0);
   vTaskDelay(1);
@@ -2037,10 +2103,13 @@ static void go_emutos(unsigned long source)
 #endif
   info_fvdi = NULL;
   asm_set_ipl(7); /* disable interrupts */
-  for(i = 1; i < 16; *(unsigned long *)(((32+i) * 4) + coldfire_vector_base) = (unsigned long)new_trap, i++);
   *(unsigned long *)((5 * 4) + coldfire_vector_base) = (unsigned long)new_zero_divide; /* Zero Divide */
   *(unsigned long *)((10 * 4) + coldfire_vector_base) = (unsigned long)new_trap; /* LineA */
   *(unsigned long *)((15 * 4) + coldfire_vector_base) = (unsigned long)new_trap; /* LineF */
+  *(unsigned long *)((3 * 4) + coldfire_vector_base) = *(unsigned long *)(save_coldfire_vector); /* Address Error */
+  *(unsigned long *)((4 * 4) + coldfire_vector_base) = *(unsigned long *)(save_coldfire_vector); /* Illegal Instruction */
+  *(unsigned long *)((8 * 4) + coldfire_vector_base) = *(unsigned long *)(save_coldfire_vector); /* Privilege Violation */
+  for(i = 1; i < 16; *(unsigned long *)(((32+i) * 4) + coldfire_vector_base) = (unsigned long)new_trap, i++);
   *(unsigned long *)(((64+6) * 4) + coldfire_vector_base) = (unsigned long)new_mfp;  /* IRQ6 EPORT */
   pseudo_dma_vec = *(unsigned long *)0x13C;
   MCF_EPORT_EPIER |= MCF_EPORT_EPIER_EPIE6;
@@ -2058,12 +2127,40 @@ static void go_emutos(unsigned long source)
         " move.l #0x0000E040,D0\n\t" /* zone at $00000000 to $00FFFFFF in cache inhibit */
         " movec.l D0,ACR0\n\t" );
   memcpy((void *)0xE00000,(void *)source,0x80000); /* copy Emutos */
+  for(p = (unsigned short *)0xE00000; p < (unsigned short *)0xE80000; p++)
+  {
+    if(p[0] == 0x40C0) /* move.w SR,D0 */
+    {
+      if((p[1] == 0x46FC) && (p[2] == 0x2300)) /* move.w #0x2300,SR */
+      {
+        p[0] = 0x4EB9; /* jsr */
+        *(unsigned long *)&p[1] = (unsigned long)emutos_enable_interrupts;
+        board_printf("EMUTOS patch: found move.w SR,D0 move.w #0x2300,SR at 0x%08lX\r\n", p);
+      }
+    }
+    else if(p[0] == 0x4E72) /* stop */
+    {
+      if(((p[1] & 0xF8FF) == 0x2000) && (p[2] == 0x46C0)) /* move.w D0,SR */
+      {
+        p[0] = 0x4EB9; /* jsr */
+        *(unsigned long *)&p[1] = (unsigned long)emutos_stop;
+        board_printf("EMUTOS patch: found stop #0x2X00,SR move.w D0,SR at 0x%08lX\r\n", p);
+      }
+      else if((p[1] == 0x2700) && (p[2] == 0x60FA)) /* bra.s .stop */
+      {
+        p[0] = 0x4EB9; /* jsr */
+        *(unsigned long *)&p[1] = (unsigned long)emutos_halt;
+        board_printf("EMUTOS patch: found stop #0x2700,SR bra.s .stop at 0x%08lX\r\n", p);
+      }
+    }
+  }
   asm volatile (
         " moveq #0,D0\n\t"
         " movec.l D0,ACR0\n\t" );
   mmu_map(top,top,0,MMUDR_SZ1M+MMUDR_NOCACHE+MMUDR_LK);
   *(unsigned long *)ramtop = top;
   enable_caches();
+  xQueueWaitVBL = xQueueCreate(1, sizeof(long));
   xTaskCreate(vETOS, (void *)"ETOS", STACK_DEFAULT, NULL, TOS_TASK_PRIORITY, &tid_ETOS);
   xTaskCreate(vVBL, (void *)"VBL", STACK_DEFAULT, NULL, VBL_TASK_PRIORITY, NULL);
 }
@@ -4756,7 +4853,7 @@ static void *test_debug_fault(unsigned long address, unsigned long vector, unsig
 		*(unsigned long *)memvalid = 0; /* force cold reset to next reset */
   }
 #ifdef MCF547X
-  else if((pxCurrentTCB == tid_ETOS) && (vector != 3) && (vector != 4)) /* rebuild return exception frame, EMUTOS not use the CF68KLIB */
+  else if(pxCurrentTCB == tid_ETOS) /* rebuild return exception frame, EMUTOS not use the CF68KLIB */
   {
     unsigned long ssp = (*(unsigned long *)&RegList[76]) + 8;
     unsigned long pc = *(unsigned long *)&RegList[64];
