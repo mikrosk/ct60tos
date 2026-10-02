@@ -1,0 +1,192 @@
+--- a/bfd/prg-mint.c
++++ b/bfd/prg-mint.c
+@@ -1247,7 +1247,7 @@
+ 	 here.  If we would do it the clean way we would have
+ 	 to traverse the entire symbol map and reset the written
+ 	 flag.  We hack here instead...  */
+-#define mark_written(h) ((int) h->written = (int) true + 1) 
++#define mark_written(h) (h->written = true + 1) 
+ #define is_written(h) ((int) h->written == (int) true + 1)
+       for (; sym < sym_end; sym++, sym_hash++) {
+ 	const char* name = strings + GET_WORD (ibfd, sym->e_strx);
+--- a/binutils/Makefile.in
++++ b/binutils/Makefile.in
+@@ -472,82 +472,82 @@
+ nlmconv$(EXEEXT): $(nlmconv_OBJECTS) $(nlmconv_DEPENDENCIES)
+ 	@rm -f nlmconv$(EXEEXT)
+ 	$(LINK) $(nlmconv_LDFLAGS) $(nlmconv_OBJECTS) $(nlmconv_LDADD) $(LIBS)
+-	stack --fix=64k nlmconv$(EXEEXT)
++	true nlmconv$(EXEEXT)
+ 
+ srconv$(EXEEXT): $(srconv_OBJECTS) $(srconv_DEPENDENCIES)
+ 	@rm -f srconv$(EXEEXT)
+ 	$(LINK) $(srconv_LDFLAGS) $(srconv_OBJECTS) $(srconv_LDADD) $(LIBS)
+-	stack --fix=64k srconv$(EXEEXT)
++	true srconv$(EXEEXT)
+ 
+ sysdump$(EXEEXT): $(sysdump_OBJECTS) $(sysdump_DEPENDENCIES)
+ 	@rm -f sysdump$(EXEEXT)
+ 	$(LINK) $(sysdump_LDFLAGS) $(sysdump_OBJECTS) $(sysdump_LDADD) $(LIBS)
+-	stack --fix=64k sysdump$(EXEEXT)
++	true sysdump$(EXEEXT)
+ 
+ coffdump$(EXEEXT): $(coffdump_OBJECTS) $(coffdump_DEPENDENCIES)
+ 	@rm -f coffdump$(EXEEXT)
+ 	$(LINK) $(coffdump_LDFLAGS) $(coffdump_OBJECTS) $(coffdump_LDADD) $(LIBS)
+-	stack --fix=64k coffdump$(EXEEXT)
++	true coffdump$(EXEEXT)
+ 
+ dlltool$(EXEEXT): $(dlltool_OBJECTS) $(dlltool_DEPENDENCIES)
+ 	@rm -f dlltool$(EXEEXT)
+ 	$(LINK) $(dlltool_LDFLAGS) $(dlltool_OBJECTS) $(dlltool_LDADD) $(LIBS)
+-	stack --fix=64k dlltool$(EXEEXT)
++	true dlltool$(EXEEXT)
+ 
+ windres$(EXEEXT): $(windres_OBJECTS) $(windres_DEPENDENCIES)
+ 	@rm -f windres$(EXEEXT)
+ 	$(LINK) $(windres_LDFLAGS) $(windres_OBJECTS) $(windres_LDADD) $(LIBS)
+-	stack --fix=64k windres$(EXEEXT)
++	true windres$(EXEEXT)
+ 
+ size$(EXEEXT): $(size_OBJECTS) $(size_DEPENDENCIES)
+ 	@rm -f size$(EXEEXT)
+ 	$(LINK) $(size_LDFLAGS) $(size_OBJECTS) $(size_LDADD) $(LIBS)
+-	stack --fix=64k size$(EXEEXT)
++	true size$(EXEEXT)
+ 
+ objdump$(EXEEXT): $(objdump_OBJECTS) $(objdump_DEPENDENCIES)
+ 	@rm -f objdump$(EXEEXT)
+ 	$(LINK) $(objdump_LDFLAGS) $(objdump_OBJECTS) $(objdump_LDADD) $(LIBS)
+-	stack --fix=64k objdump$(EXEEXT)
++	true objdump$(EXEEXT)
+ 
+ ar$(EXEEXT): $(ar_OBJECTS) $(ar_DEPENDENCIES)
+ 	@rm -f ar$(EXEEXT)
+ 	$(LINK) $(ar_LDFLAGS) $(ar_OBJECTS) $(ar_LDADD) $(LIBS)
+-	stack --fix=64k ar$(EXEEXT)
++	true ar$(EXEEXT)
+ 
+ strings$(EXEEXT): $(strings_OBJECTS) $(strings_DEPENDENCIES)
+ 	@rm -f strings$(EXEEXT)
+ 	$(LINK) $(strings_LDFLAGS) $(strings_OBJECTS) $(strings_LDADD) $(LIBS)
+-	stack --fix=64k strings$(EXEEXT)
++	true strings$(EXEEXT)
+ 
+ ranlib$(EXEEXT): $(ranlib_OBJECTS) $(ranlib_DEPENDENCIES)
+ 	@rm -f ranlib$(EXEEXT)
+ 	$(LINK) $(ranlib_LDFLAGS) $(ranlib_OBJECTS) $(ranlib_LDADD) $(LIBS)
+-	stack --fix=64k ranlib$(EXEEXT)
++	true ranlib$(EXEEXT)
+ 
+ c++filt$(EXEEXT): $(c__filt_OBJECTS) $(c__filt_DEPENDENCIES)
+ 	@rm -f c++filt$(EXEEXT)
+ 	$(LINK) $(c__filt_LDFLAGS) $(c__filt_OBJECTS) $(c__filt_LDADD) $(LIBS)
+-	stack --fix=64k c++filt$(EXEEXT)
++	true c++filt$(EXEEXT)
+ 
+ objcopy$(EXEEXT): $(objcopy_OBJECTS) $(objcopy_DEPENDENCIES)
+ 	@rm -f objcopy$(EXEEXT)
+ 	$(LINK) $(objcopy_LDFLAGS) $(objcopy_OBJECTS) $(objcopy_LDADD) $(LIBS)
+-	stack --fix=64k objcopy$(EXEEXT)
++	true objcopy$(EXEEXT)
+ 
+ addr2line$(EXEEXT): $(addr2line_OBJECTS) $(addr2line_DEPENDENCIES)
+ 	@rm -f addr2line$(EXEEXT)
+ 	$(LINK) $(addr2line_LDFLAGS) $(addr2line_OBJECTS) $(addr2line_LDADD) $(LIBS)
+-	stack --fix=64k addr2line$(EXEEXT)
++	true addr2line$(EXEEXT)
+ 
+ nm-new$(EXEEXT): $(nm_new_OBJECTS) $(nm_new_DEPENDENCIES)
+ 	@rm -f nm-new$(EXEEXT)
+ 	$(LINK) $(nm_new_LDFLAGS) $(nm_new_OBJECTS) $(nm_new_LDADD) $(LIBS)
+-	stack --fix=64k nm-new$(EXEEXT)
++	true nm-new$(EXEEXT)
+ 
+ strip-new$(EXEEXT): $(strip_new_OBJECTS) $(strip_new_DEPENDENCIES)
+ 	@rm -f strip-new$(EXEEXT)
+ 	$(LINK) $(strip_new_LDFLAGS) $(strip_new_OBJECTS) $(strip_new_LDADD) $(LIBS)
+-	stack --fix=64k strip-new$(EXEEXT)
++	true strip-new$(EXEEXT)
+ .y.c:
+ 	$(SHELL) $(YLWRAP) "$(YACC)" $< y.tab.c $*.c y.tab.h $*.h -- $(YFLAGS)
+ defparse.h: defparse.c
+--- a/gas/config/tc-m68k.c
++++ b/gas/config/tc-m68k.c
+@@ -480,6 +480,8 @@
+   {0, 0, 4, 0},
+   {1, 1, 0, 0},
+ };
++void *m68k_relax_table_addr (void) { return (void *) md_relax_table; }
++
+ 
+ /* These are the machine dependent pseudo-ops.  These are included so
+    the assembler can work on the output from the SUN C compiler, which
+--- a/gas/config/tc-m68k.h
++++ b/gas/config/tc-m68k.h
+@@ -198,8 +198,8 @@
+ #define TARGET_WORD_SIZE 32
+ #define TARGET_ARCH bfd_arch_m68k
+ 
+-extern struct relax_type md_relax_table[];
+-#define TC_GENERIC_RELAX_TABLE md_relax_table
++extern void *m68k_relax_table_addr (void);
++#define TC_GENERIC_RELAX_TABLE ((const struct relax_type *) m68k_relax_table_addr ())
+ 
+ /* Copied from write.c */
+ /* This was formerly called M68K_AIM_KLUDGE.  */
+--- a/gas/Makefile.in
++++ b/gas/Makefile.in
+@@ -1327,17 +1327,17 @@
+ itbl-test$(EXEEXT): $(itbl_test_OBJECTS) $(itbl_test_DEPENDENCIES)
+ 	@rm -f itbl-test$(EXEEXT)
+ 	$(LINK) $(itbl_test_LDFLAGS) $(itbl_test_OBJECTS) $(itbl_test_LDADD) $(LIBS)
+-	stack --fix=64k itbl-test$(EXEEXT)
++	true itbl-test$(EXEEXT)
+ 
+ as-new$(EXEEXT): $(as_new_OBJECTS) $(as_new_DEPENDENCIES)
+ 	@rm -f as-new$(EXEEXT)
+ 	$(LINK) $(as_new_LDFLAGS) $(as_new_OBJECTS) $(as_new_LDADD) $(LIBS)
+-	stack --fix=64k as-new$(EXEEXT)
++	true as-new$(EXEEXT)
+ 
+ gasp-new$(EXEEXT): $(gasp_new_OBJECTS) $(gasp_new_DEPENDENCIES)
+ 	@rm -f gasp-new$(EXEEXT)
+ 	$(LINK) $(gasp_new_LDFLAGS) $(gasp_new_OBJECTS) $(gasp_new_LDADD) $(LIBS)
+-	stack --fix=64k gasp-new$(EXEEXT)
++	true gasp-new$(EXEEXT)
+ .y.c:
+ 	$(SHELL) $(YLWRAP) "$(YACC)" $< y.tab.c $*.c y.tab.h $*.h -- $(YFLAGS)
+ config/m68k-parse.h: config/m68k-parse.c
+--- a/ld/Makefile.in
++++ b/ld/Makefile.in
+@@ -437,7 +437,7 @@
+ ld-new$(EXEEXT): $(ld_new_OBJECTS) $(ld_new_DEPENDENCIES)
+ 	@rm -f ld-new$(EXEEXT)
+ 	$(LINK) $(ld_new_LDFLAGS) $(ld_new_OBJECTS) $(ld_new_LDADD) $(LIBS)
+-	stack --fix=64k ld-new$(EXEEXT)
++	true ld-new$(EXEEXT)
+ .y.c:
+ 	$(YACC) $(YFLAGS) $< && mv y.tab.c $*.c
+ 	if test -f y.tab.h; then \
+--- a/libiberty/strerror.c
++++ b/libiberty/strerror.c
+@@ -457,7 +457,9 @@
+ 
+ #ifdef NEED_sys_errlist
+ 
++#define sys_nerr sys_nerr__
+ static int sys_nerr;
++#define sys_errlist sys_errlist__
+ static const char **sys_errlist;
+ 
+ #else
+--- a/libiberty/strsignal.c
++++ b/libiberty/strsignal.c
+@@ -239,6 +239,7 @@
+ #ifdef NEED_sys_siglist
+ 
+ static int sys_nsig;
++#define sys_siglist sys_siglist__
+ static const char **sys_siglist;
+ 
+ #else

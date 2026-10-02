@@ -117,8 +117,16 @@ int main(int argc, char **argv)
 		gentos_error("Not enough memory for work buffer.", NULL);
 	memset(buffer_flash,-1,FLASH_SIZE-PARAM_SIZE);
 	load_tos(argv[1], buffer_flash, FLASH_SIZE-PARAM_SIZE-TESTS_SIZE); /* load 512KB TOS */
-	*((unsigned short *)(buffer_flash+0x30))=0x60FF; /* bra.l to boot (12 bytes version header) */
-	*((unsigned long *)(buffer_flash+0x32))=0xE8000C-0xE00030-2;
+	{
+		unsigned char *p = (unsigned char *)buffer_flash+0x30; /* bra.l to boot (12 bytes version header) */
+		unsigned long offset = 0xE8000C-0xE00030-2;
+		p[0] = 0x60; /* big endian on any host */
+		p[1] = 0xFF;
+		p[2] = (unsigned char)(offset >> 24);
+		p[3] = (unsigned char)(offset >> 16);
+		p[4] = (unsigned char)(offset >> 8);
+		p[5] = (unsigned char)offset;
+	}
 	if(strstr(argv[2], ".hex") == NULL)
 		gentos_error("Need .hex file for boot", NULL);
 	printf("read srec file %s...", argv[2]);

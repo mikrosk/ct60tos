@@ -13,6 +13,14 @@ static void *SzAlloc(void *p, size_t size) { p = p; return (void *)Mxalloc(size,
 static void SzFree(void *p, void *address) { p = p; if(address != NULL) Mfree(address); }
 static ISzAlloc g_Alloc = { SzAlloc, SzFree };
 
+static void put_long(char *p, unsigned long value) /* big endian on any host */
+{
+	p[0] = (char)(value >> 24);
+	p[1] = (char)(value >> 16);
+	p[2] = (char)(value >> 8);
+	p[3] = (char)value;
+}
+
 int main(int argc, char **argv)
 {
 	char *sbuf=NULL,*dbuf=NULL;
@@ -84,7 +92,7 @@ int main(int argc, char **argv)
 		if(cf || ((unsigned long)clength > FLASH_ADR+FLASH_SIZE-PARAM_SIZE-start_addr-8))
 		{
 			int i;
-			SizeT destLen;
+			SizeT destLen = FLASH_SIZE-PARAM_SIZE-8-LZMA_PROPS_SIZE; /* dbuf space */
 			CLzmaEncProps props;
 			unsigned char out_props[5];
 			SizeT out_props_size = 5;
@@ -112,7 +120,7 @@ int main(int argc, char **argv)
 			dbuf[1] = 'Z';
 			dbuf[2] = 'M';
 			dbuf[3] = 'A';
-			*(long *)&dbuf[4] = destLen;
+			put_long(&dbuf[4], destLen);
 			for(i = 0; i < LZMA_PROPS_SIZE; dbuf[8 + i] = out_props[i], i++); 
 			clength = LZMA_PROPS_SIZE + destLen;
 		}
@@ -121,7 +129,7 @@ int main(int argc, char **argv)
 			dbuf[0] = dbuf[3]='_'; /* add header */
 			dbuf[1] = 'L';
 			dbuf[2] = 'Z';
-			*(long *)&dbuf[4] = clength;
+			put_long(&dbuf[4], clength);
 		}
 		clength += 8;
 	}
@@ -145,7 +153,7 @@ int main(int argc, char **argv)
 		if(Fread(handle, length, sbuf) != length)
 			goto error;
 		Fclose(handle);
-	  *(long *)dbuf = (long)length;
+	  put_long(dbuf, length);
 		clength = (long)LZ_CompressFast((unsigned char *)sbuf, (unsigned char *)&dbuf[4], (unsigned int)length, work) + 4;
 		printf("compress %s (%d) to %s (%d)\r\n", argv[1], (int)length, argv[2], (int)clength);
 	}

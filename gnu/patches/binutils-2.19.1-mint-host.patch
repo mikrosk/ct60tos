@@ -1,0 +1,24 @@
+--- a/gas/config/tc-m68k.c
++++ b/gas/config/tc-m68k.c
+@@ -809,6 +809,8 @@
+   {     0,	0,  10, 0 },
+   {     1,	1,  0, 0 },
+ };
++void *m68k_relax_table_addr (void) { return (void *) md_relax_table; }
++
+ 
+ /* These are the machine dependent pseudo-ops.  These are included so
+    the assembler can work on the output from the SUN C compiler, which
+--- a/gas/config/tc-m68k.h
++++ b/gas/config/tc-m68k.h
+@@ -152,8 +152,8 @@
+ 
+ #define TARGET_ARCH bfd_arch_m68k
+ 
+-extern struct relax_type md_relax_table[];
+-#define TC_GENERIC_RELAX_TABLE md_relax_table
++extern void *m68k_relax_table_addr (void);
++#define TC_GENERIC_RELAX_TABLE ((const struct relax_type *) m68k_relax_table_addr ())
+ 
+ /* We can't do a byte jump to the next instruction, so in that case
+    force word mode by faking AIM.  */

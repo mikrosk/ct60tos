@@ -1,0 +1,10 @@
+/obj*/
+/*.ttp
+/*.map
+/*.bin
+/*.hex
+/drivers/obj*/
+/drivers/*.ttp
+/drivers/*.map
+/drivers/*.sys
+/drivers/drivers_cf*.hex

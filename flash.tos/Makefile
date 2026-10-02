@@ -1,8 +1,13 @@
+# pinned cross toolchain, see ../gnu
+GNU = $(abspath ../gnu)
+GNU_PREFIX = $(GNU)/install
+export GNU_PREFIX
 #CC = gcc
-CC = /usr/local/bin/gcc
-LD = ld
-STRIP = strip
-STACK =	stack
+CC = $(GNU)/bin/tos-gcc
+LD = $(GNU_PREFIX)/binutils-2.9.1/bin/m68k-atari-mint-ld
+OBJCOPY = $(GNU_PREFIX)/binutils-2.9.1/bin/m68k-atari-mint-objcopy
+HOSTCC = gcc
+HOSTCFLAGS = -O2 -w -I$(GNU)/host/include
 
 VERSION = 0x0202
 
@@ -14,6 +19,7 @@ OBJDIR = ./obj
 OBJDIRCF = ./obj_cf
 OBJDIRCF2 = ./obj_cf2
 OBJDIRCF3 = ./obj_cf3
+OBJDIRHOST = ./obj_host
 
 SUBOBJDIRS=	\
 		$(OBJDIR)/tos \
@@ -88,7 +94,6 @@ GENTOS_BINARY= gentos.ttp
 GENTOS_BINARYCF= gentoscf.ttp
 GENTOS_BINARYCF2= gentoscf2.ttp
 GENTOS_BINARYCF3= gentoscf3.ttp
-GENTOS_STACKSIZE= 64k
 
 BOOT_OBJS=	\
 		$(OBJDIR)/tos/version.o \
@@ -371,7 +376,7 @@ m54455evb:	version.h $(GENTOS_BINARYCF2) $(BOOTCF2) $(DRIVERSCF2) $(CF68KLIB2) $
 firebee:	version.h $(GENTOS_BINARYCF3) $(BOOTCF3) $(DRIVERSCF3) $(CF68KLIB3) $(TOSCF3) $(TOSCFHEX3)
 
 clean:
-	rm -rf $(OBJDIR) $(OBJDIRCF) $(OBJDIRCF2) $(OBJDIRCF3)
+	rm -rf $(OBJDIR) $(OBJDIRCF) $(OBJDIRCF2) $(OBJDIRCF3) $(OBJDIRHOST)
 	rm -f $(GENTOS_BINARY) $(GENTOS_BINARYCF) $(GENTOS_BINARYCF2) $(GENTOS_BINARYCF3) $(BOOT) $(BOOTCF) $(BOOTCF2) $(BOOTCF3) $(CF68KLIB) $(CF68KLIB2) $(CF68KLIB3) \
 	$(TOS) $(TOSPCI) $(TOSCF) $(TOSCF2) $(TOSCF3) $(TOSCFHEX) $(TOSCFHEX2) $(TOSCFHEX3) $(TOSCFHEX3B) $(DIAG) $(FPGACF3) boot.map boot_cf.map boot_cf2.map boot_cf3.map  
 	make clean -C drivers
@@ -404,13 +409,13 @@ $(AESCF):	$(AES_OBJSCF) $(DESK_OBJSCF)
 	$(LD) --oformat srec -Ttext $(FLASH_AES) -Tdata $(FLASH2_AES) -Tbss $(RAM_AES) -Map aescf.map --cref -o $(AESCF) $(AES_OBJSCF) -lgem
 
 $(DIAG): $(DIR)/$(ATARIDIAG)
-	objcopy --verbose -I binary -O srec --adjust-vma=$(FLASH_DIAG) $(DIR)/$(ATARIDIAG) $(DIAG) 
+	$(OBJCOPY) --verbose -I binary -O srec --adjust-vma=$(FLASH_DIAG) $(DIR)/$(ATARIDIAG) $(DIAG) 
 
 $(TOS):	$(GENTOS_BINARY) $(FILES)
 	./$(GENTOS_BINARY) $(FILES) $(TOS)
 
-$(TOSPCI):	$(GENTOS_BINARY) $(FILES) ./drivers/$(DRIVERS)
-	./$(GENTOS_BINARY) $(FILES) ./drivers/$(DRIVERS) $(TOSPCI)
+$(TOSPCI):	$(GENTOS_BINARY) $(FILES) $(DRIVERS)
+	./$(GENTOS_BINARY) $(FILES) ./drivers/obj/$(DRIVERS) $(TOSPCI)
 
 $(TOSCF):	$(GENTOS_BINARYCF) $(FILESCF) ./drivers/$(DRIVERSCF)
 	./$(GENTOS_BINARYCF) $(FILESCF) ./drivers/$(DRIVERSCF) $(TOSCF)
@@ -422,16 +427,16 @@ $(TOSCF3):	$(GENTOS_BINARYCF3) $(FILESCF3) ./drivers/$(DRIVERSCF3)
 	./$(GENTOS_BINARYCF3) $(FILESCF3) ./drivers/$(DRIVERSCF3) $(TOSCF3)
 
 $(TOSCFHEX):	$(TOSCF)
-	objcopy --verbose -I binary -O srec --adjust-vma=$(FLASH_TOS_FIRE_ENGINE) $(TOSCF) $(TOSCFHEX)
+	$(OBJCOPY) --verbose -I binary -O srec --adjust-vma=$(FLASH_TOS_FIRE_ENGINE) $(TOSCF) $(TOSCFHEX)
 	cp  $(TOSCFHEX) /home/firetos.hex
 
 $(TOSCFHEX2):	$(TOSCF2)
-	objcopy --verbose -I binary -O srec --adjust-vma=$(FLASH_TOS_M54455EVB) $(TOSCF2) $(TOSCFHEX2)
+	$(OBJCOPY) --verbose -I binary -O srec --adjust-vma=$(FLASH_TOS_M54455EVB) $(TOSCF2) $(TOSCFHEX2)
 	cp  $(TOSCFHEX2) /home/firetos.hex
 
 $(TOSCFHEX3):	$(TOSCF3)
-	objcopy --verbose -I binary -O srec --adjust-vma=$(FLASH_TOS_FIREBEE) $(TOSCF3) $(TOSCFHEX3)
-	objcopy --verbose -I binary -O srec --adjust-vma=$(FLASH_BOOT_TOS_FIREBEE) $(TOSCF3) $(TOSCFHEX3B)
+	$(OBJCOPY) --verbose -I binary -O srec --adjust-vma=$(FLASH_TOS_FIREBEE) $(TOSCF3) $(TOSCFHEX3)
+	$(OBJCOPY) --verbose -I binary -O srec --adjust-vma=$(FLASH_BOOT_TOS_FIREBEE) $(TOSCF3) $(TOSCFHEX3B)
 # FIREBEE_COD added, if INIT_FPGA_FROM_RAM defined inside boot2.S
 #	objcopy --verbose -I binary -O srec --adjust-vma=$(FLASH_COD_FIREBEE) $(FIREBEE_COD) $(FPGACF3)
 #	@grep -E -v S7 $(TOSCFHEX3) > temp.hex
@@ -439,7 +444,6 @@ $(TOSCFHEX3):	$(TOSCF3)
 #	@echo "S705E0400000DA" > temp3.hex
 #	@cat temp.hex temp2.hex temp3.hex > /home/firetos.hex
 #	@rm temp.hex temp2.hex temp3.hex
-	cp  $(TOSCFHEX3) /home/firetos.hex
 
 $(DRIVERSCF):	
 	make m5484lite -C drivers
@@ -450,7 +454,9 @@ $(DRIVERSCF2):
 $(DRIVERSCF3):	
 	make firebee -C drivers
 
+# the committed stamp is kept unless STAMP is set (make STAMP=1 ...)
 version.h:
+ifneq ($(STAMP),)
 	@date -u +%e,%_m,%Y,%k,%_M > date.tmp
 	@echo "#define VERSION" $(VERSION) > $(INCDIR)/version.h
 	@echo "#define DATE \\" > version.tmp
@@ -459,26 +465,23 @@ version.h:
 	@rm version.tmp
 	@rm date.tmp
 	@touch -m $(SRCDIR)/tos/version.S
+endif
 
-$(GENTOS_BINARY):	$(OBJDIR)/gentos.o $(OBJDIR)/srec.o
-	$(CC) $(OBJDIR)/gentos.o $(OBJDIR)/srec.o -o $(GENTOS_BINARY)
-	$(STRIP) $(GENTOS_BINARY)
-	$(STACK) -S $(GENTOS_STACKSIZE) $(GENTOS_BINARY)
+$(OBJDIRHOST)/srec.o:	$(SRCDIR)/srec.c
+	@mkdir -p $(OBJDIRHOST)
+	$(HOSTCC) $(HOSTCFLAGS) $(INCLUDE) -c $< -o $@
 
-$(GENTOS_BINARYCF):	$(OBJDIRCF)/gentos.o $(OBJDIRCF)/srec.o
-	$(CC) $(OBJDIRCF)/gentos.o $(OBJDIRCF)/srec.o -o $(GENTOS_BINARYCF)
-	$(STRIP) $(GENTOS_BINARYCF)
-	$(STACK) -S $(GENTOS_STACKSIZE) $(GENTOS_BINARYCF)
+$(GENTOS_BINARY):	$(SRCDIR)/gentos.c $(OBJDIRHOST)/srec.o
+	$(HOSTCC) $(HOSTCFLAGS) $(INCLUDE) $(SRCDIR)/gentos.c $(OBJDIRHOST)/srec.o -o $(GENTOS_BINARY)
 
-$(GENTOS_BINARYCF2):	$(OBJDIRCF2)/gentos.o $(OBJDIRCF)/srec.o
-	$(CC) $(OBJDIRCF2)/gentos.o $(OBJDIRCF)/srec.o -o $(GENTOS_BINARYCF2)
-	$(STRIP) $(GENTOS_BINARYCF2)
-	$(STACK) -S $(GENTOS_STACKSIZE) $(GENTOS_BINARYCF2)
+$(GENTOS_BINARYCF):	$(SRCDIR)/gentos.c $(OBJDIRHOST)/srec.o
+	$(HOSTCC) $(HOSTCFLAGS) $(INCLUDE) -DCOLDFIRE $(SRCDIR)/gentos.c $(OBJDIRHOST)/srec.o -o $(GENTOS_BINARYCF)
 
-$(GENTOS_BINARYCF3):	$(OBJDIRCF3)/gentos.o $(OBJDIRCF)/srec.o
-	$(CC) $(OBJDIRCF3)/gentos.o $(OBJDIRCF)/srec.o -o $(GENTOS_BINARYCF3)
-	$(STRIP) $(GENTOS_BINARYCF3)
-	$(STACK) -S $(GENTOS_STACKSIZE) $(GENTOS_BINARYCF3)
+$(GENTOS_BINARYCF2):	$(SRCDIR)/gentos.c $(OBJDIRHOST)/srec.o
+	$(HOSTCC) $(HOSTCFLAGS) $(INCLUDE) -DCOLDFIRE -DMCF5445X $(SRCDIR)/gentos.c $(OBJDIRHOST)/srec.o -o $(GENTOS_BINARYCF2)
+
+$(GENTOS_BINARYCF3):	$(SRCDIR)/gentos.c $(OBJDIRHOST)/srec.o
+	$(HOSTCC) $(HOSTCFLAGS) $(INCLUDE) -DCOLDFIRE -DMCF547X $(SRCDIR)/gentos.c $(OBJDIRHOST)/srec.o -o $(GENTOS_BINARYCF3)
 
 define CREATEOBJDIRS
 	@for d in $(OBJDIR) $(SUBOBJDIRS); do \

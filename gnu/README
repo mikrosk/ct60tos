@@ -1,0 +1,37 @@
+Cross toolchain for flash.tos
+=============================
+
+"make" here downloads the sources listed in Makefile (checked against
+SHA256SUMS) and builds into install/:
+
+  binutils 2.9.1-mint         assembler of the TOS part, linker and objcopy for all
+                              images (a.out); MiNT patches of Frank Naumann
+  binutils 2.19.1-mint        assembler of the drivers (ColdFire v4e);
+  20091017                    patches/binutils-*-mint-host.patch: build fixes for a
+                              current host compiler; both built in docker/
+  gcc 3.3.2-mint              C files of the TOS part (boot, pmmu2.c, lz.c, ...);
+                              32-bit host only, built in docker/ (needs docker)
+  gcc 4.4.2-mint 20091017     drivers; also built as a 32-bit host program in docker/,
+                              a 64-bit host build generates different code
+  MiNTLib headers             0.57.3 with mint/osbind.h, mint/mintbind.h, compiler.h
+                              of 2009-05-22 and mint/sysvars.h of 2010-04-13, the mix
+                              the drivers were built with (the code gcc 4.4 generates
+                              depends on the number of declarations in the headers);
+                              patches/mintlib-2012-compat.patch: "d0" out of the
+                              remaining old clobber lists, OSBIND_CLOBBER_LIST in
+                              <mint/osbind.h>, <sysvars.h>
+
+bin/ holds the commands the flash.tos Makefiles call:
+
+  tos-gcc       TOS part: gcc 3.3.2 with the binutils 2.9.1 assembler
+  drivers-gcc   drivers: gcc 4.4.2 with the binutils 2.19.1 assembler
+
+host/include/ maps the GEMDOS calls of the image tools (gentos, compress) to POSIX.
+
+Build the images:
+
+  make -C gnu
+  make -C flash.tos firebee        (flash.tos/firetos_firebee.hex)
+  make -C flash.tos ct60           (flash.tos/ctpcitos.bin)
+
+GNU and GNU_PREFIX in the flash.tos Makefiles select another toolchain location.
