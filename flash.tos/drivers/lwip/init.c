@@ -3906,7 +3906,7 @@ void uif_cmd_reset(int argc, char **argv)
 #endif /* MCF5445X */
   while(1)
   {
-		asm volatile(" nop\n\t");
+    while(!(MCF_UART_USR(0) & MCF_UART_USR_TXRDY));
     MCF_UART_UTB(0) = '.';
   }
 }
