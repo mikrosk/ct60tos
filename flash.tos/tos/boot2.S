@@ -948,26 +948,7 @@ dummy_function: // 32 bytes length, 16 bytes alignment, for chip errata, used by
 	lea debug101(PC),A0
 	bsr debug_display_string	
 #endif
-	/* FALCON I/O 1MB */
-	move.l #MCF_FBCS_CSAR_BA(FPGA_CS1_BASE),D0
-	cmp.l MCF_FBCS_CSAR1,D0
-	beq.s .fbcs1_ok
-	move.l D0,MCF_FBCS_CSAR1
-	move.l #FPGA_CS1_ACCESS,D0
-	move.l D0,MCF_FBCS_CSCR1
-	move.l #MCF_FBCS_CSMR_BAM_1M+MCF_FBCS_CSMR_V,D0
-	move.l D0,MCF_FBCS_CSMR1
-#ifdef DEBUG
-	lea debug146(PC),A0
-	bsr debug_display_string
-	move.l #MCF_FBCS_CSAR_BA(FPGA_CS1_BASE),D0
-	bsr debug_hex_long
-	moveq #13,D0
-	bsr debug_display_char
-	moveq #10,D0
-	bsr debug_display_char
-#endif
-.fbcs1_ok:
+	/* FALCON I/O (CS1) and SRAM (CS3) keep the BaS setup (long IDE accesses) */
 	/* ACP I/O 128MB */ 
 	move.l #MCF_FBCS_CSAR_BA(FPGA_CS2_BASE),D0
 	cmp.l MCF_FBCS_CSAR2,D0
@@ -988,26 +969,6 @@ dummy_function: // 32 bytes length, 16 bytes alignment, for chip errata, used by
 	bsr debug_display_char
 #endif
 .fbcs2_ok:
-	/* SRAM 256Kx16 */
-	move.l #MCF_FBCS_CSAR_BA(FPGA_CS3_BASE),D0
-	cmp.l MCF_FBCS_CSAR3,D0
-	beq.s .fbcs3_ok
-	move.l D0,MCF_FBCS_CSAR3
-	move.l #FPGA_CS3_ACCESS,D0
-	move.l D0,MCF_FBCS_CSCR3
-	move.l #MCF_FBCS_CSMR_BAM_64M+MCF_FBCS_CSMR_V,D0
-	move.l D0,MCF_FBCS_CSMR3
-#ifdef DEBUG
-	lea debug148(PC),A0
-	bsr debug_display_string
-	move.l #MCF_FBCS_CSAR_BA(FPGA_CS3_BASE),D0
-	bsr debug_hex_long
-	moveq #13,D0
-	bsr debug_display_char
-	moveq #10,D0
-	bsr debug_display_char
-#endif
-.fbcs3_ok:
 	/* VIDEO RAM 128MB */ 
 	move.l #MCF_FBCS_CSAR_BA(FPGA_CS4_BASE),D0
 	cmp.l MCF_FBCS_CSAR4,D0
