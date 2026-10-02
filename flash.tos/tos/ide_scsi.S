@@ -3716,9 +3716,8 @@ ide_cmd: 	// D0.L: bytes, D1.L: timeout ATAPI, A0: IDE buffer, A1: cmd buffer
 	bne .ir10                // read
 #if defined(COLDFIRE) && defined(MCF547X) // FIREBEE
 	lea OFFSET_DATA(A2),A1   // IDE buffer
-	addq.b #1,D1             // DRQ of the 1st sector tested with time-out
+	addq.l #1,D1             // DRQ of the 1st sector tested with time-out
 	bra.s .ir20
-	.long 0
 #else
 .ir4:
 #ifndef USE_ATARI_IO
@@ -3793,7 +3792,6 @@ ide_cmd: 	// D0.L: bytes, D1.L: timeout ATAPI, A0: IDE buffer, A1: cmd buffer
 #else /* USE_ATARI_IO */
 #if defined(COLDFIRE) && defined(MCF547X) // FIREBEE
 .ir8:		// write
-		.short 0          // with the moveq: 68K ori.b #15,D0 (emulated)
 		moveq #15,D0      // 512 bytes
 .ir11:
 			move.l (A0)+,(A1)
