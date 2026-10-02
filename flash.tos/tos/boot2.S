@@ -2360,6 +2360,7 @@ init_060:                             // entry point
 .pci_drivers_found:
 	bsr fast_test_sdram
 	bpl.s .test_sdram_ok_init_mmu
+.test_sdram_error_init_mmu:
 	moveq #3,D0              // SDRAM read/write error
 	bsr code_led
 	bra .normal_mmu_init     // SDRAM failure
@@ -2373,10 +2374,10 @@ init_060:                             // entry point
 	addq.l #8,SP
 	move.l D0,-(SP)          // size PCI drivers in a protected area
 	move.l A0,-(SP)          // base PCI drivers
-	bra.s .go_init_mmu
+	bra .go_init_mmu
 .pci_drivers_found2:
 	bsr fast_test_sdram
-	bmi.s .normal_mmu_init   // SDRAM failure
+	bmi.s .test_sdram_error_init_mmu // SDRAM failure
 	link A6,#-24
 	move.l A0,-(SP)          // base PCI drivers
              pea 8(A0)                // propsData
