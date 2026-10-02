@@ -2062,13 +2062,15 @@ _uninstall_usb_stor:
 	moveq #2,D2              // drive C
 .loop_uninstall_usb_part:
 		move.l usb_disk_drives,D1
-		bclr D2,D1
+		btst D2,D1
 		beq.s .not_this_usb_devnum
-		move.l D1,usb_disk_drives
 		moveq #0,D1
 		move.b _pinfo_pun(A1,D2.l),D1
 		cmp.l D1,D0
 		bne.s .not_this_usb_devnum
+		move.l usb_disk_drives,D1
+		bclr D2,D1
+		move.l D1,usb_disk_drives
 		move.w _pinfo_puns(A1),D1
 		subq.l #1,D1
 		move.w D1,_pinfo_puns(A1)
@@ -3496,12 +3498,14 @@ XHDrvMap:
 		move.b _pinfo_pun(A0,D1.l),D2
 		bmi.s .xdm4 // nothing
 #ifdef MCF547X
+		move.l D0,D3
+		move.l D1,D0
 		bsr sd_test_drive
 		bmi.s .xdm5
-		move.l _drvbits,D0
+		move.l D3,D0
 		bra.s .xdm2 // OK
 .xdm5:
-		move.l _drvbits,D0
+		move.l D3,D0
 		tst.l D2
 		beq.s .xdm2 // OK
 #endif /* MCF547X */
