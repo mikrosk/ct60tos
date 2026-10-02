@@ -330,29 +330,29 @@ _install_pci_bios:
 		move.l _hz_200,D1
 	cmp.l D2,D1
 	blt.s .delay_reset
+.bypass_reset:
 	// check CTPCI version
 	move.b PCI_CTPCI_CONFIG_PEND,D0
 	and.w #0xE0,D0
-	bne.s .bypass_reset
+	bne.s .init_plx
 	move.l phystop,A0
 	moveq #CTPCI_1M,D0
 	or.l D0,hardware_type(A0)
-	clr.w -(SP)
-	pea 1
-	bsr dma_lock
-	addq.l #4,SP
-	move.w D0,(SP)
-	clr.l -(SP)
-	bsr dma_lock
-	addq.l #4,SP
+	move.w SR,-(SP)
+	or.w #0x700,SR               // no interrupts
+	bset #6,PCI_CTPCI_CONFIG_ENABI // CTPCI_1N test: bit 6 must read back
+	sne.b D0
+	and.w #1,D0
 	swap D0
-	move.w (SP)+,D0
-	cmp.l #0x10000,D0
-	bne.s .bypass_reset
-	move.l phystop,A0
+	bclr #6,PCI_CTPCI_CONFIG_ENABI
+	sne.b D0
+	and.w #1,D0
+	move.w (SP)+,SR
+	cmp.l #1,D0
+	bne.s .init_plx
 	moveq #CTPCI_1N,D0
 	or.l D0,hardware_type(A0)
-.bypass_reset:
+.init_plx:
 	// test and init PLX9054
 	move.w SR,-(SP)
 	or.w #0x700,SR               // no interrupts
