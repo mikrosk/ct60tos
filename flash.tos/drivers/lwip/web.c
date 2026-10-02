@@ -89,7 +89,7 @@
 #define CODE_STOP         -3
 
 /* The port on which we listen. */
-#define webHTTP_PORT            80
+#define webHTTP_PORT            8080
 
 /* the http versions we support */
 enum http_version {VERSION_UNKNOWN, VERSION_10, VERSION_11};
@@ -138,6 +138,8 @@ extern void conws_debug(char *buf);
 extern void ltoa(char *buf, long n, unsigned long base);
 extern void ftoa(float x, int f, char *buf);
 extern long atol(const char *text);
+extern int sprintD(char *s, const char *fmt, ...);
+extern unsigned short drivers_version[] __asm__("_VERSION");
 #define atof atof_float /* the drivers atof() returns a float, unlike the one of <stdlib.h> */
 extern float atof(const char *text) __asm__("_atof");
 
@@ -1974,6 +1976,9 @@ static void handle_menu(sock_conn *conn, char *request)
   a2p(conn, menu_html);
   a2p(conn, menu);
   ltoa(buf, VERSION, 16);
+  a2p(conn, buf);
+  a2p(conn, ", Drivers ");
+  ltoa(buf, (long)drivers_version[0], 16);
   a2p(conn, buf);
   a2p(conn, menu0);
   if(((info_fvdi != NULL) && (info_fvdi->var.bits_per_pixel >= 16))
@@ -3821,6 +3826,7 @@ static void handle_file(sock_conn *conn, char *req)
       {
         if(Flash)
         {
+          sprintD(buf2, "begin: 0x%lX end: 0x%lx", lowest_address, hight_address);
           if((err=Programmation(lowest_address,hight_address,(lowest_address-FLASH_TOS_FIRE_ENGINE)+Mem_Data)) < 0)
           {
             a2p(conn, "<body bgcolor=red>\n<h3>Programming/verify error</h3>\n");
@@ -3832,6 +3838,9 @@ static void handle_file(sock_conn *conn, char *req)
             a2p(conn, "<p><h3>System copied in flash : ");
             a2p(conn, buf);              
             a2p(conn, "</h3><br>\n");   
+            a2p(conn, "<br>Programming infos from Srecord file: ");
+            a2p(conn, buf2);
+            a2p(conn, "<br><br>\n");
             a2p(conn, file_back);
           }
         }
@@ -3841,6 +3850,10 @@ static void handle_file(sock_conn *conn, char *req)
           a2p(conn, buf);         
           err = (int)copy_file(buf, ptr, (long)len);
           a2p(conn, "</h3><br>\n");
+          sprintD(buf2, "begin: 0x%lX end: 0x%lx", lowest_address, hight_address);
+          a2p(conn, "<br>Infos from Srecord file: ");
+          a2p(conn, buf2);
+          a2p(conn, "<br>\n");
           if(err==0)
             a2p(conn, "<br>File copied inside the ram disk<br>\n");
           a2p(conn, file_back);
