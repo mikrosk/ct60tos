@@ -1293,6 +1293,7 @@ sd_card_init:
 	bsr wait_10ms
 	move.l #MCF_DSPI_DMCR_MSTR+MCF_DSPI_DMCR_CSIS5+MCF_DSPI_DMCR_CSIS3+MCF_DSPI_DMCR_CSIS2+MCF_DSPI_DMCR_CSIS0+MCF_DSPI_DMCR_DTXF+MCF_DSPI_DMCR_DRXF+MCF_DSPI_DMCR_CTXF+MCF_DSPI_DMCR_CRXF,D0
 	move.l D0,MCF_DSPI_DMCR   // clock off cs off
+	clr.b sd_card_hc
 	moveq #10,D1
 .loop_sd_com:
 		move.b #0xFF,D0
@@ -1344,6 +1345,7 @@ sd_card_init:
 			bsr sd_com
 			move.b #0x87,D0
 			bsr sd_com
+			moveq #0,D0
 			bsr sd_get_status
 			cmp.l #5,D0
 			beq.s .sd_v1
@@ -1375,6 +1377,7 @@ sd_card_init:
 			bsr sd_com
 			moveq #0x01,D0
 			bsr sd_com
+			moveq #0,D0
 			bsr sd_get_status
 			// Ver1
 		cmp.l #5,D0
@@ -1383,12 +1386,24 @@ sd_card_init:
 		bne.s .read_ocr
 		move.b #0xFF,D0
 		bsr sd_com                // 4 bytes
+		move.b D0,D1
+		asl.l #8,D1
 		move.b #0xFF,D0
 		bsr sd_com
+		move.b D0,D1
+		asl.l #8,D1
 		move.b #0xFF,D0
 		bsr sd_com
+		move.b D0,D1
+		asl.l #8,D1
 		move.b #0xFF,D0
 		bsr sd_com
+		move.b D0,D1
+		btst #30,D1               // CCS
+		beq.s .sd_not_hc
+		moveq #-1,D0
+		move.b D0,sd_card_hc
+.sd_not_hc:
 		move.l #20000,D1          // timeout
 .wait_activity:
 			move.b #0xFF,D0 // clocks
@@ -1405,6 +1420,7 @@ sd_card_init:
 			bsr sd_com
 			move.b #0x95,D0
 			bsr sd_com
+			moveq #0,D0
 			bsr sd_get_status
 		cmp.l #0x05,D0
 		beq.s .wait_activity
@@ -1423,8 +1439,8 @@ sd_card_init:
 				bsr sd_com
 				move.b #0x95,D0
 				bsr sd_com
+				moveq #0,D0
 				bsr sd_get_status
-				tst.l D0
 				beq.s .sd_init_ok
 			cmp.l #0x05,D0
 			beq.s .wait_activity2	
@@ -1510,19 +1526,66 @@ read_cid:
 	swap D1
 	move.l D1,D0
 	lsr.l #6,D0               // x 65636 / 64 -> total sectors
+	tst.b sd_card_hc
+	bne.s .sd_block_len
+	cmp.l #0x800000,D0        // 4GB
+	bcs.s .sd_init_end
+.sd_block_len:
+	move.l D0,-(SP)
+	moveq #-1,D0
+	move.b D0,sd_card_hc
+	move.l #512,D0
+	bsr sd_card_set_block_len
+	beq.s .sd_block_len_ok
+	clr.b sd_card_hc
+.sd_block_len_ok:
+	move.l (SP)+,D0
 .sd_init_end:
+	tst.l D0
 	movem.l (SP),D1-D3/A0-A1
 	lea 20(SP),SP
+	rts
+
+sd_card_set_block_len: // D0.L:block_len
+
+	lea -12(SP),SP
+	movem.l D1-D2/A0,(SP)
+	move.l D0,D1
+	move.l D0,D2
+	swap D1
+	move.b #0xFF,D0           // clocks
+	bsr sd_com	
+	moveq #0x50,D0            // cmd 16, SET_BLOCKLEN
+	bsr sd_com	
+	move.l D1,D0
+	lsr.l #8,D0
+	bsr sd_com	
+	move.b D1,D0
+	bsr sd_com
+	move.l D2,D0
+	lsr.l #8,D0
+	bsr sd_com	
+	move.b D2,D0
+	bsr sd_com	
+	moveq #0x01,D0
+	bsr sd_com
+	moveq #0,D0
+	bsr sd_get_status
+	movem.l (SP),D1-D2/A0
+	lea 12(SP),SP
 	rts
 
 sd_card_sector_read: // D0.L:sec_nr, A0:buf_addr
 
 	lea -12(SP),SP
 	movem.l D1-D2/A0,(SP)
-	asl.l #8,D0
-	add.l D0,D0               // x 512 !
-	move.l D0,D1	             // bytes
-	move.l D0,D2
+	move.l D0,D1
+	tst.b sd_card_hc
+	bne.s .sd_csr_hc          // block address
+	add.l D1,D1
+	asl.l #8,D1               // x 512 !
+.sd_csr_hc:
+	move.l D1,D2	             // bytes
 	swap D1
 	move.b #0xFF,D0           // clocks
 	bsr sd_com	
@@ -1541,8 +1604,8 @@ sd_card_sector_read: // D0.L:sec_nr, A0:buf_addr
 	moveq #0x01,D0
 	bsr sd_com
 	moveq #0,D1               // status, no error
+	moveq #0,D0
 	bsr sd_get_status
-	tst.l D0
 	bne.s .sd_csr_end
 	bsr sd_rcv_sector         // sector read
 .sd_csr_end:
@@ -1560,10 +1623,13 @@ sd_card_sector_write: // D0.L:sec_nr, A0:buf_addr
 
 	lea -12(SP),SP
 	movem.l D1-D2/A0,(SP)
-	asl.l #8,D0
-	add.l D0,D0               // x 512 !
-	move.l D0,D1	             // bytes
-	move.l D0,D2
+	move.l D0,D1
+	tst.b sd_card_hc
+	bne.s .sd_csw_hc          // block address
+	add.l D1,D1
+	asl.l #8,D1               // x 512 !
+.sd_csw_hc:
+	move.l D1,D2	             // bytes
 	swap D1
 	move.b #0xFF,D0           // clocks
 	bsr sd_com	
@@ -1582,8 +1648,8 @@ sd_card_sector_write: // D0.L:sec_nr, A0:buf_addr
 	moveq #0x01,D0
 	bsr sd_com
 	moveq #0,D1               // status, no error
+	moveq #0,D0
 	bsr sd_get_status
-	tst.l D0
 	bne.s .sd_csw_end
 	bsr sd_send_sector        // sector write
 .sd_csw_end:
@@ -1621,6 +1687,7 @@ sd_rcv_sector: // 1 sector data to A0 pointer
 
 	move.l A0,-(SP)
 	move.l D1,-(SP)
+	moveq #1,D0
 	bsr sd_get_status 
 	cmp.l #0xFE,D0
 	bne .sd_rs_end // error
@@ -1647,9 +1714,9 @@ sd_send_sector: // 1 sector data to A0 pointer
 
 	move.l A0,-(SP)
 	move.l D1,-(SP)
-	move.l #512,D1		
 	move.b #0xFE,D0 // start token
 	bsr sd_com // send
+	move.l #512,D1		
 .sd_send_wr_wb:
 		move.b (A0)+,D0 // data
 		bsr sd_com   // send
@@ -1660,6 +1727,7 @@ sd_send_sector: // 1 sector data to A0 pointer
 	bsr sd_com                // crc 1st byte
 	moveq #0x01,D0			
 	bsr sd_com                // crc 2nd byte
+	moveq #1,D0
 	bsr sd_get_status
 	and.l #0x1F,D0
 	moveq #0,D1               // status, no error
@@ -1682,7 +1750,7 @@ sd_rcv_info: // A0: data
 	movem.l D0-D1/A0,(SP)
 	moveq #18,D1             // 16 bytes + 2 bytes crc
 .sd_rcv_rb_w:		
-			move.b #0xFF,D0
+			moveq #0,D0
 			bsr sd_get_status 
 		cmp.l #0xFE,D0
 		bne.s .sd_rcv_rb_w
@@ -1696,12 +1764,32 @@ sd_rcv_info: // A0: data
 	lea 12(SP),SP
 	rts
 
-sd_get_status:
+sd_get_status: // D0: 0 for 10 mS timeout, else 250 mS
 
+	move.l D1,-(SP)
+	move.l D2,-(SP)
+	move.l #10000*SYSTEM_CLOCK,D2
+	move.l MCF_SLT_SCNT1,D1
+	tst.l D0
+	beq.s .sd_get_status_loop
+	move.l #250000*SYSTEM_CLOCK,D2
+.sd_get_status_loop:
+		move.l D1,D0
+		sub.l MCF_SLT_SCNT1,D0
+		cmp.l D2,D0
+		bcc.s .sd_get_status_timeout
 		move.b #0xFF,D0
 		bsr sd_com
 	cmp.l #0xFF,D0
-	beq.s sd_get_status
+	beq.s .sd_get_status_loop
+	move.l (SP)+,D2
+	move.l (SP)+,D1
+	tst.l D0
+	rts
+.sd_get_status_timeout:
+	move.l (SP)+,D2
+	move.l (SP)+,D1
+	moveq #-1,D0
 	rts
 
 sd_com:
@@ -5537,6 +5625,7 @@ debug148:	.asciz "XHDI XHGetCapacity major 0x"
 	.lcomm sd_buffer_verify,512
 #endif
 	.lcomm _sd_disk_drive,4
+	.lcomm sd_card_hc,4
 #endif
 	.lcomm _usb_1st_disk_drive,4
 	.lcomm old_hdv_bpb_usb,4
