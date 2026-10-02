@@ -519,7 +519,11 @@ static short fix_boot_modecode(short vmode)
 					break;
 			}
 		}
+#if defined(COLDFIRE) && defined(MCF547X)
+		else if(((vmode & NUMCOLS) < BPS8 || ((vmode & NUMCOLS) > BPS32)) && ((vmode & NUMCOLS) != BPS1))
+#else
 		else if((vmode & NUMCOLS) < BPS8 || ((vmode & NUMCOLS) > BPS32))
+#endif
 		{
 			if(!video_found)
 				vmode = PAL | VGA | COL80 | BPS16; /* 640 x 480 * 16 */
@@ -651,16 +655,17 @@ int boot_menu(int index, int nb_lines, char *title, char *lines[], int delay_sec
 
 #if defined(COLDFIRE) && defined(MCF547X) && defined(LWIP)
 
-void boot_os_menu(void)
+void boot_os_menu(short colors)
 {
 	static char atari[] = { 0x1B,0x62,0x34,0x41,0x1B,0x62,0x32,0x54,0x1B,0x62,0x33,0x41,0x1B,0x62,0x31,0x52,0x1B,0x62,0x35,0x49,0x20,0x1B,0x62,0x3F };
+	static char atari_mono[] = "ATARI ";
 	static char title[] = "Start with...\r\n";
 	static char title_fr[] = "D‚marrer avec...\r\n";
 	static char *menu[] = {" TOS404 "," EMUTOS "};
 	static char *menu2[] = {" TOS404 for MiNT "," EMUTOS          "," TOS404 full     "};
 	static char *menu2_fr[] = {" TOS404 pour MiNT "," EMUTOS           "," TOS404 complet   "};
 	static char *menu3[] = {" TOS404 (at 0xE0000000 - boot)   "," EMUTOS (at 0xE0600000)          "," TOS404 (at 0xE0400000 - normal) "};
-	Cconws(atari);
+	Cconws(!colors ? atari_mono : atari);
 	Cconws("FIREBEE\r\n\n");
 	if(!(swi & 0x40) || !(swi & 1)) /* !SW5 (UP) */
 	{
@@ -1125,7 +1130,7 @@ int init_devices(int no_reset, unsigned long flags) /* after the original setscr
 			if(!os_magic)
 			{
 #if defined(COLDFIRE) && defined(MCF547X) && defined(LWIP)
-				boot_os_menu();
+				boot_os_menu(vmode & NUMCOLS);
 #endif
 				display_atari_logo();
 				if(vmode & (DEVID|VERTFLAG2|VESA_768|VESA_600|HORFLAG2|HORFLAG)) 
@@ -1138,6 +1143,8 @@ int init_devices(int no_reset, unsigned long flags) /* after the original setscr
 		{
 #if defined(COLDFIRE) && defined(MCF547X)
 			extern void init_videl_i2c(void);
+			extern long get_videl_ram_base(void);
+			extern long get_videl_ram_size(void);
 			init_videl_i2c();
 //			use_dma = 0; /* not works on Flexbus - FPGA */
 #endif
@@ -1158,6 +1165,13 @@ int init_devices(int no_reset, unsigned long flags) /* after the original setscr
 			info_fvdi = framebuffer_alloc(0); /* => info_fvdi->par == NULL */
 			if(!info_fvdi)
 				continue;
+			info_fvdi->var.xres_virtual = info_fvdi->var.yres_virtual = 2048; /* offscreen size */
+			info_fvdi->var.bits_per_pixel = 32;
+			info_fvdi->screen_size = 0;
+			info_fvdi->screen_base = info_fvdi->ram_base = (char *)get_videl_ram_base();
+			info_fvdi->ram_size = get_videl_ram_size();
+			if(info_fvdi->ram_size)
+				offscreen_init(info_fvdi);
 			info_fvdi->var.xres = info_fvdi->var.xres_virtual = resolution.width;
 			info_fvdi->var.yres = info_fvdi->var.yres_virtual = resolution.height;
 			info_fvdi->var.bits_per_pixel = resolution.bpp;
@@ -1167,7 +1181,7 @@ int init_devices(int no_reset, unsigned long flags) /* after the original setscr
 			if(!os_magic)
 			{
 #if defined(COLDFIRE) && defined(MCF547X) && defined(LWIP)
-				boot_os_menu();
+				boot_os_menu(vmode & NUMCOLS);
 #endif
 				display_atari_logo();
 			}

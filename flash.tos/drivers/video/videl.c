@@ -37,6 +37,7 @@ extern void board_printf(const char *fmt, ...);
 
 #if defined(COLDFIRE) && defined(MCF547X)
 #define ACP_MODES_ONLY
+#define ACP_VIDEO_RAM_SIZE 0x08000000 /* 128 MB */
 #endif
 
 #define MT_DFP 1
@@ -125,8 +126,10 @@ static struct videl_table table_rez[] = {
 	{ 640, 240, 60, 25,  4, 0, 0x0C6, 0x08D, 0x015, 0x2A3, 0x07C, 0x096, 0x419, 0x3FF, 0x03F, 0x03F, 0x3FF, 0x415, 9, 0x186 }, // 25 MHz
 	{ 640, 240, 60, 25,  8, 0, 0x0C6, 0x08D, 0x015, 0x2AB, 0x084, 0x096, 0x419, 0x3FF, 0x03F, 0x03F, 0x3FF, 0x415, 9, 0x186 }, // 25 MHz
 	{ 640, 240, 60, 25, 16, 0, 0x0C6, 0x08D, 0x015, 0x2AC, 0x091, 0x096, 0x419, 0x3FF, 0x03F, 0x03F, 0x3FF, 0x415, 9, 0x186 }, // 25 MHz
-	{ 640, 480, 60, 25,  1, 0, 0x0C6, 0x08D, 0x015, 0x273, 0x050, 0x096, 0x419, 0x3FF, 0x03F, 0x03F, 0x3FF, 0x415, 8, 0x186 }, // 25 MHz
 	{ 640, 480, 60, 25,  2, 0, 0x017, 0x012, 0x001, 0x20E, 0x00D, 0x011, 0x419, 0x3FF, 0x03F, 0x03F, 0x3FF, 0x415, 8, 0x186 }, // 25 MHz
+#endif
+#if defined(COLDFIRE) && defined(MCF547X)
+	{ 640, 480, 60, 25,  1, 0, 0x0C6, 0x08D, 0x015, 0x273, 0x050, 0x096, 0x419, 0x3FF, 0x03F, 0x03F, 0x3FF, 0x415, 8, 0x186 }, // 25 MHz
 #endif
 	{ 640, 480, 60, 25,  4, 0, 0x0C6, 0x08D, 0x015, 0x2A3, 0x07C, 0x096, 0x419, 0x3FF, 0x03F, 0x03F, 0x3FF, 0x415, 8, 0x186 }, // 25 MHz
 	{ 640, 480, 60, 25,  8, 0, 0x0C6, 0x08D, 0x015, 0x2AB, 0x084, 0x096, 0x419, 0x3FF, 0x03F, 0x03F, 0x3FF, 0x415, 8, 0x186 }, // 25 MHz
@@ -667,7 +670,7 @@ long get_videl_base(void) /* return 0 for an ACP mode */
 	ret <<= 8;
 	ret |= (unsigned long)SCREEN_POS_LOW;
 #if defined(COLDFIRE) && defined(MCF547X)
-	if(*(volatile unsigned long *)ACP_VIDEO_CONTROL & (ACP_COLOR_8 | ACP_COLOR_16 | ACP_COLOR_24 | ACP_VIDEO_ON))
+	if(*(volatile unsigned long *)ACP_VIDEO_CONTROL & (ACP_COLOR_1 | ACP_COLOR_8 | ACP_COLOR_16 | ACP_COLOR_24 | ACP_VIDEO_ON))
 		ret = 0;
   if(!(*(volatile unsigned long *)ACP_VIDEO_CONTROL & (ACP_ST_SHIFT_MODE | ACP_FALCON_SHIFT)))
 		ret = 0;
@@ -735,9 +738,14 @@ void *get_videl_palette(void)
 	long bpp = get_videl_bpp();
 	switch(bpp)
 	{
+#if !(defined(COLDFIRE) && defined(MCF547X))
 		case 1:
+#endif
 		case 2:
 		case 4: return((void *)CLUT);
+#if defined(COLDFIRE) && defined(MCF547X)
+		case 1:
+#endif
 		case 8: return((void *)VCLUT); /* to fix acp palette */
 		default: return(NULL);
 	}
@@ -745,6 +753,20 @@ void *get_videl_palette(void)
 	return(NULL);
 #endif
 }
+
+#if defined(COLDFIRE) && defined(MCF547X)
+
+long get_videl_ram_base(void)
+{
+	return(ACP_VIDEO_CFG);
+}
+
+long get_videl_ram_size(void)
+{
+	return(ACP_VIDEO_RAM_SIZE);
+}
+
+#endif /* defined(COLDFIRE) && defined(MCF547X) */
 
 void videl_blank(long blank)
 {
@@ -835,11 +857,16 @@ long init_videl(long width, long height, long bpp, long refresh, long extended)
 	if(!width || !height || !bpp || !refresh)
 		return(0);		
 #if defined(COLDFIRE) && defined(MCF547X)
-	if(extended >= 0xD00000)
+	if((extended >= 0xD00000) && (extended < 0xE00000))
 	{
 		addr = extended;
 		extended = 0;
-	}		
+	}
+	else if((extended >= ACP_VIDEO_CFG) && (extended < (ACP_VIDEO_CFG + ACP_VIDEO_RAM_SIZE)))
+	{
+		addr = extended;
+		extended = 1;
+	}
 //	init_videl_i2c();
 #else
 	if((width > 640) || (height > 480) || (bpp > 16))
@@ -1109,7 +1136,7 @@ long init_videl(long width, long height, long bpp, long refresh, long extended)
 			return(0);
 	}
 #if defined(COLDFIRE) && defined(MCF547X)
-	else if(acp_mode)
+	else if(!addr && acp_mode)
 		addr = ACP_VIDEO_CFG; // ACP_VIDEO_RAM;
 	else if(!acp_mode)
 	{
@@ -1156,6 +1183,7 @@ long init_videl(long width, long height, long bpp, long refresh, long extended)
 #if defined(COLDFIRE) && defined(MCF547X)
 	if(!acp_mode)
 	{
+		SCREEN_POS_ACP = 0;
 #endif
 		OFF_NEXT_LINE = 0; // offset for next line (in words)
 		VIDEO_SYNC &= ~1; // internal clock
@@ -1175,8 +1203,11 @@ long init_videl(long width, long height, long bpp, long refresh, long extended)
 	switch(bpp)
 	{
 		case 1: /* 2 colors => FALCON palette */
-			if(!acp_mode)
-				SPSHIFT = 0x400;
+			SPSHIFT = 0x400;
+#if defined(COLDFIRE) && defined(MCF547X)
+			if(acp_mode)
+				*(volatile unsigned long *)ACP_VIDEO_CONTROL = (acp_video_control |= ACP_COLOR_1);
+#endif
 			break;	
 		case 2: /* 4 colors => ST palette */
 			if(!acp_mode)

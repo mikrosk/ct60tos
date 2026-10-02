@@ -79,6 +79,7 @@ extern void Funcs_free_block(void *addr);
 
 #ifdef COLDFIRE
 extern long init_videl(long width, long height, long bpp, long freq);
+extern void setrgb_videl(long index, long rgb, long type);
 #if defined(DRIVER_IN_ROM) && defined(MCF547X)
 extern void blitter_copy(unsigned char *src_addr, int src_line_add, unsigned char *dst_addr, int dst_line_add, int w, int h, int bpp, int op, int backward);
 #undef USE_BLITTER
@@ -4018,27 +4019,6 @@ long CDECL c_text_area(Virtual *vwk, short *text, long length, long dst_x, long 
 	return(1);
 }
 
-long CDECL c_set_colour(Virtual *vwk, long index, long red, long green, long blue)
-{
-	int ret;
-	struct fb_info *info = info_fvdi;
-	if(info->par == NULL) /* Videl driver */
-		return(0);
-	if(info->var.bits_per_pixel == 8)
-	{
-		index = toTosColors(index);
-		red *= 255;
-		green *= 255;
-		blue *= 255; 
-		red /= 1000;
-		green /= 1000;
-		blue /= 1000;
-		ret = info->fbops->fb_setcolreg((unsigned)index,(unsigned)red<<8,(unsigned)green<<8,(unsigned)blue<<8,0,info);
-		return(!ret ? 1 : 0);
-	}
-	return(0);
-}
-
 #ifndef DRIVER_IN_ROM
 
 static struct mode_option s_resolution, g_resolution;
@@ -4268,6 +4248,30 @@ long CDECL c_init_cursor(void)
 	if(info_fvdi->par == NULL) /* Videl driver */
 		return(0);
 	return(info_fvdi->fbops->CursorInit(info_fvdi)); /* buffer */
+}
+
+long CDECL c_set_colour(Virtual *vwk, long index, long red, long green, long blue)
+{
+	int ret;
+	struct fb_info *info = info_fvdi;
+	if(info->var.bits_per_pixel > 8)
+		return(0);
+	index = toTosColors(index);
+	red *= 255;
+	green *= 255;
+	blue *= 255; 
+	red /= 1000;
+	green /= 1000;
+	blue /= 1000;
+	if(info->par == NULL) /* Videl driver */
+	{
+#ifdef COLDFIRE
+		setrgb_videl(index & ((1 << info->var.bits_per_pixel) - 1), (red << 16) + (green << 8) + blue, 2);
+#endif
+		return(0);
+	}
+	ret = info->fbops->fb_setcolreg((unsigned)index,(unsigned)red<<8,(unsigned)green<<8,(unsigned)blue<<8,0,info);
+	return(!ret ? 1 : 0);
 }
 
 long CDECL c_free_cursor(long buf)
