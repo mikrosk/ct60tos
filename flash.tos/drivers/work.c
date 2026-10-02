@@ -4,6 +4,13 @@
 #include <mint/falcon.h>
 #include <string.h>
 
+#ifndef Vsetscreen
+#define Vsetscreen VsetScreen
+#endif
+#ifndef Vsetmode
+#define Vsetmode VsetMode
+#endif
+
 #define TRUE 1
 #define FALSE 0
 
