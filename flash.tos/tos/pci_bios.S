@@ -7206,12 +7206,12 @@ dma_lock:
 _dma_lock:  /* CTPCI DMA freeze workaround */
 
 	move.w 2(A0),D0          // mode
-	move.l 8(A0),D1          // data
-	move.l 4(A0),A0          // address
 	move.l phystop,A1
 	moveq #CTPCI_1N,D1
 	and.l hardware_type(A1),D1
 	beq.s .dl_error
+	move.l 8(A0),D1          // data
+	move.l 4(A0),A0          // address
 	cmp.w #-2,D0
 	bne.s .dl2
 	lea dma_lock(PC),A0
@@ -7239,6 +7239,7 @@ _dma_lock:  /* CTPCI DMA freeze workaround */
 	bclr #6,PCI_CTPCI_CONFIG_ENABI
 	bne.s .dl_busy               // DMA in progress
 	bset #7,PCI_CTPCI_CONFIG_ENABI // lock
+	moveq #0,D0
 	bra.s .dl_end
 .dl_busy:
 	sne.b D0
