@@ -211,10 +211,10 @@ void update_mmu(void) // MMU access fault
 		".global _update_tlb\n\t"
 		"_update_tlb:\n\t"
 		" MOVE.W #0x2700,SR\n\t"
-		" LEA -32(SP),SP\n\t"        /* + reserve space for jump to old vector */
-		" MOVEM.L D0-D5/A0,(SP)\n\t" /* normally it's enough !!! */
-		" MOVE.L 32(SP),%0" : "=d" (format) : );
-	asm volatile (" MOVE.L 36(SP),%0\n\t" : "=d" (pc) : );
+		" LEA -64(SP),SP\n\t"        /* + reserve space for jump to old vector */
+		" MOVEM.L D0-D7/A0-A6,(SP)\n\t" /* the C code below may use any of them */
+		" MOVE.L 64(SP),%0" : "=d" (format) : );
+	asm volatile (" MOVE.L 68(SP),%0\n\t" : "=d" (pc) : );
 	unsigned long MMU_BASE = (unsigned long)__MMU_BASE;
 	format >>= 16;
 	switch(format & 0x0C03)
@@ -393,14 +393,14 @@ void update_mmu(void) // MMU access fault
 			*(unsigned long *)(address_fault) = MMUAR;
 			addr = *(unsigned long *)(save_coldfire_vector);
 			asm volatile (
-				" MOVE.L %0,28(SP)\n\t"
-				" MOVEM.L (SP),D0-D5/A0\n\t"
-				" LEA 28(SP),SP\n\t"
+				" MOVE.L %0,60(SP)\n\t"
+				" MOVEM.L (SP),D0-D7/A0-A6\n\t"
+				" LEA 60(SP),SP\n\t"
 				" RTS" : : "d" (addr) ); /* CF68KLIB */
 	}
 	asm volatile (
-		" MOVEM.L (SP),D0-D5/A0\n\t"
-		" LEA 32(SP),SP\n\t"
+		" MOVEM.L (SP),D0-D7/A0-A6\n\t"
+		" LEA 64(SP),SP\n\t"
 		" RTE" );
 }
 
