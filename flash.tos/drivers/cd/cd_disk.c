@@ -16,7 +16,7 @@
 /* Disk cache from GRUB (GRand Unified Bootloader) sources */
 
 #include <mint/osbind.h> 
-#include <sysvars.h>
+#include <mint/sysvars.h>
 #include <string.h>
 #include <stdlib.h> /* for malloc */
 #include "gemerror.h"
