@@ -7066,7 +7066,7 @@ dma_setbuffer:
 
 	move.l 4(SP),D2          // PCI Address
 	move.l 12(SP),-(SP)      // Transfer Size (Bytes)
-	move.l 8(SP),-(SP)       // Local Address
+	move.l 12(SP),-(SP)      // Local Address
 	bra.s .dsb1
 
 #endif /* COLDFIRE */
