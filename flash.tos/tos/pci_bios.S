@@ -1140,7 +1140,7 @@ init_devices:
 		moveq #0,D0
 		move.w BUS_NUMBER(A6),D0
 		move.l D0,-(SP)
-		jsr init_devices.l
+		jsr init_devices
 		addq.l #8,SP
 		move.w BUS_NUMBER(A6),D0
 		swap D0
