@@ -131,8 +131,13 @@ struct usb_linux_config_descriptor {
 #define	ehci_readl(x)		(*((volatile u32 *)(x)))
 #define ehci_writel(a, b)	(*((volatile u32 *)(a)) = ((volatile u32)b))
 #else
+#ifdef COLDFIRE
 #define ehci_readl(x)		cpu_to_le32((*((volatile u32 *)(x))))
 #define ehci_writel(a, b)	(*((volatile u32 *)(a)) = cpu_to_le32(((volatile u32)b)))
+#else /* CTPCI DMA freeze workaround */
+#define ehci_readl(x)		cpu_to_le32(ctpci_readl((volatile u32 *)(x)))
+#define ehci_writel(a, b)	ctpci_writel((volatile u32 *)(a), cpu_to_le32(((volatile u32)b)))
+#endif
 #endif
 
 #if defined CONFIG_EHCI_MMIO_BIG_ENDIAN

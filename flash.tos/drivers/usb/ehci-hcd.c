@@ -142,9 +142,28 @@ static struct ehci {
 	const char *slot_name;
 #ifndef COLDFIRE
 	/* CTPCI anti-freeze */
-	long (*ctpci_dma_lock)(long mode);    
+	long (*ctpci_dma_lock)(long mode, void *addr, long data);    
 #endif
 } gehci;
+
+#ifndef COLDFIRE
+
+static uint32_t ctpci_readl(volatile uint32_t *addr)
+{
+	if(gehci.ctpci_dma_lock != NULL)
+		return((uint32_t)gehci.ctpci_dma_lock(4, (void *)addr, 0));
+	return(*addr);
+}
+
+static void ctpci_writel(volatile uint32_t *addr, volatile uint32_t data)
+{
+	if(gehci.ctpci_dma_lock != NULL)
+		gehci.ctpci_dma_lock(7, (void *)addr, (long)data);
+	else
+		*addr = data;
+}
+
+#endif /* COLDFIRE */
 
 #ifdef DEBUG
 #define debug(format, arg...) board_printf("DEBUG: " format, ## arg)
@@ -316,24 +335,7 @@ static int handshake(uint32_t *ptr, uint32_t mask, uint32_t done, int usec)
 #endif
 	do
 	{
-#ifndef COLDFIRE
-		if(gehci.ctpci_dma_lock != NULL)
-		{
-			int i = 0;
-			while((i <= 10000) && gehci.ctpci_dma_lock(1))
-			{
-				udelay(1); /* try to fix CTPCI freezes */
-				i++;
-			}
-			if(i > 10000)
-				err("EHCI fail to lock DMA");		
-		}
-#endif
 		result = ehci_readl(ptr);
-#ifndef COLDFIRE
-		if(gehci.ctpci_dma_lock != NULL)
-			gehci.ctpci_dma_lock(0);
-#endif
 		if(result == ~(uint32_t)0)
 			return -1;
 		result &= mask;
@@ -343,15 +345,15 @@ static int handshake(uint32_t *ptr, uint32_t mask, uint32_t done, int usec)
 		udelay(1);
 		usec--;
 #else /* !COLDFIRE */
-		if(gehci.ctpci_dma_lock != NULL)
-		{
-			udelay(10);
-			usec -= 10;		
-		}
-		else
+		if(gehci.ctpci_dma_lock == NULL)
 		{
 			mdelay(10);
 			usec -= 10000; /* try to fix CTPCI freezes */
+		}
+		else
+		{
+			udelay(100);
+			usec -= 100;		
 		}
 #endif /* COLDFIRE */
 	}
@@ -1149,7 +1151,12 @@ int ehci_usb_lowlevel_init(long handle, const struct pci_device_id *ent, void **
 #ifndef COLDFIRE
   tmp = dma_lock(-1); /* CTPCI */
   if((tmp == 0) || (tmp == 1))
+  {
     gehci.ctpci_dma_lock = (void *)dma_lock(-2); /* function exist */
+    kprint("EHCI: CTPCI_1N DMA hardware workaround detected\r\n");
+  }
+  else
+    kprint("EHCI: CTPCI try to fix DMA bug by software\r\n");
 #endif
 	/* EHCI spec section 4.1 */
 	if(ehci_reset() != 0)
