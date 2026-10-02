@@ -667,6 +667,7 @@ _flush_cache_pexec:
 	subq.l #1,D1
 	bgt.s .loop_search_memset
 	lea 256(A5),A0                                      // text
+	move.l (A0),D0
 	move.l 8(A0),D0
 	cmp.l #0x55534844,D0                                // USHD (HDDRIVER)
 	beq.s .fix_code_purec
