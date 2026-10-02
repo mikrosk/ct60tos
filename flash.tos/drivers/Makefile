@@ -1,18 +1,16 @@
-# pinned cross toolchain, see ../../gnu
-GNU = $(abspath ../../gnu)
-GNU_PREFIX = $(GNU)/install
-export GNU_PREFIX
+# cross toolchain, see ../Makefile
+CROSS ?= $(HOME)/gnu-tools-464/m68000/bin/m68k-atari-mint-
 ### 68060 - GCC 3.3 ###
 #CC = gcc
 #CC = /usr/local/bin/gcc
 CC_TOOLS = gcc
 ### 68060 - GCC 4.4 ###
-CC = $(GNU)/bin/drivers-gcc
+CC = $(CROSS)gcc
 ### Coldfire - GCC 4.4 ###
-CCF = $(GNU)/bin/drivers-gcc
-LD = $(GNU_PREFIX)/binutils-2.9.1/bin/m68k-atari-mint-ld
-STRIP = $(GNU_PREFIX)/binutils-2.9.1/bin/m68k-atari-mint-strip
-OBJCOPY = $(GNU_PREFIX)/binutils-2.9.1/bin/m68k-atari-mint-objcopy
+CCF = $(CROSS)gcc
+LD = $(CROSS)ld
+STRIP = $(CROSS)strip
+OBJCOPY = $(CROSS)objcopy
 rm = rm
 
 VERSION = 0x0102
@@ -101,7 +99,7 @@ INCLUDEFVDI = -I$(INCDIRFVDI)
 INCLUDEUSB = -I$(INCDIRUSB)
 ### 68060 - GCC 3.3 ###
 #CFLAGS = -m68060 -Os -fno-builtin -fomit-frame-pointer -Wall -Wno-multichar -g
-CFLAGS_TOOLS = -O2 -w -I$(GNU)/host/include
+CFLAGS_TOOLS = -O2 -w -I../host/include
 ### 68060 - GCC 4.4 ###
 CFLAGS = -m68060 -Os -fno-builtin -fomit-frame-pointer -fno-strict-aliasing -fno-inline-small-functions -Wall -Wno-multichar
 ### Coldfire - GCC 3.3 ###
@@ -756,14 +754,14 @@ COMPRESS_BINARY= compress.ttp
 
 all: $(COMPRESS_BINARY) version.h $(HEX) $(HEXCF) $(HEXCF2) $(HEXCF3) $(DRIVERFVDI) $(DRIVERFVDICF) $(DRIVERFVDICF2) $(DRIVERFVDICF3)
 
-# $(DRIVERFVDI) needs the MiNT linker
+# $(DRIVERFVDI) is a separate program, not part of the image
 ctpci: $(COMPRESS_BINARY) version.h $(HEX)
 
 m5484lite: $(COMPRESS_BINARY) version.h $(HEXCF) $(DRIVERFVDICF)
 
 m54455evb: $(COMPRESS_BINARY) version.h $(HEXCF2) $(DRIVERFVDICF2)
 
-# $(DRIVERFVDICF3) needs the MiNT linker
+# $(DRIVERFVDICF3) is a separate program, not part of the image
 firebee: $(COMPRESS_BINARY) version.h $(HEXCF3)
 
 clean:
@@ -774,7 +772,7 @@ $(HEX):	$(OBJS) $(OBJSRTOS) $(OBJSLWIP)
 	$(LD) --oformat srec -Map drivers.map --cref -T drivers.lk \
 	--entry Start -o $(HEX) $(OBJS)
 	./$(COMPRESS_BINARY) $(HEX) temp.bin
-	$(OBJCOPY) --verbose -I binary -O srec --adjust-vma=$(FLASH_DRIVERS) temp.bin $(HEX)
+	$(OBJCOPY) --verbose -I binary -O srec --srec-len=21 --adjust-vma=$(FLASH_DRIVERS) temp.bin $(HEX)
 	rm temp.bin 
 
 $(HEXCF):	$(OBJDIRCF)/header.o $(OBJSCF) $(OBJSBDOSCF) $(OBJSRTOSCF) $(OBJSLWIPCF) $(OBJSAC97CF)
@@ -795,7 +793,7 @@ $(HEXCF3):	$(OBJDIRCF)/header.o $(OBJSCF3) $(OBJSBDOSCF3) $(OBJSRTOSCF3) $(OBJSL
 	$(LD) --oformat srec -Map drivers_cf3.map --cref -T drivers_cf3.lk \
 	--entry Start -o $(HEXCF3) $(OBJSCF3)
 	./$(COMPRESS_BINARY) $(HEXCF3) temp.bin
-	$(OBJCOPY) --verbose -I binary -O srec --adjust-vma=$(FLASH_DRIVERS_FIREBEE) temp.bin $(HEXFIREBEE)
+	$(OBJCOPY) --verbose -I binary -O srec --srec-len=21 --adjust-vma=$(FLASH_DRIVERS_FIREBEE) temp.bin $(HEXFIREBEE)
 	$(OBJCOPY) --verbose -I binary -O srec --adjust-vma=$(FLASH_DRIVERS_CF) temp.bin $(HEXCF3)
 	rm temp.bin 
 

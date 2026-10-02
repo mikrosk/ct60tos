@@ -21,6 +21,7 @@
 #ifdef COLDFIRE
 #include "fire.h"
 
+	.cpu 68060		// gas >= 2.22: a .chip before the first instruction needs it
 	.chip 68060
 #endif
 

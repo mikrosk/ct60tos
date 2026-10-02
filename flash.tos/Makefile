@@ -1,13 +1,12 @@
-# pinned cross toolchain, see ../gnu
-GNU = $(abspath ../gnu)
-GNU_PREFIX = $(GNU)/install
-export GNU_PREFIX
+# cross toolchain: MiNT gcc 4.6.4, binutils 2.30 (a.out)
+CROSS ?= $(HOME)/gnu-tools-464/m68000/bin/m68k-atari-mint-
+export CROSS
 #CC = gcc
-CC = $(GNU)/bin/tos-gcc
-LD = $(GNU_PREFIX)/binutils-2.9.1/bin/m68k-atari-mint-ld
-OBJCOPY = $(GNU_PREFIX)/binutils-2.9.1/bin/m68k-atari-mint-objcopy
+CC = $(CROSS)gcc
+LD = $(CROSS)ld
+OBJCOPY = $(CROSS)objcopy
 HOSTCC = gcc
-HOSTCFLAGS = -O2 -w -I$(GNU)/host/include
+HOSTCFLAGS = -O2 -w -I./host/include
 
 VERSION = 0x0202
 
@@ -409,7 +408,7 @@ $(AESCF):	$(AES_OBJSCF) $(DESK_OBJSCF)
 	$(LD) --oformat srec -Ttext $(FLASH_AES) -Tdata $(FLASH2_AES) -Tbss $(RAM_AES) -Map aescf.map --cref -o $(AESCF) $(AES_OBJSCF) -lgem
 
 $(DIAG): $(DIR)/$(ATARIDIAG)
-	$(OBJCOPY) --verbose -I binary -O srec --adjust-vma=$(FLASH_DIAG) $(DIR)/$(ATARIDIAG) $(DIAG) 
+	$(OBJCOPY) --verbose -I binary -O srec --srec-len=21 --adjust-vma=$(FLASH_DIAG) $(DIR)/$(ATARIDIAG) $(DIAG) 
 
 $(TOS):	$(GENTOS_BINARY) $(FILES)
 	./$(GENTOS_BINARY) $(FILES) $(TOS)
@@ -435,8 +434,8 @@ $(TOSCFHEX2):	$(TOSCF2)
 	cp  $(TOSCFHEX2) /home/firetos.hex
 
 $(TOSCFHEX3):	$(TOSCF3)
-	$(OBJCOPY) --verbose -I binary -O srec --adjust-vma=$(FLASH_TOS_FIREBEE) $(TOSCF3) $(TOSCFHEX3)
-	$(OBJCOPY) --verbose -I binary -O srec --adjust-vma=$(FLASH_BOOT_TOS_FIREBEE) $(TOSCF3) $(TOSCFHEX3B)
+	$(OBJCOPY) --verbose -I binary -O srec --srec-len=21 --adjust-vma=$(FLASH_TOS_FIREBEE) $(TOSCF3) $(TOSCFHEX3)
+	$(OBJCOPY) --verbose -I binary -O srec --srec-len=21 --adjust-vma=$(FLASH_BOOT_TOS_FIREBEE) $(TOSCF3) $(TOSCFHEX3B)
 # FIREBEE_COD added, if INIT_FPGA_FROM_RAM defined inside boot2.S
 #	objcopy --verbose -I binary -O srec --adjust-vma=$(FLASH_COD_FIREBEE) $(FIREBEE_COD) $(FPGACF3)
 #	@grep -E -v S7 $(TOSCFHEX3) > temp.hex

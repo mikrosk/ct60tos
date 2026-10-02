@@ -73,6 +73,7 @@
 #define P_BBASE      0x18 // address of BSS segment
 #define P_BLEN       0x1C // length of BSS
                 
+	.cpu 68060		// gas >= 2.22: a .chip before the first instruction needs it
 	.chip 68060
 
 #endif /* COLDFIRE */

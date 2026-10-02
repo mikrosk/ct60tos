@@ -1,4 +1,0 @@
-#!/bin/bash
-# drivers: gcc 4.4.2 (MiNT) with the binutils 2.19.1 (MiNT) assembler
-P=${GNU_PREFIX:-$(cd "$(dirname "$0")/../install" && pwd)}
-exec "$P/gcc-4.4.2/bin/m68k-atari-mint-gcc" -B"$P/binutils-2.19.1/m68k-atari-mint/bin/" "$@"

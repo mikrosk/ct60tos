@@ -1,5 +1,0 @@
-#!/bin/bash
-# TOS part (boot, cf68klib): gcc 3.3.2 (MiNT) with the binutils 2.9.1 (MiNT) assembler
-P=${GNU_PREFIX:-$(cd "$(dirname "$0")/../install" && pwd)}
-exec "$P/gcc-3.3.2/bin/m68k-atari-mint-gcc" -B"$P/binutils-2.9.1/m68k-atari-mint/bin/" \
-	-isystem "$P/sys-root/usr/include" "$@"

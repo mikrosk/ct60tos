@@ -140,7 +140,8 @@ extern void ftoa(float x, int f, char *buf);
 extern long atol(const char *text);
 extern int sprintD(char *s, const char *fmt, ...);
 extern unsigned short drivers_version[] __asm__("_VERSION");
-extern float atof(const char *text);
+#define atof atof_float /* the drivers atof() returns a float, unlike the one of <stdlib.h> */
+extern float atof(const char *text) __asm__("_atof");
 
 static char *types1[] = { "HEXA", "BIT", "BYTE", "SHORT", "LONG", "FLOAT", "DOUBLE", NULL };
 static char *types2[] = { "BYTE", "SHORT", "LONG", "FLOAT", "DOUBLE", NULL };
