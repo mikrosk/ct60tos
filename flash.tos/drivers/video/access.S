@@ -249,7 +249,8 @@ _memcpy:
 	move.l A4,36(A2)         // source
 	move.l A5,50(A2)         // destination
 	move.w #0x203,58(A2)     // HOP source, OP source
-	lsr.l #1,D5              // words, an odd last byte is not copied
+	move.l D5,D4
+	lsr.l #1,D5              // words
 	lsr.l #8,D6              // lines of 0x2000 words
 	beq.s .cp14
 	move.w #0x2000,54(A2)    // X count
@@ -281,6 +282,12 @@ _memcpy:
 		tst.w 60(A2)
 	bmi.s .cp17
 .cp19:
+	btst #0,D4
+	beq.s .cp21
+	add.l D4,A4              // odd last byte
+	add.l D4,A5
+	move.b -1(A4),-1(A5)
+.cp21:
 	movem.l (SP),D2-D6/A2-A5
 	lea 36(SP),SP
 	rts
