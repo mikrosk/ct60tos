@@ -29,7 +29,7 @@
 
 cf68klib:
 
-	lea 0x8870,SP            // TOS 4.04 stack (destroyed by the CF68KLIB later)
+	lea 0x2000,SP            // stack (destroyed by the CF68KLIB later)
 	.chip 68060
 	move.l SP,USP
 	.chip 5200
