@@ -43,6 +43,7 @@
 
 #ifdef COLDFIRE
 
+	.cpu 68060		// gas >= 2.22: a .chip before the first instruction needs it
 	.chip 68060 // some code to fix
 
 fire_rw_param: // D0.W: mode, D1.L: type_param, D2.L: value	
