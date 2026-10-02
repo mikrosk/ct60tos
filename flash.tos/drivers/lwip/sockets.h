@@ -197,6 +197,8 @@ struct linger {
 #endif
 
 #ifndef FD_SET
+  /* own fd_set and select(), keep those of <sys/select.h> out */
+  #define _SYS_SELECT_H 1
   #undef  FD_SETSIZE
   #define FD_SETSIZE    40
   #define FD_SET(n, p)  ((p)->fd_bits[(n)/8] |=  (1 << ((n) & 7)))
