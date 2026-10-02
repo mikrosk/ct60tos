@@ -219,6 +219,36 @@ void setup_scrninfo(Device *device, Mode *graphics_mode)
 				device->scrmap.vdi2pix[i] = 0;
 		}
 	}
+
+	/*
+	 * Initialize colour number to mask conversion table
+	 * if it's needed (that is, for bitplane modes).
+	 */
+
+	if (!(graphics_mode->flags & CHUNKY)) {
+		int i, j, v;
+		for(i = 0; i < 16; i++) {
+			switch (graphics_mode->bpp) {
+			case 1:
+				v = (i & 0x01) ? 0x000f : 0;
+				break;
+			case 2:
+				v = i & 0x03;
+				v |= v << 2;
+				break;
+			default:
+				v = i;
+				break;
+			}
+			for(j = 0; j < 4; j++) {
+				if (v & 0x01)
+					mask[i][j] = 0xffff;
+				else
+					mask[i][j] = 0;
+				v >>= 1;
+			}
+		}
+	}
 }
 
 
@@ -449,36 +479,6 @@ long CDECL init(Access *_access, Driver *driver, Virtual *vwk, char *opts)
 		}
 	}
 
-	/*
-	 * Initialize colour number to mask conversion table
-	 * if it's needed (that is, for bitplane modes).
-	 */
-
-	if (!(graphics_mode->flags & CHUNKY)) {
-		int i, j, v;
-		for(i = 0; i < 16; i++) {
-			switch (wk->screen.mfdb.bitplanes) {
-			case 1:
-				v = (i & 0x01) ? 0x000f : 0;
-				break;
-			case 2:
-				v = i & 0x03;
-				v |= v << 2;
-				break;
-			default:
-				v = i;
-				break;
-			}
-			for(j = 0; j < 4; j++) {
-				if (v & 0x01)
-					mask[i][j] = 0xffff;
-				else
-					mask[i][j] = 0;
-				v >>= 1;
-			}
-		}
-	}
-	
 	setup_scrninfo(&device, graphics_mode);
 	
 /* Perhaps set up default clipping? */

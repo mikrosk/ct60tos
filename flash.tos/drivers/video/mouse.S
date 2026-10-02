@@ -172,6 +172,40 @@ restore_mouse:
 .at_bottom_hide:
 	subq.w	#1,d5
 #endif
+	moveq	#0,d3
+	move.w	wk_screen_mfdb_bitplanes(a1),d3	
+	cmp.l	#16,d3
+	beq	.rows_hide_16
+	bhi	.rows_hide_32	
+#ifdef COLDFIRE
+	cmp.l	#8,d3
+	beq.s	.rows_hide_8
+.rows_hide_1:
+	moveq	#15,d6
+	move.w	d7,d1
+	ext.l	d1
+	move.l	a3,a4
+	move.b	(a0)+,(a4)+
+.cols_hide_1:
+	move.l	d1,d0
+	not.l	d0
+	and.l	#7,d0
+	bne.s	.next_1
+	move.b	(a0)+,(a4)+
+.next_1:
+	addq.l	#1,d1
+	subq.l	#1,d6
+	bpl.s	.cols_hide_1
+	moveq	#0,d0
+	move.w	wk_screen_wrap(a1),d0
+	lea	(a3,d0.l),a3
+	addq.l	#1,d2
+	subq.l	#1,d5
+	bpl	.rows_hide_1
+	movem.l	(a7),d3-d7/a2-a4
+	lea	32(a7),a7
+	rts
+#endif
 .rows_hide_8:
 	moveq	#15,d6
 	move.w	d7,d1
@@ -179,11 +213,6 @@ restore_mouse:
 	ext.l	d1
 #endif
 	move.l	a3,a4
-	moveq	#0,d3
-	move.w	wk_screen_mfdb_bitplanes(a1),d3	
-	cmp.l	#16,d3
-	beq.s	.cols_hide_16
-	bhi.s	.cols_hide_32	
 .cols_hide_8:
 //	cmp.w	wk_screen_coordinates_min_x(a1),d1
 //	blt	.next_8
@@ -374,8 +403,59 @@ draw_cursor:
 	moveq	#0,d3
 	move.w	wk_screen_mfdb_bitplanes(a1),d3
 	cmp.l	#16,d3
-	beq.s	.rows_show_16
+	beq	.rows_show_16
 	bhi	.rows_show_32
+#ifdef COLDFIRE
+	cmp.l	#8,d3
+	beq.s	.rows_show_8
+.rows_show_1:
+	move.l	d5,-(a7)
+	moveq	#15,d6
+	move.w	(a2)+,d3
+	move.w	(a5)+,d4
+	move.w	d7,d1
+	move.l	a3,a4
+	move.b	(a4),(a0)+		// Save old data
+.cols_show_1:
+	move.l	d1,d0
+	not.l	d0
+	and.l	#7,d0			// Bit number
+	moveq	#0,d5
+	move.w	wk_screen_coordinates_max_x(a1),d5
+	cmp.l	d5,d1
+	bgt	.plotted_1
+	add.l	d3,d3		//  and then write new
+	btst	#16,d3
+	beq	.no_pixel_1
+	add.l	d4,d4
+	btst	#16,d4
+	beq	.background_1
+	bset	d0,(a4)
+	bra	.plotted_1
+.background_1:
+	bclr	d0,(a4)
+.plotted_1:
+	lsr.l	#1,d4		// Shift back again
+.no_pixel_1:
+	tst.l	d0
+	bne.s	.next_show_1
+	addq.l	#1,a4
+	move.b	(a4),(a0)+		// Save old data
+.next_show_1:
+	add.l	d4,d4		//  to make this possible
+	addq.l	#1,d1
+	subq.l	#1,d6
+	bpl	.cols_show_1
+	moveq	#0,d5
+	move.w 	wk_screen_wrap(a1),d5
+	lea	(a3,d5.l),a3
+	move.l	(a7)+,d5
+	subq.l	#1,d5
+	bpl	.rows_show_1
+	movem.l	(a7),d3-d7/a2-a5
+	lea	36(a7),a7
+	rts
+#endif
 .rows_show_8:
 #ifdef COLDFIRE
 	move.l	d5,-(a7)

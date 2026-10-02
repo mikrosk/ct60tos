@@ -215,7 +215,6 @@ inline void wait_dma(void) { }
 #endif /* COLDFIRE */
 #endif /* DRIVER_IN_ROM */
 
-#ifndef COLDFIRE
 static void blit_copy_1(unsigned short *src_addr, int src_line_add, unsigned short *dst_addr, int dst_line_add, int src_x, int dst_x, int w, int h)
 {
 	int i, j;
@@ -254,7 +253,6 @@ static void blit_copy_1(unsigned short *src_addr, int src_line_add, unsigned sho
 		dst_addr += dst_line_add;
 	}
 }
-#endif
 
 static void blit_copy_8(unsigned char *src_addr, int src_line_add, unsigned char *dst_addr, int dst_line_add, int w, int h)
 {
@@ -373,7 +371,6 @@ int blit_copy_ok()
 #endif
 }
 
-#ifndef COLDFIRE
 static void blit_or_1(unsigned short *src_addr, int src_line_add, unsigned short *dst_addr, int dst_line_add, int src_x, int dst_x, int w, int h)
 {
 	int i, j;
@@ -410,7 +407,6 @@ static void blit_or_1(unsigned short *src_addr, int src_line_add, unsigned short
 		dst_addr += dst_line_add;
 	}
 }
-#endif
 
 static void blit_or_8(unsigned char *src_addr, int src_line_add, unsigned char *dst_addr, int dst_line_add, int w, int h)
 {
@@ -448,7 +444,6 @@ static void blit_or_32(unsigned long *src_addr, int src_line_add, unsigned long 
 	}
 }
 
-#ifndef COLDFIRE
 static void blit_1(unsigned short *src_addr, int src_line_add, unsigned short *dst_addr, int dst_line_add, int src_x, int dst_x, int w, int h, int operation)
 {
 	int i, j;
@@ -559,7 +554,6 @@ static void blit_1(unsigned short *src_addr, int src_line_add, unsigned short *d
 		dst_addr += dst_line_add;
 	}
 }
-#endif
 
 static void blit_8(unsigned char *src_addr, int src_line_add, unsigned char *dst_addr, int dst_line_add, int w, int h, int operation)
 {
@@ -666,7 +660,6 @@ static void blit_32(unsigned long *src_addr, int src_line_add, unsigned long *ds
 	}
 }
 
-#ifndef COLDFIRE
 static void pan_backwards_copy_1(unsigned short *src_addr, int src_line_add, unsigned short *dst_addr, int dst_line_add, int src_x, int dst_x, int w, int h)
 {
 	int i, j;
@@ -703,7 +696,6 @@ static void pan_backwards_copy_1(unsigned short *src_addr, int src_line_add, uns
 		dst_addr += dst_line_add;
   }
 }
-#endif
 
 static void pan_backwards_copy_8(unsigned char *src_addr, int src_line_add, unsigned char *dst_addr, int dst_line_add, int w, int h)
 {
@@ -741,7 +733,6 @@ static void pan_backwards_copy_32(unsigned long *src_addr, int src_line_add, uns
   }
 }
 
-#ifndef COLDFIRE
 static void pan_backwards_or_1(unsigned short *src_addr, int src_line_add, unsigned short *dst_addr, int dst_line_add, int src_x, int dst_x, int w, int h)
 {
 	int i, j;
@@ -776,7 +767,6 @@ static void pan_backwards_or_1(unsigned short *src_addr, int src_line_add, unsig
 		dst_addr += dst_line_add;
 	}
 }
-#endif
 
 static void pan_backwards_or_8(unsigned char *src_addr, int src_line_add, unsigned char *dst_addr, int dst_line_add, int w, int h)
 {
@@ -814,7 +804,6 @@ static void pan_backwards_or_32(unsigned long *src_addr, int src_line_add, unsig
 	}
 }
 
-#ifndef COLDFIRE
 static void pan_backwards_1(unsigned short *src_addr, int src_line_add, unsigned short *dst_addr, int dst_line_add, int src_x, int dst_x, int w, int h, int operation)
 {
 	int i, j;
@@ -923,7 +912,6 @@ static void pan_backwards_1(unsigned short *src_addr, int src_line_add, unsigned
 		dst_addr += dst_line_add;
 	}
 }
-#endif
 
 static void pan_backwards_8(unsigned char *src_addr, int src_line_add, unsigned char *dst_addr, int dst_line_add, int w, int h, int operation)
 {
@@ -1030,7 +1018,6 @@ static void pan_backwards_32(unsigned long *src_addr, int src_line_add, unsigned
 	}
 }
 
-#ifndef COLDFIRE
 static void replace_1(unsigned short *src_addr, int src_line_add, unsigned short *dst_addr, int dst_line_add, int src_x, int dst_x, int w, int h, unsigned char foreground, unsigned char background)
 {
 	int i, j;
@@ -1079,7 +1066,6 @@ static void replace_1(unsigned short *src_addr, int src_line_add, unsigned short
 		dst_addr += dst_line_add;
 	}
 }
-#endif
 
 static void replace_8(unsigned short *src_addr, int src_line_add, unsigned char *dst_addr, int dst_line_add, int x, int w, int h, unsigned char foreground, unsigned char background)
 {
@@ -1159,7 +1145,6 @@ static void replace_32(unsigned short *src_addr, int src_line_add, unsigned long
 	}
 }
 
-#ifndef COLDFIRE
 static void transparent_1(unsigned short *src_addr, int src_line_add, unsigned short *dst_addr, int dst_line_add, int src_x, int dst_x, int w, int h, unsigned char foreground, unsigned char background)
 {
 	int i, j;
@@ -1201,7 +1186,6 @@ static void transparent_1(unsigned short *src_addr, int src_line_add, unsigned s
 		dst_addr += dst_line_add;
 	}
 }
-#endif
 
 static void transparent_8(unsigned short *src_addr, int src_line_add, unsigned char *dst_addr, int dst_line_add, int x, int w, int h, unsigned char foreground, unsigned char background)
 {
@@ -1281,7 +1265,6 @@ static void transparent_32(unsigned short *src_addr, int src_line_add, unsigned 
 	}
 }
 
-#ifndef COLDFIRE
 static void xor_1(unsigned short *src_addr, int src_line_add, unsigned short *dst_addr, int dst_line_add, int src_x, int dst_x, int w, int h, unsigned char foreground, unsigned char background)
 {
 	int i, j;
@@ -1318,7 +1301,6 @@ static void xor_1(unsigned short *src_addr, int src_line_add, unsigned short *ds
 		dst_addr += dst_line_add;
 	}
 }
-#endif
 
 static void xor_8(unsigned short *src_addr, int src_line_add, unsigned char *dst_addr, int dst_line_add, int x, int w, int h, unsigned char foreground, unsigned char background)
 {
@@ -1407,7 +1389,6 @@ static void xor_32(unsigned short *src_addr, int src_line_add, unsigned long *ds
 	}
 }
 
-#ifndef COLDFIRE
 static void revtransp_1(unsigned short *src_addr, int src_line_add, unsigned short *dst_addr, int dst_line_add, int src_x, int dst_x, int w, int h, unsigned char foreground, unsigned char background)
 {
 	int i, j;
@@ -1449,7 +1430,6 @@ static void revtransp_1(unsigned short *src_addr, int src_line_add, unsigned sho
 		dst_addr += dst_line_add;
 	}
 }
-#endif
 
 static void revtransp_8(unsigned short *src_addr, int src_line_add, unsigned char *dst_addr, int dst_line_add, int x, int w, int h, unsigned char foreground, unsigned char background)
 {
@@ -1534,7 +1514,6 @@ void update_mono(void)
 	info_fvdi->update_mono = 1;  /* VBL drawing flag */
 }
 
-#ifndef COLDFIRE
 long CDECL c_read_pixel_1(Virtual *vwk, MFDB *src, long x, long y)
 {
 	Workstation *wk;
@@ -1585,7 +1564,6 @@ long CDECL c_write_pixel_1(Virtual *vwk, MFDB *dst, long x, long y, long color)
 	info_fvdi->update_mono = 1;
 	return(1);
 }
-#endif
 
 long CDECL c_read_pixel_8(Virtual *vwk, MFDB *src, long x, long y)
 {
@@ -1926,11 +1904,9 @@ long CDECL c_expand_area(Virtual *vwk, MFDB *src, long src_x, long src_y, MFDB *
 		case 1:				/* Replace */
 			switch(bpp)
 			{
-#ifndef COLDFIRE
 				case 1:
 					replace_1((void *)src_addr,src_line_add,dst_addr,dst_line_add,src_x,dst_x,w,h,(unsigned char)foreground,(unsigned char)background);
 					break;
-#endif
 				case 16:
 					replace_16((void *)src_addr,src_line_add,(void *)dst_addr,dst_line_add,src_x,w,h,(unsigned short)foreground,(unsigned short)background);
 					break;
@@ -1945,11 +1921,9 @@ long CDECL c_expand_area(Virtual *vwk, MFDB *src, long src_x, long src_y, MFDB *
 		case 2:				/* Transparent */
 			switch(bpp)
 			{
-#ifndef COLDFIRE
 				case 1:
 					transparent_1((void *)src_addr,src_line_add,dst_addr,dst_line_add,src_x,dst_x,w,h,(unsigned char)foreground,(unsigned char)background);
 					break;
-#endif
 				case 16:
 					transparent_16((void *)src_addr,src_line_add,(void *)dst_addr,dst_line_add,src_x,w,h,(unsigned short)foreground,(unsigned short)background);
 					break;
@@ -1964,11 +1938,9 @@ long CDECL c_expand_area(Virtual *vwk, MFDB *src, long src_x, long src_y, MFDB *
 		case 3:				/* XOR */
 			switch(bpp)
 			{
-#ifndef COLDFIRE
 				case 1:
 					xor_1((void *)src_addr,src_line_add,dst_addr,dst_line_add,src_x,dst_x,w,h,(unsigned char)foreground,(unsigned char)background);
 					break;
-#endif
 				case 16:
 					xor_16((void *)src_addr,src_line_add,(void *)dst_addr,dst_line_add,src_x,w,h,(unsigned short)foreground,(unsigned short)background);
 					break;
@@ -1983,11 +1955,9 @@ long CDECL c_expand_area(Virtual *vwk, MFDB *src, long src_x, long src_y, MFDB *
 		case 4:				/* Reverse transparent */
 			switch(bpp)
 			{
-#ifndef COLDFIRE
 				case 1:			
 					revtransp_1((void *)src_addr,src_line_add,dst_addr,dst_line_add,src_x,dst_x,w,h,(unsigned char)foreground,(unsigned char)background);
 					break;
-#endif
 				case 16:			
 					revtransp_16((void *)src_addr,src_line_add,(void *)dst_addr,dst_line_add,src_x,w,h,(unsigned short)foreground,(unsigned short)background);
 					break;
@@ -2590,11 +2560,9 @@ long CDECL c_blit_area(Virtual *vwk, MFDB *src, long src_x, long src_y, MFDB *ds
 			case 3:
 				switch(bpp)
 				{
-#ifndef COLDFIRE
 					case 1:
 						pan_backwards_copy_1(src_addr,src_line_add,dst_addr,dst_line_add,src_x,dst_x,w,h);
 						break;
-#endif
 					case 16:
 						pan_backwards_copy_16(src_addr,src_line_add,dst_addr,dst_line_add,w,h);
 						break;
@@ -2609,11 +2577,9 @@ long CDECL c_blit_area(Virtual *vwk, MFDB *src, long src_x, long src_y, MFDB *ds
 			case 7:
 				switch(bpp)
 				{
-#ifndef COLDFIRE
 					case 1:
 						pan_backwards_or_1(src_addr,src_line_add,dst_addr,dst_line_add,src_x,dst_x,w,h);
 						break;
-#endif
 					case 16:
 						pan_backwards_or_16(src_addr,src_line_add,dst_addr,dst_line_add,w,h);
 						break;
@@ -2628,11 +2594,9 @@ long CDECL c_blit_area(Virtual *vwk, MFDB *src, long src_x, long src_y, MFDB *ds
 			default:
 				switch(bpp)
 				{
-#ifndef COLDFIRE
 					case 1:
 						pan_backwards_1(src_addr,src_line_add,dst_addr,dst_line_add,src_x,dst_x,w,h,operation);
 						break;
-#endif
 					case 16:
 						pan_backwards_16(src_addr,src_line_add,dst_addr,dst_line_add,w,h,operation);
 						break;
@@ -2660,11 +2624,9 @@ long CDECL c_blit_area(Virtual *vwk, MFDB *src, long src_x, long src_y, MFDB *ds
 			case 3:
 				switch(bpp)
 				{
-#ifndef COLDFIRE
 					case 1:
 						blit_copy_1(src_addr,src_line_add,dst_addr,dst_line_add,src_x,dst_x,w,h);
 						break;
-#endif
 					case 16:
 						blit_copy_16(src_addr,src_line_add,dst_addr,dst_line_add,w,h);
 						break;
@@ -2679,11 +2641,9 @@ long CDECL c_blit_area(Virtual *vwk, MFDB *src, long src_x, long src_y, MFDB *ds
 			case 7:
 				switch(bpp)
 				{
-#ifndef COLDFIRE
 					case 1:
 						blit_or_1(src_addr,src_line_add,dst_addr,dst_line_add,src_x,dst_x,w,h);
 						break;
-#endif
 					case 16:
 						blit_or_16(src_addr,src_line_add,dst_addr,dst_line_add,w,h);
 						break;
@@ -2698,11 +2658,9 @@ long CDECL c_blit_area(Virtual *vwk, MFDB *src, long src_x, long src_y, MFDB *ds
 			default:
 				switch(bpp)
 				{
-#ifndef COLDFIRE
 					case 1:
 						blit_1(src_addr,src_line_add,dst_addr,dst_line_add,w,h,src_x,dst_x,operation);
 						break;
-#endif
 					case 16:
 						blit_16(src_addr,src_line_add,dst_addr,dst_line_add,w,h,operation);
 						break;
