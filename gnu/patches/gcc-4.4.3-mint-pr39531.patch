@@ -1,0 +1,29 @@
+--- a/gcc/config/m68k/m68k.c
++++ b/gcc/config/m68k/m68k.c
+@@ -4224,7 +4224,7 @@
+       return "and%.w %2,%0";
+     }
+   if (GET_CODE (operands[2]) == CONST_INT
+-      && (logval = exact_log2 (~ INTVAL (operands[2]))) >= 0
++      && (logval = exact_log2 (~ INTVAL (operands[2]) & 0xffffffff)) >= 0
+       && (DATA_REG_P (operands[0])
+           || offsettable_memref_p (operands[0])))
+     {
+@@ -4261,7 +4261,7 @@
+       return "or%.w %2,%0";
+     }
+   if (GET_CODE (operands[2]) == CONST_INT
+-      && (logval = exact_log2 (INTVAL (operands[2]))) >= 0
++      && (logval = exact_log2 (INTVAL (operands[2]) & 0xffffffff)) >= 0
+       && (DATA_REG_P (operands[0])
+ 	  || offsettable_memref_p (operands[0])))
+     {
+@@ -4296,7 +4296,7 @@
+       return "eor%.w %2,%0";
+     }
+   if (GET_CODE (operands[2]) == CONST_INT
+-      && (logval = exact_log2 (INTVAL (operands[2]))) >= 0
++      && (logval = exact_log2 (INTVAL (operands[2]) & 0xffffffff)) >= 0
+       && (DATA_REG_P (operands[0])
+ 	  || offsettable_memref_p (operands[0])))
+     {

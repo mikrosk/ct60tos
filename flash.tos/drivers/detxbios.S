@@ -251,7 +251,11 @@ _det_xbios:
 		tst.l D1
 		beq.s .no_xbra           // NVDI not found before _PCI
 		move.l -4(A1),-4(A2)     // remove _PCI XBRA
+#ifdef COLDFIRE
+		.short 0x2378,0x00B8,0xFFFC // move.l 0xB8,-4(A1), gas refuses it for ColdFire
+#else
 		move.l 0xB8,-4(A1)       // install _PCI XBRA at the top
+#endif
 		move.l A1,0xB8           // TRAP #14
 		bra.s .no_xbra
 .next_xbra:

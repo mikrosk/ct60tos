@@ -138,7 +138,8 @@ extern void conws_debug(char *buf);
 extern void ltoa(char *buf, long n, unsigned long base);
 extern void ftoa(float x, int f, char *buf);
 extern long atol(const char *text);
-extern float atof(const char *text);
+#define atof atof_float /* the drivers atof() returns a float, unlike the one of <stdlib.h> */
+extern float atof(const char *text) __asm__("_atof");
 
 static char *types1[] = { "HEXA", "BIT", "BYTE", "SHORT", "LONG", "FLOAT", "DOUBLE", NULL };
 static char *types2[] = { "BYTE", "SHORT", "LONG", "FLOAT", "DOUBLE", NULL };

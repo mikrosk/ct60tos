@@ -1,0 +1,29 @@
+#!/bin/bash
+# gcc 4.4.3 (MiNT) for the drivers and for all assembler sources:
+# compiles (.c) or preprocesses (.S) to assembler, then assembles with m68k-as.
+D=$(cd "$(dirname "$0")" && pwd)
+P=${GNU_PREFIX:-$(cd "$D/../install" && pwd)}
+GCC="$P/gcc-4.4.3/bin/m68k-atari-mint-gcc"
+src=; out=; prev=; compile=; args=(); asargs=()
+for a in "$@"; do
+	if [ "$prev" = -o ]; then out="$a"; prev=; continue; fi
+	case "$a" in
+		-o) prev=-o; continue;;
+		-c) compile=1; prev="$a"; continue;;
+		*.c|*.S) src="$a";;
+		-m68060|-m5200|-mcfv4e|-m68000|-m68020-60) asargs+=("$a");;
+		-Wa,*) IFS=, read -ra w <<< "${a#-Wa,}"; asargs+=("${w[@]}"); prev="$a"; continue;;
+	esac
+	args+=("$a"); prev="$a"
+done
+if [ -z "$compile" ] || [ -z "$src" ] || [ -z "$out" ]; then
+	echo "$0: only 'gcc -c file.c|file.S -o file.o' is supported" >&2
+	exit 1
+fi
+tmp=$(mktemp --suffix=.s) || exit 1
+trap 'rm -f "$tmp"' EXIT
+case "$src" in
+	*.c) "$GCC" -S "${args[@]}" -o "$tmp" || exit 1;;
+	*.S) "$GCC" -E "${args[@]}" -o "$tmp" || exit 1;;
+esac
+"$D/m68k-as" "${asargs[@]}" -o "$out" "$tmp"

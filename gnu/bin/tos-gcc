@@ -1,0 +1,30 @@
+#!/bin/bash
+# Compiler for the TOS part (boot, cf68klib): C files with gcc 3.3.2 (MiNT),
+# assembler sources as for the drivers; gas in GAS_M68K_OLD mode for both.
+D=$(cd "$(dirname "$0")" && pwd)
+P=${GNU_PREFIX:-$(cd "$D/../install" && pwd)}
+export GAS_M68K_OLD=1
+src=; out=; prev=; compile=; args=(); asargs=()
+for a in "$@"; do
+	if [ "$prev" = -o ]; then out="$a"; prev=; continue; fi
+	case "$a" in
+		-o) prev=-o; continue;;
+		-c) compile=1; prev="$a"; continue;;
+		*.c) src="$a";;
+		-m68060|-m5200|-mcfv4e|-m68000|-m68020-60) asargs+=("$a");;
+		-Wa,*) IFS=, read -ra w <<< "${a#-Wa,}"; asargs+=("${w[@]}"); prev="$a"; continue;;
+	esac
+	args+=("$a"); prev="$a"
+done
+[ -n "$src" ] || exec "$D/drivers-gcc" "$@"
+if [ -z "$compile" ] || [ -z "$out" ]; then
+	echo "$0: only 'gcc -c file.c -o file.o' is supported" >&2
+	exit 1
+fi
+tmp=$(mktemp --suffix=.s) || exit 1
+trap 'rm -f "$tmp"' EXIT
+# gas 2.45 relaxes branches across ".even" less tightly than gas 2.13; the code is word aligned anyway
+"$P/gcc-3.3.2/bin/m68k-atari-mint-gcc" -isystem "$P/sys-root/usr/include" -S "${args[@]}" -o - | \
+	grep -v '^[[:space:]]*\.even[[:space:]]*$' > "$tmp"
+[ "${PIPESTATUS[0]}" = 0 ] || exit 1
+"$D/m68k-as" "${asargs[@]}" -o "$out" "$tmp"

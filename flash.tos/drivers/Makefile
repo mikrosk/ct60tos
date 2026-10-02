@@ -1,14 +1,18 @@
+# pinned cross toolchain, see ../../gnu
+GNU = $(abspath ../../gnu)
+GNU_PREFIX = $(GNU)/install
+export GNU_PREFIX
 ### 68060 - GCC 3.3 ###
 #CC = gcc
 #CC = /usr/local/bin/gcc
-CC_TOOLS = /usr/local/bin/gcc
+CC_TOOLS = gcc
 ### 68060 - GCC 4.4 ###
-CC = /home/usr/local/bin/gcc
+CC = $(GNU)/bin/drivers-gcc
 ### Coldfire - GCC 4.4 ###
-CCF = /home/usr/local/bin/gcc
-LD = ld
-STRIP = strip
-STACK =	stack
+CCF = $(GNU)/bin/drivers-gcc
+LD = $(GNU_PREFIX)/bin/m68k-elf-ld
+STRIP = $(GNU_PREFIX)/bin/m68k-elf-strip
+OBJCOPY = $(GNU_PREFIX)/bin/m68k-elf-objcopy
 rm = rm
 
 VERSION = 0x0102
@@ -97,7 +101,7 @@ INCLUDEFVDI = -I$(INCDIRFVDI)
 INCLUDEUSB = -I$(INCDIRUSB)
 ### 68060 - GCC 3.3 ###
 #CFLAGS = -m68060 -Os -fno-builtin -fomit-frame-pointer -Wall -Wno-multichar -g
-CFLAGS_TOOLS = -m68060 -Os -fno-builtin -fomit-frame-pointer -Wall -Wno-multichar -g
+CFLAGS_TOOLS = -O2 -w -I$(GNU)/host/include
 ### 68060 - GCC 4.4 ###
 CFLAGS = -m68060 -Os -fno-builtin -fomit-frame-pointer -fno-strict-aliasing -fno-inline-small-functions -Wall -Wno-multichar
 ### Coldfire - GCC 3.3 ###
@@ -746,17 +750,18 @@ FLASH_DRIVERS_FIREBEE = 0xE04A0000
 
 BINHEX_BINARY= binhex.ttp
 COMPRESS_BINARY= compress.ttp
-STACKSIZE= 64k
 
-all: $(BINHEX_BINARY) $(COMPRESS_BINARY) version.h $(HEX) $(HEXCF) $(HEXCF2) $(HEXCF3) $(DRIVERFVDI) $(DRIVERFVDICF) $(DRIVERFVDICF2) $(DRIVERFVDICF3)
+all: $(COMPRESS_BINARY) version.h $(HEX) $(HEXCF) $(HEXCF2) $(HEXCF3) $(DRIVERFVDI) $(DRIVERFVDICF) $(DRIVERFVDICF2) $(DRIVERFVDICF3)
 
-ctpci: $(BINHEX_BINARY) $(COMPRESS_BINARY) version.h $(HEX) $(DRIVERFVDI)
+# $(DRIVERFVDI) needs the MiNT linker
+ctpci: $(COMPRESS_BINARY) version.h $(HEX)
 
-m5484lite: $(BINHEX_BINARY) $(COMPRESS_BINARY) version.h $(HEXCF) $(DRIVERFVDICF)
+m5484lite: $(COMPRESS_BINARY) version.h $(HEXCF) $(DRIVERFVDICF)
 
-m54455evb: $(BINHEX_BINARY) $(COMPRESS_BINARY) version.h $(HEXCF2) $(DRIVERFVDICF2)
+m54455evb: $(COMPRESS_BINARY) version.h $(HEXCF2) $(DRIVERFVDICF2)
 
-firebee: $(BINHEX_BINARY) $(COMPRESS_BINARY) version.h $(HEXCF3) $(DRIVERFVDICF3)
+# $(DRIVERFVDICF3) needs the MiNT linker
+firebee: $(COMPRESS_BINARY) version.h $(HEXCF3)
 
 clean:
 	rm -rf $(OBJDIR) $(OBJDIRCF) $(OBJDIRCF2) $(OBJDIRCF3)
@@ -766,29 +771,29 @@ $(HEX):	$(OBJS) $(OBJSRTOS) $(OBJSLWIP)
 	$(LD) --oformat srec -Map drivers.map --cref -T drivers.lk \
 	--entry Start -o $(HEX) $(OBJS)
 	./$(COMPRESS_BINARY) $(HEX) temp.bin
-	objcopy --verbose -I binary -O srec --adjust-vma=$(FLASH_DRIVERS) temp.bin $(HEX)
+	$(OBJCOPY) --verbose -I binary -O srec --srec-len=21 --adjust-vma=$(FLASH_DRIVERS) temp.bin $(HEX)
 	rm temp.bin 
 
 $(HEXCF):	$(OBJDIRCF)/header.o $(OBJSCF) $(OBJSBDOSCF) $(OBJSRTOSCF) $(OBJSLWIPCF) $(OBJSAC97CF)
 	$(LD) --oformat srec -Map drivers_cf.map --cref -T drivers_cf.lk \
 	--entry Start -o $(HEXCF) $(OBJSCF)
 	./$(COMPRESS_BINARY) $(HEXCF) temp.bin
-	objcopy --verbose -I binary -O srec --adjust-vma=$(FLASH_DRIVERS_CF) temp.bin $(HEXCF)
+	$(OBJCOPY) --verbose -I binary -O srec --adjust-vma=$(FLASH_DRIVERS_CF) temp.bin $(HEXCF)
 	rm temp.bin 
 
 $(HEXCF2):	$(OBJDIRCF)/header.o $(OBJSCF2) $(OBJSBDOSCF2) $(OBJSRTOSCF2) $(OBJSLWIPCF2)
 	$(LD) --oformat srec -Map drivers_cf2.map --cref -T drivers_cf2.lk \
 	--entry Start -o $(HEXCF2) $(OBJSCF2)
 	./$(COMPRESS_BINARY) $(HEXCF2) temp.bin
-	objcopy --verbose -I binary -O srec --adjust-vma=$(FLASH_DRIVERS_CF) temp.bin $(HEXCF2)
+	$(OBJCOPY) --verbose -I binary -O srec --adjust-vma=$(FLASH_DRIVERS_CF) temp.bin $(HEXCF2)
 	rm temp.bin 
 
 $(HEXCF3):	$(OBJDIRCF)/header.o $(OBJSCF3) $(OBJSBDOSCF3) $(OBJSRTOSCF3) $(OBJSLWIPCF3) $(OBJSAC97CF3)
 	$(LD) --oformat srec -Map drivers_cf3.map --cref -T drivers_cf3.lk \
 	--entry Start -o $(HEXCF3) $(OBJSCF3)
 	./$(COMPRESS_BINARY) $(HEXCF3) temp.bin
-	objcopy --verbose -I binary -O srec --adjust-vma=$(FLASH_DRIVERS_FIREBEE) temp.bin $(HEXFIREBEE)
-	objcopy --verbose -I binary -O srec --adjust-vma=$(FLASH_DRIVERS_CF) temp.bin $(HEXCF3)
+	$(OBJCOPY) --verbose -I binary -O srec --srec-len=21 --adjust-vma=$(FLASH_DRIVERS_FIREBEE) temp.bin $(HEXFIREBEE)
+	$(OBJCOPY) --verbose -I binary -O srec --adjust-vma=$(FLASH_DRIVERS_CF) temp.bin $(HEXCF3)
 	rm temp.bin 
 
 $(DRIVERFVDI):	$(OBJDIR)/video/spec.o $(OBJDIR)/video/accel.o $(OBJDIR)/radeon/radeon_base.o $(OBJDIR)/timer.o $(OBJSDRIVERFVDI)
@@ -807,7 +812,9 @@ $(DRIVERFVDICF3):	$(OBJDIRCF)/video/spec.o $(OBJDIRCF3)/video/accel.o $(OBJDIRCF
 	$(LD) $(LDFLAGS) -o $(DRIVERFVDICF3) $(OBJDIRCF)/video/spec.o $(OBJDIRCF3)/video/accel.o $(OBJDIRCF3)/radeon/radeon_base.o $(OBJDIRCF)/fvdi/common/c_common.o $(OBJDIRCF)/timer.o  $(OBJSDRIVERFVDICF3)
 	$(STRIP) $(DRIVERFVDICF3)
 
+# the committed stamp is kept unless STAMP is set (make STAMP=1 ...)
 version.h:
+ifneq ($(STAMP),)
 	@date -u +%e,%_m,%Y,%k,%_M > date.tmp
 	@echo "#define VERSION" $(VERSION) > $(INCDIR)/version.h
 	@echo "#define DATE \\" > version.tmp
@@ -816,16 +823,13 @@ version.h:
 	@rm version.tmp
 	@rm date.tmp
 	@touch -m $(SRCDIR)/header.S
+endif
 
 $(BINHEX_BINARY):	$(OBJDIR)/tools/binhex.o
 	$(CC_TOOLS) $(OBJDIR)/tools/binhex.o -o $(BINHEX_BINARY)
-	$(STRIP) $(BINHEX_BINARY)
-	$(STACK) -S $(STACKSIZE) $(BINHEX_BINARY)
 
 $(COMPRESS_BINARY):	$(OBJDIR)/tools/compress.o $(OBJDIR)/tools/lz.o $(OBJDIR)/tools/LzmaEnc.o $(OBJDIR)/tools/LzFind.o $(OBJDIR)/tools/srec.o
 	$(CC_TOOLS) $(OBJDIR)/tools//compress.o $(OBJDIR)/tools/lz.o $(OBJDIR)/tools/LzmaEnc.o $(OBJDIR)/tools/LzFind.o $(OBJDIR)/tools/srec.o -o $(COMPRESS_BINARY)
-	$(STRIP) $(COMPRESS_BINARY)
-	$(STACK) -S $(STACKSIZE) $(COMPRESS_BINARY)
 
 define CREATEOBJDIRS
 	@for d in $(OBJDIR) $(SUBOBJDIRS); do \
@@ -1175,7 +1179,8 @@ $(OBJDIRCF3)/radeon/radeon_accel_rom.o:	$(SRCDIR)/radeon/radeon_accel.c
 	$(CREATEOBJDIRSCF3)
 	$(CCF) $(INCLUDE) $(INCLUDEFVDI) $(CFLAGSCF3) -DDRIVER_IN_ROM -c $< -o $@
 
-$(OBJDIR)/radeon/radeon_theatre_dsp.o: $(ATICOD)
+# radeon_theatre_dsp.c from the ATI microcode, binhex.ttp is an Atari program
+theatre_dsp: $(ATICOD) $(COMPRESS_BINARY) $(BINHEX_BINARY)
 	./$(COMPRESS_BINARY) $(ATICOD) ./ati.bin
 	./$(BINHEX_BINARY) ./ati.bin $(SRCDIR)/radeon/radeon_theatre_dsp.txt theatre_dsp
 	@rm ati.bin
@@ -1184,6 +1189,8 @@ $(OBJDIR)/radeon/radeon_theatre_dsp.o: $(ATICOD)
 	@cat $(SRCDIR)/radeon/radeon_theatre_dsp.txt >> $(SRCDIR)/radeon/radeon_theatre_dsp.c
 	@echo "#endif" >> $(SRCDIR)/radeon/radeon_theatre_dsp.c
 	@rm $(SRCDIR)/radeon/radeon_theatre_dsp.txt
+
+$(OBJDIR)/radeon/radeon_theatre_dsp.o: $(SRCDIR)/radeon/radeon_theatre_dsp.c
 	$(CREATEOBJDIRS)
 	$(CC) $(INCLUDE) $(CFLAGS) -c $(SRCDIR)/radeon/radeon_theatre_dsp.c -o $@
 

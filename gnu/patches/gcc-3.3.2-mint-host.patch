@@ -1,0 +1,97 @@
+--- a/gcc/c-parse.in
++++ b/gcc/c-parse.in
+@@ -652,7 +652,7 @@
+ 	IDENTIFIER
+ 		{
+ 		  if (yychar == YYEMPTY)
+-		    yychar = YYLEX;
++		    yychar = yylex ();
+ 		  $$ = build_external_ref ($1, yychar == '(');
+ 		}
+ 	| CONSTANT
+@@ -1751,7 +1751,7 @@
+ 
+ structsp_attr:
+ 	  struct_head identifier '{'
+-		{ $$ = start_struct (RECORD_TYPE, $2);
++		{ $<ttype>$ = start_struct (RECORD_TYPE, $2);
+ 		  /* Start scope of tag before parsing components.  */
+ 		}
+ 	  component_decl_list '}' maybe_attribute
+@@ -1761,7 +1761,7 @@
+ 				      $3, chainon ($1, $5));
+ 		}
+ 	| union_head identifier '{'
+-		{ $$ = start_struct (UNION_TYPE, $2); }
++		{ $<ttype>$ = start_struct (UNION_TYPE, $2); }
+ 	  component_decl_list '}' maybe_attribute
+ 		{ $$ = finish_struct ($<ttype>4, $5, chainon ($1, $7)); }
+ 	| union_head '{' component_decl_list '}' maybe_attribute
+@@ -1769,12 +1769,12 @@
+ 				      $3, chainon ($1, $5));
+ 		}
+ 	| enum_head identifier '{'
+-		{ $$ = start_enum ($2); }
++		{ $<ttype>$ = start_enum ($2); }
+ 	  enumlist maybecomma_warn '}' maybe_attribute
+ 		{ $$ = finish_enum ($<ttype>4, nreverse ($5),
+ 				    chainon ($1, $8)); }
+ 	| enum_head '{'
+-		{ $$ = start_enum (NULL_TREE); }
++		{ $<ttype>$ = start_enum (NULL_TREE); }
+ 	  enumlist maybecomma_warn '}' maybe_attribute
+ 		{ $$ = finish_enum ($<ttype>3, nreverse ($4),
+ 				    chainon ($1, $7)); }
+@@ -2240,13 +2240,13 @@
+    first token on the next line.  */
+ save_filename:
+ 		{ if (yychar == YYEMPTY)
+-		    yychar = YYLEX;
++		    yychar = yylex ();
+ 		  $$ = input_filename; }
+ 	;
+ 
+ save_lineno:
+ 		{ if (yychar == YYEMPTY)
+-		    yychar = YYLEX;
++		    yychar = yylex ();
+ 		  $$ = lineno; }
+ 	;
+ 
+--- a/include/obstack.h
++++ b/include/obstack.h
+@@ -423,7 +423,7 @@
+ ({ struct obstack *__o = (OBSTACK);					\
+    if (__o->next_free + sizeof (void *) > __o->chunk_limit)		\
+      _obstack_newchunk (__o, sizeof (void *));				\
+-   *((void **)__o->next_free)++ = ((void *)datum);			\
++   *(void **)__o->next_free = ((void *)datum); __o->next_free += sizeof (void *);			\
+    (void) 0; })
+ 
+ # define obstack_int_grow(OBSTACK,datum)				\
+@@ -431,11 +431,11 @@
+ ({ struct obstack *__o = (OBSTACK);					\
+    if (__o->next_free + sizeof (int) > __o->chunk_limit)		\
+      _obstack_newchunk (__o, sizeof (int));				\
+-   *((int *)__o->next_free)++ = ((int)datum);				\
++   *(int *)__o->next_free = ((int)datum); __o->next_free += sizeof (int);				\
+    (void) 0; })
+ 
+-# define obstack_ptr_grow_fast(h,aptr) (*((void **) (h)->next_free)++ = (void *)aptr)
+-# define obstack_int_grow_fast(h,aint) (*((int *) (h)->next_free)++ = (int) aint)
++# define obstack_ptr_grow_fast(h,aptr) (*(void **) (h)->next_free = (void *)aptr, (h)->next_free += sizeof (void *))
++# define obstack_int_grow_fast(h,aint) (*(int *) (h)->next_free = (int) aint, (h)->next_free += sizeof (int))
+ 
+ # define obstack_blank(OBSTACK,length)					\
+ __extension__								\
+@@ -542,8 +542,8 @@
+    ? (_obstack_newchunk ((h), sizeof (int)), 0) : 0),			\
+   (*((int *) (((h)->next_free+=sizeof(int))-sizeof(int))) = ((int) datum)))
+ 
+-# define obstack_ptr_grow_fast(h,aptr) (*((char **) (h)->next_free)++ = (char *) aptr)
+-# define obstack_int_grow_fast(h,aint) (*((int *) (h)->next_free)++ = (int) aint)
++# define obstack_ptr_grow_fast(h,aptr) (*(char **) (h)->next_free = (char *) aptr, (h)->next_free += sizeof (char *))
++# define obstack_int_grow_fast(h,aint) (*(int *) (h)->next_free = (int) aint, (h)->next_free += sizeof (int))
+ 
+ # define obstack_blank(h,length)					\
+ ( (h)->temp = (length),							\
