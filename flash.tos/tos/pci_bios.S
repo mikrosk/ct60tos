@@ -7058,12 +7058,24 @@ phys_to_virt:
 	moveq #PCI_SUCCESSFUL,D0
 	rts
 	
+#ifndef COLDFIRE
+
+dma_setbuffer:
+
+	move.l 4(SP),D2          // PCI Address
+	move.l 12(SP),-(SP)      // Transfer Size (Bytes)
+	move.l 8(SP),-(SP)       // Local Address
+	bra.s .dsb1
+
+#endif /* COLDFIRE */
+
 _dma_setbuffer:
 
 #ifndef COLDFIRE
 	move.l 10(A0),-(SP)      // Transfer Size (Bytes)
 	move.l 6(A0),-(SP)       // Local Address
 	move.l 2(A0),D2          // PCI Address
+.dsb1:
 	move.l #DMAPADR0,D1      // DMA Channel 0 PCI Address
 	bsr write_local_config_longword	
 	move.l (SP)+,D2          // Local Address
@@ -7075,10 +7087,20 @@ _dma_setbuffer:
 #endif
 	rts
 	
+#ifndef COLDFIRE
+
+dma_buffoper:
+
+	move.l 4(SP),D0          // mode
+	bra.s .dbo1
+
+#endif /* COLDFIRE */
+
 _dma_buffoper:
 
 #ifndef COLDFIRE
 	move.w 2(A0),D0          // mode
+.dbo1:
 	bmi.s .status_dma_buffoper
 	moveq #4,D2              // abort
 	ext.l D0                 // stop
