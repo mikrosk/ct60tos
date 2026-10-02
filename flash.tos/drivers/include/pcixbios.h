@@ -156,7 +156,7 @@ typedef struct                       /* structure of address conversion     */
 /*                              Functions                                     */
 /******************************************************************************/
 #ifndef OSBIND_CLOBBER_LIST
-#define OSBIND_CLOBBER_LIST "d0", "d1", "d2", "a0", "a1", "a2", "memory"
+#define OSBIND_CLOBBER_LIST "d1", "d2", "a0", "a1", "a2", "memory"
 #endif
 
 #ifndef trap_14_wlw
