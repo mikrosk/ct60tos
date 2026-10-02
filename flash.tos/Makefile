@@ -1,13 +1,12 @@
-# pinned cross toolchain, see ../gnu
-GNU = $(abspath ../gnu)
-GNU_PREFIX = $(GNU)/install
-export GNU_PREFIX
+# cross toolchain: MiNT gcc 4.6.4, binutils 2.30 (a.out)
+CROSS ?= $(HOME)/gnu-tools-464/m68000/bin/m68k-atari-mint-
+export CROSS
 #CC = gcc
-CC = $(GNU)/bin/tos-gcc
-LD = $(GNU_PREFIX)/bin/m68k-elf-ld -N
-OBJCOPY = $(GNU_PREFIX)/bin/m68k-elf-objcopy
+CC = $(CROSS)gcc
+LD = $(CROSS)ld
+OBJCOPY = $(CROSS)objcopy
 HOSTCC = gcc
-HOSTCFLAGS = -O2 -w -I$(GNU)/host/include
+HOSTCFLAGS = -O2 -w -I./host/include
 
 VERSION = 0x0202
 

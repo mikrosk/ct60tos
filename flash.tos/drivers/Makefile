@@ -1,18 +1,16 @@
-# pinned cross toolchain, see ../../gnu
-GNU = $(abspath ../../gnu)
-GNU_PREFIX = $(GNU)/install
-export GNU_PREFIX
+# cross toolchain, see ../Makefile
+CROSS ?= $(HOME)/gnu-tools-464/m68000/bin/m68k-atari-mint-
 ### 68060 - GCC 3.3 ###
 #CC = gcc
 #CC = /usr/local/bin/gcc
 CC_TOOLS = gcc
 ### 68060 - GCC 4.4 ###
-CC = $(GNU)/bin/drivers-gcc
+CC = $(CROSS)gcc
 ### Coldfire - GCC 4.4 ###
-CCF = $(GNU)/bin/drivers-gcc
-LD = $(GNU_PREFIX)/bin/m68k-elf-ld
-STRIP = $(GNU_PREFIX)/bin/m68k-elf-strip
-OBJCOPY = $(GNU_PREFIX)/bin/m68k-elf-objcopy
+CCF = $(CROSS)gcc
+LD = $(CROSS)ld
+STRIP = $(CROSS)strip
+OBJCOPY = $(CROSS)objcopy
 rm = rm
 
 VERSION = 0x0102
@@ -101,7 +99,7 @@ INCLUDEFVDI = -I$(INCDIRFVDI)
 INCLUDEUSB = -I$(INCDIRUSB)
 ### 68060 - GCC 3.3 ###
 #CFLAGS = -m68060 -Os -fno-builtin -fomit-frame-pointer -Wall -Wno-multichar -g
-CFLAGS_TOOLS = -O2 -w -I$(GNU)/host/include
+CFLAGS_TOOLS = -O2 -w -I../host/include
 ### 68060 - GCC 4.4 ###
 CFLAGS = -m68060 -Os -fno-builtin -fomit-frame-pointer -fno-strict-aliasing -fno-inline-small-functions -Wall -Wno-multichar
 ### Coldfire - GCC 3.3 ###
@@ -756,14 +754,14 @@ COMPRESS_BINARY= compress.ttp
 
 all: $(COMPRESS_BINARY) version.h $(HEX) $(HEXCF) $(HEXCF2) $(HEXCF3) $(DRIVERFVDI) $(DRIVERFVDICF) $(DRIVERFVDICF2) $(DRIVERFVDICF3)
 
-# $(DRIVERFVDI) needs the MiNT linker
+# $(DRIVERFVDI) is a separate program, not part of the image
 ctpci: $(COMPRESS_BINARY) version.h $(HEX)
 
 m5484lite: $(COMPRESS_BINARY) version.h $(HEXCF) $(DRIVERFVDICF)
 
 m54455evb: $(COMPRESS_BINARY) version.h $(HEXCF2) $(DRIVERFVDICF2)
 
-# $(DRIVERFVDICF3) needs the MiNT linker
+# $(DRIVERFVDICF3) is a separate program, not part of the image
 firebee: $(COMPRESS_BINARY) version.h $(HEXCF3)
 
 clean:
