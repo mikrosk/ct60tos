@@ -209,7 +209,7 @@ OBJSDRIVERFVDICF3=	\
 		$(OBJDIRCF)/video/8b_pal.o \
 		$(OBJDIRCF)/video/16b_pal.o \
 		$(OBJDIRCF)/video/32b_pal.o \
-		$(OBJDIRCF)/video/access.o \
+		$(OBJDIRCF3)/video/access.o \
 		$(OBJDIRCF)/video/debug.o \
 		$(OBJDIRCF)/video/mouse.o \
 		$(OBJDIRCF)/fvdi/common/init.o \

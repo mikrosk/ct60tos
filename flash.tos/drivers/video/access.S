@@ -219,6 +219,72 @@ _memcpy:
 .cp0:
 	move.l D5,D6
 	move.l #256,D4
+#ifdef MCF547X
+	lea 0xFFFF8007,A2
+	btst.b #3,(A2)           // blitter
+	beq .cp7
+	cmp.l #0x40000000,A4     // source and destination
+	blt .cp7               // inside 0x40000000-0x7FFFFFFF
+	tst.l A4
+	bmi .cp7
+	cmp.l #0x40000000,A5
+	blt .cp7
+	tst.l A5
+	bmi .cp7
+	lsr.l #6,D6
+	bne.s .cp13              // >= 64 bytes
+.cp12:
+	move.l D5,D6
+	bra .cp7
+.cp13:
+	cmp.l A5,A4
+	bmi.s .cp12
+	lea 0xFFFF8A00,A2        // blitter
+	move.l #0x20002,D2
+	move.l D2,32(A2)         // source X/Y increment
+	move.l D2,46(A2)         // destination X/Y increment
+	moveq #-1,D2
+	move.l D2,40(A2)         // endmasks
+	move.w D2,44(A2)
+	move.l A4,36(A2)         // source
+	move.l A5,50(A2)         // destination
+	move.w #0x203,58(A2)     // HOP source, OP source
+	lsr.l #1,D5              // words, an odd last byte is not copied
+	lsr.l #8,D6              // lines of 0x2000 words
+	beq.s .cp14
+	move.w #0x2000,54(A2)    // X count
+	move.w D6,56(A2)         // Y count
+	bra.s .cp15
+.cp14:
+	move.w D5,54(A2)         // X count
+	move.w #1,56(A2)         // Y count
+.cp15:
+	nop
+	move.w #0x8000,60(A2)    // start
+	move.l #.cp18,D2         // flush data cache
+	move.l D2,0x1FE000A8     // trap #10 vector (VBR 0x1FE00000)
+	trap #10
+.cp16:
+		nop
+		tst.w 60(A2)
+	bmi.s .cp16
+	tst.w D6
+	beq.s .cp19
+	and.l #0x1FFF,D5        // remaining words
+	beq.s .cp19
+	move.w D5,54(A2)         // X count
+	move.w #1,56(A2)         // Y count
+	nop
+	move.w #0x8000,60(A2)    // start
+.cp17:
+		nop
+		tst.w 60(A2)
+	bmi.s .cp17
+.cp19:
+	movem.l (SP),D2-D6/A2-A5
+	lea 36(SP),SP
+	rts
+#endif /* MCF547X */
 #if 0 // #ifndef COLDFIRE
 	move.l A5,D0             // d
 	move.l A4,D1             // s
@@ -326,6 +392,28 @@ _memcpy:
 	movem.l (SP),D2-D6/A2-A5
 	lea 36(SP),SP
 	rts
+
+#ifdef MCF547X
+.cp18:	// trap #10, flush and invalidate the data cache
+	move.w #0x2700,SR
+	nop
+	moveq #0,D2             // way
+	moveq #0,D3             // set
+	move.l D2,A3
+.cp20:
+		cpushl dc,(A3)
+		add.l #16,A3
+		addq.l #1,D3
+		cmp.w #512,D3
+	bne.s .cp20
+	moveq #0,D3
+	addq.l #1,D2
+	move.l D2,A3
+	cmp.w #4,D2
+	bne.s .cp20
+	nop
+	rte
+#endif /* MCF547X */
 
 #ifndef COLDFIRE	
 _cpush_dc:
