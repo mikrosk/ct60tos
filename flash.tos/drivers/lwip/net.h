@@ -79,6 +79,7 @@ extern unsigned char __MCDAPI_START[];
 #endif /* MCF5445X */
 
 extern int asm_set_ipl(int level);
+extern int asm_get_ipl(void);
 
 /* functions to convert between host and network byte order (big endian) */
 #define	ntohl(x) (x)
