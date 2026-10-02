@@ -1210,7 +1210,7 @@ unsigned long physbase(void)
 unsigned long logbase(void)
 {
 	struct fb_info *info = info_fvdi;
-	if(video_found && (info->screen_mono == NULL))
+	if(info->screen_mono == NULL)
 		return(log_addr);
 	return((long)*((char **)_v_bas_ad));
 }
@@ -1319,7 +1319,7 @@ long vsetscreen(long logaddr, long physaddr, long rez, long modecode, long init_
 					}
 					return(0);
 				case CMD_ALLOCPAGE:
-					if(video_found && (info->screen_mono == NULL))
+					if(info->screen_mono == NULL)
 					{
 						long addr, addr_aligned, size;
 						long wrap = info->var.xres_virtual * (info->var.bits_per_pixel >> 3);
@@ -1362,7 +1362,7 @@ long vsetscreen(long logaddr, long physaddr, long rez, long modecode, long init_
 					}
 					return(0);
 				case CMD_FREEPAGE:
-					if(video_found && (info->screen_mono == NULL))
+					if(info->screen_mono == NULL)
 					{
 						if((logaddr == -1) || (logaddr == second_screen_aligned))
 							logaddr = second_screen;
@@ -1401,7 +1401,7 @@ long vsetscreen(long logaddr, long physaddr, long rez, long modecode, long init_
 					rez = -1;
 					break;
 				case CMD_ALLOCMEM:
-					if(video_found && (info->screen_mono == NULL))
+					if(info->screen_mono == NULL)
 					{
 						SCRMEMBLK *blk = (SCRMEMBLK *)physaddr;
 						if(blk->blk_y)
@@ -1428,7 +1428,7 @@ long vsetscreen(long logaddr, long physaddr, long rez, long modecode, long init_
 					}
 					return(0);
 				case CMD_FREEMEM:
-					if(video_found && (info->screen_mono == NULL))
+					if(info->screen_mono == NULL)
 					{
 						SCRMEMBLK *blk	= (SCRMEMBLK *)physaddr;
 						offscreen_free(info, blk->blk_start);
@@ -1436,11 +1436,17 @@ long vsetscreen(long logaddr, long physaddr, long rez, long modecode, long init_
 					}
 					return(0);
 				case CMD_SETADR:
-					if(video_found && (info->screen_mono == NULL))
+					if(info->screen_mono == NULL)
 					{
-						if((logaddr >= (long)info->screen_base)
-						 || ((logaddr - (long)info->screen_base) >= (info->var.xres_virtual * 8192 * (info->var.bits_per_pixel >> 3))))
-							log_addr = logaddr;
+						if(video_found)
+						{
+							if((logaddr < (long)info->screen_base)
+							 || ((logaddr - (long)info->screen_base) >= (info->var.xres_virtual * 8192 * (info->var.bits_per_pixel >> 3))))
+								return(0);
+						}
+						else if((logaddr < (long)info->ram_base) || (logaddr >= (long)info->ram_base + info->ram_size))
+							return(0);
+						physaddr = logaddr;
 						rez = -1;
 						break;
 					}
