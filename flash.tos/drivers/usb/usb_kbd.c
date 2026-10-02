@@ -30,7 +30,7 @@
 
 #undef USB_KBD_DEBUG
 
-#undef USE_COUNTRYCODE
+#define USE_COUNTRYCODE
 
 #if defined(CONFIG_USB_UHCI) || defined(CONFIG_USB_OHCI) || defined(CONFIG_USB_EHCI)
 #ifdef CONFIG_USB_KEYBOARD
@@ -101,6 +101,7 @@ static unsigned char num_lock;
 static unsigned char caps_lock;
 static unsigned char scroll_lock;
 static unsigned char old_modifier;
+static unsigned char key_modifier;
 static union
 {
 	struct
@@ -632,6 +633,66 @@ static int usb_kbd_translate(unsigned char scancode, unsigned char modifier, int
 	int type = USA;
 	USB_KBD_PRINTF("USB KBD scancode: 0x%02x, modifier:0x%02x, pressed: %d\r\n", scancode, modifier, pressed);
 	flags.b.force_alt_shift = 0;
+	switch(scancode) /* modifiers keys */
+	{
+		case 0xE0:
+			if(pressed)
+				key_modifier |= (1 << LEFT_CNTR);
+			else
+				key_modifier &= ~(1 << LEFT_CNTR);
+			scancode = 0x88;
+			break;
+		case 0xE1:
+			if(pressed)
+				key_modifier |= (1 << LEFT_SHIFT);
+			else
+				key_modifier &= ~(1 << LEFT_SHIFT);
+			scancode = 0x89;
+			break;
+		case 0xE2:
+			if(pressed)
+				key_modifier |= (1 << LEFT_ALT);
+			else
+				key_modifier &= ~(1 << LEFT_ALT);
+			scancode = 0x8A;
+			break;
+		case 0xE3:
+			if(pressed)
+				key_modifier |= (1 << LEFT_GUI);
+			else
+				key_modifier &= ~(1 << LEFT_GUI);
+			scancode = 0x8B;
+			break;
+		case 0xE4:
+			if(pressed)
+				key_modifier |= (1 << RIGHT_CNTR);
+			else
+				key_modifier &= ~(1 << RIGHT_CNTR);
+			scancode = 0x8C;
+			break;
+		case 0xE5:
+			if(pressed)
+				key_modifier |= (1 << RIGHT_SHIFT);
+			else
+				key_modifier &= ~(1 << RIGHT_SHIFT);
+			scancode = 0x8D;
+			break;
+		case 0xE6:
+			if(pressed)
+				key_modifier |= (1 << RIGHT_ALT);
+			else
+				key_modifier &= ~(1 << RIGHT_ALT);
+			scancode = 0x8E;
+			break;
+		case 0xE7:
+			if(pressed)
+				key_modifier |= (1 << RIGHT_GUI);
+			else
+				key_modifier &= ~(1 << RIGHT_GUI);
+			scancode = 0x8F;
+			break;
+	}
+	modifier |= key_modifier;
 	if(scancode > MAX_VALUE_LOOKUP)
 		keycode = 0;
 	else
@@ -645,9 +706,6 @@ static int usb_kbd_translate(unsigned char scancode, unsigned char modifier, int
 			unsigned char *altgr_table = NULL;
 			unsigned char *modifier_table = NULL;
 			unsigned long lang = USA;
-			USB_COOKIE *p = usb_get_cookie('_AKP');
-			if(p != NULL)
-				lang = (p->v.l >> 8) & 0xFF;
 #ifdef USE_COUNTRYCODE
 			switch(usb_kbd_hid_desc.bCountryCode)
 			{
@@ -660,7 +718,18 @@ static int usb_kbd_translate(unsigned char scancode, unsigned char modifier, int
 				case CC_SWE: lang = SWE; break;
 				case CC_SWF: lang = SWF; break;
 				case CC_SWG: lang = SWG; break;		
+				default:
+					{
+						USB_COOKIE *p = usb_get_cookie('_AKP');
+						if(p != NULL)
+							lang = (p->v.l >> 8) & 0xFF;
+					}
+					break;
 			} 
+#else
+			USB_COOKIE *p = usb_get_cookie('_AKP');
+			if(p != NULL)
+				lang = (p->v.l >> 8) & 0xFF;
 #endif
 	  	switch(lang)
 			{
@@ -735,7 +804,7 @@ static int usb_kbd_translate(unsigned char scancode, unsigned char modifier, int
 					atari_modifier = 0;
 				if(flags.b.altgr_usb_break)
 				{
-					if(altgr_table[scancode])
+					if((altgr_table != NULL) && altgr_table[scancode])
 					{
 						keycode = altgr_table[scancode];
 						if((atari_modifier & (1 << 6)) != 0)
@@ -746,7 +815,7 @@ static int usb_kbd_translate(unsigned char scancode, unsigned char modifier, int
 				}
 			  else if(flags.b.shift_usb_break)
 			  {
-					if(shift_table[scancode])
+					if((shift_table != NULL) && shift_table[scancode])
 					{
 						keycode = shift_table[scancode];
 						if((atari_modifier & (1 << 6)) != 0)
