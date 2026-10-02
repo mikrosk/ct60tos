@@ -1,5 +1,5 @@
 # cross toolchain, see ../Makefile
-CROSS ?= $(HOME)/gnu-tools-464/m68000/bin/m68k-atari-mint-
+CROSS ?= $(HOME)/gnu-tools/m68000/bin/m68k-atari-mint-
 ### 68060 - GCC 3.3 ###
 #CC = gcc
 #CC = /usr/local/bin/gcc

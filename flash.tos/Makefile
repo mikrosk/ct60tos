@@ -1,5 +1,5 @@
-# cross toolchain: MiNT gcc 4.6.4, binutils 2.30 (a.out)
-CROSS ?= $(HOME)/gnu-tools-464/m68000/bin/m68k-atari-mint-
+# cross toolchain: MiNT gcc 7.5.0, binutils 2.30 (a.out)
+CROSS ?= $(HOME)/gnu-tools/m68000/bin/m68k-atari-mint-
 export CROSS
 #CC = gcc
 CC = $(CROSS)gcc
