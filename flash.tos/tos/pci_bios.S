@@ -7218,6 +7218,10 @@ _dma_lock:  /* CTPCI DMA freeze workaround */
 	move.l A0,D0
 	rts
 .dl2:
+#if 1 // no hardware deadlock workaround
+	moveq #0,D0
+	rts
+#endif
 	tst.w D0
 	bmi.s .dl_status
 	bne.s .dl_lock
