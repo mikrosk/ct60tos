@@ -101,11 +101,11 @@ INCLUDEUSB = -I$(INCDIRUSB)
 #CFLAGS = -m68060 -Os -fno-builtin -fomit-frame-pointer -Wall -Wno-multichar -g
 CFLAGS_TOOLS = -O2 -w -I../host/include
 ### 68060 - GCC 4.4 ###
-CFLAGS = -m68060 -Os -fno-builtin -fomit-frame-pointer -fno-strict-aliasing -fno-inline-small-functions -Wall -Wno-multichar
+CFLAGS = -m68060 -Os -fno-builtin -fomit-frame-pointer -fno-strict-aliasing -fno-inline-small-functions -fno-delete-null-pointer-checks -Wall -Wno-multichar
 ### Coldfire - GCC 3.3 ###
 #CFLAGSCF = -m5200 -Os -fno-builtin -fomit-frame-pointer -Wall -Wno-multichar -g -Wa,-m5200 -DCOLDFIRE
 ### Coldfire - GCC 4.4 ###
-CFLAGSCF = -mcfv4e -Os -fno-builtin -fomit-frame-pointer -fno-strict-aliasing -fno-inline-small-functions -Wall -Wno-multichar -DCOLDFIRE
+CFLAGSCF = -mcfv4e -Os -fno-builtin -fomit-frame-pointer -fno-strict-aliasing -fno-inline-small-functions -fno-delete-null-pointer-checks -Wall -Wno-multichar -DCOLDFIRE
 CFLAGSCF2 = $(CFLAGSCF) -DMCF5445X
 CFLAGSCF3 = $(CFLAGSCF) -DMCF547X
 LDFLAGS = -nostdlib -s

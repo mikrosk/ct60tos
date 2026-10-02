@@ -39,12 +39,12 @@ SUBOBJDIRSCF3=	\
 		$(OBJDIRCF3)/tos/patches
 
 INCLUDE=	-I$(INCDIR)
-CFLAGS=		-m68060 -Wall -O2 -fomit-frame-pointer
-CFLAGSCF=	-m5200 -Wall -O2 -fomit-frame-pointer -Wa,-m5200 -DCOLDFIRE
+CFLAGS=		-m68060 -Wall -O2 -fomit-frame-pointer -fno-delete-null-pointer-checks
+CFLAGSCF=	-m5200 -Wall -O2 -fomit-frame-pointer -fno-delete-null-pointer-checks -Wa,-m5200 -DCOLDFIRE
 CFLAGSCF2=	$(CFLAGSCF) -DMCF5445X
 CFLAGSCF3=	$(CFLAGSCF) -DMCF547X
-CFLAGS_TOS=	-m68060 -Wall -O2 -fomit-frame-pointer
-CFLAGSCF_TOS=	-m5200 -Wall -O2 -fomit-frame-pointer -Wa,-m5200 -DCOLDFIRE
+CFLAGS_TOS=	-m68060 -Wall -O2 -fomit-frame-pointer -fno-delete-null-pointer-checks
+CFLAGSCF_TOS=	-m5200 -Wall -O2 -fomit-frame-pointer -fno-delete-null-pointer-checks -Wa,-m5200 -DCOLDFIRE
 CFLAGSCF2_TOS=	$(CFLAGSCF_TOS) -DMCF5445X
 CFLAGSCF3_TOS=	$(CFLAGSCF_TOS) -DMCF547X
 CFLAGSDESK=     -D_MINT_=0 -D_MORE_AV=0 -D_EDITLABELS=0 -D_OVSCAN=0 -D__USE_MACROS=0 -DCFGEMP=0 -DPALETTES=0 -D_PREDEF=0 -D_SHOWFIND=0 -D_MENUDEL=0 -D_FONT_SEL=0 -DAES_RECT=0 -D_LOGFILE=0
