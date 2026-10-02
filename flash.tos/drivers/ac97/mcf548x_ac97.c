@@ -504,7 +504,7 @@ static int mcf548x_ac97_get_frame(struct mcf548x_ac97_priv *priv, int num_frames
 									*cptr++ = cr;
 								  if((void *)cptr >= end_ptr)
 								  {
-										if(!mcf548x_ac97_swap_record_buffers(priv));
+										if(!mcf548x_ac97_swap_record_buffers(priv))
 										{
 											cptr = NULL;
 											break;
@@ -544,7 +544,7 @@ static int mcf548x_ac97_get_frame(struct mcf548x_ac97_priv *priv, int num_frames
 									*sptr++ = sr;
 								  if((void *)sptr >= end_ptr)
 								  {
-										if(!mcf548x_ac97_swap_record_buffers(priv));
+										if(!mcf548x_ac97_swap_record_buffers(priv))
 										{
 											sptr = NULL;
 											break;
@@ -579,7 +579,7 @@ static int mcf548x_ac97_get_frame(struct mcf548x_ac97_priv *priv, int num_frames
 									*cptr++ = cr;
 								  if((void *)cptr >= end_ptr)
 								  {
-										if(!mcf548x_ac97_swap_record_buffers(priv));
+										if(!mcf548x_ac97_swap_record_buffers(priv))
 										{
 											cptr = NULL;
 											break;
@@ -614,7 +614,7 @@ static int mcf548x_ac97_get_frame(struct mcf548x_ac97_priv *priv, int num_frames
 									*sptr++ = sr;
 								  if((void *)sptr >= end_ptr)
 								  {
-										if(!mcf548x_ac97_swap_record_buffers(priv));
+										if(!mcf548x_ac97_swap_record_buffers(priv))
 										{
 											sptr = NULL;
 											break;
