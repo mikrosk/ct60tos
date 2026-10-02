@@ -405,7 +405,7 @@ In:
 	lsr.l #8,D0
 	move.w D0,2(A1)          // cyl high & low, LBA high & mid
 	move.b D1,5(A1)          // sec count 0 <=> 256
-	cmp.l #0x1000000,D2
+	cmp.l #0x10000000,D2
 	bcc.s .in22	
 	move.b #0x20,(A1)        // read sector(s)
 	clr.b 6(A1)              // features
@@ -2913,7 +2913,7 @@ read_sectors: 	// A0: buffer, D0: drive, D0.H: flag swap bytes, D1: count, D2.L:
 	lsr.l #8,D0
 	move.w D0,2(A1)          // cyl high & low, LBA high & mid
 	move.b D1,5(A1)          // sec count 0 <=> 256
-	cmp.l #0x1000000,D2
+	cmp.l #0x10000000,D2
 	bcc.s .read_lba48	
 	move.b #0x20,(A1)        // read sector(s)
 	clr.b 6(A1)              // features
@@ -3018,7 +3018,7 @@ write_sectors: 	// A0: buffer, D0: drive, D0.H: flag swap bytes, D1: count, D2.L
 	lsr.l #8,D0
 	move.w D0,2(A1)          // cyl high & low, LBA high & mid
 	move.b D1,5(A1)          // sec count 0 <=> 256
-	cmp.l #0x1000000,D2
+	cmp.l #0x10000000,D2
 	bcc.s .write_lba48
 	move.b #0x30,(A1)        // write sector(s)
 	clr.b 6(A1)              // features
