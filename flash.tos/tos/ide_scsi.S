@@ -1052,7 +1052,7 @@ InquireSCSI:
 	move.w #3,(A0)+          // BusNo, IDE not compatible
 	moveq #1,D0
 	move.w D0,BusNumber(A1)
-	move.w Features+2(A1),(A0)+
+	move.w Features+4(A1),(A0)+
 	bra.s .is3
 .is1:
 #endif /* SECOND_IDE_BUS */
