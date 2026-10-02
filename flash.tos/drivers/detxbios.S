@@ -5407,9 +5407,11 @@ _call_ikbdvec:
 	move.l 36(SP),A2         // &kbdvecs[-1]
 	move.l 0x118,A0          // ACIA MFP interrupt vector
 .find_mint_acia:
-		cmp.l #0x58425241,-12(A0) // XBRA
+		move.l -12(A0),D0
+		cmp.l #0x58425241,D0      // XBRA
 		bne .mint_ok
-		cmp.l #0x4D694E54,-8(A0)  // MiNT
+		move.l -8(A0),D0
+		cmp.l #0x4D694E54,D0      // MiNT
 		beq.s .mint_acia_found
 		move.l -4(A0),D0          // next
 	move.l D0,A0
@@ -5418,9 +5420,11 @@ _call_ikbdvec:
 .mint_acia_found:
 	move.l (A2),A1           // ikbdvec
 .find_mint_ikbdvec:
-		cmp.l #0x58425241,-12(A1) // XBRA
+		move.l -12(A1),D0
+		cmp.l #0x58425241,D0      // XBRA
 		bne.s .mint_ikbdvec_not_found
-		cmp.l #0x4D694E54,-8(A1)  // MiNT
+		move.l -8(A1),D0
+		cmp.l #0x4D694E54,D0      // MiNT
 		beq.s .mint_ok
 		move.l -4(A1),D0          // next
 	move.l D0,A1
