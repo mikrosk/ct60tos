@@ -151,6 +151,16 @@ install_scsidrv:
 	movem.l D0-D2/A0-A2,(SP)
 #else
 	movem.l D0-D2/A0-A2,-(SP)
+	clr.l -(SP)
+	move.l #CT60_PARAM_CTPCI,-(SP)
+	move.w #CT60_MODE_READ,-(SP)
+	move.w #0xC60B,-(SP)     // ct60_rw_parameter
+	trap #14
+	lea 12(SP),SP
+	tst.l D0
+	bmi .error_install
+	btst #6,D0               // XHDI/SCSI enabled ?
+	beq .error_install
 #endif
 	move.l #0x53435349,D0    // SCSI
 	jsr get_cookie
