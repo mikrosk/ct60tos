@@ -61,7 +61,7 @@
 #define VIDEO_RAM          0x00D00000 /* FIREBEE */
 #define END_VIDEO_RAM      0x00E00000 /* FIREBEE */
 #define VIDEO_RAM2         0x60000000 /* FIREBEE */
-#define END_VIDEO_RAM2     0x80000000 /* FIREBEE */
+#define END_VIDEO_RAM2     0x68000000 /* FIREBEE */
 #define FPGA_VIDEO_RAM     0x60D00000 /* FIREBEE */
 #define END_FPGA_VIDEO_RAM 0x60E00000 /* FIREBEE */
 #define FPGA_ACP_IO        0xF0000000 /* FIREBEE */
@@ -504,7 +504,7 @@ void init_mmu(unsigned long base_pci_drivers, unsigned long size_pci_drivers)
 		if((addr>=VIDEO_RAM) && (addr<END_VIDEO_RAM))
 		{
 			mmu_map(addr,addr-VIDEO_RAM+FPGA_VIDEO_RAM,MMUOR_ITLB,MMUTR_SG,MMUDR_SZ1M+MMUDR_WRITETHROUGH+MMUDR_X+MMUDR_LK);
-			mmu_remap(addr,addr-VIDEO_RAM+FPGA_VIDEO_RAM,0,MMUTR_SG,MMUDR_SZ1M+MMUDR_WRITETHROUGH+MMUDR_R+MMUDR_W);
+			mmu_map(addr,addr-VIDEO_RAM+FPGA_VIDEO_RAM,0,MMUTR_SG,MMUDR_SZ1M+MMUDR_WRITETHROUGH+MMUDR_R+MMUDR_W);
 		}
 		else
 #endif /* MCF547X */
