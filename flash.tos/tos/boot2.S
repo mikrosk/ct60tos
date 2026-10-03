@@ -3494,8 +3494,8 @@ init_sdram:
 .no_nvm_read_saved:
 	lea crlf(PC),A0
 	bsr display_string_single
-#if !defined(COLDFIRE) || defined(MCF5445X) || (defined MCF547X)
-#if defined(COLDFIRE) && defined(DEBUG)
+#if defined(COLDFIRE) && (defined(MCF5445X) || (defined MCF547X))
+#ifdef DEBUG
 	lea debug133(PC),A0
 	bsr debug_display_string
 #endif
