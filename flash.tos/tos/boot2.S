@@ -4758,8 +4758,8 @@ boot_drive:
 //	move.l D0,old_access_error
 //	lea access_error_ide(PC),A0
 //	move.l A0,2*4(A1)        // to fix with MMU update_tlb access fault !!!
-#endif
 	jsr install_scsidrv
+#endif
 	move.l hdv_rw,-22(A6)
 	move.w #3,-(SP)          // TT ram if possible
 	move.l #pinfo_size,-(SP)
@@ -5663,6 +5663,9 @@ boot_drive:
 	jsr install_hddriver     // if no external driver
 .external_driver:
 #endif /* USE_ATARI_IO */
+#ifndef COLDFIRE
+	jsr install_scsidrv      // after the boot of a hard disk driver, which may install its own
+#endif
 //	cmp.l #0x31415926,resvalid
 //	bne.s .no_resvector
 //	tst.l resvector
