@@ -504,7 +504,8 @@ In:
 	bne .in18                // error
 	move.l 120(A0),D0        // total sectors
 	swap D0
-	move.l D0,(A4)           // logical block address
+	subq.l #1,D0
+	move.l D0,(A4)           // last logical block address
 	move.l #512,4(A4)        // block length
 .in17:
 	moveq #NOSCSIERROR,D5
