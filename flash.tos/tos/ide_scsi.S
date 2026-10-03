@@ -404,7 +404,7 @@ In:
 	lsr.l #1,D1              // / 512
 	beq .in16
 	cmp.l #0x100,D1
-	bhi .in16                // error
+	bcc .in16                // error, 255 sectors max.
 	lea -8(A6),A1            // cmd buffer
 	move.l A4,A0             // buffer IDE
 	moveq #3,D0
