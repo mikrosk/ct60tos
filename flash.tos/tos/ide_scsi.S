@@ -3727,7 +3727,10 @@ ide_cmd: 	// D0.L: bytes, D1.L: timeout ATAPI, A0: IDE buffer, A1: cmd buffer
 	cmp.l #0xA0,D0           // packet
 	beq .ir14
 	cmp.l #0x30,D0           // write sector(s)
+	beq.s .ir31
+	cmp.l #0x34,D0           // write sector(s) ext
 	bne .ir10                // read
+.ir31:
 #if defined(COLDFIRE) && defined(MCF547X) // FIREBEE
 	lea OFFSET_DATA(A2),A1   // IDE buffer
 	addq.l #1,D1             // DRQ of the 1st sector tested with time-out
