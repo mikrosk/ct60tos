@@ -4058,13 +4058,8 @@ tab_vdo_cookie:
 #ifdef COLDFIRE
 env:	.asciz "PATH="
 	.asciz "#:\\"
-	.asciz "SDL_AUDIODRIVER="
-	.asciz "mint_gsxb"
-	.asciz "SDL_VIDEODRIVER="
-	.asciz "gem"
-	.asciz "SDL_ATARI_EVENTSDRIVER="
-	.asciz "gemdos"
 	.byte 0
+	.byte 0xFF               // end mark for the copy loop
 #else
 error1:	.asciz "SDRAM not found"
 	.asciz "SDRAM non trouv‚e"
