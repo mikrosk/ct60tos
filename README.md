@@ -32,15 +32,24 @@ How exactly each release is reproduced is listed in [STATUS.md](STATUS.md).
 Building
 --------
 
-From "Pinned cross toolchain for the TOS and drivers images" up to MCS ver10, `gnu/`
-builds the toolchain of the original releases (needs docker, see `gnu/README`):
+The Makefiles use the MiNT gcc 4.6.4 cross toolchain named by `CROSS` (default
+`$HOME/gnu-tools-464/m68000/bin/m68k-atari-mint-`):
+
+    make -C flash.tos              (ct60 and firebee)
+    make -C flash.tos ct60         (flash.tos/ct60tos.bin, flash.tos/ctpcitos.bin)
+    make -C flash.tos firebee      (flash.tos/firetos_firebee.hex)
+
+The `m5484lite` and `m54455evb` targets (ColdFire evaluation boards) do not link:
+the FireTOS beta 12 and 13 sources were reconstructed from FireBee images only, and
+no image exists for these boards to reconstruct their side from.
+
+Commits from "Pinned cross toolchain for the TOS and drivers images" up to MCS ver10
+build with the toolchain of the original releases instead, built by `gnu/` (needs
+docker, see `gnu/README`):
 
     make -C gnu
-    make -C flash.tos firebee      (flash.tos/firetos_firebee.hex)
-    make -C flash.tos ct60         (flash.tos/ctpcitos.bin)
-
-From "gcc-4.6.4: Build with the MiNT gcc 4.6.4 toolchain" on, `gnu/` is gone and the
-Makefiles use the MiNT gcc 4.6.4 cross toolchain named by `CROSS`.
+    make -C flash.tos firebee
+    make -C flash.tos ct60
 
 Documentation
 -------------

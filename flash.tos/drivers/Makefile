@@ -752,7 +752,7 @@ FLASH_DRIVERS_FIREBEE = 0xE04A0000
 BINHEX_BINARY= binhex.ttp
 COMPRESS_BINARY= compress.ttp
 
-all: $(COMPRESS_BINARY) version.h $(HEX) $(HEXCF) $(HEXCF2) $(HEXCF3) $(DRIVERFVDI) $(DRIVERFVDICF) $(DRIVERFVDICF2) $(DRIVERFVDICF3)
+all: $(COMPRESS_BINARY) version.h $(HEX) $(HEXCF3) $(DRIVERFVDI)
 
 # $(DRIVERFVDI) is a separate program, not part of the image
 ctpci: $(COMPRESS_BINARY) version.h $(HEX)
