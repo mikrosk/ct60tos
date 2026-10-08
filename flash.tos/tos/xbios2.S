@@ -2055,8 +2055,11 @@ Jenabint:
 	
 Xbtimer: // D0.W: timer, D1.W: control, D2.W: data, A0: vector
 
+	ext.l D0
+	cmp.l #3,D0
+	bhi.s .vector_not_used   // invalid timer
 	bsr settimer
-	move.l A0,D0             // vector
+	move.l A0,D1             // vector
 	bmi.s .vector_not_used
 	lea tab_num_int_timer(PC),A1
 	move.b (A1,D0.l),D0
