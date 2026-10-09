@@ -487,10 +487,17 @@ replace_mfp:
 	lea jdosgettime(PC),A1   // 0xE0225C
 	move.l A1,0x114A         // clockvec
 	move.l A0,0x114E         // joyvec
+#ifdef MCF547X
+	lea 0xE032AC,A0          // vecmidi
+	move.l A0,0x1152         // midisys, called by midikey
+	lea 0xE032BA,A0          // vecikbd
+	move.l A0,0x1156         // ikbdsys, called by midikey
+#else
 	lea unimplemented(PC),A0 // 0xE032AC
 	move.l A0,0x1152         // midisys, MIDI interrupt (unused because not called)
 	lea unimplemented(PC),A0 // 0xE032BA
 	move.l A0,0x1156         // ikbdsys, keyboard interrupt (unused because not called)
+#endif
 	moveq #7,D0
 	move.b D0,conterm        // keyclick, repeat, bell enable
 	moveq #0,D0
@@ -3523,36 +3530,6 @@ pseudo_dma_init: /* MCF547X */
 	bset #7,18(A0)           // IMRA I/O bit 7 enable interrupt
 	rts
 
-int_mfp_ikbd:
-
-	link A6,#-4
-	lea -56(SP),SP
-	movem.l D0-A5,(SP)
-	move.b 0xFFFFFC00,D0     // ACIA IKBD
-	move.b D0,D2
-	btst #7,D0
-	beq.s .imk1              // not interrupt request
-	btst #0,D0
-	beq.s .imk2              // receiver empty
-	move.b 0xFFFFFC02,D0     // read data
-	lea 0xF96,A0             // iorec keyboard
-	lea -4(A6),A1            // data - 2 for arcvint
-	move.b D0,2(A1)          // data
-	move.l D2,-(SP)
-	bsr arcvint              // 0xE032EC
-	move.l (SP)+,D2
-.imk2:
-	btst #5,D2
-	beq.s .imk1              // no error
-	move.b 0xFFFFFC02,D0     // read data
-.imk1:
-	lea 0xFFFFFA01,A0        // MFP (FPGA emulation)		
-	bclr #6,16(A0)           // ISRB clear interrupt
-	movem.l (SP),D0-A5
-	lea 56(SP),SP
-	unlk A6
-	rte
-
 ikbd_init: /* MCF547X */
 
 #ifdef DEBUG
@@ -3596,7 +3573,7 @@ ikbd_init: /* MCF547X */
 	move.b D0,0xFFFFFC00     // reset ACIA IKBD
 	move.b #0x96,D0
 	move.b D0,0xFFFFFC00     // / 64, 8 bits, 1 stop, no parity
-	lea int_mfp_ikbd(PC),A0
+	lea 0xE03288,A0          // midikey, calls midisys and ikbdsys
 	move.l A0,IKBD_VEC       // MFP I/O bit 4
 	lea 0xFFFFFA01,A0        // MFP (FPGA emulation)
 	bset #6,8(A0)            // IERB I/O bit 4
