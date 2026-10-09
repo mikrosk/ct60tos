@@ -3433,13 +3433,14 @@ int6_mfp:
 	bne.s .int_mfp_ok
 	tst.b stop_mfp_ikbd
 	beq.s .int_mfp_ok
-	move.l A0,-(SP)          // IKBD not connected, avoid null bytes
-	lea 0xFFFFFA01,A0        // MFP (FPGA emulation)
-	bclr #6,20(A0)           // IMRB I/O bit 4, stop interrupt
-	bclr #6,8(A0)            // IERB
-	bclr #6,12(A0)           // IPRB
-	bclr #6,16(A0)           // ISRB
-	move.l (SP)+,A0
+	tst.b 0xFFFFFC00         // ACIA IKBD status
+	bpl.s .int_mfp_ok        // interrupt from the MIDI ACIA
+	move.l D0,-(SP)          // IKBD not connected, avoid null bytes
+	moveq #0x16,D0           // / 64, 8 bits, 1 stop, no parity, no RX interrupt
+	move.b D0,0xFFFFFC00     // MFP I/O bit 4 stays enabled for the MIDI ACIA
+	move.b 0xFFFFFC02,D0     // read data
+	move.l (SP)+,D0
+	bra.s .int_mfp_ok
 .is_not_mfp:
 	move.l (SP)+,D0
 	rts
