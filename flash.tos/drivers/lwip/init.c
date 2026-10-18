@@ -2103,6 +2103,12 @@ static void go_emutos(unsigned long source)
 #endif
   info_fvdi = NULL;
   asm_set_ipl(7); /* disable interrupts */
+  /* no MFP interrupt until EmuTOS sets up the MFP: the MFP vectors in low
+     memory still belong to TOS and may point into the area EmuTOS is copied over */
+  *(volatile unsigned char *)0xFFFFFA07 = 0; /* MFP IERA (FPGA emulation) */
+  *(volatile unsigned char *)0xFFFFFA09 = 0; /* MFP IERB */
+  *(volatile unsigned char *)0xFFFFFA0B = 0; /* MFP IPRA */
+  *(volatile unsigned char *)0xFFFFFA0D = 0; /* MFP IPRB */
   *(unsigned long *)((5 * 4) + coldfire_vector_base) = (unsigned long)new_zero_divide; /* Zero Divide */
   *(unsigned long *)((10 * 4) + coldfire_vector_base) = (unsigned long)new_trap; /* LineA */
   *(unsigned long *)((15 * 4) + coldfire_vector_base) = (unsigned long)new_trap; /* LineF */
