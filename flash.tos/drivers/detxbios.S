@@ -5414,6 +5414,9 @@ _call_ikbdvec:
 
 	lea -24(SP),SP
 	movem.l D0-D2/A0-A2,(SP)
+	move.l 36(SP),A2         // &kbdvecs[-1]
+	tst.l (A2)
+	beq .no_ikbdvec          // not set yet by the OS (EmuTOS started from the boot menu)
 #if (defined(CONFIG_USB_UHCI) || defined(CONFIG_USB_OHCI) || defined(CONFIG_USB_EHCI)) && defined(MINT_IKBD_PATCH)
 	tst.l mint_ikbd_scan
 	bne .mint_ok
@@ -5489,6 +5492,7 @@ _call_ikbdvec:
 	move.l 36(SP),A2         // &kbdvecs[-1]
 	move.l (A2),A2           // ikbdvec
 	jsr (A2)
+.no_ikbdvec:
 	movem.l (SP),D0-D2/A0-A2
 	lea 24(SP),SP
 	rts
@@ -5503,8 +5507,11 @@ _call_mousevec:
 	movem.l D0-D2/A0-A2,(SP)
 	move.l 28(SP),A0         // data
 	move.l 32(SP),A2
-	move.l (A2),A2           // mousevec
+	move.l (A2),D0           // mousevec
+	beq.s .no_mousevec       // not set yet by the OS (EmuTOS started from the boot menu)
+	move.l D0,A2
 	jsr (A2)
+.no_mousevec:
 	movem.l (SP),D0-D2/A0-A2
 	lea 24(SP),SP
 	rts
